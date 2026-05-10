@@ -1,0 +1,5 @@
+{"id":"arith-1","input":"What is 2 + 2?","expected":"4","slice":"arithmetic"}
+{"id":"arith-2","input":"What is 10 - 3?","expected":"7","slice":"arithmetic"}
+{"id":"format-1","input":"Return the label POSITIVE.","expected":"POSITIVE","slice":"format"}
+{"id":"format-2","input":"Return the label NEGATIVE.","expected":"NEGATIVE","slice":"format"}
+

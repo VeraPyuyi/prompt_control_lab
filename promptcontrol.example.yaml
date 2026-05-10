@@ -1,0 +1,7 @@
+# PromptControlLab example.
+# The current v0.1 CLI accepts explicit command flags; this file documents the run.
+data: examples/tasks.jsonl
+metric: exact_match
+baseline_predictions: examples/predictions_baseline.jsonl
+candidate_predictions: examples/predictions_candidate.jsonl
+
