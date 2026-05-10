@@ -44,6 +44,24 @@ PromptControlLab 的核心思想是：每次运行都应该留下可复查的文
 
 说明什么问题：这次运行是 `pass`、`needs_review` 还是 `fail`，以及触发原因是什么。
 
+## `improved_prompt.txt`
+
+记录 `pcl improve` 生成的优化 prompt。
+
+说明什么问题：工具推荐用户使用哪一个更直白、更稳定的 prompt。
+
+## `prompt_improvement.json`
+
+记录原始 prompt、优化 prompt、识别语言、优化目标、风格、改写原因和报告上下文提示。
+
+说明什么问题：工具为什么这样改 prompt，以及是否使用了已有诊断报告。
+
+## `prompt_diff.md`
+
+记录原始 prompt、优化 prompt 和可读的改动列表。
+
+说明什么问题：不用看 JSON，也能知道 prompt 具体改了什么。
+
 ## `diagnostics/soft_hard.json`
 
 记录 soft prompt 向 nearest token embedding 投影的 token index 和距离。

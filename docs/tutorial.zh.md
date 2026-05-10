@@ -26,6 +26,31 @@ pcl analyze --config promptcontrol.example.yaml --out runs/quick
 
 这是给非专业人员的最短路径。报告会直接说明 candidate prompt 是否更好、证据是否可靠、哪些样本发生变化、下一步应该检查哪里。
 
+## 最简单的 prompt 优化
+
+操作：
+
+```bash
+pcl improve --prompt "回答下面的问题"
+```
+
+结合已有检测报告：
+
+```bash
+pcl improve --prompt-file prompts/current.txt --run runs/quick --out runs/improve
+```
+
+得到：
+
+- 终端输出优化后的 prompt
+- `runs/improve/improved_prompt.txt`
+- `runs/improve/prompt_improvement.json`
+- `runs/improve/prompt_diff.md`
+
+说明：
+
+这个命令会给出一个更清楚的 prompt，包含任务目标、输出格式要求和稳定性要求。结合 `--run` 时，它还会根据已有诊断加入退化 slice、变差样本或部署风险提示。
+
 ## 专家模式：一步一步控制
 
 ## 1. 初始化示例

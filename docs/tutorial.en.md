@@ -27,6 +27,33 @@ What it explains:
 This is the shortest path for non-specialists. The report says whether the candidate prompt
 looks better, how reliable the evidence is, which examples changed, and what to inspect next.
 
+## Simplest Prompt Improvement
+
+Operation:
+
+```bash
+pcl improve --prompt "Answer the user question."
+```
+
+Operation with an existing report:
+
+```bash
+pcl improve --prompt-file prompts/current.txt --run runs/quick --out runs/improve
+```
+
+Result:
+
+- optimized prompt printed in the terminal
+- `runs/improve/improved_prompt.txt`
+- `runs/improve/prompt_improvement.json`
+- `runs/improve/prompt_diff.md`
+
+What it explains:
+
+The command gives a clearer prompt with a task goal, output-format rules, and stability rules.
+With `--run`, it also uses previous diagnostics to add simple warnings about regressed slices,
+broken examples, or deployment risk.
+
 ## Expert Mode: Step by Step
 
 ## 1. Initialize an Example

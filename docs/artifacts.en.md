@@ -46,6 +46,25 @@ Stores the result of applying a policy file to a run.
 
 What it explains: whether the run passes, needs review, or fails configured thresholds.
 
+## `improved_prompt.txt`
+
+Stores the prompt produced by `pcl improve`.
+
+What it explains: the recommended plain-language rewrite of the original prompt.
+
+## `prompt_improvement.json`
+
+Stores the original prompt, improved prompt, detected language, goal, style, changes, and report
+context notes.
+
+What it explains: why the tool changed the prompt and which diagnostic hints were used.
+
+## `prompt_diff.md`
+
+Stores the original prompt, improved prompt, and a readable list of changes.
+
+What it explains: what changed in the prompt without reading JSON.
+
 ## `diagnostics/soft_hard.json`
 
 Stores nearest-token projection indices and distances for a soft prompt.

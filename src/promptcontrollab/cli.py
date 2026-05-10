@@ -16,7 +16,11 @@ from promptcontrollab.config import (
 from promptcontrollab.errors import PromptControlLabError
 from promptcontrollab.evaluation import run_import_eval
 from promptcontrollab.explain import generate_explanation
+from promptcontrollab.files import ensure_dir, write_json
 from promptcontrollab.gate import run_gate
+from promptcontrollab.prompt_context import load_prompt_context
+from promptcontrollab.prompt_diff import render_prompt_diff
+from promptcontrollab.prompt_improver import improve_prompt
 from promptcontrollab.reporting import generate_report
 from promptcontrollab.riccati import analyze_riccati
 from promptcontrollab.soft_hard import analyze_soft_hard
@@ -58,6 +62,23 @@ def build_parser() -> argparse.ArgumentParser:
     init_parser = subcommands.add_parser("init", help="Create an example project.")
     init_parser.add_argument("--path", type=Path, default=Path("."), help="Project directory.")
     init_parser.set_defaults(func=_cmd_init)
+
+    improve_parser = subcommands.add_parser(
+        "improve",
+        help="Improve one prompt with simple offline rules.",
+    )
+    improve_parser.add_argument("--prompt", default=None, help="Prompt string to improve.")
+    improve_parser.add_argument("--prompt-file", type=Path, default=None, help="Prompt text file.")
+    improve_parser.add_argument("--run", type=Path, default=None, help="Optional run directory.")
+    improve_parser.add_argument("--out", type=Path, default=None, help="Optional output directory.")
+    improve_parser.add_argument(
+        "--goal",
+        default="stability",
+        help="accuracy, format, or stability.",
+    )
+    improve_parser.add_argument("--language", choices=["auto", "zh", "en"], default="auto")
+    improve_parser.add_argument("--style", choices=["simple", "strict", "stable"], default="stable")
+    improve_parser.set_defaults(func=_cmd_improve)
 
     analyze_parser = subcommands.add_parser(
         "analyze",
@@ -209,6 +230,30 @@ def build_parser() -> argparse.ArgumentParser:
 def _cmd_init(args: argparse.Namespace) -> None:
     write_example_project(args.path)
     print(f"Created PromptControlLab example at {args.path}")
+
+
+def _cmd_improve(args: argparse.Namespace) -> None:
+    prompt = _read_improve_prompt(args.prompt, args.prompt_file)
+    context = load_prompt_context(args.run)
+    improvement = improve_prompt(
+        prompt,
+        context=context,
+        goal=args.goal,
+        language=args.language,
+        style=args.style,
+    )
+    print(_format_improvement_output(improvement.improved_prompt, improvement.changes))
+    if args.out is not None:
+        ensure_dir(args.out)
+        (args.out / "improved_prompt.txt").write_text(
+            improvement.improved_prompt + "\n",
+            encoding="utf-8",
+        )
+        write_json(args.out / "prompt_improvement.json", improvement.to_json())
+        (args.out / "prompt_diff.md").write_text(
+            render_prompt_diff(improvement),
+            encoding="utf-8",
+        )
 
 
 def _cmd_analyze(args: argparse.Namespace) -> None:
@@ -378,3 +423,24 @@ def _maybe_refresh_explanation(out_dir: Path, level: str | None) -> None:
         return
     run_dir = out_dir.parent if out_dir.name == "diagnostics" else out_dir
     generate_explanation(run_dir, level=level)
+
+
+def _read_improve_prompt(prompt: str | None, prompt_file: Path | None) -> str:
+    if prompt is not None and prompt_file is not None:
+        msg = "Use either --prompt or --prompt-file, not both"
+        raise ValueError(msg)
+    if prompt is None and prompt_file is None:
+        msg = "Provide --prompt or --prompt-file"
+        raise ValueError(msg)
+    if prompt_file is not None:
+        return prompt_file.read_text(encoding="utf-8")
+    if prompt is None:
+        msg = "Provide --prompt or --prompt-file"
+        raise ValueError(msg)
+    return prompt
+
+
+def _format_improvement_output(improved_prompt: str, changes: list[str]) -> str:
+    lines = ["Optimized prompt:", "", improved_prompt, "", "Why it changed:"]
+    lines.extend(f"- {change}" for change in changes)
+    return "\n".join(lines)

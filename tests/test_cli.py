@@ -3,6 +3,8 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+import pytest
+
 from promptcontrollab.cli import main
 from promptcontrollab.files import write_jsonl
 
@@ -289,3 +291,80 @@ def test_cli_diagnostic_command_can_refresh_technical_explanation(tmp_path: Path
     explanation = json.loads((run / "explanation.json").read_text(encoding="utf-8"))
     assert explanation["level"] == "technical"
     assert "deployment_risk" in explanation
+
+
+def test_cli_improve_prompt_string_outputs_plain_optimized_prompt(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    assert main(["improve", "--prompt", "回答下面的问题"]) == 0
+    captured = capsys.readouterr()
+    assert "Optimized prompt:" in captured.out
+    assert "请准确回答下面的问题" in captured.out
+    assert "Why it changed:" in captured.out
+
+
+def test_cli_improve_prompt_file_and_out_writes_artifacts(tmp_path: Path) -> None:
+    prompt_file = tmp_path / "prompt.txt"
+    out_dir = tmp_path / "improve"
+    prompt_file.write_text("Answer the user question.", encoding="utf-8")
+
+    assert main(["improve", "--prompt-file", str(prompt_file), "--out", str(out_dir)]) == 0
+
+    improved = (out_dir / "improved_prompt.txt").read_text(encoding="utf-8")
+    payload = json.loads((out_dir / "prompt_improvement.json").read_text(encoding="utf-8"))
+    diff = (out_dir / "prompt_diff.md").read_text(encoding="utf-8")
+    assert "Please answer the user question accurately." in improved
+    assert payload["language"] == "en"
+    assert payload["original_prompt"] == "Answer the user question."
+    assert "Added a clear task goal" in diff
+
+
+def test_cli_improve_uses_run_context(tmp_path: Path) -> None:
+    run = tmp_path / "run"
+    (run / "diagnostics").mkdir(parents=True)
+    (run / "explanation.json").write_text(
+        json.dumps(
+            {
+                "failure_slices": {
+                    "regressed": {"arithmetic": -0.25},
+                    "improved": {},
+                    "unchanged": {},
+                },
+                "example_changes": {
+                    "fixed_ids": [],
+                    "broken_ids": ["arith-2"],
+                    "unchanged_ids": [],
+                },
+                "deployment_risk": {
+                    "items": {"trajectory": {"mean_step_drift": 2.0}},
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    assert (
+        main(
+            [
+                "improve",
+                "--prompt",
+                "回答下面的问题",
+                "--run",
+                str(run),
+                "--out",
+                str(tmp_path / "improve"),
+            ]
+        )
+        == 0
+    )
+
+    improved = (tmp_path / "improve" / "improved_prompt.txt").read_text(encoding="utf-8")
+    assert "arithmetic" in improved
+    assert "arith-2" in improved
+
+
+def test_cli_improve_validates_prompt_source(tmp_path: Path) -> None:
+    prompt_file = tmp_path / "prompt.txt"
+    prompt_file.write_text("Answer the question.", encoding="utf-8")
+    assert main(["improve"]) == 2
+    assert main(["improve", "--prompt", "x", "--prompt-file", str(prompt_file)]) == 2

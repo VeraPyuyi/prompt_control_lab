@@ -55,6 +55,26 @@ pipeline for you: split, score, compare, explain, and report.
 individual commands when you want to tune split ratios, import different outputs,
 run statistics with custom sampling, attach diagnostics, or inspect every artifact.
 
+## Easiest Prompt Improvement
+
+If you only have a prompt string and want a clearer version, use:
+
+```bash
+pcl improve --prompt "Answer the user question."
+```
+
+Result:
+
+- The optimized prompt is printed in the terminal.
+- If you add `--out runs/improve`, the tool writes `improved_prompt.txt`,
+  `prompt_improvement.json`, and `prompt_diff.md`.
+
+What it tells you:
+
+This command gives a practical rewrite without calling any external model. If you also pass
+`--run runs/quick`, it uses the existing report to add warnings about regressed slices, broken
+examples, and deployment risk.
+
 ## Who It Is For
 
 - Prompt optimization researchers who need clean train/val/withheld protocols.
@@ -102,7 +122,34 @@ What it tells you:
 This shows the minimum input format. A task has an `id`, an `input`, an `expected`
 answer, and a `slice`. A prediction file maps each `id` to a model `output`.
 
-### 2. `pcl analyze`: run Quick Mode end to end
+### 2. `pcl improve`: rewrite one prompt directly
+
+Operation:
+
+```bash
+pcl improve --prompt "Answer the user question."
+```
+
+Operation with an existing report:
+
+```bash
+pcl improve --prompt-file prompts/current.txt --run runs/quick --out runs/improve
+```
+
+Result:
+
+- terminal output with the optimized prompt
+- `runs/improve/improved_prompt.txt`
+- `runs/improve/prompt_improvement.json`
+- `runs/improve/prompt_diff.md`
+
+What it tells you:
+
+This gives a clearer prompt with task goal, output-format constraints, and stability rules. With
+`--run`, it also uses previous diagnostics to add simple warnings about task slices or examples
+that regressed.
+
+### 3. `pcl analyze`: run Quick Mode end to end
 
 Operation:
 
@@ -138,7 +185,7 @@ This is the easiest path for non-specialists. It answers: did the candidate prom
 improve, is the evidence reliable, did any task slice regress, and what should be
 checked next?
 
-### 3. `pcl split`: separate train, validation, and withheld examples
+### 4. `pcl split`: separate train, validation, and withheld examples
 
 Operation:
 
@@ -156,7 +203,7 @@ The file contains train, validation, and withheld ids, a split hash, and a leaka
 report. If `has_leakage` is false, the three split groups do not overlap. The split
 hash lets another person reproduce the same split.
 
-### 4. `pcl eval`: score raw model outputs
+### 5. `pcl eval`: score raw model outputs
 
 Operation:
 
@@ -187,7 +234,7 @@ What it tells you:
 score, slice, and any error. `metrics.json` gives the overall mean score and slice-level
 scores, so you can see whether one task group regressed even if the average improved.
 
-### 5. `pcl stats`: check whether the change is reliable
+### 6. `pcl stats`: check whether the change is reliable
 
 Operation:
 
@@ -208,7 +255,7 @@ interval, paired permutation p-value, and Holm-adjusted p-value. If the confiden
 interval crosses zero, treat the apparent improvement as uncertain. If the interval is
 above zero and the adjusted p-value is small, the candidate improvement is more reliable.
 
-### 6. `pcl report`: turn artifacts into a readable report
+### 7. `pcl report`: turn artifacts into a readable report
 
 Operation:
 
@@ -227,7 +274,7 @@ The report gathers split hygiene, metrics, statistical comparison, and any diagn
 that were already written under `diagnostics/`. It gives a readable summary of whether
 the prompt change looks useful and what should be checked next.
 
-### 7. `pcl explain`: turn artifacts into a direct explanation
+### 8. `pcl explain`: turn artifacts into a direct explanation
 
 Operation:
 
@@ -246,7 +293,7 @@ What it tells you:
 `technical` keeps artifact paths and raw comparison details so researchers can audit
 the result.
 
-### 8. `pcl gate`: check a run against policy thresholds
+### 9. `pcl gate`: check a run against policy thresholds
 
 Operation:
 
@@ -263,7 +310,7 @@ What it tells you:
 The file returns `pass`, `needs_review`, or `fail`. It explains whether the candidate
 score, regression size, adjusted p-value, and optional diagnostic risk meet the policy.
 
-### 9. `pcl soft-hard`: inspect soft-to-hard deployment risk
+### 10. `pcl soft-hard`: inspect soft-to-hard deployment risk
 
 Operation:
 
@@ -292,7 +339,7 @@ real token embeddings, so converting the soft prompt into hard tokens may lose b
 
 ![PromptControlLab diagnostics](docs/assets/diagnostics.svg)
 
-### 10. `pcl trajectory`: measure hidden-state drift and decay
+### 11. `pcl trajectory`: measure hidden-state drift and decay
 
 Operation:
 
@@ -315,7 +362,7 @@ The file reports mean step drift, max step drift, log-decay slope, fit quality, 
 turnpike-like signal. A negative slope with reasonable fit quality suggests motion
 toward a stable region. High drift or weak fit suggests more heterogeneous behavior.
 
-### 11. `pcl riccati`: check a finite-dimensional surrogate
+### 12. `pcl riccati`: check a finite-dimensional surrogate
 
 Operation:
 
@@ -344,7 +391,7 @@ The file reports the closed-loop spectral radius, a diagnostic decay rate, and w
 the fitted surrogate is stable. This is a check on the finite-dimensional surrogate. It
 is not a proof about the full language model.
 
-### 12. `pcl tv-soft`: compare static and time-varying method groups
+### 13. `pcl tv-soft`: compare static and time-varying method groups
 
 Operation:
 
