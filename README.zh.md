@@ -13,6 +13,16 @@ PromptControlLab 是一个开源工具包，用于 prompt 评测、诊断、复�
 
 它不是只输出一个分数的表格，而是生成一套可复现的实验产物：数据怎么切、输出怎么评、差异是否可靠、哪些风险需要检查。
 
+## 图示概览
+
+![PromptControlLab 工作流](docs/assets/workflow.svg)
+
+工具的主流程很直接：准备任务池，生成干净的 train/val/withheld 切分，评测 baseline 和 candidate 输出，做 paired statistics，最后生成报告。如果有 soft prompt 或 hidden states，再追加研究诊断。
+
+![PromptControlLab 产物结构](docs/assets/artifacts.svg)
+
+每次运行都会留下一个小型 audit trail。这些文件既方便人阅读，也方便脚本、论文复现和后续工具继续消费。
+
 ## 面向谁
 
 - prompt optimization 研究者：需要干净的 train/val/withheld 协议。
@@ -92,6 +102,8 @@ pcl report --run runs/candidate --title "Candidate Prompt Report"
 
 ## 研究诊断命令
 
+![PromptControlLab 研究诊断](docs/assets/diagnostics.svg)
+
 soft prompt 到 hard prompt 的风险：
 
 ```bash
@@ -135,4 +147,3 @@ pcl tv-soft --predictions scored_methods.jsonl --out runs/candidate/diagnostics
 ## License
 
 Apache-2.0。
-

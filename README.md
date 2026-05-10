@@ -19,6 +19,19 @@ and which diagnostics need inspection.
 
 Chinese documentation is available in [README.zh.md](README.zh.md).
 
+## Visual Overview
+
+![PromptControlLab workflow](docs/assets/workflow.svg)
+
+The toolkit follows a simple path: prepare a task pool, make a clean tri-split, score
+baseline and candidate outputs, run paired statistics, then write a report. Optional
+diagnostics can be added when soft prompts or hidden states are available.
+
+![PromptControlLab artifacts](docs/assets/artifacts.svg)
+
+Every run writes a small audit trail. The files are designed to be readable by people,
+scripts, papers, and future dashboards without rerunning the experiment.
+
 ## Who It Is For
 
 - Prompt optimization researchers who need clean train/val/withheld protocols.
@@ -105,6 +118,8 @@ numbers mean, and what should be inspected next.
 
 ## Research Diagnostics
 
+![PromptControlLab diagnostics](docs/assets/diagnostics.svg)
+
 Soft-to-hard projection risk:
 
 ```bash
@@ -153,4 +168,3 @@ It helps distinguish temporal-structure gains from capacity or selection effects
 ## License
 
 Apache-2.0.
-
