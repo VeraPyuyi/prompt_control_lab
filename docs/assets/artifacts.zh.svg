@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1100" height="430" viewBox="0 0 1100 430" role="img" aria-labelledby="title desc">
+  <title id="title">PromptControlLab 产物结构</title>
+  <desc id="desc">一次运行会生成 manifest、splits、predictions、metrics、stats、diagnostics 和 reports。</desc>
+  <rect width="1100" height="430" rx="18" fill="#fbfbf8"/>
+  <text x="44" y="54" font-family="Microsoft YaHei, Noto Sans CJK SC, Segoe UI, Arial, sans-serif" font-size="28" font-weight="700" fill="#172033">每次运行都留下可检查记录</text>
+  <text x="44" y="84" font-family="Microsoft YaHei, Noto Sans CJK SC, Segoe UI, Arial, sans-serif" font-size="15" fill="#4b5563">产物会说明分数从哪里来，以及下一步应该检查什么。</text>
+
+  <g font-family="Microsoft YaHei, Noto Sans CJK SC, Segoe UI, Arial, sans-serif">
+    <rect x="48" y="128" width="315" height="248" rx="14" fill="#ffffff" stroke="#94a3b8" stroke-width="2"/>
+    <text x="78" y="164" font-size="20" font-weight="700" fill="#0f172a">runs/candidate/</text>
+    <text x="88" y="199" font-size="15" fill="#334155">manifest.json</text>
+    <text x="88" y="227" font-size="15" fill="#334155">splits.json</text>
+    <text x="88" y="255" font-size="15" fill="#334155">predictions.jsonl</text>
+    <text x="88" y="283" font-size="15" fill="#334155">metrics.json / metrics.csv</text>
+    <text x="88" y="311" font-size="15" fill="#334155">stats.json</text>
+    <text x="88" y="339" font-size="15" fill="#334155">diagnostics/*.json</text>
+    <text x="88" y="367" font-size="15" fill="#334155">report.md / report.html</text>
+
+    <rect x="430" y="128" width="275" height="98" rx="14" fill="#ecfeff" stroke="#67e8f9"/>
+    <text x="568" y="164" text-anchor="middle" font-size="18" font-weight="700" fill="#164e63">可复现性</text>
+    <text x="568" y="194" text-anchor="middle" font-size="14" fill="#155e75">版本、seed、split hash</text>
+
+    <rect x="760" y="128" width="275" height="98" rx="14" fill="#f0fdf4" stroke="#86efac"/>
+    <text x="898" y="164" text-anchor="middle" font-size="18" font-weight="700" fill="#14532d">逐样本证据</text>
+    <text x="898" y="194" text-anchor="middle" font-size="14" fill="#166534">输出、得分、分组、错误</text>
+
+    <rect x="430" y="278" width="275" height="98" rx="14" fill="#fff7ed" stroke="#fdba74"/>
+    <text x="568" y="314" text-anchor="middle" font-size="18" font-weight="700" fill="#7c2d12">可靠性</text>
+    <text x="568" y="344" text-anchor="middle" font-size="14" fill="#9a3412">置信区间、置换检验、校正</text>
+
+    <rect x="760" y="278" width="275" height="98" rx="14" fill="#f5f3ff" stroke="#c4b5fd"/>
+    <text x="898" y="314" text-anchor="middle" font-size="18" font-weight="700" fill="#4c1d95">诊断结果</text>
+    <text x="898" y="344" text-anchor="middle" font-size="14" fill="#5b21b6">部署风险和轨迹风险</text>
+  </g>
+</svg>

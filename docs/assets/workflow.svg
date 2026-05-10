@@ -41,7 +41,7 @@
     <text x="1016" y="207" text-anchor="middle" font-size="13" fill="#475569">MD/HTML</text>
 
     <path d="M584 236 C584 282, 742 286, 817 238" fill="none" stroke="#94a3b8" stroke-width="2" stroke-dasharray="6 6" marker-end="url(#arrow)"/>
-    <rect x="435" y="272" width="305" height="46" rx="10" fill="#eef2ff" stroke="#c7d2fe"/>
-    <text x="588" y="301" text-anchor="middle" font-size="15" font-weight="700" fill="#3730a3">Optional diagnostics: soft-hard, trajectory, Riccati, tv-soft</text>
+    <rect x="290" y="272" width="520" height="46" rx="10" fill="#eef2ff" stroke="#c7d2fe"/>
+    <text x="550" y="301" text-anchor="middle" font-size="15" font-weight="700" fill="#3730a3">Optional diagnostics: soft-hard, trajectory, Riccati, tv-soft</text>
   </g>
 </svg>

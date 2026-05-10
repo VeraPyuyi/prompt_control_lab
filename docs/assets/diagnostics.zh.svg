@@ -1,0 +1,43 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1100" height="420" viewBox="0 0 1100 420" role="img" aria-labelledby="title desc">
+  <title id="title">PromptControlLab 研究诊断</title>
+  <desc id="desc">四个研究诊断模块：软硬转换风险、轨迹漂移、Riccati surrogate 和 time-varying soft control。</desc>
+  <rect width="1100" height="420" rx="18" fill="#f8fafc"/>
+  <text x="44" y="54" font-family="Microsoft YaHei, Noto Sans CJK SC, Segoe UI, Arial, sans-serif" font-size="28" font-weight="700" fill="#172033">不只看分数，还看诊断</text>
+  <text x="44" y="84" font-family="Microsoft YaHei, Noto Sans CJK SC, Segoe UI, Arial, sans-serif" font-size="15" fill="#4b5563">每个模块回答一个关于 prompt 行为、稳定性或部署风险的问题。</text>
+
+  <g font-family="Microsoft YaHei, Noto Sans CJK SC, Segoe UI, Arial, sans-serif">
+    <rect x="52" y="130" width="230" height="220" rx="16" fill="#ffffff" stroke="#38bdf8" stroke-width="2"/>
+    <text x="167" y="168" text-anchor="middle" font-size="18" font-weight="700" fill="#0f172a">软硬转换</text>
+    <circle cx="128" cy="222" r="10" fill="#0ea5e9"/>
+    <circle cx="170" cy="248" r="10" fill="#0ea5e9"/>
+    <circle cx="208" cy="205" r="10" fill="#94a3b8"/>
+    <line x1="128" y1="222" x2="118" y2="286" stroke="#0ea5e9" stroke-width="2"/>
+    <line x1="170" y1="248" x2="178" y2="286" stroke="#0ea5e9" stroke-width="2"/>
+    <text x="167" y="318" text-anchor="middle" font-size="13" fill="#475569">投影距离</text>
+
+    <rect x="315" y="130" width="230" height="220" rx="16" fill="#ffffff" stroke="#34d399" stroke-width="2"/>
+    <text x="430" y="168" text-anchor="middle" font-size="18" font-weight="700" fill="#0f172a">轨迹诊断</text>
+    <polyline points="360,285 390,250 420,228 450,212 500,198" fill="none" stroke="#059669" stroke-width="4"/>
+    <circle cx="360" cy="285" r="5" fill="#059669"/>
+    <circle cx="390" cy="250" r="5" fill="#059669"/>
+    <circle cx="420" cy="228" r="5" fill="#059669"/>
+    <circle cx="450" cy="212" r="5" fill="#059669"/>
+    <circle cx="500" cy="198" r="5" fill="#059669"/>
+    <text x="430" y="318" text-anchor="middle" font-size="13" fill="#475569">漂移与衰减</text>
+
+    <rect x="578" y="130" width="230" height="220" rx="16" fill="#ffffff" stroke="#a78bfa" stroke-width="2"/>
+    <text x="693" y="168" text-anchor="middle" font-size="18" font-weight="700" fill="#0f172a">Riccati 诊断</text>
+    <rect x="638" y="207" width="110" height="58" rx="10" fill="#ede9fe" stroke="#8b5cf6"/>
+    <text x="693" y="242" text-anchor="middle" font-size="15" font-weight="700" fill="#4c1d95">A - BK</text>
+    <path d="M638 286 C668 305, 718 305, 748 286" fill="none" stroke="#7c3aed" stroke-width="3"/>
+    <text x="693" y="318" text-anchor="middle" font-size="13" fill="#475569">surrogate 稳定性</text>
+
+    <rect x="841" y="130" width="230" height="220" rx="16" fill="#ffffff" stroke="#fb7185" stroke-width="2"/>
+    <text x="956" y="168" text-anchor="middle" font-size="18" font-weight="700" fill="#0f172a">TV-soft</text>
+    <rect x="898" y="276" width="24" height="22" fill="#fb7185"/>
+    <rect x="934" y="242" width="24" height="56" fill="#f59e0b"/>
+    <rect x="970" y="260" width="24" height="38" fill="#64748b"/>
+    <line x1="890" y1="298" x2="1010" y2="298" stroke="#334155" stroke-width="2"/>
+    <text x="956" y="318" text-anchor="middle" font-size="13" fill="#475569">结构还是容量</text>
+  </g>
+</svg>

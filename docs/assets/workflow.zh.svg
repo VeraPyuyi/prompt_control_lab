@@ -1,0 +1,47 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1100" height="360" viewBox="0 0 1100 360" role="img" aria-labelledby="title desc">
+  <title id="title">PromptControlLab 工作流</title>
+  <desc id="desc">从任务池到三段切分、评测、统计、报告和可选诊断的流程。</desc>
+  <rect width="1100" height="360" rx="18" fill="#f7fafc"/>
+  <text x="44" y="54" font-family="Microsoft YaHei, Noto Sans CJK SC, Segoe UI, Arial, sans-serif" font-size="28" font-weight="700" fill="#172033">PromptControlLab 工作流</text>
+  <text x="44" y="84" font-family="Microsoft YaHei, Noto Sans CJK SC, Segoe UI, Arial, sans-serif" font-size="15" fill="#4b5563">把一次 prompt 改动变成可复现的评测、统计和诊断报告。</text>
+
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L0,6 L9,3 z" fill="#64748b"/>
+    </marker>
+  </defs>
+
+  <g font-family="Microsoft YaHei, Noto Sans CJK SC, Segoe UI, Arial, sans-serif">
+    <rect x="45" y="145" width="145" height="88" rx="12" fill="#ffffff" stroke="#7dd3fc" stroke-width="2"/>
+    <text x="118" y="181" text-anchor="middle" font-size="18" font-weight="700" fill="#0f172a">任务池</text>
+    <text x="118" y="207" text-anchor="middle" font-size="13" fill="#475569">JSONL 样例</text>
+
+    <line x1="202" y1="189" x2="265" y2="189" stroke="#64748b" stroke-width="2" marker-end="url(#arrow)"/>
+
+    <rect x="278" y="145" width="145" height="88" rx="12" fill="#ffffff" stroke="#34d399" stroke-width="2"/>
+    <text x="351" y="181" text-anchor="middle" font-size="18" font-weight="700" fill="#0f172a">三段切分</text>
+    <text x="351" y="207" text-anchor="middle" font-size="13" fill="#475569">训练 / 验证 / 留出</text>
+
+    <line x1="435" y1="189" x2="498" y2="189" stroke="#64748b" stroke-width="2" marker-end="url(#arrow)"/>
+
+    <rect x="511" y="145" width="145" height="88" rx="12" fill="#ffffff" stroke="#fbbf24" stroke-width="2"/>
+    <text x="584" y="181" text-anchor="middle" font-size="18" font-weight="700" fill="#0f172a">评测导入</text>
+    <text x="584" y="207" text-anchor="middle" font-size="13" fill="#475569">输出和得分</text>
+
+    <line x1="668" y1="189" x2="731" y2="189" stroke="#64748b" stroke-width="2" marker-end="url(#arrow)"/>
+
+    <rect x="744" y="145" width="145" height="88" rx="12" fill="#ffffff" stroke="#a78bfa" stroke-width="2"/>
+    <text x="817" y="181" text-anchor="middle" font-size="18" font-weight="700" fill="#0f172a">统计比较</text>
+    <text x="817" y="207" text-anchor="middle" font-size="13" fill="#475569">CI / p 值 / Holm</text>
+
+    <line x1="901" y1="189" x2="964" y2="189" stroke="#64748b" stroke-width="2" marker-end="url(#arrow)"/>
+
+    <rect x="977" y="145" width="78" height="88" rx="12" fill="#ffffff" stroke="#fb7185" stroke-width="2"/>
+    <text x="1016" y="181" text-anchor="middle" font-size="18" font-weight="700" fill="#0f172a">报告</text>
+    <text x="1016" y="207" text-anchor="middle" font-size="13" fill="#475569">MD/HTML</text>
+
+    <path d="M584 236 C584 282, 742 286, 817 238" fill="none" stroke="#94a3b8" stroke-width="2" stroke-dasharray="6 6" marker-end="url(#arrow)"/>
+    <rect x="290" y="272" width="520" height="46" rx="10" fill="#eef2ff" stroke="#c7d2fe"/>
+    <text x="550" y="301" text-anchor="middle" font-size="15" font-weight="700" fill="#3730a3">可选诊断：软硬转换、轨迹、Riccati、TV-soft</text>
+  </g>
+</svg>
