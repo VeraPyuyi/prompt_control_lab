@@ -13,8 +13,12 @@ def generate_report(run_dir: Path, *, title: str) -> tuple[Path, Path]:
 
     manifest = _read_optional_json(run_dir / "manifest.json")
     metrics = _read_optional_json(run_dir / "metrics.json")
+    if not metrics:
+        metrics = _read_optional_json(run_dir / "candidate" / "metrics.json")
     stats = _read_optional_json(run_dir / "stats.json")
     splits = _read_optional_json(run_dir / "splits.json")
+    explanation = _read_optional_json(run_dir / "explanation.json")
+    gate = _read_optional_json(run_dir / "gate_result.json")
     diagnostics = _collect_diagnostics(run_dir / "diagnostics")
     markdown = render_markdown(
         title=title,
@@ -22,6 +26,8 @@ def generate_report(run_dir: Path, *, title: str) -> tuple[Path, Path]:
         metrics=metrics,
         stats=stats,
         splits=splits,
+        explanation=explanation,
+        gate=gate,
         diagnostics=diagnostics,
     )
     md_path = run_dir / "report.md"
@@ -38,6 +44,8 @@ def render_markdown(
     metrics: JsonDict,
     stats: JsonDict,
     splits: JsonDict,
+    explanation: JsonDict,
+    gate: JsonDict,
     diagnostics: dict[str, JsonDict],
 ) -> str:
     """Render a compact diagnostic report."""
@@ -66,6 +74,36 @@ def render_markdown(
             "",
             "This section explains whether train, validation, and withheld examples were "
             "kept apart.",
+            "",
+        ]
+    if explanation:
+        summary = explanation.get("overall_summary", {})
+        hygiene = explanation.get("data_hygiene", {})
+        examples = explanation.get("example_changes", {})
+        next_action = explanation.get("next_action", {})
+        lines += [
+            "## Quick Mode Explanation",
+            "",
+            f"- Verdict: `{_get(summary, 'verdict')}`",
+            f"- Mean delta: `{_get(summary, 'mean_delta')}`",
+            f"- What this means: {_get(summary, 'what_this_means')}",
+            f"- Data leakage detected: `{_get(hygiene, 'has_leakage')}`",
+            f"- Fixed examples: `{_get(examples, 'fixed_ids')}`",
+            f"- Broken examples: `{_get(examples, 'broken_ids')}`",
+            f"- Next action: `{_get(next_action, 'recommendation')}`",
+            "",
+            "This section turns the raw artifacts into a direct explanation for readers who "
+            "do not want to inspect every JSON file first.",
+            "",
+        ]
+    if gate:
+        lines += [
+            "## Gate Result",
+            "",
+            f"- Status: `{gate.get('status', 'unknown')}`",
+            f"- Meaning: {gate.get('what_this_means', '')}",
+            "",
+            "This section explains whether the run passed the configured policy thresholds.",
             "",
         ]
     if metrics:
@@ -154,3 +192,9 @@ def _pretty(value: JsonDict) -> str:
     import json
 
     return json.dumps(value, indent=2, sort_keys=True)
+
+
+def _get(value: object, key: str) -> object:
+    if isinstance(value, dict):
+        return value.get(key, "missing")
+    return "missing"

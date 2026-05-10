@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1100" height="340" viewBox="0 0 1100 340" role="img" aria-labelledby="title desc">
+  <title id="title">Expert Mode command map</title>
+  <desc id="desc">Expert Mode exposes split, eval, stats, explain, gate, report, and research diagnostics.</desc>
+  <rect width="1100" height="340" rx="18" fill="#f8fafc"/>
+  <text x="44" y="54" font-family="Segoe UI, Arial, sans-serif" font-size="26" font-weight="700" fill="#172033">Expert Mode: compose the exact analysis you need</text>
+  <g font-family="Segoe UI, Arial, sans-serif">
+    <rect x="60" y="110" width="145" height="58" rx="10" fill="#ffffff" stroke="#93c5fd" stroke-width="2"/>
+    <text x="133" y="146" text-anchor="middle" font-size="17" font-weight="700" fill="#0f172a">split</text>
+    <rect x="230" y="110" width="145" height="58" rx="10" fill="#ffffff" stroke="#fbbf24" stroke-width="2"/>
+    <text x="303" y="146" text-anchor="middle" font-size="17" font-weight="700" fill="#0f172a">eval</text>
+    <rect x="400" y="110" width="145" height="58" rx="10" fill="#ffffff" stroke="#22c55e" stroke-width="2"/>
+    <text x="473" y="146" text-anchor="middle" font-size="17" font-weight="700" fill="#0f172a">stats</text>
+    <rect x="570" y="110" width="145" height="58" rx="10" fill="#ffffff" stroke="#a78bfa" stroke-width="2"/>
+    <text x="643" y="146" text-anchor="middle" font-size="17" font-weight="700" fill="#0f172a">explain</text>
+    <rect x="740" y="110" width="145" height="58" rx="10" fill="#ffffff" stroke="#fb7185" stroke-width="2"/>
+    <text x="813" y="146" text-anchor="middle" font-size="17" font-weight="700" fill="#0f172a">gate</text>
+    <rect x="910" y="110" width="145" height="58" rx="10" fill="#ffffff" stroke="#64748b" stroke-width="2"/>
+    <text x="983" y="146" text-anchor="middle" font-size="17" font-weight="700" fill="#0f172a">report</text>
+
+    <rect x="145" y="225" width="170" height="58" rx="10" fill="#ffffff" stroke="#38bdf8" stroke-width="2"/>
+    <text x="230" y="260" text-anchor="middle" font-size="16" font-weight="700" fill="#0f172a">soft-hard</text>
+    <rect x="350" y="225" width="170" height="58" rx="10" fill="#ffffff" stroke="#14b8a6" stroke-width="2"/>
+    <text x="435" y="260" text-anchor="middle" font-size="16" font-weight="700" fill="#0f172a">trajectory</text>
+    <rect x="555" y="225" width="170" height="58" rx="10" fill="#ffffff" stroke="#8b5cf6" stroke-width="2"/>
+    <text x="640" y="260" text-anchor="middle" font-size="16" font-weight="700" fill="#0f172a">riccati</text>
+    <rect x="760" y="225" width="170" height="58" rx="10" fill="#ffffff" stroke="#f97316" stroke-width="2"/>
+    <text x="845" y="260" text-anchor="middle" font-size="16" font-weight="700" fill="#0f172a">tv-soft</text>
+  </g>
+</svg>

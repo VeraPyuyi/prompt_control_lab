@@ -32,6 +32,18 @@ PromptControlLab 的核心思想是：每次运行都应该留下可复查的文
 
 说明什么问题：观察到的提升是否可靠，还是样本波动导致的不确定结果。
 
+## `explanation.json`
+
+记录这次运行的直白或技术解释，包括总体结论、证据强度、数据隔离、slice 变化、样本变化、部署风险和下一步建议。
+
+说明什么问题：不用逐个阅读所有 JSON 文件，也能知道这次 prompt 改动说明了什么。
+
+## `gate_result.json`
+
+记录策略阈值判断结果。
+
+说明什么问题：这次运行是 `pass`、`needs_review` 还是 `fail`，以及触发原因是什么。
+
 ## `diagnostics/soft_hard.json`
 
 记录 soft prompt 向 nearest token embedding 投影的 token index 和距离。
@@ -61,4 +73,3 @@ PromptControlLab 的核心思想是：每次运行都应该留下可复查的文
 把 split、metrics、stats 和 diagnostics 汇总成可读报告。
 
 说明什么问题：这次 prompt 改动是否值得保留，以及下一步应该检查哪里。
-

@@ -2,6 +2,32 @@
 
 本教程采用“怎么操作 -> 得到什么结果 -> 能说明什么问题”的格式。
 
+## 快速模式：一个命令生成报告
+
+操作：
+
+```bash
+pcl init --path demo
+cd demo
+pcl analyze --config promptcontrol.example.yaml --out runs/quick
+```
+
+得到：
+
+- `runs/quick/splits.json`
+- `runs/quick/baseline/metrics.json`
+- `runs/quick/candidate/metrics.json`
+- `runs/quick/stats.json`
+- `runs/quick/explanation.json`
+- `runs/quick/report.md`
+- `runs/quick/report.html`
+
+说明：
+
+这是给非专业人员的最短路径。报告会直接说明 candidate prompt 是否更好、证据是否可靠、哪些样本发生变化、下一步应该检查哪里。
+
+## 专家模式：一步一步控制
+
 ## 1. 初始化示例
 
 操作：
@@ -102,7 +128,40 @@ pcl report --run runs/candidate --title "Candidate Prompt Report"
 
 报告把 split、metrics、stats 和 diagnostics 汇总到一起，适合放进实验记录、评审材料或 prompt 变更记录。
 
-## 6. 检查 soft-to-hard 风险
+## 6. 生成直白或技术解释
+
+操作：
+
+```bash
+pcl explain --run runs/quick --level plain
+pcl explain --run runs/quick --level technical
+```
+
+得到：
+
+- `runs/quick/explanation.json`
+
+说明：
+
+`plain` 面向只想看结论的人。`technical` 保留 artifact path 和原始统计比较，方便专业用户审计和复现。
+
+## 7. 使用策略阈值判断
+
+操作：
+
+```bash
+pcl gate --run runs/quick --policy examples/gate.policy.yaml
+```
+
+得到：
+
+- `runs/quick/gate_result.json`
+
+说明：
+
+gate 会输出 `pass`、`needs_review` 或 `fail`，依据包括最低 candidate 分数、最大允许退化、adjusted p-value 和可选诊断风险。
+
+## 8. 检查 soft-to-hard 风险
 
 操作：
 
@@ -118,7 +177,7 @@ pcl soft-hard --soft soft_prompt.npz --vocab vocab_embeddings.npz --out runs/can
 
 projection distance 越大，说明 soft prompt 向量越不像真实 token embedding。风险高时，soft prompt 训练分数不能直接说明 hard prompt 部署会成功。
 
-## 7. 检查 hidden-state trajectory
+## 9. 检查 hidden-state trajectory
 
 操作：
 
@@ -134,7 +193,7 @@ pcl trajectory --states hidden_states.npz --out runs/candidate/diagnostics
 
 mean step drift 说明轨迹每步变化强度。log-decay slope 为负且 R2 较高时，说明轨迹可能向稳定区域靠近。drift 高或拟合弱时，说明任务或 prompt 可能导致更异质的内部行为。
 
-## 8. 做 Riccati surrogate 诊断
+## 10. 做 Riccati surrogate 诊断
 
 操作：
 
@@ -150,7 +209,7 @@ pcl riccati --trajectory hidden_states.npz --out runs/candidate/diagnostics
 
 closed-loop spectral radius 小于 1 时，说明拟合出来的有限维 surrogate 在这个诊断中是稳定的。它只是对 surrogate 的检查，不是对完整语言模型的证明。
 
-## 9. 比较 time-varying soft-control lane
+## 11. 比较 time-varying soft-control lane
 
 操作：
 
@@ -165,4 +224,3 @@ pcl tv-soft --predictions scored_methods.jsonl --out runs/candidate/diagnostics
 说明：
 
 如果 `time_varying` 明显优于 `static`，但 `shuffled_tv` 和 `random_tv` 没有同样提升，收益更可能来自时序结构。如果 shuffled/random 也提升，应该检查参数容量和选择效应。
-

@@ -2,6 +2,33 @@
 
 This tutorial uses the format "operation -> result -> what it explains".
 
+## Quick Mode: One Command
+
+Operation:
+
+```bash
+pcl init --path demo
+cd demo
+pcl analyze --config promptcontrol.example.yaml --out runs/quick
+```
+
+Result:
+
+- `runs/quick/splits.json`
+- `runs/quick/baseline/metrics.json`
+- `runs/quick/candidate/metrics.json`
+- `runs/quick/stats.json`
+- `runs/quick/explanation.json`
+- `runs/quick/report.md`
+- `runs/quick/report.html`
+
+What it explains:
+
+This is the shortest path for non-specialists. The report says whether the candidate prompt
+looks better, how reliable the evidence is, which examples changed, and what to inspect next.
+
+## Expert Mode: Step by Step
+
 ## 1. Initialize an Example
 
 Operation:
@@ -108,7 +135,42 @@ What it explains:
 
 The report gathers split hygiene, metrics, statistics, and diagnostics into one readable file.
 
-## 6. Check Soft-to-Hard Risk
+## 6. Generate Plain or Technical Explanations
+
+Operation:
+
+```bash
+pcl explain --run runs/quick --level plain
+pcl explain --run runs/quick --level technical
+```
+
+Result:
+
+- `runs/quick/explanation.json`
+
+What it explains:
+
+Plain explanations are written for readers who want the conclusion quickly. Technical
+explanations keep artifact paths and raw comparison details for audit and reproduction.
+
+## 7. Apply a Gate Policy
+
+Operation:
+
+```bash
+pcl gate --run runs/quick --policy examples/gate.policy.yaml
+```
+
+Result:
+
+- `runs/quick/gate_result.json`
+
+What it explains:
+
+The gate returns `pass`, `needs_review`, or `fail` based on thresholds such as minimum
+candidate score, maximum regression, adjusted p-value, and optional diagnostic risk.
+
+## 8. Check Soft-to-Hard Risk
 
 Operation:
 
@@ -125,7 +187,7 @@ What it explains:
 Large projection distances mean the learned soft vectors are far from real token embeddings.
 In that case, strong soft prompt performance does not guarantee hard prompt deployability.
 
-## 7. Inspect Hidden-State Trajectories
+## 9. Inspect Hidden-State Trajectories
 
 Operation:
 
@@ -143,7 +205,7 @@ Mean step drift describes how strongly the trajectory moves step to step. A nega
 slope with good fit quality suggests motion toward a stable region. High drift or weak fit
 suggests more heterogeneous internal behavior.
 
-## 8. Run Riccati Surrogate Diagnostics
+## 10. Run Riccati Surrogate Diagnostics
 
 Operation:
 
@@ -160,7 +222,7 @@ What it explains:
 A closed-loop spectral radius below 1 means the fitted finite-dimensional surrogate is stable in
 this diagnostic. It is not a proof about the full language model.
 
-## 9. Compare a Time-Varying Soft-Control Lane
+## 11. Compare a Time-Varying Soft-Control Lane
 
 Operation:
 
@@ -177,4 +239,3 @@ What it explains:
 If `time_varying` beats `static` while `shuffled_tv` and `random_tv` do not, the gain is more
 consistent with temporal structure. If shuffled or random variants also improve, inspect capacity
 and selection effects.
-

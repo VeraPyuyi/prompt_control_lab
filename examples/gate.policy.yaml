@@ -1,0 +1,4 @@
+# Example gate policy for `pcl gate`.
+min_candidate_score: 0.75
+max_regression: 0.0
+require_adjusted_p_below: 1.0

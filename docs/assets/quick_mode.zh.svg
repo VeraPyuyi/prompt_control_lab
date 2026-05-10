@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1100" height="300" viewBox="0 0 1100 300" role="img" aria-labelledby="title desc">
+  <title id="title">快速模式流程</title>
+  <desc id="desc">快速模式运行 analyze，生成切分、分数、统计、解释和报告。</desc>
+  <rect width="1100" height="300" rx="18" fill="#f7fafc"/>
+  <text x="44" y="54" font-family="Microsoft YaHei, Segoe UI, Arial, sans-serif" font-size="26" font-weight="700" fill="#172033">快速模式：一个命令生成可读报告</text>
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L0,6 L9,3 z" fill="#64748b"/>
+    </marker>
+  </defs>
+  <g font-family="Microsoft YaHei, Segoe UI, Arial, sans-serif">
+    <rect x="55" y="125" width="155" height="82" rx="12" fill="#ffffff" stroke="#93c5fd" stroke-width="2"/>
+    <text x="133" y="158" text-anchor="middle" font-size="18" font-weight="700" fill="#0f172a">输入文件</text>
+    <text x="133" y="184" text-anchor="middle" font-size="13" fill="#475569">任务 + 输出</text>
+    <line x1="222" y1="166" x2="286" y2="166" stroke="#64748b" stroke-width="2" marker-end="url(#arrow)"/>
+    <rect x="300" y="125" width="155" height="82" rx="12" fill="#e0f2fe" stroke="#38bdf8" stroke-width="2"/>
+    <text x="378" y="158" text-anchor="middle" font-size="18" font-weight="700" fill="#075985">pcl analyze</text>
+    <text x="378" y="184" text-anchor="middle" font-size="13" fill="#475569">自动流程</text>
+    <line x1="467" y1="166" x2="531" y2="166" stroke="#64748b" stroke-width="2" marker-end="url(#arrow)"/>
+    <rect x="545" y="125" width="155" height="82" rx="12" fill="#ffffff" stroke="#fbbf24" stroke-width="2"/>
+    <text x="623" y="158" text-anchor="middle" font-size="18" font-weight="700" fill="#0f172a">统计比较</text>
+    <text x="623" y="184" text-anchor="middle" font-size="13" fill="#475569">区间 + p值</text>
+    <line x1="712" y1="166" x2="776" y2="166" stroke="#64748b" stroke-width="2" marker-end="url(#arrow)"/>
+    <rect x="790" y="125" width="155" height="82" rx="12" fill="#ffffff" stroke="#a78bfa" stroke-width="2"/>
+    <text x="868" y="158" text-anchor="middle" font-size="18" font-weight="700" fill="#0f172a">解释结论</text>
+    <text x="868" y="184" text-anchor="middle" font-size="13" fill="#475569">直白说明</text>
+    <line x1="957" y1="166" x2="1000" y2="166" stroke="#64748b" stroke-width="2" marker-end="url(#arrow)"/>
+    <text x="1030" y="158" text-anchor="middle" font-size="18" font-weight="700" fill="#166534">报告</text>
+    <text x="1030" y="184" text-anchor="middle" font-size="13" fill="#475569">md/html</text>
+  </g>
+</svg>

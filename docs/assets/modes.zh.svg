@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1100" height="390" viewBox="0 0 1100 390" role="img" aria-labelledby="title desc">
+  <title id="title">PromptControlLab 双模式</title>
+  <desc id="desc">快速模式用一个命令生成报告，专家模式暴露每个诊断命令。</desc>
+  <rect width="1100" height="390" rx="18" fill="#f8fafc"/>
+  <text x="44" y="54" font-family="Microsoft YaHei, Segoe UI, Arial, sans-serif" font-size="28" font-weight="700" fill="#172033">两种模式，共用同一套产物</text>
+  <text x="44" y="84" font-family="Microsoft YaHei, Segoe UI, Arial, sans-serif" font-size="15" fill="#4b5563">快速模式直接出报告，专家模式保留每一步的精细控制。</text>
+
+  <g font-family="Microsoft YaHei, Segoe UI, Arial, sans-serif">
+    <rect x="60" y="125" width="455" height="205" rx="14" fill="#ffffff" stroke="#38bdf8" stroke-width="2"/>
+    <text x="88" y="165" font-size="23" font-weight="700" fill="#0f172a">快速模式</text>
+    <text x="88" y="195" font-size="15" fill="#475569">给非专业人员和快速评审使用</text>
+    <rect x="88" y="222" width="170" height="42" rx="8" fill="#e0f2fe"/>
+    <text x="173" y="249" text-anchor="middle" font-size="16" font-weight="700" fill="#075985">pcl analyze</text>
+    <text x="88" y="292" font-size="15" fill="#334155">输出：切分、指标、统计、解释、报告</text>
+
+    <rect x="585" y="125" width="455" height="205" rx="14" fill="#ffffff" stroke="#22c55e" stroke-width="2"/>
+    <text x="613" y="165" font-size="23" font-weight="700" fill="#0f172a">专家模式</text>
+    <text x="613" y="195" font-size="15" fill="#475569">给研究者和工程团队使用</text>
+    <rect x="613" y="222" width="170" height="42" rx="8" fill="#dcfce7"/>
+    <text x="698" y="249" text-anchor="middle" font-size="16" font-weight="700" fill="#166534">分步命令</text>
+    <text x="613" y="292" font-size="15" fill="#334155">精细控制：统计、soft-hard、trajectory、Riccati</text>
+  </g>
+</svg>

@@ -57,3 +57,10 @@ PromptControlLab helps move the field toward:
 - routine hidden-state trajectory diagnostics;
 - prompt engineering that can grow into prompt control engineering.
 
+## Explainability Layer
+
+The `explanation.json` artifact translates raw metrics, statistical tests, slice changes, example
+changes, and optional diagnostics into plain or technical explanations.
+
+Contribution: the same tool can support non-specialist reviewers who need a direct conclusion and
+expert users who need audit details.

@@ -24,3 +24,5 @@ score?" It also asks:
 It is designed for prompt optimization research, reproducible experiments, local prompt regression
 testing, soft prompt deployment analysis, and open-model hidden-state diagnostics.
 
+The toolkit supports two modes. Quick Mode gives non-specialists one command for a readable report.
+Expert Mode keeps every step available as an individual command for deeper control and auditing.

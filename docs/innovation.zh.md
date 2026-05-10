@@ -48,3 +48,8 @@ PromptControlLab 可以帮助相关领域向这些方向发展：
 - hidden-state trajectory 成为常规诊断对象；
 - prompt engineering 向 prompt control engineering 发展。
 
+## 可解释性层
+
+`explanation.json` 会把原始指标、统计检验、slice 变化、样本变化和可选诊断结果转换成直白解释或技术解释。
+
+推动作用：同一套工具既能服务只想看结论的非专业评审者，也能服务需要审计细节的专业用户。

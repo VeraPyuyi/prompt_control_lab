@@ -21,3 +21,4 @@ PromptControlLab 的目标是把这些问题变成可检查的工程步骤。它
 
 因此，它适合用在 prompt 优化研究、论文复现、本地 prompt regression testing、soft prompt 部署分析和 open-model hidden-state 诊断中。
 
+工具支持两种模式。Quick Mode 给非专业人员一个命令生成可读报告。Expert Mode 保留每个独立命令，方便专业用户深入控制和审计。

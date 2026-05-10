@@ -1,5 +1,11 @@
 # Users
 
+## Non-Specialist Reviewers
+
+Use Quick Mode when you want a clear report without tuning every command. `pcl analyze` turns
+task data and two prediction files into split hygiene, metrics, statistics, explanation, and
+Markdown/HTML reports.
+
 ## Prompt Researchers
 
 Use PromptControlLab to enforce train/validation/withheld separation, save split hashes, keep
@@ -25,3 +31,7 @@ slice-level changes, and reports.
 Import hidden-state trajectories and inspect drift, log-decay slope, turnpike-like signals, and
 Riccati surrogate stability. These are diagnostics, not proofs about a full language model.
 
+## Expert Users
+
+Use Expert Mode when you need fine control over each step. The individual commands let you choose
+split settings, metrics, sampling counts, diagnostics, and policy gates separately.

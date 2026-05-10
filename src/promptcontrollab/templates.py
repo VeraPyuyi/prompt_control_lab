@@ -28,12 +28,22 @@ CANDIDATE_JSONL = """\
 """
 
 CONFIG_YAML = """\
-# PromptControlLab example.
-# The current v0.1 CLI accepts explicit command flags; this file documents the run.
+# PromptControlLab Quick Mode example.
+mode: quick
 data: examples/tasks.jsonl
 metric: exact_match
 baseline_predictions: examples/predictions_baseline.jsonl
 candidate_predictions: examples/predictions_candidate.jsonl
+out: runs/quick
+explain_level: plain
+gate_policy: examples/gate.policy.yaml
+"""
+
+GATE_POLICY_YAML = """\
+# Example gate policy for `pcl gate`.
+min_candidate_score: 0.75
+max_regression: 0.0
+require_adjusted_p_below: 1.0
 """
 
 
@@ -48,4 +58,5 @@ def write_example_project(path: Path) -> None:
         CANDIDATE_JSONL,
         encoding="utf-8",
     )
+    (path / "examples" / "gate.policy.yaml").write_text(GATE_POLICY_YAML, encoding="utf-8")
     (path / "promptcontrol.example.yaml").write_text(CONFIG_YAML, encoding="utf-8")

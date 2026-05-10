@@ -33,6 +33,19 @@ and Holm-adjusted p-value.
 
 What it explains: whether an observed change is reliable or still uncertain.
 
+## `explanation.json`
+
+Stores a plain or technical explanation of the run: verdict, evidence strength, data hygiene,
+slice changes, example changes, deployment risk, and next action.
+
+What it explains: what the artifacts mean for a reader who does not want to inspect every file.
+
+## `gate_result.json`
+
+Stores the result of applying a policy file to a run.
+
+What it explains: whether the run passes, needs review, or fails configured thresholds.
+
 ## `diagnostics/soft_hard.json`
 
 Stores nearest-token projection indices and distances for a soft prompt.
@@ -62,4 +75,3 @@ What it explains: whether time-varying gains are more consistent with temporal s
 Collects split hygiene, metrics, statistics, and diagnostics into a readable report.
 
 What it explains: whether the prompt change should be kept and what should be inspected next.
-

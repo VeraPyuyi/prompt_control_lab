@@ -1,7 +1,9 @@
-# PromptControlLab example.
-# The current v0.1 CLI accepts explicit command flags; this file documents the run.
+# PromptControlLab Quick Mode example.
+mode: quick
 data: examples/tasks.jsonl
 metric: exact_match
 baseline_predictions: examples/predictions_baseline.jsonl
 candidate_predictions: examples/predictions_candidate.jsonl
-
+out: runs/quick
+explain_level: plain
+gate_policy: examples/gate.policy.yaml
