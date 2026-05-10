@@ -1,6 +1,6 @@
-# PromptControlLab
+# Prompt_Control_Lab
 
-PromptControlLab 是一个开源工具包，用于 prompt 评测、诊断、复现和控制论分析。
+Prompt_Control_Lab 是一个开源工具包，用于 prompt 评测、诊断、复现和控制论分析。
 
 它帮助研究者和工程团队回答这些问题：
 
