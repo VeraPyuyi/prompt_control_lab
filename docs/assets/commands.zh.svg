@@ -1,0 +1,63 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="840" viewBox="0 0 1200 840" role="img" aria-labelledby="title desc">
+  <title id="title">PromptControlLab 命令示例</title>
+  <desc id="desc">九个 CLI 命令对应的示例输出，以及每个命令回答的问题。</desc>
+  <rect width="1200" height="840" rx="20" fill="#f8fafc"/>
+  <text x="50" y="58" font-family="Microsoft YaHei, Noto Sans CJK SC, Segoe UI, Arial, sans-serif" font-size="30" font-weight="700" fill="#111827">每个功能都有一个示例</text>
+  <text x="50" y="90" font-family="Microsoft YaHei, Noto Sans CJK SC, Segoe UI, Arial, sans-serif" font-size="15" fill="#475569">每个命令都会写出一个产物，并回答一个明确的 prompt 评测问题。</text>
+
+  <g font-family="Microsoft YaHei, Noto Sans CJK SC, Segoe UI, Arial, sans-serif">
+    <rect x="50" y="130" width="330" height="185" rx="14" fill="#ffffff" stroke="#7dd3fc" stroke-width="2"/>
+    <text x="74" y="165" font-size="19" font-weight="700" fill="#0f172a">pcl init</text>
+    <text x="74" y="198" font-size="14" fill="#334155">示例：生成 demo 文件</text>
+    <text x="74" y="226" font-size="14" fill="#334155">产物：任务和预测样例</text>
+    <text x="74" y="254" font-size="14" fill="#334155">说明：工具需要什么输入</text>
+
+    <rect x="435" y="130" width="330" height="185" rx="14" fill="#ffffff" stroke="#34d399" stroke-width="2"/>
+    <text x="459" y="165" font-size="19" font-weight="700" fill="#0f172a">pcl split</text>
+    <text x="459" y="198" font-size="14" fill="#334155">示例：切分 JSONL 任务</text>
+    <text x="459" y="226" font-size="14" fill="#334155">产物：splits.json</text>
+    <text x="459" y="254" font-size="14" fill="#334155">说明：是否泄漏和可复现</text>
+
+    <rect x="820" y="130" width="330" height="185" rx="14" fill="#ffffff" stroke="#fbbf24" stroke-width="2"/>
+    <text x="844" y="165" font-size="19" font-weight="700" fill="#0f172a">pcl eval</text>
+    <text x="844" y="198" font-size="14" fill="#334155">示例：给模型输出打分</text>
+    <text x="844" y="226" font-size="14" fill="#334155">产物：predictions + metrics</text>
+    <text x="844" y="254" font-size="14" fill="#334155">说明：单条和分组表现</text>
+
+    <rect x="50" y="355" width="330" height="185" rx="14" fill="#ffffff" stroke="#a78bfa" stroke-width="2"/>
+    <text x="74" y="390" font-size="19" font-weight="700" fill="#0f172a">pcl stats</text>
+    <text x="74" y="423" font-size="14" fill="#334155">示例：比较两个 run</text>
+    <text x="74" y="451" font-size="14" fill="#334155">产物：stats.json</text>
+    <text x="74" y="479" font-size="14" fill="#334155">说明：提升是否可靠</text>
+
+    <rect x="435" y="355" width="330" height="185" rx="14" fill="#ffffff" stroke="#fb7185" stroke-width="2"/>
+    <text x="459" y="390" font-size="19" font-weight="700" fill="#0f172a">pcl report</text>
+    <text x="459" y="423" font-size="14" fill="#334155">示例：生成运行报告</text>
+    <text x="459" y="451" font-size="14" fill="#334155">产物：report.md / html</text>
+    <text x="459" y="479" font-size="14" fill="#334155">说明：下一步检查哪里</text>
+
+    <rect x="820" y="355" width="330" height="185" rx="14" fill="#ffffff" stroke="#38bdf8" stroke-width="2"/>
+    <text x="844" y="390" font-size="19" font-weight="700" fill="#0f172a">pcl soft-hard</text>
+    <text x="844" y="423" font-size="14" fill="#334155">示例：投影 soft 向量</text>
+    <text x="844" y="451" font-size="14" fill="#334155">产物：soft_hard.json</text>
+    <text x="844" y="479" font-size="14" fill="#334155">说明：hard prompt 风险</text>
+
+    <rect x="50" y="580" width="330" height="185" rx="14" fill="#ffffff" stroke="#22c55e" stroke-width="2"/>
+    <text x="74" y="615" font-size="19" font-weight="700" fill="#0f172a">pcl trajectory</text>
+    <text x="74" y="648" font-size="14" fill="#334155">示例：读取 hidden states</text>
+    <text x="74" y="676" font-size="14" fill="#334155">产物：trajectory.json</text>
+    <text x="74" y="704" font-size="14" fill="#334155">说明：漂移和衰减</text>
+
+    <rect x="435" y="580" width="330" height="185" rx="14" fill="#ffffff" stroke="#8b5cf6" stroke-width="2"/>
+    <text x="459" y="615" font-size="19" font-weight="700" fill="#0f172a">pcl riccati</text>
+    <text x="459" y="648" font-size="14" fill="#334155">示例：拟合 surrogate</text>
+    <text x="459" y="676" font-size="14" fill="#334155">产物：riccati.json</text>
+    <text x="459" y="704" font-size="14" fill="#334155">说明：surrogate 稳定性</text>
+
+    <rect x="820" y="580" width="330" height="185" rx="14" fill="#ffffff" stroke="#f97316" stroke-width="2"/>
+    <text x="844" y="615" font-size="19" font-weight="700" fill="#0f172a">pcl tv-soft</text>
+    <text x="844" y="648" font-size="14" fill="#334155">示例：比较方法分组</text>
+    <text x="844" y="676" font-size="14" fill="#334155">产物：tv_soft.json</text>
+    <text x="844" y="704" font-size="14" fill="#334155">说明：结构还是容量</text>
+  </g>
+</svg>

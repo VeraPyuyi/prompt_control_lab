@@ -23,6 +23,10 @@ PromptControlLab 是一个开源工具包，用于 prompt 评测、诊断、复�
 
 每次运行都会留下一个小型 audit trail。这些文件既方便人阅读，也方便脚本、论文复现和后续工具继续消费。
 
+![PromptControlLab 命令示例](docs/assets/commands.zh.svg)
+
+下面每个功能都给出一个具体示例，格式统一为：怎么操作、得到什么结果、这个结果能说明什么问题。
+
 ## 面向谁
 
 - prompt optimization 研究者：需要干净的 train/val/withheld 协议。
@@ -45,26 +49,47 @@ uv pip install -e ".[dev,research]"
 
 核心命令只依赖 Python 标准库。`soft-hard`、`trajectory`、`riccati` 等研究诊断命令使用可选科学计算依赖。
 
-## 快速开始
+## 功能示例
 
-生成示例项目：
+### 1. `pcl init`：生成可运行示例
+
+操作：
 
 ```bash
 pcl init --path demo
 cd demo
 ```
 
-你会得到示例任务、baseline 输出、candidate 输出和一个配置说明。它说明这个工具需要什么输入格式。
+得到：
 
-生成可复现的 train/val/withheld 切分：
+- `examples/tasks.jsonl`
+- `examples/predictions_baseline.jsonl`
+- `examples/predictions_candidate.jsonl`
+- `promptcontrol.example.yaml`
+
+说明什么问题：
+
+这些文件展示了最小输入格式。任务文件包含 `id`、`input`、`expected` 和 `slice`。预测文件用同一个 `id` 对应模型输出 `output`。
+
+### 2. `pcl split`：切分 train、validation 和 withheld
+
+操作：
 
 ```bash
 pcl split --data examples/tasks.jsonl --out runs/candidate --seed 0
 ```
 
-你会得到 `runs/candidate/splits.json`。里面的 split hash 和 leakage report 说明数据切分是否可复现，以及 train/val/withheld 是否有交叉泄漏。
+得到：
 
-评测 baseline 和 candidate：
+- `runs/candidate/splits.json`
+
+说明什么问题：
+
+这个文件包含 train、validation、withheld 的样本 id、split hash 和 leakage report。如果 `has_leakage` 是 false，说明三组样本没有交叉。split hash 可以用来复现同一次切分。
+
+### 3. `pcl eval`：给模型输出打分
+
+操作：
 
 ```bash
 pcl eval --data examples/tasks.jsonl `
@@ -80,9 +105,20 @@ pcl eval --data examples/tasks.jsonl `
   --method candidate
 ```
 
-你会得到每个 run 的 `predictions.jsonl` 和 `metrics.json`。它们说明每条样本答得如何、每个任务 slice 表现如何、总体分数是多少。
+得到：
 
-比较 candidate 是否真的比 baseline 好：
+- `runs/baseline/predictions.jsonl`
+- `runs/baseline/metrics.json`
+- `runs/candidate/predictions.jsonl`
+- `runs/candidate/metrics.json`
+
+说明什么问题：
+
+`predictions.jsonl` 说明每条样本的输出、期望答案、得分、slice 和错误信息。`metrics.json` 说明总体平均分和每个 slice 的平均分。这样可以发现“平均分变好，但某类任务变差”的情况。
+
+### 4. `pcl stats`：判断提升是否可靠
+
+操作：
 
 ```bash
 pcl stats --baseline runs/baseline/predictions.jsonl `
@@ -90,51 +126,125 @@ pcl stats --baseline runs/baseline/predictions.jsonl `
   --out runs/candidate/stats.json
 ```
 
-你会得到置信区间、paired permutation p-value 和 Holm-adjusted p-value。它们说明新 prompt 的提升是否可靠，还是样本波动导致的不确定结果。
+得到：
 
-生成报告：
+- `runs/candidate/stats.json`
+
+说明什么问题：
+
+这个文件包含 baseline 均值、candidate 均值、mean delta、bootstrap 置信区间、paired permutation p-value 和 Holm-adjusted p-value。如果置信区间跨过 0，说明提升还不稳。如果区间在 0 以上且 adjusted p-value 很小，说明 candidate 的提升更可靠。
+
+### 5. `pcl report`：把产物汇总成人能读的报告
+
+操作：
 
 ```bash
 pcl report --run runs/candidate --title "Candidate Prompt Report"
 ```
 
-你会得到 `report.md` 和 `report.html`。报告会说明这次 prompt 改动表现如何、统计结果意味着什么、下一步应该检查哪里。
+得到：
+
+- `runs/candidate/report.md`
+- `runs/candidate/report.html`
+
+说明什么问题：
+
+报告会汇总 split hygiene、metrics、统计比较，以及已经写入 `diagnostics/` 的诊断结果。它能直白说明这次 prompt 改动是否值得保留，以及下一步应该检查哪里。
+
+### 6. `pcl soft-hard`：检查 soft prompt 转 hard prompt 的风险
+
+操作：
+
+```bash
+pcl soft-hard --soft soft_prompt.npz `
+  --vocab vocab_embeddings.npz `
+  --out runs/candidate/diagnostics
+```
+
+输入格式：
+
+- `soft_prompt.npz` 里必须有一个二维数组 `soft`。
+- `vocab_embeddings.npz` 里必须有一个二维数组 `embeddings`。
+
+得到：
+
+- `runs/candidate/diagnostics/soft_hard.json`
+
+说明什么问题：
+
+这个文件会给出 nearest-token index、平均投影距离、最大投影距离和风险等级。距离越大，说明 soft prompt 学到的向量越不像真实 token embedding，转成 hard prompt 后越可能丢失行为。
 
 ## 研究诊断命令
 
 ![PromptControlLab 研究诊断](docs/assets/diagnostics.zh.svg)
 
-soft prompt 到 hard prompt 的风险：
+### 7. `pcl trajectory`：分析 hidden-state 轨迹漂移和衰减
 
-```bash
-pcl soft-hard --soft soft_prompt.npz --vocab vocab_embeddings.npz --out runs/candidate/diagnostics
-```
-
-它会输出 nearest-token projection distance。距离越大，说明 soft prompt 学到的向量越不像真实 token embedding，转成 hard prompt 后越可能丢失行为。
-
-hidden-state trajectory 诊断：
+操作：
 
 ```bash
 pcl trajectory --states hidden_states.npz --out runs/candidate/diagnostics
 ```
 
-它会输出 step drift、log-decay slope 和拟合质量。如果 slope 为负且拟合质量较好，说明轨迹可能向某个稳定区域靠近；如果拟合弱或 drift 高，说明行为可能更异质或不稳定。
+输入格式：
 
-Riccati surrogate 诊断：
+- `hidden_states.npz` 里必须有一个二维数组 `states`，形状是 `[steps, hidden_dim]`。
+
+得到：
+
+- `runs/candidate/diagnostics/trajectory.json`
+
+说明什么问题：
+
+这个文件会给出 mean step drift、max step drift、log-decay slope、拟合质量和 turnpike-like signal。如果 slope 为负且拟合质量较好，说明轨迹可能向某个稳定区域靠近。如果 drift 高或拟合弱，说明内部行为可能更异质或更不稳定。
+
+### 8. `pcl riccati`：检查有限维 surrogate 是否稳定
+
+操作：
 
 ```bash
 pcl riccati --trajectory hidden_states.npz --out runs/candidate/diagnostics
 ```
 
-它会构造有限维 surrogate 并检查 closed-loop spectral radius。这个结果只说明 surrogate 是否自洽稳定，不是对完整语言模型的数学证明。
+也可以直接提供矩阵：
 
-time-varying soft-control lane：
+```bash
+pcl riccati --matrices matrices.npz --out runs/candidate/diagnostics
+```
+
+输入格式：
+
+- `--trajectory` 读取包含 `states` 的 `hidden_states.npz`。
+- `--matrices` 读取包含 `A`、`B`、`Q`、`R` 的 `matrices.npz`。
+
+得到：
+
+- `runs/candidate/diagnostics/riccati.json`
+
+说明什么问题：
+
+这个文件会给出 closed-loop spectral radius、diagnostic decay rate 和 surrogate 是否稳定。它只是在检查拟合出的有限维 surrogate 是否自洽稳定，不是对完整语言模型的数学证明。
+
+### 9. `pcl tv-soft`：比较 static 和 time-varying 方法组
+
+操作：
 
 ```bash
 pcl tv-soft --predictions scored_methods.jsonl --out runs/candidate/diagnostics
 ```
 
-它会比较 `static`、`time_varying`、`shuffled_tv`、`random_tv` 等方法，帮助判断收益来自时序结构，还是只是参数容量或选择效应。
+输入格式：
+
+- `scored_methods.jsonl` 使用已经打分的 prediction record，字段包括 `id`、`output`、`expected`、`score`、`slice` 和 `method`。
+- 常见 `method` 名称包括 `static`、`time_varying`、`shuffled_tv` 和 `random_tv`。
+
+得到：
+
+- `runs/candidate/diagnostics/tv_soft.json`
+
+说明什么问题：
+
+如果 `time_varying` 明显优于 `static`，但 `shuffled_tv` 和 `random_tv` 没有同样提升，收益更可能来自时序结构。如果 shuffled 或 random 也提升，应该检查参数容量和选择效应。
 
 ## 文档
 

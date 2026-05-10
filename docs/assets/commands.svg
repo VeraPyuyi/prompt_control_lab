@@ -1,0 +1,63 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="840" viewBox="0 0 1200 840" role="img" aria-labelledby="title desc">
+  <title id="title">PromptControlLab command examples</title>
+  <desc id="desc">Nine CLI commands mapped to example outputs and the question each command answers.</desc>
+  <rect width="1200" height="840" rx="20" fill="#f8fafc"/>
+  <text x="50" y="58" font-family="Segoe UI, Arial, sans-serif" font-size="30" font-weight="700" fill="#111827">Function-by-function examples</text>
+  <text x="50" y="90" font-family="Segoe UI, Arial, sans-serif" font-size="15" fill="#475569">Each command writes an artifact and answers one clear prompt-evaluation question.</text>
+
+  <g font-family="Segoe UI, Arial, sans-serif">
+    <rect x="50" y="130" width="330" height="185" rx="14" fill="#ffffff" stroke="#7dd3fc" stroke-width="2"/>
+    <text x="74" y="165" font-size="19" font-weight="700" fill="#0f172a">pcl init</text>
+    <text x="74" y="198" font-size="14" fill="#334155">Example: create demo files</text>
+    <text x="74" y="226" font-size="14" fill="#334155">Output: tasks and predictions</text>
+    <text x="74" y="254" font-size="14" fill="#334155">Shows: required input format</text>
+
+    <rect x="435" y="130" width="330" height="185" rx="14" fill="#ffffff" stroke="#34d399" stroke-width="2"/>
+    <text x="459" y="165" font-size="19" font-weight="700" fill="#0f172a">pcl split</text>
+    <text x="459" y="198" font-size="14" fill="#334155">Example: split JSONL tasks</text>
+    <text x="459" y="226" font-size="14" fill="#334155">Output: splits.json</text>
+    <text x="459" y="254" font-size="14" fill="#334155">Shows: leakage and split hash</text>
+
+    <rect x="820" y="130" width="330" height="185" rx="14" fill="#ffffff" stroke="#fbbf24" stroke-width="2"/>
+    <text x="844" y="165" font-size="19" font-weight="700" fill="#0f172a">pcl eval</text>
+    <text x="844" y="198" font-size="14" fill="#334155">Example: score raw outputs</text>
+    <text x="844" y="226" font-size="14" fill="#334155">Output: predictions + metrics</text>
+    <text x="844" y="254" font-size="14" fill="#334155">Shows: item and slice scores</text>
+
+    <rect x="50" y="355" width="330" height="185" rx="14" fill="#ffffff" stroke="#a78bfa" stroke-width="2"/>
+    <text x="74" y="390" font-size="19" font-weight="700" fill="#0f172a">pcl stats</text>
+    <text x="74" y="423" font-size="14" fill="#334155">Example: compare two runs</text>
+    <text x="74" y="451" font-size="14" fill="#334155">Output: stats.json</text>
+    <text x="74" y="479" font-size="14" fill="#334155">Shows: reliability of the delta</text>
+
+    <rect x="435" y="355" width="330" height="185" rx="14" fill="#ffffff" stroke="#fb7185" stroke-width="2"/>
+    <text x="459" y="390" font-size="19" font-weight="700" fill="#0f172a">pcl report</text>
+    <text x="459" y="423" font-size="14" fill="#334155">Example: render run summary</text>
+    <text x="459" y="451" font-size="14" fill="#334155">Output: report.md / html</text>
+    <text x="459" y="479" font-size="14" fill="#334155">Shows: what to inspect next</text>
+
+    <rect x="820" y="355" width="330" height="185" rx="14" fill="#ffffff" stroke="#38bdf8" stroke-width="2"/>
+    <text x="844" y="390" font-size="19" font-weight="700" fill="#0f172a">pcl soft-hard</text>
+    <text x="844" y="423" font-size="14" fill="#334155">Example: project soft vectors</text>
+    <text x="844" y="451" font-size="14" fill="#334155">Output: soft_hard.json</text>
+    <text x="844" y="479" font-size="14" fill="#334155">Shows: hard-prompt risk</text>
+
+    <rect x="50" y="580" width="330" height="185" rx="14" fill="#ffffff" stroke="#22c55e" stroke-width="2"/>
+    <text x="74" y="615" font-size="19" font-weight="700" fill="#0f172a">pcl trajectory</text>
+    <text x="74" y="648" font-size="14" fill="#334155">Example: read hidden states</text>
+    <text x="74" y="676" font-size="14" fill="#334155">Output: trajectory.json</text>
+    <text x="74" y="704" font-size="14" fill="#334155">Shows: drift and decay</text>
+
+    <rect x="435" y="580" width="330" height="185" rx="14" fill="#ffffff" stroke="#8b5cf6" stroke-width="2"/>
+    <text x="459" y="615" font-size="19" font-weight="700" fill="#0f172a">pcl riccati</text>
+    <text x="459" y="648" font-size="14" fill="#334155">Example: fit surrogate</text>
+    <text x="459" y="676" font-size="14" fill="#334155">Output: riccati.json</text>
+    <text x="459" y="704" font-size="14" fill="#334155">Shows: surrogate stability</text>
+
+    <rect x="820" y="580" width="330" height="185" rx="14" fill="#ffffff" stroke="#f97316" stroke-width="2"/>
+    <text x="844" y="615" font-size="19" font-weight="700" fill="#0f172a">pcl tv-soft</text>
+    <text x="844" y="648" font-size="14" fill="#334155">Example: compare method groups</text>
+    <text x="844" y="676" font-size="14" fill="#334155">Output: tv_soft.json</text>
+    <text x="844" y="704" font-size="14" fill="#334155">Shows: structure vs capacity</text>
+  </g>
+</svg>
