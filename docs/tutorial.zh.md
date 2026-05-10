@@ -34,6 +34,12 @@ pcl analyze --config promptcontrol.example.yaml --out runs/quick
 pcl improve --prompt "回答下面的问题"
 ```
 
+控制 token 成本的操作：
+
+```bash
+pcl improve --prompt "回答下面的问题" --token-mode aggressive --max-tokens 80
+```
+
 结合已有检测报告：
 
 ```bash
@@ -46,10 +52,11 @@ pcl improve --prompt-file prompts/current.txt --run runs/quick --out runs/improv
 - `runs/improve/improved_prompt.txt`
 - `runs/improve/prompt_improvement.json`
 - `runs/improve/prompt_diff.md`
+- 终端、JSON 和 Markdown diff 里的 estimated token 数
 
 说明：
 
-这个命令会给出一个更清楚的 prompt，包含任务目标、输出格式要求和稳定性要求。结合 `--run` 时，它还会根据已有诊断加入退化 slice、变差样本或部署风险提示。
+这个命令会给出一个更清楚的 prompt，包含任务目标、输出格式要求和稳定性要求。结合 `--run` 时，它还会根据已有诊断加入退化 slice、变差样本或部署风险提示。默认 token 模式是 `balanced`：尽量保留关键约束，同时减少不必要措辞。`aggressive` 更短、更省成本，但可能减少一部分保护性规则。`--max-tokens` 是估算预算。
 
 ## 专家模式：一步一步控制
 

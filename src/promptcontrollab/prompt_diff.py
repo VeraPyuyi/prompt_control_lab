@@ -30,5 +30,21 @@ def render_prompt_diff(improvement: PromptImprovement) -> str:
     if improvement.context_notes:
         lines += ["", "## Context Notes", ""]
         lines.extend(f"- {note}" for note in improvement.context_notes)
+    token_report = improvement.token_report.to_json()
+    lines += [
+        "",
+        "## Estimated Token Cost",
+        "",
+        f"- Original prompt: {token_report['original_estimated_tokens']}",
+        f"- Improved prompt: {token_report['improved_estimated_tokens']}",
+        f"- Token mode: {token_report['token_mode']}",
+    ]
+    if token_report["max_tokens"] is not None:
+        lines.extend(
+            [
+                f"- Max tokens: {token_report['max_tokens']}",
+                f"- Within budget: {token_report['within_budget']}",
+            ]
+        )
     lines.append("")
     return "\n".join(lines)

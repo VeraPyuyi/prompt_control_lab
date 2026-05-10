@@ -55,13 +55,15 @@ What it explains: the recommended plain-language rewrite of the original prompt.
 ## `prompt_improvement.json`
 
 Stores the original prompt, improved prompt, detected language, goal, style, changes, and report
-context notes.
+context notes. It also includes `token_report`, a dependency-free estimate of original and
+improved prompt tokens, token mode, optional budget, and whether the rewrite fits that budget.
 
-What it explains: why the tool changed the prompt and which diagnostic hints were used.
+What it explains: why the tool changed the prompt, which diagnostic hints were used, and how the
+rewrite affects estimated prompt-token cost.
 
 ## `prompt_diff.md`
 
-Stores the original prompt, improved prompt, and a readable list of changes.
+Stores the original prompt, improved prompt, a readable list of changes, and estimated token cost.
 
 What it explains: what changed in the prompt without reading JSON.
 

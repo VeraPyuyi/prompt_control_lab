@@ -52,13 +52,13 @@ PromptControlLab 的核心思想是：每次运行都应该留下可复查的文
 
 ## `prompt_improvement.json`
 
-记录原始 prompt、优化 prompt、识别语言、优化目标、风格、改写原因和报告上下文提示。
+记录原始 prompt、优化 prompt、识别语言、优化目标、风格、改写原因和报告上下文提示。它还包含 `token_report`，用不依赖外部 tokenizer 的方式估算原始 prompt 和优化 prompt 的 token 数、token 模式、可选预算以及是否满足预算。
 
-说明什么问题：工具为什么这样改 prompt，以及是否使用了已有诊断报告。
+说明什么问题：工具为什么这样改 prompt，是否使用了已有诊断报告，以及这次改写对估算 prompt token 成本有什么影响。
 
 ## `prompt_diff.md`
 
-记录原始 prompt、优化 prompt 和可读的改动列表。
+记录原始 prompt、优化 prompt、可读的改动列表和 estimated token 成本。
 
 说明什么问题：不用看 JSON，也能知道 prompt 具体改了什么。
 

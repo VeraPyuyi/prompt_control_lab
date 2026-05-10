@@ -35,6 +35,12 @@ Operation:
 pcl improve --prompt "Answer the user question."
 ```
 
+Token-conscious operation:
+
+```bash
+pcl improve --prompt "Answer the user question." --token-mode aggressive --max-tokens 80
+```
+
 Operation with an existing report:
 
 ```bash
@@ -47,12 +53,15 @@ Result:
 - `runs/improve/improved_prompt.txt`
 - `runs/improve/prompt_improvement.json`
 - `runs/improve/prompt_diff.md`
+- estimated token counts in the terminal, JSON, and Markdown diff
 
 What it explains:
 
 The command gives a clearer prompt with a task goal, output-format rules, and stability rules.
 With `--run`, it also uses previous diagnostics to add simple warnings about regressed slices,
-broken examples, or deployment risk.
+broken examples, or deployment risk. The default token mode is `balanced`, which keeps key
+constraints while reducing unnecessary wording. `aggressive` is shorter and useful when cost is
+more important, but it may remove some guardrails. `--max-tokens` is an estimated budget.
 
 ## Expert Mode: Step by Step
 

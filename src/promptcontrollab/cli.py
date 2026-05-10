@@ -16,7 +16,7 @@ from promptcontrollab.config import (
 from promptcontrollab.errors import PromptControlLabError
 from promptcontrollab.evaluation import run_import_eval
 from promptcontrollab.explain import generate_explanation
-from promptcontrollab.files import ensure_dir, write_json
+from promptcontrollab.files import JsonDict, ensure_dir, write_json
 from promptcontrollab.gate import run_gate
 from promptcontrollab.prompt_context import load_prompt_context
 from promptcontrollab.prompt_diff import render_prompt_diff
@@ -78,6 +78,18 @@ def build_parser() -> argparse.ArgumentParser:
     )
     improve_parser.add_argument("--language", choices=["auto", "zh", "en"], default="auto")
     improve_parser.add_argument("--style", choices=["simple", "strict", "stable"], default="stable")
+    improve_parser.add_argument(
+        "--token-mode",
+        choices=["balanced", "aggressive"],
+        default="balanced",
+        help="Token-cost mode. Balanced preserves key constraints; aggressive is shorter.",
+    )
+    improve_parser.add_argument(
+        "--max-tokens",
+        type=int,
+        default=None,
+        help="Optional estimated-token budget for the rewritten prompt.",
+    )
     improve_parser.set_defaults(func=_cmd_improve)
 
     analyze_parser = subcommands.add_parser(
@@ -241,8 +253,16 @@ def _cmd_improve(args: argparse.Namespace) -> None:
         goal=args.goal,
         language=args.language,
         style=args.style,
+        token_mode=args.token_mode,
+        max_tokens=args.max_tokens,
     )
-    print(_format_improvement_output(improvement.improved_prompt, improvement.changes))
+    print(
+        _format_improvement_output(
+            improvement.improved_prompt,
+            improvement.changes,
+            improvement.token_report.to_json(),
+        )
+    )
     if args.out is not None:
         ensure_dir(args.out)
         (args.out / "improved_prompt.txt").write_text(
@@ -440,7 +460,21 @@ def _read_improve_prompt(prompt: str | None, prompt_file: Path | None) -> str:
     return prompt
 
 
-def _format_improvement_output(improved_prompt: str, changes: list[str]) -> str:
+def _format_improvement_output(
+    improved_prompt: str,
+    changes: list[str],
+    token_report: JsonDict,
+) -> str:
     lines = ["Optimized prompt:", "", improved_prompt, "", "Why it changed:"]
     lines.extend(f"- {change}" for change in changes)
+    lines += [
+        "",
+        "Estimated token cost:",
+        f"- Original prompt: {token_report['original_estimated_tokens']}",
+        f"- Optimized prompt: {token_report['improved_estimated_tokens']}",
+        f"- Token mode: {token_report['token_mode']}",
+    ]
+    if token_report["max_tokens"] is not None:
+        lines.append(f"- Max tokens: {token_report['max_tokens']}")
+        lines.append(f"- Within budget: {token_report['within_budget']}")
     return "\n".join(lines)

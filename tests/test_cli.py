@@ -319,6 +319,58 @@ def test_cli_improve_prompt_file_and_out_writes_artifacts(tmp_path: Path) -> Non
     assert "Added a clear task goal" in diff
 
 
+def test_cli_improve_records_balanced_token_report(tmp_path: Path) -> None:
+    out_dir = tmp_path / "improve"
+
+    assert main(["improve", "--prompt", "Answer the user question.", "--out", str(out_dir)]) == 0
+
+    payload = json.loads((out_dir / "prompt_improvement.json").read_text(encoding="utf-8"))
+    token_report = payload["token_report"]
+    assert token_report["token_mode"] == "balanced"
+    assert token_report["original_estimated_tokens"] > 0
+    assert token_report["improved_estimated_tokens"] > 0
+    assert token_report["compression_applied"] is True
+    assert token_report["estimate_note"] == "Estimated with a dependency-free heuristic."
+
+
+def test_cli_improve_aggressive_max_tokens_makes_prompt_shorter(tmp_path: Path) -> None:
+    balanced_dir = tmp_path / "balanced"
+    aggressive_dir = tmp_path / "aggressive"
+
+    assert (
+        main(["improve", "--prompt", "Answer the user question.", "--out", str(balanced_dir)])
+        == 0
+    )
+    assert (
+        main(
+            [
+                "improve",
+                "--prompt",
+                "Answer the user question.",
+                "--token-mode",
+                "aggressive",
+                "--max-tokens",
+                "35",
+                "--out",
+                str(aggressive_dir),
+            ]
+        )
+        == 0
+    )
+
+    balanced = json.loads((balanced_dir / "prompt_improvement.json").read_text(encoding="utf-8"))
+    aggressive = json.loads(
+        (aggressive_dir / "prompt_improvement.json").read_text(encoding="utf-8")
+    )
+    balanced_tokens = balanced["token_report"]["improved_estimated_tokens"]
+    aggressive_report = aggressive["token_report"]
+    assert aggressive_report["token_mode"] == "aggressive"
+    assert aggressive_report["max_tokens"] == 35
+    assert aggressive_report["within_budget"] is True
+    assert aggressive_report["improved_estimated_tokens"] <= balanced_tokens
+    assert "Reduced prompt length to lower estimated token cost." in aggressive["changes"]
+
+
 def test_cli_improve_uses_run_context(tmp_path: Path) -> None:
     run = tmp_path / "run"
     (run / "diagnostics").mkdir(parents=True)

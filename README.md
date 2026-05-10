@@ -113,17 +113,27 @@ If you only have a prompt string and want a clearer version, use:
 pcl improve --prompt "Answer the user question."
 ```
 
+To reduce prompt-token cost more aggressively:
+
+```bash
+pcl improve --prompt "Answer the user question." --token-mode aggressive --max-tokens 80
+```
+
 Result:
 
 - The optimized prompt is printed in the terminal.
 - If you add `--out runs/improve`, the tool writes `improved_prompt.txt`,
   `prompt_improvement.json`, and `prompt_diff.md`.
+- The terminal and JSON output include dependency-free estimated token counts. The default
+  `balanced` mode keeps key constraints while shortening wording; `aggressive` favors a
+  shorter prompt for lower estimated token cost.
 
 What it tells you:
 
 This command gives a practical rewrite without calling any external model. If you also pass
 `--run runs/quick`, it uses the existing report to add warnings about regressed slices, broken
-examples, and deployment risk.
+examples, and deployment risk. `--max-tokens` is treated as an estimated budget, not a
+model-specific tokenizer guarantee.
 
 ## Who It Is For
 
@@ -180,6 +190,12 @@ Operation:
 pcl improve --prompt "Answer the user question."
 ```
 
+Token-conscious operation:
+
+```bash
+pcl improve --prompt "Answer the user question." --token-mode aggressive --max-tokens 80
+```
+
 Operation with an existing report:
 
 ```bash
@@ -192,12 +208,15 @@ Result:
 - `runs/improve/improved_prompt.txt`
 - `runs/improve/prompt_improvement.json`
 - `runs/improve/prompt_diff.md`
+- estimated token counts in the terminal, JSON, and Markdown diff
 
 What it tells you:
 
 This gives a clearer prompt with task goal, output-format constraints, and stability rules. With
 `--run`, it also uses previous diagnostics to add simple warnings about task slices or examples
-that regressed.
+that regressed. The default token mode is `balanced`: it tries to keep useful constraints while
+avoiding unnecessary wording. `aggressive` is shorter and better for cost, but may remove some
+guardrails.
 
 ### 3. `pcl analyze`: run Quick Mode end to end
 

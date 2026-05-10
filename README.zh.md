@@ -88,14 +88,22 @@ PromptControlLab 的不同点在于：它把“诊断层”放在核心位置，
 pcl improve --prompt "回答下面的问题"
 ```
 
+如果想更明显地减少 prompt token 成本：
+
+```bash
+pcl improve --prompt "回答下面的问题" --token-mode aggressive --max-tokens 80
+```
+
 得到：
 
 - 终端里直接打印优化后的 prompt。
 - 如果加上 `--out runs/improve`，还会写出 `improved_prompt.txt`、`prompt_improvement.json` 和 `prompt_diff.md`。
+- 终端和 JSON 里会给出不依赖外部 tokenizer 的 estimated token 数。默认 `balanced`
+  会尽量保留关键约束并压缩措辞；`aggressive` 会更短，更偏向降低成本。
 
 说明什么问题：
 
-这个命令不调用外部模型，只用离线规则改写 prompt。它会补充任务目标、输出格式约束和稳定性要求。如果再加上 `--run runs/quick`，它会读取已有检测报告，把退化的任务 slice、变差样本和风险提示加入 prompt。
+这个命令不调用外部模型，只用离线规则改写 prompt。它会补充任务目标、输出格式约束和稳定性要求。如果再加上 `--run runs/quick`，它会读取已有检测报告，把退化的任务 slice、变差样本和风险提示加入 prompt。`--max-tokens` 是估算预算，不是某个模型 tokenizer 的精确保证。
 
 ## 面向谁
 
@@ -149,6 +157,12 @@ cd demo
 pcl improve --prompt "回答下面的问题"
 ```
 
+控制 token 成本的操作：
+
+```bash
+pcl improve --prompt "回答下面的问题" --token-mode aggressive --max-tokens 80
+```
+
 结合已有检测报告：
 
 ```bash
@@ -161,10 +175,11 @@ pcl improve --prompt-file prompts/current.txt --run runs/quick --out runs/improv
 - `runs/improve/improved_prompt.txt`
 - `runs/improve/prompt_improvement.json`
 - `runs/improve/prompt_diff.md`
+- 终端、JSON 和 Markdown diff 里的 estimated token 数
 
 说明什么问题：
 
-这个命令会给出一个更清楚的 prompt，包含任务目标、输出格式要求和稳定性要求。结合 `--run` 时，它还会根据已有报告加入退化 slice、变差样本和部署风险提示。
+这个命令会给出一个更清楚的 prompt，包含任务目标、输出格式要求和稳定性要求。结合 `--run` 时，它还会根据已有报告加入退化 slice、变差样本和部署风险提示。默认 token 模式是 `balanced`：尽量保留有用约束，同时避免不必要措辞。`aggressive` 更短、更省成本，但可能减少一部分保护性规则。
 
 ### 3. `pcl analyze`：一键运行快速模式
 
