@@ -1,0 +1,54 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1100" height="430" viewBox="0 0 1100 430" role="img" aria-labelledby="title desc">
+  <title id="title">PromptControlLab 生态位置</title>
+  <desc id="desc">PromptControlLab 位于优化、评测和可观测工具旁边，提供诊断和控制分析层。</desc>
+  <defs>
+    <style>
+      .bg{fill:#f8fafc}.title{font:700 30px "Microsoft YaHei","Noto Sans CJK SC",Arial,sans-serif;fill:#102033}.sub{font:400 16px "Microsoft YaHei","Noto Sans CJK SC",Arial,sans-serif;fill:#52616f}
+      .card{fill:#ffffff;stroke:#cbd5e1;stroke-width:2}.pcl{fill:#ecfeff;stroke:#0e7490;stroke-width:3}
+      .h{font:700 19px "Microsoft YaHei","Noto Sans CJK SC",Arial,sans-serif;fill:#102033}.t{font:400 14px "Microsoft YaHei","Noto Sans CJK SC",Arial,sans-serif;fill:#405160}.pill{fill:#0e7490}
+      .pillText{font:700 13px "Microsoft YaHei","Noto Sans CJK SC",Arial,sans-serif;fill:#ffffff}.arrow{stroke:#64748b;stroke-width:2.5;fill:none;marker-end:url(#arrow)}
+    </style>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto">
+      <path d="M0,0 L0,6 L9,3 z" fill="#64748b"/>
+    </marker>
+  </defs>
+  <rect class="bg" width="1100" height="430"/>
+  <text x="40" y="48" class="title">PromptControlLab 放在工具生态的哪里</text>
+  <text x="40" y="76" class="sub">它不替代相邻工具，而是补上一层可复现的 prompt 诊断和控制论证据。</text>
+
+  <rect x="42" y="120" width="235" height="190" rx="10" class="card"/>
+  <text x="68" y="154" class="h">优化类工具</text>
+  <text x="68" y="184" class="t">调 prompt、程序结构</text>
+  <text x="68" y="206" class="t">或模型参数。</text>
+  <text x="68" y="239" class="t">例子：DSPy、TextGrad、</text>
+  <text x="68" y="261" class="t">OpenPrompt</text>
+
+  <rect x="312" y="120" width="235" height="190" rx="10" class="card"/>
+  <text x="338" y="154" class="h">评测与测试工具</text>
+  <text x="338" y="184" class="t">跑评测集、分数、</text>
+  <text x="338" y="206" class="t">CI 和安全测试。</text>
+  <text x="338" y="239" class="t">例子：promptfoo、</text>
+  <text x="338" y="261" class="t">DeepEval</text>
+
+  <rect x="582" y="120" width="235" height="190" rx="10" class="card"/>
+  <text x="608" y="154" class="h">可观测工具</text>
+  <text x="608" y="184" class="t">记录 trace、监控运行、</text>
+  <text x="608" y="206" class="t">管理 prompt 和评测。</text>
+  <text x="608" y="239" class="t">例子：Langfuse、</text>
+  <text x="608" y="261" class="t">LangSmith、Phoenix</text>
+
+  <rect x="852" y="96" width="210" height="238" rx="12" class="pcl"/>
+  <rect x="888" y="119" width="138" height="28" rx="14" class="pill"/>
+  <text x="916" y="138" class="pillText">诊断分析层</text>
+  <text x="878" y="178" class="h">PromptControlLab</text>
+  <text x="878" y="209" class="t">三段切分协议</text>
+  <text x="878" y="231" class="t">成对统计检验</text>
+  <text x="878" y="253" class="t">软转硬风险</text>
+  <text x="878" y="275" class="t">内部轨迹漂移</text>
+  <text x="878" y="297" class="t">Riccati 代理诊断</text>
+
+  <path d="M277 215 H312" class="arrow"/>
+  <path d="M547 215 H582" class="arrow"/>
+  <path d="M817 215 H852" class="arrow"/>
+  <text x="255" y="360" class="sub">PromptControlLab 不替代这些工具，而是把 prompt 改动变成可以检查的证据链。</text>
+</svg>

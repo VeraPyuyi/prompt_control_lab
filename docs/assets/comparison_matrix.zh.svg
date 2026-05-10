@@ -1,0 +1,57 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1100" height="500" viewBox="0 0 1100 500" role="img" aria-labelledby="title desc">
+  <title id="title">能力对比矩阵</title>
+  <desc id="desc">常见 LLM 工具类型与 PromptControlLab 的高层能力对比。</desc>
+  <defs>
+    <style>
+      .bg{fill:#ffffff}.title{font:700 28px "Microsoft YaHei","Noto Sans CJK SC",Arial,sans-serif;fill:#102033}.note{font:400 14px "Microsoft YaHei","Noto Sans CJK SC",Arial,sans-serif;fill:#64748b}
+      .head{fill:#0f172a}.headText{font:700 13px "Microsoft YaHei","Noto Sans CJK SC",Arial,sans-serif;fill:#ffffff}.rowA{fill:#f8fafc}.rowB{fill:#ffffff}
+      .cell{stroke:#d7dee8;stroke-width:1}.label{font:700 14px "Microsoft YaHei","Noto Sans CJK SC",Arial,sans-serif;fill:#102033}.txt{font:400 13px "Microsoft YaHei","Noto Sans CJK SC",Arial,sans-serif;fill:#334155}
+      .strong{fill:#ecfeff}.strongText{font:700 13px "Microsoft YaHei","Noto Sans CJK SC",Arial,sans-serif;fill:#0e7490}.midText{font:700 13px "Microsoft YaHei","Noto Sans CJK SC",Arial,sans-serif;fill:#475569}
+    </style>
+  </defs>
+  <rect class="bg" width="1100" height="500"/>
+  <text x="40" y="46" class="title">能力对比：PromptControlLab 补上了什么</text>
+  <text x="40" y="72" class="note">这是生态定位，不是替代声明。相邻工具依然适合各自的工作流。</text>
+
+  <g transform="translate(40,105)">
+    <rect width="1020" height="44" class="head"/>
+    <text x="18" y="28" class="headText">工具类型</text>
+    <text x="210" y="20" class="headText">Prompt 或</text><text x="210" y="36" class="headText">程序优化</text>
+    <text x="360" y="20" class="headText">评测、CI、</text><text x="360" y="36" class="headText">安全测试</text>
+    <text x="505" y="20" class="headText">Trace 与</text><text x="505" y="36" class="headText">运行监控</text>
+    <text x="640" y="20" class="headText">Withheld 协议</text><text x="640" y="36" class="headText">与成对统计</text>
+    <text x="805" y="20" class="headText">软转硬、轨迹、</text><text x="805" y="36" class="headText">Riccati 诊断</text>
+
+    <rect y="44" width="1020" height="70" class="rowA cell"/>
+    <text x="18" y="75" class="label">优化类工具</text><text x="18" y="96" class="txt">DSPy、TextGrad、OpenPrompt</text>
+    <text x="226" y="85" class="strongText">核心</text>
+    <text x="380" y="85" class="midText">部分支持</text>
+    <text x="532" y="85" class="txt">通常靠外部</text>
+    <text x="668" y="85" class="txt">需要补充</text>
+    <text x="840" y="85" class="txt">很少作为重点</text>
+
+    <rect y="114" width="1020" height="70" class="rowB cell"/>
+    <text x="18" y="145" class="label">评测与测试工具</text><text x="18" y="166" class="txt">promptfoo、DeepEval</text>
+    <text x="226" y="155" class="txt">部分支持</text>
+    <text x="380" y="155" class="strongText">核心</text>
+    <text x="532" y="155" class="txt">部分支持</text>
+    <text x="668" y="155" class="txt">可以实现</text>
+    <text x="840" y="155" class="txt">很少作为重点</text>
+
+    <rect y="184" width="1020" height="70" class="rowA cell"/>
+    <text x="18" y="215" class="label">可观测工具</text><text x="18" y="236" class="txt">Langfuse、LangSmith、Phoenix</text>
+    <text x="226" y="225" class="txt">部分支持</text>
+    <text x="380" y="225" class="txt">部分支持</text>
+    <text x="532" y="225" class="strongText">核心</text>
+    <text x="668" y="225" class="txt">可以实现</text>
+    <text x="840" y="225" class="txt">覆盖有限</text>
+
+    <rect y="254" width="1020" height="86" class="strong cell"/>
+    <text x="18" y="289" class="label">PromptControlLab</text><text x="18" y="312" class="txt">诊断与控制分析工具</text>
+    <text x="226" y="302" class="txt">简单改写</text>
+    <text x="380" y="302" class="txt">本地评分</text>
+    <text x="532" y="302" class="txt">产物留痕</text>
+    <text x="668" y="302" class="strongText">核心</text>
+    <text x="840" y="302" class="strongText">核心</text>
+  </g>
+</svg>

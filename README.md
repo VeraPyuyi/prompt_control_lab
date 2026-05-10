@@ -55,6 +55,56 @@ pipeline for you: split, score, compare, explain, and report.
 individual commands when you want to tune split ratios, import different outputs,
 run statistics with custom sampling, attach diagnostics, or inspect every artifact.
 
+## Ecosystem Positioning and Advantages
+
+PromptControlLab sits next to existing LLM tools. It is not meant to replace prompt
+optimizers, evaluation frameworks, or observability platforms. Its role is narrower and
+more diagnostic: after a prompt changes, it helps you decide whether the result is
+reproducible, statistically reliable, deployable, and stable enough to inspect further.
+
+![PromptControlLab ecosystem position](docs/assets/ecosystem.svg)
+
+Adjacent tools are valuable in their own workflows:
+
+- [DSPy](https://dspy.ai/learn/optimization/optimizers/) focuses on optimizers that tune
+  prompts or language-model programs against a metric.
+- [TextGrad](https://github.com/zou-group/textgrad) explores textual gradients and
+  automatic-differentiation-style optimization over text.
+- [OpenPrompt](https://github.com/thunlp/OpenPrompt) provides prompt-learning pipelines.
+- [promptfoo](https://www.promptfoo.dev/docs/intro/) focuses on LLM evaluation, testing,
+  red-teaming, and CI workflows.
+- [DeepEval](https://deepeval.com/docs/getting-started) provides LLM evaluation metrics
+  and test cases for applications.
+- [Langfuse](https://langfuse.com/docs) and
+  [LangSmith](https://docs.smith.langchain.com/) focus on tracing, observability,
+  prompt management, experiments, and evaluation workflows.
+
+PromptControlLab is different because it makes the diagnostic layer first-class:
+
+![PromptControlLab comparison matrix](docs/assets/comparison_matrix.svg)
+
+| Area | What many adjacent tools emphasize | What PromptControlLab adds |
+| --- | --- | --- |
+| Prompt improvement | Find or rewrite a better prompt/program. | `pcl improve` gives a simple offline rewrite, while reports explain why the rewrite is suggested. |
+| Evaluation | Score outputs on examples and compare runs. | `pcl split`, `pcl stats`, and `pcl report` keep train/val/withheld separate and report paired uncertainty. |
+| Reproducibility | Store configs, prompts, traces, or experiments. | Every run writes explicit artifacts, split hashes, metrics, explanations, and report files. |
+| Deployment risk | Usually handled through output-level tests. | `pcl soft-hard` measures soft-to-hard projection risk before deploying a hard prompt. |
+| Internal behavior | Often outside normal prompt-eval workflows. | `pcl trajectory` checks hidden-state drift, decay, and turnpike-like signals when hidden states are available. |
+| Control analysis | Rarely exposed as reusable prompt tooling. | `pcl riccati` and `pcl tv-soft` expose surrogate stability and time-varying control diagnostics. |
+
+The main innovation is the stack: prompt changes are not reduced to one score. They become
+a small evidence package that a researcher, engineer, or non-specialist can inspect.
+
+![PromptControlLab innovation stack](docs/assets/innovation_stack.svg)
+
+In practical terms, the tool contributes four things to the field:
+
+- Cleaner prompt-evaluation hygiene through a built-in train/val/withheld protocol.
+- More reliable prompt comparisons through paired statistics and correction-aware reports.
+- More deployable soft-prompt research through explicit soft-to-hard risk reporting.
+- A reusable bridge from prompt engineering to control-oriented diagnostics, including
+  hidden trajectories, turnpike-like decay, Riccati surrogates, and time-varying controls.
+
 ## Easiest Prompt Improvement
 
 If you only have a prompt string and want a clearer version, use:

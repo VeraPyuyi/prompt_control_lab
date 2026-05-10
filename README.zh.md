@@ -41,6 +41,45 @@ PromptControlLab 现在把同一套开源能力分成两种使用方式。
 
 **Expert Mode（专家模式）** 面向研究者和工程师。你可以继续使用单个命令精细控制切分比例、评测指标、统计采样、soft-hard 分析、trajectory 分析、Riccati 诊断和 time-varying soft-control 对比。
 
+## 生态定位、优势和创新点
+
+PromptControlLab 放在现有 LLM 工具旁边使用。它不是要替代 prompt 优化器、评测框架或可观测平台，而是专门补上一层更直白的诊断能力：prompt 改了之后，结果是否可复现、是否可靠、是否适合部署、内部行为是否需要继续检查。
+
+![PromptControlLab 生态位置](docs/assets/ecosystem.zh.svg)
+
+相邻工具各有自己的重点：
+
+- [DSPy](https://dspy.ai/learn/optimization/optimizers/) 主要提供 optimizer，用指标驱动 prompt 或语言模型程序的优化。
+- [TextGrad](https://github.com/zou-group/textgrad) 主要探索 textual gradient，也就是用类似自动微分的方式优化文本。
+- [OpenPrompt](https://github.com/thunlp/OpenPrompt) 主要提供 prompt-learning 的流程和组件。
+- [promptfoo](https://www.promptfoo.dev/docs/intro/) 主要做 LLM 评测、测试、红队和 CI 工作流。
+- [DeepEval](https://deepeval.com/docs/getting-started) 主要提供 LLM 应用的评测指标和测试用例。
+- [Langfuse](https://langfuse.com/docs) 和 [LangSmith](https://docs.smith.langchain.com/) 更强调 trace、可观测性、prompt 管理、实验和评测工作流。
+
+PromptControlLab 的不同点在于：它把“诊断层”放在核心位置，不只问分数是多少，还问这个分数是否可信、是否有数据泄漏风险、是否能部署、是否稳定。
+
+![PromptControlLab 能力对比矩阵](docs/assets/comparison_matrix.zh.svg)
+
+| 维度 | 很多相邻工具更强调什么 | PromptControlLab 补上什么 |
+| --- | --- | --- |
+| Prompt 改写 | 找到或改写更好的 prompt / 程序。 | `pcl improve` 给出离线、简单、可读的 prompt 改写，并解释为什么这么改。 |
+| 评测比较 | 在样本上打分，比较不同运行结果。 | `pcl split`、`pcl stats`、`pcl report` 固化 train/val/withheld 隔离，并报告成对统计不确定性。 |
+| 可复现性 | 保存配置、prompt、trace 或实验记录。 | 每次运行都写出 split hash、metrics、explanation、report 等明确产物。 |
+| 部署风险 | 通常通过输出层测试检查。 | `pcl soft-hard` 专门检查 soft prompt 转 hard prompt 的风险。 |
+| 内部行为 | 通常不是普通 prompt 评测流程的重点。 | `pcl trajectory` 在有 hidden states 时检查漂移、衰减和 turnpike-like 信号。 |
+| 控制论分析 | 很少作为可复用 prompt 工具暴露。 | `pcl riccati` 和 `pcl tv-soft` 提供代理稳定性和 time-varying control 诊断。 |
+
+它的核心创新可以理解为下面这条链路：一次 prompt 改动，不再只得到一个分数，而是得到一套可以检查的证据包。
+
+![PromptControlLab 创新栈](docs/assets/innovation_stack.zh.svg)
+
+对相关领域的贡献可以概括为四点：
+
+- 把 train/val/withheld 协议做成工具，降低验证集过拟合和测试泄漏风险。
+- 用成对统计、置信区间和校正报告，让 prompt 改动是否可靠更容易判断。
+- 系统报告 soft-to-hard gap，让 soft prompt 研究更容易走向部署分析。
+- 把 hidden-state trajectory、turnpike-like decay、Riccati surrogate 和 time-varying control 变成可复用诊断能力，推动 prompt engineering 向 prompt control diagnostics 发展。
+
 ## 最简单的 prompt 优化
 
 如果你只有一段 prompt 字符串，只想直接得到一个更清楚的版本，可以运行：

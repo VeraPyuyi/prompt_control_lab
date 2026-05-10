@@ -1,0 +1,47 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1100" height="360" viewBox="0 0 1100 360" role="img" aria-labelledby="title desc">
+  <title id="title">PromptControlLab innovation stack</title>
+  <desc id="desc">The stack turns a prompt change into reproducible evidence, diagnostics, and a clearer improved prompt.</desc>
+  <defs>
+    <style>
+      .bg{fill:#f8fafc}.title{font:700 28px Arial,sans-serif;fill:#102033}.sub{font:400 15px Arial,sans-serif;fill:#536273}
+      .box{fill:#ffffff;stroke:#cbd5e1;stroke-width:2}.top{fill:#0e7490}.h{font:700 15px Arial,sans-serif;fill:#102033}.t{font:400 13px Arial,sans-serif;fill:#445464}
+      .topText{font:700 14px Arial,sans-serif;fill:#ffffff}.arrow{stroke:#64748b;stroke-width:2.5;fill:none;marker-end:url(#arrow)}
+    </style>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto">
+      <path d="M0,0 L0,6 L9,3 z" fill="#64748b"/>
+    </marker>
+  </defs>
+  <rect class="bg" width="1100" height="360"/>
+  <text x="40" y="47" class="title">Innovation Stack</text>
+  <text x="40" y="74" class="sub">PromptControlLab extends prompt evaluation from a single score to evidence, risk, and explanation.</text>
+
+  <g transform="translate(45,120)">
+    <rect width="150" height="120" rx="10" class="box"/><rect width="150" height="31" rx="10" class="top"/>
+    <text x="45" y="21" class="topText">Input</text>
+    <text x="20" y="58" class="h">Prompt change</text><text x="20" y="84" class="t">Tasks and outputs</text>
+  </g>
+  <path d="M205 180 H245" class="arrow"/>
+  <g transform="translate(250,120)">
+    <rect width="150" height="120" rx="10" class="box"/><rect width="150" height="31" rx="10" class="top"/>
+    <text x="42" y="21" class="topText">Protocol</text>
+    <text x="20" y="58" class="h">Tri-split</text><text x="20" y="84" class="t">Train, val, withheld</text>
+  </g>
+  <path d="M410 180 H450" class="arrow"/>
+  <g transform="translate(455,120)">
+    <rect width="150" height="120" rx="10" class="box"/><rect width="150" height="31" rx="10" class="top"/>
+    <text x="52" y="21" class="topText">Stats</text>
+    <text x="20" y="58" class="h">Reliability</text><text x="20" y="84" class="t">CI, p-value, Holm</text>
+  </g>
+  <path d="M615 180 H655" class="arrow"/>
+  <g transform="translate(660,120)">
+    <rect width="170" height="120" rx="10" class="box"/><rect width="170" height="31" rx="10" class="top"/>
+    <text x="44" y="21" class="topText">Diagnostics</text>
+    <text x="20" y="58" class="h">Risk signals</text><text x="20" y="84" class="t">Soft-hard, trajectory,</text><text x="20" y="104" class="t">Riccati surrogate</text>
+  </g>
+  <path d="M840 180 H880" class="arrow"/>
+  <g transform="translate(885,120)">
+    <rect width="170" height="120" rx="10" class="box"/><rect width="170" height="31" rx="10" class="top"/>
+    <text x="50" y="21" class="topText">Action</text>
+    <text x="20" y="58" class="h">Report and improve</text><text x="20" y="84" class="t">Plain explanation</text><text x="20" y="104" class="t">plus better prompt</text>
+  </g>
+</svg>

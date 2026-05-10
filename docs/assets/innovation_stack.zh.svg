@@ -1,0 +1,47 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1100" height="360" viewBox="0 0 1100 360" role="img" aria-labelledby="title desc">
+  <title id="title">PromptControlLab 创新栈</title>
+  <desc id="desc">这个栈把一次 prompt 改动转成可复现证据、诊断结果和更清楚的优化 prompt。</desc>
+  <defs>
+    <style>
+      .bg{fill:#f8fafc}.title{font:700 28px "Microsoft YaHei","Noto Sans CJK SC",Arial,sans-serif;fill:#102033}.sub{font:400 15px "Microsoft YaHei","Noto Sans CJK SC",Arial,sans-serif;fill:#536273}
+      .box{fill:#ffffff;stroke:#cbd5e1;stroke-width:2}.top{fill:#0e7490}.h{font:700 15px "Microsoft YaHei","Noto Sans CJK SC",Arial,sans-serif;fill:#102033}.t{font:400 13px "Microsoft YaHei","Noto Sans CJK SC",Arial,sans-serif;fill:#445464}
+      .topText{font:700 14px "Microsoft YaHei","Noto Sans CJK SC",Arial,sans-serif;fill:#ffffff}.arrow{stroke:#64748b;stroke-width:2.5;fill:none;marker-end:url(#arrow)}
+    </style>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto">
+      <path d="M0,0 L0,6 L9,3 z" fill="#64748b"/>
+    </marker>
+  </defs>
+  <rect class="bg" width="1100" height="360"/>
+  <text x="40" y="47" class="title">创新栈</text>
+  <text x="40" y="74" class="sub">PromptControlLab 把 prompt 评测从单一分数扩展成证据、风险和解释。</text>
+
+  <g transform="translate(45,120)">
+    <rect width="150" height="120" rx="10" class="box"/><rect width="150" height="31" rx="10" class="top"/>
+    <text x="61" y="21" class="topText">输入</text>
+    <text x="20" y="58" class="h">Prompt 改动</text><text x="20" y="84" class="t">任务和输出</text>
+  </g>
+  <path d="M205 180 H245" class="arrow"/>
+  <g transform="translate(250,120)">
+    <rect width="150" height="120" rx="10" class="box"/><rect width="150" height="31" rx="10" class="top"/>
+    <text x="61" y="21" class="topText">协议</text>
+    <text x="20" y="58" class="h">三段切分</text><text x="20" y="84" class="t">训练、验证、保留集</text>
+  </g>
+  <path d="M410 180 H450" class="arrow"/>
+  <g transform="translate(455,120)">
+    <rect width="150" height="120" rx="10" class="box"/><rect width="150" height="31" rx="10" class="top"/>
+    <text x="61" y="21" class="topText">统计</text>
+    <text x="20" y="58" class="h">可靠性</text><text x="20" y="84" class="t">置信区间、p 值、</text><text x="20" y="104" class="t">Holm 校正</text>
+  </g>
+  <path d="M615 180 H655" class="arrow"/>
+  <g transform="translate(660,120)">
+    <rect width="170" height="120" rx="10" class="box"/><rect width="170" height="31" rx="10" class="top"/>
+    <text x="57" y="21" class="topText">诊断</text>
+    <text x="20" y="58" class="h">风险信号</text><text x="20" y="84" class="t">软转硬、内部轨迹、</text><text x="20" y="104" class="t">Riccati 代理模型</text>
+  </g>
+  <path d="M840 180 H880" class="arrow"/>
+  <g transform="translate(885,120)">
+    <rect width="170" height="120" rx="10" class="box"/><rect width="170" height="31" rx="10" class="top"/>
+    <text x="57" y="21" class="topText">行动</text>
+    <text x="20" y="58" class="h">报告和优化</text><text x="20" y="84" class="t">直白解释</text><text x="20" y="104" class="t">加更清楚的 prompt</text>
+  </g>
+</svg>
