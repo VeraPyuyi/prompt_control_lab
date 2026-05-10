@@ -1,4 +1,4 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1100" height="340" viewBox="0 0 1100 340" role="img" aria-labelledby="title desc">
+﻿<svg xmlns="http://www.w3.org/2000/svg" width="1100" height="340" viewBox="0 0 1100 340" role="img" aria-labelledby="title desc">
   <title id="title">Expert Mode command map</title>
   <desc id="desc">Expert Mode exposes split, eval, stats, explain, gate, report, and research diagnostics.</desc>
   <rect width="1100" height="340" rx="18" fill="#f8fafc"/>

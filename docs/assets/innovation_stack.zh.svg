@@ -1,5 +1,5 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1100" height="360" viewBox="0 0 1100 360" role="img" aria-labelledby="title desc">
-  <title id="title">PromptControlLab 创新栈</title>
+﻿<svg xmlns="http://www.w3.org/2000/svg" width="1100" height="360" viewBox="0 0 1100 360" role="img" aria-labelledby="title desc">
+  <title id="title">prompt_control_lab 创新栈</title>
   <desc id="desc">这个栈把一次 prompt 改动转成可复现证据、诊断结果和更清楚的优化 prompt。</desc>
   <defs>
     <style>
@@ -13,7 +13,7 @@
   </defs>
   <rect class="bg" width="1100" height="360"/>
   <text x="40" y="47" class="title">创新栈</text>
-  <text x="40" y="74" class="sub">PromptControlLab 把 prompt 评测从单一分数扩展成证据、风险和解释。</text>
+  <text x="40" y="74" class="sub">prompt_control_lab 把 prompt 评测从单一分数扩展成证据、风险和解释。</text>
 
   <g transform="translate(45,120)">
     <rect width="150" height="120" rx="10" class="box"/><rect width="150" height="31" rx="10" class="top"/>

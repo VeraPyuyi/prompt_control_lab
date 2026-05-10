@@ -1,5 +1,5 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1100" height="390" viewBox="0 0 1100 390" role="img" aria-labelledby="title desc">
-  <title id="title">PromptControlLab 双模式</title>
+﻿<svg xmlns="http://www.w3.org/2000/svg" width="1100" height="390" viewBox="0 0 1100 390" role="img" aria-labelledby="title desc">
+  <title id="title">prompt_control_lab 双模式</title>
   <desc id="desc">快速模式用一个命令生成报告，专家模式暴露每个诊断命令。</desc>
   <rect width="1100" height="390" rx="18" fill="#f8fafc"/>
   <text x="44" y="54" font-family="Microsoft YaHei, Segoe UI, Arial, sans-serif" font-size="28" font-weight="700" fill="#172033">两种模式，共用同一套产物</text>

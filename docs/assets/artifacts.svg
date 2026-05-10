@@ -1,5 +1,5 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1100" height="430" viewBox="0 0 1100 430" role="img" aria-labelledby="title desc">
-  <title id="title">PromptControlLab artifacts</title>
+﻿<svg xmlns="http://www.w3.org/2000/svg" width="1100" height="430" viewBox="0 0 1100 430" role="img" aria-labelledby="title desc">
+  <title id="title">prompt_control_lab artifacts</title>
   <desc id="desc">A run directory with manifest, splits, predictions, metrics, stats, diagnostics, and reports.</desc>
   <rect width="1100" height="430" rx="18" fill="#fbfbf8"/>
   <text x="44" y="54" font-family="Segoe UI, Arial, sans-serif" font-size="28" font-weight="700" fill="#172033">Every run leaves an audit trail</text>

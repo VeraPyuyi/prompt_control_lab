@@ -1,6 +1,6 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1100" height="500" viewBox="0 0 1100 500" role="img" aria-labelledby="title desc">
+﻿<svg xmlns="http://www.w3.org/2000/svg" width="1100" height="500" viewBox="0 0 1100 500" role="img" aria-labelledby="title desc">
   <title id="title">Capability comparison matrix</title>
-  <desc id="desc">A high-level comparison between common LLM tool families and PromptControlLab.</desc>
+  <desc id="desc">A high-level comparison between common LLM tool families and prompt_control_lab.</desc>
   <defs>
     <style>
       .bg{fill:#ffffff}.title{font:700 28px Arial,sans-serif;fill:#102033}.note{font:400 14px Arial,sans-serif;fill:#64748b}
@@ -10,7 +10,7 @@
     </style>
   </defs>
   <rect class="bg" width="1100" height="500"/>
-  <text x="40" y="46" class="title">Capability View: What PromptControlLab Adds</text>
+  <text x="40" y="46" class="title">Capability View: What prompt_control_lab Adds</text>
   <text x="40" y="72" class="note">This is a positioning guide, not a replacement claim. Adjacent tools remain useful for their own workflows.</text>
 
   <g transform="translate(40,105)">
@@ -47,7 +47,7 @@
     <text x="840" y="225" class="txt">Limited</text>
 
     <rect y="254" width="1020" height="86" class="strong cell"/>
-    <text x="18" y="289" class="label">PromptControlLab</text><text x="18" y="312" class="txt">Diagnostics and control analysis</text>
+    <text x="18" y="289" class="label">prompt_control_lab</text><text x="18" y="312" class="txt">Diagnostics and control analysis</text>
     <text x="226" y="302" class="txt">Simple rewrite</text>
     <text x="380" y="302" class="txt">Local scoring</text>
     <text x="532" y="302" class="txt">Artifact trail</text>

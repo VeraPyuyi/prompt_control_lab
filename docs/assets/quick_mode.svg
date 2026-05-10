@@ -1,4 +1,4 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1100" height="300" viewBox="0 0 1100 300" role="img" aria-labelledby="title desc">
+﻿<svg xmlns="http://www.w3.org/2000/svg" width="1100" height="300" viewBox="0 0 1100 300" role="img" aria-labelledby="title desc">
   <title id="title">Quick Mode flow</title>
   <desc id="desc">Quick Mode runs analyze to generate split, scores, statistics, explanation, and report.</desc>
   <rect width="1100" height="300" rx="18" fill="#f7fafc"/>

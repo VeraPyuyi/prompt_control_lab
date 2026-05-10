@@ -1,9 +1,16 @@
-# PromptControlLab
+# prompt_control_lab 🧪✨
 
-PromptControlLab is an open-source toolkit for prompt evaluation, prompt diagnostics,
+[![GitHub stars](https://img.shields.io/github/stars/VeraPyuyi/prompt_control_lab?style=social)](https://github.com/VeraPyuyi/prompt_control_lab/stargazers)
+[![GitHub forks](https://img.shields.io/github/forks/VeraPyuyi/prompt_control_lab?style=social)](https://github.com/VeraPyuyi/prompt_control_lab/forks)
+[![GitHub watchers](https://img.shields.io/github/watchers/VeraPyuyi/prompt_control_lab?style=social)](https://github.com/VeraPyuyi/prompt_control_lab/watchers)
+[![License](https://img.shields.io/github/license/VeraPyuyi/prompt_control_lab)](LICENSE)
+[![Python](https://img.shields.io/badge/python-3.10%2B-blue)](pyproject.toml)
+
+prompt_control_lab is an open-source toolkit for prompt evaluation, prompt diagnostics,
 reproducibility, and control-oriented analysis.
 
-It helps researchers and engineering teams answer practical questions:
+It helps researchers and engineering teams answer practical questions without turning prompt
+work into guesswork:
 
 - Did a prompt change really improve the result?
 - Was the improvement caused by validation overfitting?
@@ -13,35 +20,38 @@ It helps researchers and engineering teams answer practical questions:
 - Does a time-varying prompt help because of temporal structure, or just because it has
   more parameters?
 
-PromptControlLab is not just a score table. It creates reproducible artifacts that explain
-what was tested, how it was split, how outputs were scored, whether the change is reliable,
-and which diagnostics need inspection.
+prompt_control_lab is not just a score table. It creates a friendly, reproducible audit trail
+that explains what was tested, how it was split, how outputs were scored, whether the change is
+reliable, and which diagnostics need inspection.
+
+> 📌 The repository is currently private, so public badge services may show zero or unavailable
+> counts until the repository is made public.
 
 Chinese documentation is available in [README.zh.md](README.zh.md).
 
-## Visual Overview
+## Visual Overview 🗺️
 
-![PromptControlLab workflow](docs/assets/workflow.svg)
+![prompt_control_lab workflow](docs/assets/workflow.svg)
 
 The toolkit follows a simple path: prepare a task pool, make a clean tri-split, score
 baseline and candidate outputs, run paired statistics, then write a report. Optional
 diagnostics can be added when soft prompts or hidden states are available.
 
-![PromptControlLab artifacts](docs/assets/artifacts.svg)
+![prompt_control_lab artifacts](docs/assets/artifacts.svg)
 
 Every run writes a small audit trail. The files are designed to be readable by people,
 scripts, papers, and future dashboards without rerunning the experiment.
 
-![PromptControlLab command examples](docs/assets/commands.svg)
+![prompt_control_lab command examples](docs/assets/commands.svg)
 
 The sections below give one concrete example for every CLI command. Each example follows
 the same pattern: what to run, what file you get, and what question the result answers.
 
-![PromptControlLab two modes](docs/assets/modes.svg)
+![prompt_control_lab two modes](docs/assets/modes.svg)
 
-## Two Modes
+## Two Modes 🧭
 
-PromptControlLab now has two ways to use the same open-source tool.
+prompt_control_lab now has two ways to use the same open-source tool.
 
 ![Quick Mode](docs/assets/quick_mode.svg)
 
@@ -55,14 +65,14 @@ pipeline for you: split, score, compare, explain, and report.
 individual commands when you want to tune split ratios, import different outputs,
 run statistics with custom sampling, attach diagnostics, or inspect every artifact.
 
-## Ecosystem Positioning and Advantages
+## Ecosystem Positioning and Advantages 🌱
 
-PromptControlLab sits next to existing LLM tools. It is not meant to replace prompt
+prompt_control_lab sits next to existing LLM tools. It is not meant to replace prompt
 optimizers, evaluation frameworks, or observability platforms. Its role is narrower and
 more diagnostic: after a prompt changes, it helps you decide whether the result is
 reproducible, statistically reliable, deployable, and stable enough to inspect further.
 
-![PromptControlLab ecosystem position](docs/assets/ecosystem.svg)
+![prompt_control_lab ecosystem position](docs/assets/ecosystem.svg)
 
 Adjacent tools are valuable in their own workflows:
 
@@ -79,11 +89,11 @@ Adjacent tools are valuable in their own workflows:
   [LangSmith](https://docs.smith.langchain.com/) focus on tracing, observability,
   prompt management, experiments, and evaluation workflows.
 
-PromptControlLab is different because it makes the diagnostic layer first-class:
+prompt_control_lab is different because it makes the diagnostic layer first-class:
 
-![PromptControlLab comparison matrix](docs/assets/comparison_matrix.svg)
+![prompt_control_lab comparison matrix](docs/assets/comparison_matrix.svg)
 
-| Area | What many adjacent tools emphasize | What PromptControlLab adds |
+| Area | What many adjacent tools emphasize | What prompt_control_lab adds |
 | --- | --- | --- |
 | Prompt improvement | Find or rewrite a better prompt/program. | `pcl improve` gives a simple offline rewrite, while reports explain why the rewrite is suggested. |
 | Evaluation | Score outputs on examples and compare runs. | `pcl split`, `pcl stats`, and `pcl report` keep train/val/withheld separate and report paired uncertainty. |
@@ -95,7 +105,7 @@ PromptControlLab is different because it makes the diagnostic layer first-class:
 The main innovation is the stack: prompt changes are not reduced to one score. They become
 a small evidence package that a researcher, engineer, or non-specialist can inspect.
 
-![PromptControlLab innovation stack](docs/assets/innovation_stack.svg)
+![prompt_control_lab innovation stack](docs/assets/innovation_stack.svg)
 
 In practical terms, the tool contributes four things to the field:
 
@@ -105,7 +115,7 @@ In practical terms, the tool contributes four things to the field:
 - A reusable bridge from prompt engineering to control-oriented diagnostics, including
   hidden trajectories, turnpike-like decay, Riccati surrogates, and time-varying controls.
 
-## Easiest Prompt Improvement
+## Easiest Prompt Improvement ✨
 
 If you only have a prompt string and want a clearer version, use:
 
@@ -135,7 +145,7 @@ This command gives a practical rewrite without calling any external model. If yo
 examples, and deployment risk. `--max-tokens` is treated as an estimated budget, not a
 model-specific tokenizer guarantee.
 
-## Who It Is For
+## Who It Is For 👥
 
 - Prompt optimization researchers who need clean train/val/withheld protocols.
 - LLM engineering teams that want local prompt regression reports.
@@ -144,7 +154,7 @@ model-specific tokenizer guarantee.
 - Researchers studying hidden-state trajectories, turnpike-like behavior, and Riccati
   surrogate diagnostics.
 
-## Install
+## Install ⚙️
 
 ```bash
 pip install -e ".[dev,research]"
@@ -159,7 +169,7 @@ uv pip install -e ".[dev,research]"
 Core commands use only the standard library. Research diagnostics such as `soft-hard`,
 `trajectory`, and `riccati` use optional scientific dependencies.
 
-## Function Examples
+## Function Examples 🧩
 
 ### 1. `pcl init`: create a runnable example
 
@@ -404,9 +414,9 @@ The file reports nearest-token indices, mean projection distance, max projection
 distance, and a risk label. Large distances mean the learned soft vectors are far from
 real token embeddings, so converting the soft prompt into hard tokens may lose behavior.
 
-## Research Diagnostics
+## Research Diagnostics 🔬
 
-![PromptControlLab diagnostics](docs/assets/diagnostics.svg)
+![prompt_control_lab diagnostics](docs/assets/diagnostics.svg)
 
 ### 11. `pcl trajectory`: measure hidden-state drift and decay
 
@@ -484,7 +494,7 @@ If `time_varying` beats `static` while `shuffled_tv` and `random_tv` do not, the
 more consistent with temporal structure. If shuffled or random variants also improve,
 inspect parameter capacity and selection effects.
 
-## Documentation
+## Documentation 📚
 
 - [Background](docs/background.en.md)
 - [Users](docs/users.en.md)
@@ -492,6 +502,6 @@ inspect parameter capacity and selection effects.
 - [Artifacts](docs/artifacts.en.md)
 - [Innovation and contribution](docs/innovation.en.md)
 
-## License
+## License 📄
 
 Apache-2.0.

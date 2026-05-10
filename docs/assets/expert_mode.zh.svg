@@ -1,4 +1,4 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1100" height="340" viewBox="0 0 1100 340" role="img" aria-labelledby="title desc">
+﻿<svg xmlns="http://www.w3.org/2000/svg" width="1100" height="340" viewBox="0 0 1100 340" role="img" aria-labelledby="title desc">
   <title id="title">专家模式命令图</title>
   <desc id="desc">专家模式提供 split、eval、stats、explain、gate、report 和研究诊断命令。</desc>
   <rect width="1100" height="340" rx="18" fill="#f8fafc"/>

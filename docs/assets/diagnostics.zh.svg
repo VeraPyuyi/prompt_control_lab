@@ -1,5 +1,5 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1100" height="420" viewBox="0 0 1100 420" role="img" aria-labelledby="title desc">
-  <title id="title">PromptControlLab 研究诊断</title>
+﻿<svg xmlns="http://www.w3.org/2000/svg" width="1100" height="420" viewBox="0 0 1100 420" role="img" aria-labelledby="title desc">
+  <title id="title">prompt_control_lab 研究诊断</title>
   <desc id="desc">四个研究诊断模块：软硬转换风险、轨迹漂移、Riccati surrogate 和 time-varying soft control。</desc>
   <rect width="1100" height="420" rx="18" fill="#f8fafc"/>
   <text x="44" y="54" font-family="Microsoft YaHei, Noto Sans CJK SC, Segoe UI, Arial, sans-serif" font-size="28" font-weight="700" fill="#172033">不只看分数，还看诊断</text>

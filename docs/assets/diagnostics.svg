@@ -1,5 +1,5 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1100" height="420" viewBox="0 0 1100 420" role="img" aria-labelledby="title desc">
-  <title id="title">PromptControlLab diagnostics</title>
+﻿<svg xmlns="http://www.w3.org/2000/svg" width="1100" height="420" viewBox="0 0 1100 420" role="img" aria-labelledby="title desc">
+  <title id="title">prompt_control_lab diagnostics</title>
   <desc id="desc">Four research diagnostics: soft-hard risk, trajectory drift, Riccati surrogate, and time-varying soft control.</desc>
   <rect width="1100" height="420" rx="18" fill="#f8fafc"/>
   <text x="44" y="54" font-family="Segoe UI, Arial, sans-serif" font-size="28" font-weight="700" fill="#172033">Research diagnostics beyond a score</text>

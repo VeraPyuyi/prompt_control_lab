@@ -1,5 +1,5 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="840" viewBox="0 0 1200 840" role="img" aria-labelledby="title desc">
-  <title id="title">PromptControlLab command examples</title>
+﻿<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="840" viewBox="0 0 1200 840" role="img" aria-labelledby="title desc">
+  <title id="title">prompt_control_lab command examples</title>
   <desc id="desc">Nine CLI commands mapped to example outputs and the question each command answers.</desc>
   <rect width="1200" height="840" rx="20" fill="#f8fafc"/>
   <text x="50" y="58" font-family="Segoe UI, Arial, sans-serif" font-size="30" font-weight="700" fill="#111827">Function-by-function examples</text>

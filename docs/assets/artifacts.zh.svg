@@ -1,5 +1,5 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1100" height="430" viewBox="0 0 1100 430" role="img" aria-labelledby="title desc">
-  <title id="title">PromptControlLab 产物结构</title>
+﻿<svg xmlns="http://www.w3.org/2000/svg" width="1100" height="430" viewBox="0 0 1100 430" role="img" aria-labelledby="title desc">
+  <title id="title">prompt_control_lab 产物结构</title>
   <desc id="desc">一次运行会生成 manifest、splits、predictions、metrics、stats、diagnostics 和 reports。</desc>
   <rect width="1100" height="430" rx="18" fill="#fbfbf8"/>
   <text x="44" y="54" font-family="Microsoft YaHei, Noto Sans CJK SC, Segoe UI, Arial, sans-serif" font-size="28" font-weight="700" fill="#172033">每次运行都留下可检查记录</text>

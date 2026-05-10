@@ -1,4 +1,4 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1100" height="300" viewBox="0 0 1100 300" role="img" aria-labelledby="title desc">
+﻿<svg xmlns="http://www.w3.org/2000/svg" width="1100" height="300" viewBox="0 0 1100 300" role="img" aria-labelledby="title desc">
   <title id="title">快速模式流程</title>
   <desc id="desc">快速模式运行 analyze，生成切分、分数、统计、解释和报告。</desc>
   <rect width="1100" height="300" rx="18" fill="#f7fafc"/>

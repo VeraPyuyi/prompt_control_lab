@@ -1,5 +1,5 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="840" viewBox="0 0 1200 840" role="img" aria-labelledby="title desc">
-  <title id="title">PromptControlLab 命令示例</title>
+﻿<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="840" viewBox="0 0 1200 840" role="img" aria-labelledby="title desc">
+  <title id="title">prompt_control_lab 命令示例</title>
   <desc id="desc">九个 CLI 命令对应的示例输出，以及每个命令回答的问题。</desc>
   <rect width="1200" height="840" rx="20" fill="#f8fafc"/>
   <text x="50" y="58" font-family="Microsoft YaHei, Noto Sans CJK SC, Segoe UI, Arial, sans-serif" font-size="30" font-weight="700" fill="#111827">每个功能都有一个示例</text>

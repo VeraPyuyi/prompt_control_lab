@@ -1,8 +1,8 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1100" height="360" viewBox="0 0 1100 360" role="img" aria-labelledby="title desc">
-  <title id="title">PromptControlLab 工作流</title>
+﻿<svg xmlns="http://www.w3.org/2000/svg" width="1100" height="360" viewBox="0 0 1100 360" role="img" aria-labelledby="title desc">
+  <title id="title">prompt_control_lab 工作流</title>
   <desc id="desc">从任务池到三段切分、评测、统计、报告和可选诊断的流程。</desc>
   <rect width="1100" height="360" rx="18" fill="#f7fafc"/>
-  <text x="44" y="54" font-family="Microsoft YaHei, Noto Sans CJK SC, Segoe UI, Arial, sans-serif" font-size="28" font-weight="700" fill="#172033">PromptControlLab 工作流</text>
+  <text x="44" y="54" font-family="Microsoft YaHei, Noto Sans CJK SC, Segoe UI, Arial, sans-serif" font-size="28" font-weight="700" fill="#172033">prompt_control_lab 工作流</text>
   <text x="44" y="84" font-family="Microsoft YaHei, Noto Sans CJK SC, Segoe UI, Arial, sans-serif" font-size="15" fill="#4b5563">把一次 prompt 改动变成可复现的评测、统计和诊断报告。</text>
 
   <defs>

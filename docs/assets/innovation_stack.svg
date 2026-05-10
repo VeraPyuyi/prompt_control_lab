@@ -1,5 +1,5 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1100" height="360" viewBox="0 0 1100 360" role="img" aria-labelledby="title desc">
-  <title id="title">PromptControlLab innovation stack</title>
+﻿<svg xmlns="http://www.w3.org/2000/svg" width="1100" height="360" viewBox="0 0 1100 360" role="img" aria-labelledby="title desc">
+  <title id="title">prompt_control_lab innovation stack</title>
   <desc id="desc">The stack turns a prompt change into reproducible evidence, diagnostics, and a clearer improved prompt.</desc>
   <defs>
     <style>
@@ -13,7 +13,7 @@
   </defs>
   <rect class="bg" width="1100" height="360"/>
   <text x="40" y="47" class="title">Innovation Stack</text>
-  <text x="40" y="74" class="sub">PromptControlLab extends prompt evaluation from a single score to evidence, risk, and explanation.</text>
+  <text x="40" y="74" class="sub">prompt_control_lab extends prompt evaluation from a single score to evidence, risk, and explanation.</text>
 
   <g transform="translate(45,120)">
     <rect width="150" height="120" rx="10" class="box"/><rect width="150" height="31" rx="10" class="top"/>

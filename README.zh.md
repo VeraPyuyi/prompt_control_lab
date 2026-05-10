@@ -1,6 +1,12 @@
-# Prompt_Control_Lab
+# prompt_control_lab 🧪✨
 
-Prompt_Control_Lab 是一个开源工具包，用于 prompt 评测、诊断、复现和控制论分析。
+[![GitHub stars](https://img.shields.io/github/stars/VeraPyuyi/prompt_control_lab?style=social)](https://github.com/VeraPyuyi/prompt_control_lab/stargazers)
+[![GitHub forks](https://img.shields.io/github/forks/VeraPyuyi/prompt_control_lab?style=social)](https://github.com/VeraPyuyi/prompt_control_lab/forks)
+[![GitHub watchers](https://img.shields.io/github/watchers/VeraPyuyi/prompt_control_lab?style=social)](https://github.com/VeraPyuyi/prompt_control_lab/watchers)
+[![License](https://img.shields.io/github/license/VeraPyuyi/prompt_control_lab)](LICENSE)
+[![Python](https://img.shields.io/badge/python-3.10%2B-blue)](pyproject.toml)
+
+prompt_control_lab 是一个开源工具包，用于 prompt 评测、诊断、复现和控制论分析。它的目标很直接：让 prompt 改动更好测、更好解释，也更好复查。
 
 它帮助研究者和工程团队回答这些问题：
 
@@ -11,27 +17,29 @@ Prompt_Control_Lab 是一个开源工具包，用于 prompt 评测、诊断、�
 - hidden-state trajectory 是否出现漂移、不稳定或 turnpike-like 信号？
 - time-varying prompt 的收益来自时序结构，还是只是参数更多？
 
-它不是只输出一个分数的表格，而是生成一套可复现的实验产物：数据怎么切、输出怎么评、差异是否可靠、哪些风险需要检查。
+它不是只输出一个分数的表格，而是生成一套友好的、可复现的实验产物：数据怎么切、输出怎么评、差异是否可靠、哪些风险需要检查。
 
-## 图示概览
+> 📌 当前仓库还是 private，公开徽章服务可能暂时显示 0 或无法显示真实统计；仓库公开后，stars、forks 和 watching 徽章会更自然地展示出来。
 
-![PromptControlLab 工作流](docs/assets/workflow.zh.svg)
+## 图示概览 🗺️
+
+![prompt_control_lab 工作流](docs/assets/workflow.zh.svg)
 
 工具的主流程很直接：准备任务池，生成干净的 train/val/withheld 切分，评测 baseline 和 candidate 输出，做 paired statistics，最后生成报告。如果有 soft prompt 或 hidden states，再追加研究诊断。
 
-![PromptControlLab 产物结构](docs/assets/artifacts.zh.svg)
+![prompt_control_lab 产物结构](docs/assets/artifacts.zh.svg)
 
 每次运行都会留下一个小型 audit trail。这些文件既方便人阅读，也方便脚本、论文复现和后续工具继续消费。
 
-![PromptControlLab 命令示例](docs/assets/commands.zh.svg)
+![prompt_control_lab 命令示例](docs/assets/commands.zh.svg)
 
 下面每个功能都给出一个具体示例，格式统一为：怎么操作、得到什么结果、这个结果能说明什么问题。
 
-![PromptControlLab 双模式](docs/assets/modes.zh.svg)
+![prompt_control_lab 双模式](docs/assets/modes.zh.svg)
 
-## 两种模式
+## 两种模式 🧭
 
-PromptControlLab 现在把同一套开源能力分成两种使用方式。
+prompt_control_lab 现在把同一套开源能力分成两种使用方式。
 
 ![快速模式](docs/assets/quick_mode.zh.svg)
 
@@ -41,11 +49,11 @@ PromptControlLab 现在把同一套开源能力分成两种使用方式。
 
 **Expert Mode（专家模式）** 面向研究者和工程师。你可以继续使用单个命令精细控制切分比例、评测指标、统计采样、soft-hard 分析、trajectory 分析、Riccati 诊断和 time-varying soft-control 对比。
 
-## 生态定位、优势和创新点
+## 生态定位、优势和创新点 🌱
 
-PromptControlLab 放在现有 LLM 工具旁边使用。它不是要替代 prompt 优化器、评测框架或可观测平台，而是专门补上一层更直白的诊断能力：prompt 改了之后，结果是否可复现、是否可靠、是否适合部署、内部行为是否需要继续检查。
+prompt_control_lab 放在现有 LLM 工具旁边使用。它不是要替代 prompt 优化器、评测框架或可观测平台，而是专门补上一层更直白的诊断能力：prompt 改了之后，结果是否可复现、是否可靠、是否适合部署、内部行为是否需要继续检查。
 
-![PromptControlLab 生态位置](docs/assets/ecosystem.zh.svg)
+![prompt_control_lab 生态位置](docs/assets/ecosystem.zh.svg)
 
 相邻工具各有自己的重点：
 
@@ -56,11 +64,11 @@ PromptControlLab 放在现有 LLM 工具旁边使用。它不是要替代 prompt
 - [DeepEval](https://deepeval.com/docs/getting-started) 主要提供 LLM 应用的评测指标和测试用例。
 - [Langfuse](https://langfuse.com/docs) 和 [LangSmith](https://docs.smith.langchain.com/) 更强调 trace、可观测性、prompt 管理、实验和评测工作流。
 
-PromptControlLab 的不同点在于：它把“诊断层”放在核心位置，不只问分数是多少，还问这个分数是否可信、是否有数据泄漏风险、是否能部署、是否稳定。
+prompt_control_lab 的不同点在于：它把“诊断层”放在核心位置，不只问分数是多少，还问这个分数是否可信、是否有数据泄漏风险、是否能部署、是否稳定。
 
-![PromptControlLab 能力对比矩阵](docs/assets/comparison_matrix.zh.svg)
+![prompt_control_lab 能力对比矩阵](docs/assets/comparison_matrix.zh.svg)
 
-| 维度 | 很多相邻工具更强调什么 | PromptControlLab 补上什么 |
+| 维度 | 很多相邻工具更强调什么 | prompt_control_lab 补上什么 |
 | --- | --- | --- |
 | Prompt 改写 | 找到或改写更好的 prompt / 程序。 | `pcl improve` 给出离线、简单、可读的 prompt 改写，并解释为什么这么改。 |
 | 评测比较 | 在样本上打分，比较不同运行结果。 | `pcl split`、`pcl stats`、`pcl report` 固化 train/val/withheld 隔离，并报告成对统计不确定性。 |
@@ -71,7 +79,7 @@ PromptControlLab 的不同点在于：它把“诊断层”放在核心位置，
 
 它的核心创新可以理解为下面这条链路：一次 prompt 改动，不再只得到一个分数，而是得到一套可以检查的证据包。
 
-![PromptControlLab 创新栈](docs/assets/innovation_stack.zh.svg)
+![prompt_control_lab 创新栈](docs/assets/innovation_stack.zh.svg)
 
 对相关领域的贡献可以概括为四点：
 
@@ -80,7 +88,7 @@ PromptControlLab 的不同点在于：它把“诊断层”放在核心位置，
 - 系统报告 soft-to-hard gap，让 soft prompt 研究更容易走向部署分析。
 - 把 hidden-state trajectory、turnpike-like decay、Riccati surrogate 和 time-varying control 变成可复用诊断能力，推动 prompt engineering 向 prompt control diagnostics 发展。
 
-## 最简单的 prompt 优化
+## 最简单的 prompt 优化 ✨
 
 如果你只有一段 prompt 字符串，只想直接得到一个更清楚的版本，可以运行：
 
@@ -105,7 +113,7 @@ pcl improve --prompt "回答下面的问题" --token-mode aggressive --max-token
 
 这个命令不调用外部模型，只用离线规则改写 prompt。它会补充任务目标、输出格式约束和稳定性要求。如果再加上 `--run runs/quick`，它会读取已有检测报告，把退化的任务 slice、变差样本和风险提示加入 prompt。`--max-tokens` 是估算预算，不是某个模型 tokenizer 的精确保证。
 
-## 面向谁
+## 面向谁 👥
 
 - prompt optimization 研究者：需要干净的 train/val/withheld 协议。
 - LLM 工程团队：需要本地 prompt regression report。
@@ -113,7 +121,7 @@ pcl improve --prompt "回答下面的问题" --token-mode aggressive --max-token
 - 模型迁移和评测团队：需要可复现的 artifact trail。
 - 研究 hidden-state trajectory、turnpike-like 行为和 Riccati surrogate 的研究者。
 
-## 安装
+## 安装 ⚙️
 
 ```bash
 pip install -e ".[dev,research]"
@@ -127,7 +135,7 @@ uv pip install -e ".[dev,research]"
 
 核心命令只依赖 Python 标准库。`soft-hard`、`trajectory`、`riccati` 等研究诊断命令使用可选科学计算依赖。
 
-## 功能示例
+## 功能示例 🧩
 
 ### 1. `pcl init`：生成可运行示例
 
@@ -351,9 +359,9 @@ pcl soft-hard --soft soft_prompt.npz `
 
 这个文件会给出 nearest-token index、平均投影距离、最大投影距离和风险等级。距离越大，说明 soft prompt 学到的向量越不像真实 token embedding，转成 hard prompt 后越可能丢失行为。
 
-## 研究诊断命令
+## 研究诊断命令 🔬
 
-![PromptControlLab 研究诊断](docs/assets/diagnostics.zh.svg)
+![prompt_control_lab 研究诊断](docs/assets/diagnostics.zh.svg)
 
 ### 11. `pcl trajectory`：分析 hidden-state 轨迹漂移和衰减
 
@@ -423,7 +431,7 @@ pcl tv-soft --predictions scored_methods.jsonl --out runs/candidate/diagnostics
 
 如果 `time_varying` 明显优于 `static`，但 `shuffled_tv` 和 `random_tv` 没有同样提升，收益更可能来自时序结构。如果 shuffled 或 random 也提升，应该检查参数容量和选择效应。
 
-## 文档
+## 文档 📚
 
 - [使用背景](docs/background.zh.md)
 - [面向群体](docs/users.zh.md)
@@ -431,6 +439,6 @@ pcl tv-soft --predictions scored_methods.jsonl --out runs/candidate/diagnostics
 - [产物说明](docs/artifacts.zh.md)
 - [创新点和贡献](docs/innovation.zh.md)
 
-## License
+## License 📄
 
 Apache-2.0。
