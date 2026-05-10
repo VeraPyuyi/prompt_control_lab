@@ -54,8 +54,8 @@ dev = [
 pcl = "promptcontrollab.cli:main"
 
 [project.urls]
-Homepage = "https://github.com/VeraPyuyi/promptcontrollab"
-Issues = "https://github.com/VeraPyuyi/promptcontrollab/issues"
+Homepage = "https://github.com/VeraPyuyi/prompt_control_lab"
+Issues = "https://github.com/VeraPyuyi/prompt_control_lab/issues"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/promptcontrollab"]
