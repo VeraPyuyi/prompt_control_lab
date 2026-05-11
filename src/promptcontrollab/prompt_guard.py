@@ -95,9 +95,14 @@ def guard_prompt(
 
 
 def _add_profile_hint(prompt: str, profile: str) -> str:
+    language = _detect_language(prompt)
     if profile == "coding":
+        if language == "zh":
+            return f"{prompt}\n请关注精确代码改动、影响文件、测试方式和验证结果。"
         return f"{prompt}\nFocus on precise code changes, affected files, tests, and verification."
     if profile == "research":
+        if language == "zh":
+            return f"{prompt}\n请关注假设、证据、baseline 和可复现产物。"
         return f"{prompt}\nFocus on assumptions, evidence, baselines, and reproducible artifacts."
     return prompt
 

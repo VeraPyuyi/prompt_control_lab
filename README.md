@@ -156,7 +156,8 @@ More details: [plugins/claude-code](plugins/claude-code).
 
 ### Cursor Rules 🖱️
 
-Cursor is best supported today through rules plus explicit `pcl guard` commands.
+Cursor can be used in two layers: a simple rules workflow, or an optional MCP-style
+server that exposes `guard_prompt` as a callable tool.
 
 Install steps inside a Cursor project:
 
@@ -174,6 +175,16 @@ pcl guard --prompt "Refactor this module" --profile coding --token-mode balanced
 Expected result: Cursor has a project rule that nudges agents to use `pcl guard` for vague,
 broad, risky, or expensive prompts. This is not full prompt interception yet; it is a practical
 rules workflow.
+
+Optional MCP-style server:
+
+```bash
+python plugins/cursor/mcp_server.py
+```
+
+Point your Cursor MCP configuration at that command if your Cursor setup supports local MCP
+servers. Expected result: Cursor can call `guard_prompt` and display the returned
+`plain_summary`, `risk_level`, `improved_prompt`, and token estimate.
 
 More details: [plugins/cursor](plugins/cursor).
 

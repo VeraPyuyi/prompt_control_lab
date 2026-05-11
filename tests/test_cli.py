@@ -134,6 +134,10 @@ def test_cli_quick_analyze_explain_and_report(tmp_path: Path) -> None:
     assert "Recommendation:" in report
     assert "Quick Mode Explanation" in report
     assert "What this means" in report
+    html = (run / "report.html").read_text(encoding="utf-8")
+    assert "recommendation-card" in html
+    assert "Sample changes" in html
+    assert "arith-2" in html
 
     assert main(["explain", "--run", str(run), "--level", "technical"]) == 0
     technical = json.loads((run / "explanation.json").read_text(encoding="utf-8"))
@@ -320,6 +324,7 @@ def test_cli_improve_prompt_file_and_out_writes_artifacts(tmp_path: Path) -> Non
     payload = json.loads((out_dir / "prompt_improvement.json").read_text(encoding="utf-8"))
     diff = (out_dir / "prompt_diff.md").read_text(encoding="utf-8")
     assert "Please answer the user question accurately." in improved
+    assert payload["plain_summary"].startswith("This rewrite")
     assert payload["language"] == "en"
     assert payload["original_prompt"] == "Answer the user question."
     assert "Added a clear task goal" in diff
@@ -453,6 +458,28 @@ def test_cli_guard_default_output_starts_with_plain_summary(
     assert "Add target files" in output
 
 
+def test_cli_guard_chinese_prompt_uses_chinese_profile_hint(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    assert (
+        main(
+            [
+                "guard",
+                "--prompt",
+                "修复这个 bug",
+                "--profile",
+                "coding",
+                "--json",
+            ]
+        )
+        == 0
+    )
+    payload = json.loads(capsys.readouterr().out)
+    assert "目标文件" in payload["plain_summary"]
+    assert "Focus on precise code changes" not in payload["improved_prompt"]
+    assert "影响文件" in payload["improved_prompt"]
+
+
 def test_cli_start_choice_improve_outputs_beginner_prompt(
     capsys: pytest.CaptureFixture[str],
 ) -> None:
@@ -548,3 +575,40 @@ def test_claude_code_hook_can_block_over_budget_prompt() -> None:
     payload = json.loads(completed.stdout)
     assert payload["decision"] == "block"
     assert "token budget" in payload["reason"]
+
+
+def test_cursor_mcp_server_lists_and_calls_guard_prompt() -> None:
+    server = Path("plugins/cursor/mcp_server.py")
+    requests = "\n".join(
+        [
+            json.dumps({"jsonrpc": "2.0", "id": 1, "method": "initialize", "params": {}}),
+            json.dumps({"jsonrpc": "2.0", "id": 2, "method": "tools/list", "params": {}}),
+            json.dumps(
+                {
+                    "jsonrpc": "2.0",
+                    "id": 3,
+                    "method": "tools/call",
+                    "params": {
+                        "name": "guard_prompt",
+                        "arguments": {
+                            "prompt": "Fix this bug",
+                            "profile": "coding",
+                            "token_mode": "balanced",
+                        },
+                    },
+                }
+            ),
+        ]
+    )
+    completed = subprocess.run(
+        [sys.executable, str(server)],
+        input=requests + "\n",
+        text=True,
+        capture_output=True,
+        check=True,
+    )
+    responses = [json.loads(line) for line in completed.stdout.splitlines()]
+    assert responses[1]["result"]["tools"][0]["name"] == "guard_prompt"
+    tool_result = responses[2]["result"]["content"][0]["text"]
+    assert "plain_summary" in tool_result
+    assert "target files" in tool_result

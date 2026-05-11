@@ -74,7 +74,8 @@ context notes. It also includes `token_report`, a dependency-free estimate of or
 improved prompt tokens, token mode, optional budget, and whether the rewrite fits that budget.
 
 What it explains: why the tool changed the prompt, which diagnostic hints were used, and how the
-rewrite affects estimated prompt-token cost.
+rewrite affects estimated prompt-token cost. The `plain_summary` field gives a one-sentence,
+non-technical explanation that plugins and simple wrappers can show directly.
 
 ## `prompt_diff.md`
 

@@ -154,7 +154,8 @@ plugins/claude-code/hooks/prompt_guard.py
 
 ### Cursor Rules 🖱️
 
-Cursor 当前最适合用 rules + 显式 `pcl guard` 命令接入。
+Cursor 可以分两层接入：最简单的是 rules 工作流；更自动一点的是使用本仓库提供的
+MCP-style server，把 `guard_prompt` 暴露成 Cursor 可调用工具。
 
 在 Cursor 项目中安装：
 
@@ -172,6 +173,16 @@ pcl guard --prompt "重构这个模块" --profile coding --token-mode balanced
 预期结果：Cursor 项目里会有一条规则，提醒 agent 遇到模糊、宽泛、高风险或高成本
 prompt 时先使用 `pcl guard`。这还不是 Cursor 的全自动输入拦截，但已经是可用的
 项目级工作流。
+
+可选 MCP-style server：
+
+```bash
+python plugins/cursor/mcp_server.py
+```
+
+如果你的 Cursor 配置支持本地 MCP server，可以把它指向上面这个命令。预期结果：
+Cursor 可以调用 `guard_prompt`，并展示返回的 `plain_summary`、`risk_level`、
+`improved_prompt` 和 estimated token 成本。
 
 更多说明见 [plugins/cursor](plugins/cursor)。
 

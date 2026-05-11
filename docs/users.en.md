@@ -35,3 +35,16 @@ Riccati surrogate stability. These are diagnostics, not proofs about a full lang
 
 Use Expert Mode when you need fine control over each step. The individual commands let you choose
 split settings, metrics, sampling counts, diagnostics, and policy gates separately.
+
+## Expert Decision Guide
+
+- If the bootstrap confidence interval crosses zero, treat the observed change as uncertain even
+  when the average score improved.
+- If the adjusted p-value is high, the run may still pass a gate when the policy only requires
+  "no large regression". That means "acceptable under this policy", not "statistically proven".
+- If `p-value = 1.0` and the gate passes, inspect the gate policy. It usually means the policy is
+  permissive or focused on minimum score/regression thresholds.
+- If slice-level scores regress while the average improves, inspect those slices before keeping
+  the prompt.
+- Riccati, trajectory, and soft-hard diagnostics are fitted probes and deployment-risk signals;
+  they are not proofs about the full language model.

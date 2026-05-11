@@ -1,8 +1,12 @@
 # prompt_control_lab for Cursor
 
-Cursor integration is currently a lightweight rules and command pattern. Cursor does not expose
-the same repository-local prompt interception hook as Claude Code in this repo, so this adapter
-does not claim full automatic interception yet.
+Cursor integration has two layers:
+
+- a lightweight rules and command pattern
+- a dependency-free MCP-style stdio server that exposes `guard_prompt`
+
+This adapter still does not claim full automatic prompt interception. It gives Cursor a callable
+guard tool and a practical rule workflow.
 
 Bundled rule file:
 
@@ -51,3 +55,33 @@ A deeper Cursor integration should be implemented as one of these:
 
 The stable integration contract is the `pcl guard --json` payload, especially
 `plain_summary`, `action`, `risk_level`, `improved_prompt`, and `token_report`.
+
+## Optional MCP-Style Server
+
+Run the local server:
+
+```bash
+python plugins/cursor/mcp_server.py
+```
+
+If your Cursor setup supports local MCP servers, point the server command to that script. The
+server exposes one tool:
+
+```text
+guard_prompt
+```
+
+Example tool arguments:
+
+```json
+{
+  "prompt": "Refactor this module",
+  "profile": "coding",
+  "token_mode": "balanced",
+  "mode": "suggest"
+}
+```
+
+The tool returns a JSON text payload with `plain_summary`, `risk_level`, `improved_prompt`,
+`reasons`, and `token_report`, so a Cursor wrapper can show a human-readable suggestion before
+the agent spends tokens.

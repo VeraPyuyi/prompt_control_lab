@@ -40,6 +40,7 @@ class PromptImprovement:
 
     original_prompt: str
     improved_prompt: str
+    plain_summary: str
     language: str
     goal: str
     style: str
@@ -51,6 +52,7 @@ class PromptImprovement:
         return {
             "original_prompt": self.original_prompt,
             "improved_prompt": self.improved_prompt,
+            "plain_summary": self.plain_summary,
             "language": self.language,
             "goal": self.goal,
             "style": self.style,
@@ -136,6 +138,11 @@ def improve_prompt(
     return PromptImprovement(
         original_prompt=original,
         improved_prompt=improved,
+        plain_summary=_plain_summary(
+            language=resolved_language,
+            token_report=token_report,
+            has_context=bool(context_notes),
+        ),
         language=resolved_language,
         goal=goal,
         style=style,
@@ -143,6 +150,31 @@ def improve_prompt(
         context_notes=context_notes,
         token_report=token_report,
     )
+
+
+def _plain_summary(
+    *,
+    language: str,
+    token_report: PromptTokenReport,
+    has_context: bool,
+) -> str:
+    budget_part = ""
+    if token_report.max_tokens is not None:
+        if token_report.within_budget:
+            budget_part = " It fits the estimated token budget."
+        else:
+            budget_part = " It still exceeds the estimated token budget."
+    if language == "zh":
+        base = "这版 prompt 补充了目标、输出格式和稳定性规则。"
+        if has_context:
+            base += " 它还结合了已有检测报告里的风险提示。"
+        if token_report.max_tokens is not None:
+            base += " 已检查 estimated token 预算。"
+        return base
+    base = "This rewrite adds a clearer goal, output rules, and stability guardrails."
+    if has_context:
+        base += " It also uses warning signs from the existing report."
+    return base + budget_part
 
 
 def _resolve_language(prompt: str, language: str) -> str:

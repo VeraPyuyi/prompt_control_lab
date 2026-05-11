@@ -161,14 +161,26 @@ def render_html(markdown: str, *, title: str) -> str:
     """Render a dependency-free HTML wrapper around the Markdown text."""
 
     escaped = html.escape(markdown)
+    card = _html_recommendation_card(markdown)
+    sample_changes = _html_sample_changes(markdown)
     return (
         "<!doctype html>\n"
         "<html><head><meta charset='utf-8'>"
         f"<title>{html.escape(title)}</title>"
         "<style>body{font-family:system-ui,sans-serif;max-width:920px;margin:40px auto;"
         "line-height:1.55;padding:0 20px}pre{background:#f6f8fa;padding:16px;"
-        "overflow:auto}code{background:#f6f8fa;padding:2px 4px}</style>"
+        "overflow:auto}code{background:#f6f8fa;padding:2px 4px}"
+        ".recommendation-card{border-radius:10px;padding:16px 18px;margin:18px 0;"
+        "border:1px solid #cbd5e1}.recommendation-card.green{background:#f0fdf4;"
+        "border-color:#86efac}.recommendation-card.yellow{background:#fefce8;"
+        "border-color:#fde047}.recommendation-card.red{background:#fef2f2;"
+        "border-color:#fca5a5}.recommendation-card h2{margin:0 0 8px}"
+        "table{border-collapse:collapse;width:100%;margin:12px 0 22px}"
+        "td,th{border:1px solid #e2e8f0;padding:8px;text-align:left}"
+        "th{background:#f8fafc}</style>"
         "</head><body>"
+        f"{card}"
+        f"{sample_changes}"
         f"<pre>{escaped}</pre>"
         "</body></html>\n"
     )
@@ -258,3 +270,43 @@ def _deployment_card(explanation: JsonDict, gate: JsonDict) -> JsonDict:
         "color": "yellow",
         "reason": "No explanation or gate result is available yet.",
     }
+
+
+def _html_recommendation_card(markdown: str) -> str:
+    recommendation = _markdown_field(markdown, "Recommendation") or "needs_review"
+    color = _markdown_field(markdown, "Risk color") or "yellow"
+    reason = _markdown_field(markdown, "Why") or "Review the generated artifacts."
+    safe_color = color if color in {"green", "yellow", "red"} else "yellow"
+    return (
+        f"<section class='recommendation-card {safe_color}'>"
+        "<h2>Deployment Recommendation</h2>"
+        f"<p><strong>{html.escape(recommendation)}</strong></p>"
+        f"<p>{html.escape(reason)}</p>"
+        "</section>"
+    )
+
+
+def _html_sample_changes(markdown: str) -> str:
+    fixed = _markdown_field(markdown, "Fixed examples") or "[]"
+    broken = _markdown_field(markdown, "Broken examples") or "[]"
+    return (
+        "<section>"
+        "<h2>Sample changes</h2>"
+        "<table>"
+        "<tr><th>Type</th><th>Example ids</th></tr>"
+        f"<tr><td>Fixed</td><td>{html.escape(fixed)}</td></tr>"
+        f"<tr><td>Broken</td><td>{html.escape(broken)}</td></tr>"
+        "</table>"
+        "</section>"
+    )
+
+
+def _markdown_field(markdown: str, label: str) -> str | None:
+    prefix = f"- {label}:"
+    for line in markdown.splitlines():
+        if line.startswith(prefix):
+            value = line[len(prefix) :].strip()
+            if value.startswith("`") and value.endswith("`"):
+                value = value[1:-1]
+            return value
+    return None

@@ -202,6 +202,14 @@ The file contains mean delta, bootstrap confidence interval, paired permutation 
 Holm-adjusted p-value. If the interval crosses zero, the change is still uncertain. If the
 adjusted p-value is small and the interval stays above zero, the improvement is more reliable.
 
+Decision guide:
+
+- CI crosses zero -> do not claim a reliable improvement yet.
+- p-value is high -> the evidence is weak, even if the mean score improved.
+- p-value is high but gate passes -> the policy likely checks minimum score or allowed
+  regression, not proof of improvement.
+- average improves but a slice regresses -> inspect that slice before keeping the prompt.
+
 ## 5. Generate a Report
 
 Operation:

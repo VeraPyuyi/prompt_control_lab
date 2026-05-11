@@ -186,6 +186,13 @@ pcl stats --baseline runs/baseline/predictions.jsonl `
 
 这个文件包含 mean delta、bootstrap confidence interval、paired permutation p-value 和 Holm-adjusted p-value。如果置信区间跨过 0，说明提升仍然不稳定。如果 adjusted p-value 很小且区间不跨 0，说明 candidate 的提升更可靠。
 
+决策指南：
+
+- CI 跨过 0 -> 暂时不要声称 prompt 已经可靠提升。
+- p-value 很高 -> 证据偏弱，就算平均分提高也要谨慎。
+- p-value 很高但 gate pass -> 当前 policy 可能只检查最低分或最大退化，不代表已经证明提升。
+- 平均分提高但某个 slice 退化 -> 先检查这个 slice，再决定是否保留 prompt。
+
 ## 5. 生成报告
 
 操作：
