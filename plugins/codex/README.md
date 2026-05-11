@@ -2,6 +2,21 @@
 
 Codex integration is currently a skill and wrapper pattern.
 
+Bundled local skill:
+
+```text
+plugins/codex/skills/prompt_control_lab/SKILL.md
+```
+
+Install on Windows PowerShell:
+
+```powershell
+New-Item -ItemType Directory -Force "$env:USERPROFILE\.codex\skills\prompt_control_lab"
+Copy-Item -Recurse -Force .\plugins\codex\skills\prompt_control_lab\* "$env:USERPROFILE\.codex\skills\prompt_control_lab\"
+```
+
+Restart Codex after copying the skill.
+
 Recommended use:
 
 ```bash

@@ -2,6 +2,19 @@
 
 Cursor integration is currently a lightweight rules and command pattern.
 
+Bundled rule file:
+
+```text
+plugins/cursor/rules/prompt_control_lab.mdc
+```
+
+Install inside a Cursor project:
+
+```powershell
+New-Item -ItemType Directory -Force .cursor\rules
+Copy-Item plugins\cursor\rules\prompt_control_lab.mdc .cursor\rules\prompt_control_lab.mdc
+```
+
 Recommended use:
 
 1. Keep prompt guidance in `.cursor/rules`.

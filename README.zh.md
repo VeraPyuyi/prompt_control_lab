@@ -6,97 +6,211 @@
 [![License](https://img.shields.io/github/license/VeraPyuyi/prompt_control_lab)](LICENSE)
 [![Python](https://img.shields.io/badge/python-3.10%2B-blue)](pyproject.toml)
 
-prompt_control_lab 是一个开源工具包，用于 prompt 评测、诊断、复现和控制论分析。它的目标很直接：让 prompt 改动更好测、更好解释，也更好复查。
+`prompt_control_lab` 是一个开源工具包，用于 prompt 优化、prompt 输入守护、
+prompt 评测、复现和控制论诊断。它可以从最简单的“一句话 prompt 改写”开始，
+逐步扩展到 CLI 报告、Claude Code / Cursor / Codex 插件、withheld 评测、
+soft-to-hard 风险、hidden-state trajectory 和 Riccati surrogate 分析。٩(ˊᗜˋ*)و
 
-它帮助研究者和工程团队回答这些问题：
+> 📌 当前仓库还是 private，公开徽章服务可能暂时显示 0 或无法显示真实统计；
+> 仓库公开后，stars、forks 和 watching 徽章会更自然地展示出来。
 
-- prompt 改动后，效果是否真的变好？
-- 结果是否只是验证集过拟合？
-- train / val / withheld 是否被干净隔离？
-- soft prompt 转成 hard prompt 后风险有多大？
-- hidden-state trajectory 是否出现漂移、不稳定或 turnpike-like 信号？
-- time-varying prompt 的收益来自时序结构，还是只是参数更多？
+English documentation is available in [README.md](README.md).
 
-它不是只输出一个分数的表格，而是生成一套友好的、可复现的实验产物：数据怎么切、输出怎么评、差异是否可靠、哪些风险需要检查。
+## 快速地图 🗺️
 
-> 📌 当前仓库还是 private，公开徽章服务可能暂时显示 0 或无法显示真实统计；仓库公开后，stars、forks 和 watching 徽章会更自然地展示出来。
+如果你第一次使用，建议按这个顺序看：
 
-## 图示概览 🗺️
+1. **只想直接优化一个 prompt** → `pcl improve`
+2. **想在 Claude Code / Cursor / Codex 输入前守护 prompt** → `pcl guard` + `plugins/`
+3. **想一键生成完整分析报告** → `pcl analyze`
+4. **想专业控制每一步评测** → `split → eval → stats → report → explain → gate`
+5. **想做研究诊断** → `soft-hard → trajectory → riccati → tv-soft`
 
 ![prompt_control_lab 工作流](docs/assets/workflow.zh.svg)
 
-工具的主流程很直接：准备任务池，生成干净的 train/val/withheld 切分，评测 baseline 和 candidate 输出，做 paired statistics，最后生成报告。如果有 soft prompt 或 hidden states，再追加研究诊断。
+核心思想很直白：不要只相信一个分数。把切分、输出、统计、解释、诊断和 prompt
+改写都留下来，方便复查和复现。
 
 ![prompt_control_lab 产物结构](docs/assets/artifacts.zh.svg)
 
-每次运行都会留下一个小型 audit trail。这些文件既方便人阅读，也方便脚本、论文复现和后续工具继续消费。
+## 安装 CLI ⚙️
 
-![prompt_control_lab 命令示例](docs/assets/commands.zh.svg)
+### 1. 克隆仓库
 
-下面每个功能都给出一个具体示例，格式统一为：怎么操作、得到什么结果、这个结果能说明什么问题。
+```bash
+git clone https://github.com/VeraPyuyi/prompt_control_lab.git
+cd prompt_control_lab
+```
 
-![prompt_control_lab 双模式](docs/assets/modes.zh.svg)
+如果你已经有本地仓库，直接进入仓库目录即可。
 
-## 两种模式 🧭
+### 2. 安装轻量 CLI
 
-prompt_control_lab 现在把同一套开源能力分成两种使用方式。
+```bash
+pip install -e .
+```
 
-![快速模式](docs/assets/quick_mode.zh.svg)
+使用 `uv`：
 
-**Quick Mode（快速模式）** 面向非专业人员。你只需要准备任务文件、baseline 输出和 candidate 输出，然后运行 `pcl analyze`。它会自动完成切分、打分、统计比较、解释和报告生成。
+```bash
+uv pip install -e .
+```
 
-![专家模式](docs/assets/expert_mode.zh.svg)
+### 3. 安装开发和研究诊断依赖
 
-**Expert Mode（专家模式）** 面向研究者和工程师。你可以继续使用单个命令精细控制切分比例、评测指标、统计采样、soft-hard 分析、trajectory 分析、Riccati 诊断和 time-varying soft-control 对比。
+如果你要跑测试，或者使用 `soft-hard`、`trajectory`、`riccati` 等研究诊断命令：
 
-## 生态定位、优势和创新点 🌱
+```bash
+pip install -e ".[dev,research]"
+```
 
-prompt_control_lab 放在现有 LLM 工具旁边使用。它不是要替代 prompt 优化器、评测框架或可观测平台，而是专门补上一层更直白的诊断能力：prompt 改了之后，结果是否可复现、是否可靠、是否适合部署、内部行为是否需要继续检查。
+使用 `uv`：
 
-![prompt_control_lab 生态位置](docs/assets/ecosystem.zh.svg)
+```bash
+uv pip install -e ".[dev,research]"
+```
 
-相邻工具各有自己的重点：
+### 4. 检查 CLI 是否可用
 
-- [DSPy](https://dspy.ai/learn/optimization/optimizers/) 主要提供 optimizer，用指标驱动 prompt 或语言模型程序的优化。
-- [TextGrad](https://github.com/zou-group/textgrad) 主要探索 textual gradient，也就是用类似自动微分的方式优化文本。
-- [OpenPrompt](https://github.com/thunlp/OpenPrompt) 主要提供 prompt-learning 的流程和组件。
-- [promptfoo](https://www.promptfoo.dev/docs/intro/) 主要做 LLM 评测、测试、红队和 CI 工作流。
-- [DeepEval](https://deepeval.com/docs/getting-started) 主要提供 LLM 应用的评测指标和测试用例。
-- [Langfuse](https://langfuse.com/docs) 和 [LangSmith](https://docs.smith.langchain.com/) 更强调 trace、可观测性、prompt 管理、实验和评测工作流。
+```bash
+pcl --help
+pcl improve --prompt "回答下面的问题"
+```
 
-prompt_control_lab 的不同点在于：它把“诊断层”放在核心位置，不只问分数是多少，还问这个分数是否可信、是否有数据泄漏风险、是否能部署、是否稳定。
+预期结果：`pcl --help` 能看到命令列表，`pcl improve` 会输出优化后的 prompt 和
+estimated token 成本。
 
-![prompt_control_lab 能力对比矩阵](docs/assets/comparison_matrix.zh.svg)
+## 安装 IDE / CLI 插件和 Skills 🧩
 
-| 维度 | 很多相邻工具更强调什么 | prompt_control_lab 补上什么 |
-| --- | --- | --- |
-| Prompt 改写 | 找到或改写更好的 prompt / 程序。 | `pcl improve` 给出离线、简单、可读的 prompt 改写，并解释为什么这么改。 |
-| 评测比较 | 在样本上打分，比较不同运行结果。 | `pcl split`、`pcl stats`、`pcl report` 固化 train/val/withheld 隔离，并报告成对统计不确定性。 |
-| 可复现性 | 保存配置、prompt、trace 或实验记录。 | 每次运行都写出 split hash、metrics、explanation、report 等明确产物。 |
-| 部署风险 | 通常通过输出层测试检查。 | `pcl soft-hard` 专门检查 soft prompt 转 hard prompt 的风险。 |
-| 内部行为 | 通常不是普通 prompt 评测流程的重点。 | `pcl trajectory` 在有 hidden states 时检查漂移、衰减和 turnpike-like 信号。 |
-| 控制论分析 | 很少作为可复用 prompt 工具暴露。 | `pcl riccati` 和 `pcl tv-soft` 提供代理稳定性和 time-varying control 诊断。 |
+所有 IDE / CLI 集成都围绕同一个稳定命令：
 
-它的核心创新可以理解为下面这条链路：一次 prompt 改动，不再只得到一个分数，而是得到一套可以检查的证据包。
+```bash
+pcl guard --prompt "修复这个 bug" --profile coding --token-mode balanced --json
+```
 
-![prompt_control_lab 创新栈](docs/assets/innovation_stack.zh.svg)
+给 hook 或 wrapper 使用时，推荐走 stdin：
 
-对相关领域的贡献可以概括为四点：
+```bash
+echo "修复这个 bug" | pcl guard --stdin --profile coding --json
+```
 
-- 把 train/val/withheld 协议做成工具，降低验证集过拟合和测试泄漏风险。
-- 用成对统计、置信区间和校正报告，让 prompt 改动是否可靠更容易判断。
-- 系统报告 soft-to-hard gap，让 soft prompt 研究更容易走向部署分析。
-- 把 hidden-state trajectory、turnpike-like decay、Riccati surrogate 和 time-varying control 变成可复用诊断能力，推动 prompt engineering 向 prompt control diagnostics 发展。
+### Claude Code Hook 🪝
 
-## 最简单的 prompt 优化 ✨
+Claude Code 支持 `UserPromptSubmit` hook。本仓库已经提供可运行的 hook：
 
-如果你只有一段 prompt 字符串，只想直接得到一个更清楚的版本，可以运行：
+```text
+plugins/claude-code/hooks/prompt_guard.py
+```
+
+安装步骤：
+
+1. 先运行 `pip install -e .` 安装 CLI。
+2. 打开你的 Claude Code settings 文件。
+3. 加入下面的 `UserPromptSubmit` hook：
+
+```json
+{
+  "hooks": {
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python \"D:/path/to/prompt_control_lab/plugins/claude-code/hooks/prompt_guard.py\" --mode suggest --profile coding --token-mode balanced --max-tokens 300"
+          }
+        ]
+      }
+    ]
+  }
+}
+```
+
+4. 把路径改成你的本地仓库路径。
+5. 手动测试 hook：
+
+```powershell
+'{"hook_event_name":"UserPromptSubmit","prompt":"Fix this bug"}' |
+  python plugins\claude-code\hooks\prompt_guard.py --mode suggest --profile coding
+```
+
+预期结果：输出包含 `additionalContext` 的 JSON。使用 `--mode gate` 时，高风险 prompt
+可以返回 `decision: "block"` 和阻断原因。(ง •̀_•́)ง
+
+更多说明见 [plugins/claude-code](plugins/claude-code)。
+
+### Cursor Rules 🖱️
+
+Cursor 当前最适合用 rules + 显式 `pcl guard` 命令接入。
+
+在 Cursor 项目中安装：
+
+```powershell
+New-Item -ItemType Directory -Force .cursor\rules
+Copy-Item plugins\cursor\rules\prompt_control_lab.mdc .cursor\rules\prompt_control_lab.mdc
+```
+
+然后在发送高成本或模糊 prompt 前运行：
+
+```bash
+pcl guard --prompt "重构这个模块" --profile coding --token-mode balanced
+```
+
+预期结果：Cursor 项目里会有一条规则，提醒 agent 遇到模糊、宽泛、高风险或高成本
+prompt 时先使用 `pcl guard`。这还不是 Cursor 的全自动输入拦截，但已经是可用的
+项目级工作流。
+
+更多说明见 [plugins/cursor](plugins/cursor)。
+
+### Codex Skill 🛠️
+
+本仓库提供了一个本地 Codex skill 模板：
+
+```text
+plugins/codex/skills/prompt_control_lab/SKILL.md
+```
+
+Windows PowerShell 安装：
+
+```powershell
+New-Item -ItemType Directory -Force "$env:USERPROFILE\.codex\skills\prompt_control_lab"
+Copy-Item -Recurse -Force .\plugins\codex\skills\prompt_control_lab\* "$env:USERPROFILE\.codex\skills\prompt_control_lab\"
+```
+
+然后重启 Codex，让它重新发现 skill。使用时可以这样说：
+
+```text
+$prompt_control_lab 请先守护这个 prompt 再开始实现："实现这个功能"
+```
+
+预期结果：Codex 会根据 skill 说明优先调用 `pcl guard`，先整理 prompt，再进入更大的
+实现任务。(｡•̀ᴗ-)✧
+
+更多说明见 [plugins/codex](plugins/codex)。
+
+### 通用 Shell Wrapper 🐚
+
+任何 CLI agent 都可以使用 JSON 接口：
+
+```bash
+echo "给这个功能写测试" | pcl guard --stdin --profile coding --json
+```
+
+你可以把 `improved_prompt` 作为真正发给 agent 的 prompt；如果是 gate 模式，也可以把
+`action=block` 当作停止信号。
+
+## 功能路径：从简单到专业 🚀
+
+下面的功能顺序是从“最直白、最高度集成”到“更专业、更灵活”。
+
+### 1. `pcl improve`：直接改写一个 prompt ✨
+
+操作：
 
 ```bash
 pcl improve --prompt "回答下面的问题"
 ```
 
-如果想更明显地减少 prompt token 成本：
+控制 token 成本：
 
 ```bash
 pcl improve --prompt "回答下面的问题" --token-mode aggressive --max-tokens 80
@@ -104,27 +218,27 @@ pcl improve --prompt "回答下面的问题" --token-mode aggressive --max-token
 
 得到：
 
-- 终端里直接打印优化后的 prompt。
-- 如果加上 `--out runs/improve`，还会写出 `improved_prompt.txt`、`prompt_improvement.json` 和 `prompt_diff.md`。
-- 终端和 JSON 里会给出不依赖外部 tokenizer 的 estimated token 数。默认 `balanced`
-  会尽量保留关键约束并压缩措辞；`aggressive` 会更短，更偏向降低成本。
+- 终端输出优化后的 prompt
+- 改写前后的 estimated token 数
+- 加上 `--out runs/improve` 后会写出 `improved_prompt.txt`、`prompt_improvement.json`、`prompt_diff.md`
 
 说明什么问题：
 
-这个命令不调用外部模型，只用离线规则改写 prompt。它会补充任务目标、输出格式约束和稳定性要求。如果再加上 `--run runs/quick`，它会读取已有检测报告，把退化的任务 slice、变差样本和风险提示加入 prompt。`--max-tokens` 是估算预算，不是某个模型 tokenizer 的精确保证。
+如果你只有一段 prompt 字符串，这就是最简单入口。它会补充任务目标、输出格式约束、
+稳定性要求，并且可以按 token 预算压缩措辞。
 
-## Prompt Guard 插件 🛡️
+### 2. `pcl guard`：在 IDE 或 CLI agent 使用前守护 prompt 🛡️
 
-`pcl guard` 是给 IDE 和 CLI agent 用的输入层模式。它会在模型真正处理 prompt 之前，先检查 prompt 是否太模糊、太长、缺少格式要求，随后返回一个更清楚、更省 token、更适合执行的版本。
+操作：
 
 ```bash
-pcl guard --prompt "修复这个 bug" --profile coding --token-mode balanced
+pcl guard --prompt "修复这个 bug" --profile coding --token-mode balanced --json
 ```
 
-给 hook 或 wrapper 使用时，可以走 stdin：
+Gate 操作：
 
 ```bash
-echo "修复这个 bug" | pcl guard --stdin --profile coding --json
+echo "回答用户问题" | pcl guard --stdin --mode gate --max-tokens 80 --json
 ```
 
 得到：
@@ -132,40 +246,40 @@ echo "修复这个 bug" | pcl guard --stdin --profile coding --json
 - `action`：`suggest`、`auto` 或 `block`
 - `risk_level`：`low`、`medium` 或 `high`
 - `improved_prompt`：守护后的 prompt
-- `token_report`：守护前后的 estimated token 成本
-- `reasons`：为什么这样建议或阻断
+- `token_report`：estimated token 成本
+- `reasons`：为什么建议或阻断
 
-插件适配放在 [`plugins/`](plugins/)：
+说明什么问题：
 
-- [`plugins/claude-code`](plugins/claude-code)：可运行的 Claude Code `UserPromptSubmit` hook
-- [`plugins/cursor`](plugins/cursor)：Cursor rules 和命令工作流说明
-- [`plugins/codex`](plugins/codex)：Codex skill / wrapper 工作流说明
+在 Claude Code、Cursor、Codex 或 shell wrapper 真正花 token 前，先检查 prompt 是否
+太模糊、超预算或缺少关键约束。
 
-## 面向谁 👥
+### 3. `pcl analyze`：一个命令生成完整报告 📦
 
-- prompt optimization 研究者：需要干净的 train/val/withheld 协议。
-- LLM 工程团队：需要本地 prompt regression report。
-- soft prompt 研究者：需要 soft-to-hard 部署风险分析。
-- 模型迁移和评测团队：需要可复现的 artifact trail。
-- 研究 hidden-state trajectory、turnpike-like 行为和 Riccati surrogate 的研究者。
-
-## 安装 ⚙️
+操作：
 
 ```bash
-pip install -e ".[dev,research]"
+pcl init --path demo
+cd demo
+pcl analyze --config promptcontrol.example.yaml --out runs/quick
 ```
 
-使用 uv：
+得到：
 
-```bash
-uv pip install -e ".[dev,research]"
-```
+- `runs/quick/splits.json`
+- `runs/quick/baseline/metrics.json`
+- `runs/quick/candidate/metrics.json`
+- `runs/quick/stats.json`
+- `runs/quick/explanation.json`
+- `runs/quick/report.md`
+- `runs/quick/report.html`
 
-核心命令只依赖 Python 标准库。`soft-hard`、`trajectory`、`riccati` 等研究诊断命令使用可选科学计算依赖。
+说明什么问题：
 
-## 功能示例 🧩
+这是最简单的完整评测路径。它会回答 candidate 是否更好、证据是否可靠、有没有任务
+slice 退化、下一步应该检查哪里。
 
-### 1. `pcl init`：生成可运行示例
+### 4. `pcl init`：生成可运行示例 🌱
 
 操作：
 
@@ -183,304 +297,102 @@ cd demo
 
 说明什么问题：
 
-这些文件展示了最小输入格式。任务文件包含 `id`、`input`、`expected` 和 `slice`。预测文件用同一个 `id` 对应模型输出 `output`。
+这些文件展示最小输入格式：任务 `id`、`input`、`expected`、`slice`，以及模型
+`output`。
 
-### 2. `pcl improve`：直接改写一个 prompt
-
-操作：
-
-```bash
-pcl improve --prompt "回答下面的问题"
-```
-
-控制 token 成本的操作：
-
-```bash
-pcl improve --prompt "回答下面的问题" --token-mode aggressive --max-tokens 80
-```
-
-结合已有检测报告：
-
-```bash
-pcl improve --prompt-file prompts/current.txt --run runs/quick --out runs/improve
-```
-
-得到：
-
-- 终端输出优化后的 prompt
-- `runs/improve/improved_prompt.txt`
-- `runs/improve/prompt_improvement.json`
-- `runs/improve/prompt_diff.md`
-- 终端、JSON 和 Markdown diff 里的 estimated token 数
-
-说明什么问题：
-
-这个命令会给出一个更清楚的 prompt，包含任务目标、输出格式要求和稳定性要求。结合 `--run` 时，它还会根据已有报告加入退化 slice、变差样本和部署风险提示。默认 token 模式是 `balanced`：尽量保留有用约束，同时避免不必要措辞。`aggressive` 更短、更省成本，但可能减少一部分保护性规则。
-
-### 3. `pcl guard`：在 IDE 或 CLI agent 使用前守护 prompt
+### 5. `pcl report`、`pcl explain`、`pcl gate`：阅读并做决定 ✅
 
 操作：
 
 ```bash
-pcl guard --prompt "修复这个 bug" --profile coding --token-mode balanced --json
-```
-
-Gate 操作：
-
-```bash
-echo "回答用户问题" | pcl guard --stdin --mode gate --max-tokens 80 --json
-```
-
-得到：
-
-- 包含 `action`、`risk_level`、`improved_prompt`、`token_report` 和 `reasons` 的 JSON
-- 当 gate 模式发现 prompt 风险高或超过预算时，`action=block`
-
-说明什么问题：
-
-这是模型调用前的 prompt 守门员。它适合 Claude Code hook、Cursor rules、Codex skills 和 shell wrapper，让 prompt 在花 token 之前先被整理一遍。
-
-### 4. `pcl analyze`：一键运行快速模式
-
-操作：
-
-```bash
-pcl analyze `
-  --data examples/tasks.jsonl `
-  --baseline-predictions examples/predictions_baseline.jsonl `
-  --candidate-predictions examples/predictions_candidate.jsonl `
-  --metric exact_match `
-  --out runs/quick `
-  --explain-level plain
-```
-
-也可以使用配置文件：
-
-```bash
-pcl analyze --config promptcontrol.example.yaml --out runs/quick
-```
-
-得到：
-
-- `runs/quick/splits.json`
-- `runs/quick/baseline/metrics.json`
-- `runs/quick/candidate/metrics.json`
-- `runs/quick/stats.json`
-- `runs/quick/explanation.json`
-- `runs/quick/report.md`
-- `runs/quick/report.html`
-
-说明什么问题：
-
-这是给非专业人员的最快路径。它直接回答：candidate prompt 是否变好、证据是否可靠、是否有任务子类退化、下一步应该保留还是继续检查。
-
-### 5. `pcl split`：切分 train、validation 和 withheld
-
-操作：
-
-```bash
-pcl split --data examples/tasks.jsonl --out runs/candidate --seed 0
-```
-
-得到：
-
-- `runs/candidate/splits.json`
-
-说明什么问题：
-
-这个文件包含 train、validation、withheld 的样本 id、split hash 和 leakage report。如果 `has_leakage` 是 false，说明三组样本没有交叉。split hash 可以用来复现同一次切分。
-
-### 6. `pcl eval`：给模型输出打分
-
-操作：
-
-```bash
-pcl eval --data examples/tasks.jsonl `
-  --predictions examples/predictions_baseline.jsonl `
-  --out runs/baseline `
-  --metric exact_match `
-  --method baseline
-
-pcl eval --data examples/tasks.jsonl `
-  --predictions examples/predictions_candidate.jsonl `
-  --out runs/candidate `
-  --metric exact_match `
-  --method candidate
-```
-
-得到：
-
-- `runs/baseline/predictions.jsonl`
-- `runs/baseline/metrics.json`
-- `runs/candidate/predictions.jsonl`
-- `runs/candidate/metrics.json`
-
-说明什么问题：
-
-`predictions.jsonl` 说明每条样本的输出、期望答案、得分、slice 和错误信息。`metrics.json` 说明总体平均分和每个 slice 的平均分。这样可以发现“平均分变好，但某类任务变差”的情况。
-
-### 7. `pcl stats`：判断提升是否可靠
-
-操作：
-
-```bash
-pcl stats --baseline runs/baseline/predictions.jsonl `
-  --candidate runs/candidate/predictions.jsonl `
-  --out runs/candidate/stats.json
-```
-
-得到：
-
-- `runs/candidate/stats.json`
-
-说明什么问题：
-
-这个文件包含 baseline 均值、candidate 均值、mean delta、bootstrap 置信区间、paired permutation p-value 和 Holm-adjusted p-value。如果置信区间跨过 0，说明提升还不稳。如果区间在 0 以上且 adjusted p-value 很小，说明 candidate 的提升更可靠。
-
-### 8. `pcl report`：把产物汇总成人能读的报告
-
-操作：
-
-```bash
-pcl report --run runs/candidate --title "Candidate Prompt Report"
-```
-
-得到：
-
-- `runs/candidate/report.md`
-- `runs/candidate/report.html`
-
-说明什么问题：
-
-报告会汇总 split hygiene、metrics、统计比较，以及已经写入 `diagnostics/` 的诊断结果。它能直白说明这次 prompt 改动是否值得保留，以及下一步应该检查哪里。
-
-### 9. `pcl explain`：把产物解释成直白结论
-
-操作：
-
-```bash
+pcl report --run runs/quick --title "Candidate Prompt Report"
 pcl explain --run runs/quick --level plain
-pcl explain --run runs/quick --level technical
-```
-
-得到：
-
-- `runs/quick/explanation.json`
-
-说明什么问题：
-
-`plain` 适合只想看结论的人，会直白说明是否值得保留、证据是否可靠、哪些样本变好或变差。`technical` 适合专业用户，会保留 artifact path 和原始统计比较细节。
-
-### 10. `pcl gate`：用策略阈值判断是否通过
-
-操作：
-
-```bash
 pcl gate --run runs/quick --policy examples/gate.policy.yaml
 ```
 
 得到：
 
-- `runs/quick/gate_result.json`
+- `report.md` / `report.html`
+- `explanation.json`
+- `gate_result.json`
 
 说明什么问题：
 
-结果会是 `pass`、`needs_review` 或 `fail`。它会解释 candidate 分数、退化幅度、adjusted p-value，以及可选诊断风险是否满足策略。
+这些命令把产物变成结论：保留 prompt、继续复查，或者暂时不要使用。
 
-### 11. `pcl soft-hard`：检查 soft prompt 转 hard prompt 的风险
+### 6. 专家评测：`split → eval → stats` 🧠
 
 操作：
 
 ```bash
-pcl soft-hard --soft soft_prompt.npz `
-  --vocab vocab_embeddings.npz `
-  --out runs/candidate/diagnostics
+pcl split --data examples/tasks.jsonl --out runs/candidate --seed 0
+pcl eval --data examples/tasks.jsonl --predictions examples/predictions_candidate.jsonl --out runs/candidate --method candidate
+pcl stats --baseline runs/baseline/predictions.jsonl --candidate runs/candidate/predictions.jsonl --out runs/candidate/stats.json
 ```
-
-输入格式：
-
-- `soft_prompt.npz` 里必须有一个二维数组 `soft`。
-- `vocab_embeddings.npz` 里必须有一个二维数组 `embeddings`。
 
 得到：
 
-- `runs/candidate/diagnostics/soft_hard.json`
+- 可复现的 train/val/withheld 切分
+- 每条样本和每个 slice 的分数
+- paired confidence interval、permutation p-value、Holm-adjusted p-value
 
 说明什么问题：
 
-这个文件会给出 nearest-token index、平均投影距离、最大投影距离和风险等级。距离越大，说明 soft prompt 学到的向量越不像真实 token embedding，转成 hard prompt 后越可能丢失行为。
+适合需要精细控制评测协议和统计比较的研究者或工程团队。
 
-## 研究诊断命令 🔬
+### 7. 部署和研究诊断 🔬
 
-![prompt_control_lab 研究诊断](docs/assets/diagnostics.zh.svg)
+Soft-to-hard 风险：
 
-### 12. `pcl trajectory`：分析 hidden-state 轨迹漂移和衰减
+```bash
+pcl soft-hard --soft soft_prompt.npz --vocab vocab_embeddings.npz --out runs/candidate/diagnostics
+```
 
-操作：
+Hidden-state trajectory：
 
 ```bash
 pcl trajectory --states hidden_states.npz --out runs/candidate/diagnostics
 ```
 
-输入格式：
+Riccati surrogate：
 
-- `hidden_states.npz` 里必须有一个二维数组 `states`，形状是 `[steps, hidden_dim]`。
+```bash
+pcl riccati --matrices surrogate_mats.npz --out runs/candidate/diagnostics
+```
 
-得到：
+Time-varying soft-control lane：
 
-- `runs/candidate/diagnostics/trajectory.json`
+```bash
+pcl tv-soft --predictions method_predictions.jsonl --out runs/candidate/diagnostics
+```
 
 说明什么问题：
 
-这个文件会给出 mean step drift、max step drift、log-decay slope、拟合质量和 turnpike-like signal。如果 slope 为负且拟合质量较好，说明轨迹可能向某个稳定区域靠近。如果 drift 高或拟合弱，说明内部行为可能更异质或更不稳定。
+这些命令不只看输出分数，还检查 soft prompt 转 hard prompt 的风险、内部轨迹漂移、
+代理控制模型稳定性，以及 time-varying prompt 的收益是否更像来自时序结构。
 
-### 13. `pcl riccati`：检查有限维 surrogate 是否稳定
+![prompt_control_lab 研究诊断](docs/assets/diagnostics.zh.svg)
 
-操作：
+## 生态定位 🌱
 
-```bash
-pcl riccati --trajectory hidden_states.npz --out runs/candidate/diagnostics
-```
+`prompt_control_lab` 不替代 prompt optimizer、eval 工具或 observability 平台。它补的是
+诊断层：withheld 协议、paired statistics、soft-to-hard 风险、hidden trajectory、
+control surrogate，以及 prompt 输入守护。
 
-也可以直接提供矩阵：
+![prompt_control_lab 生态位置](docs/assets/ecosystem.zh.svg)
 
-```bash
-pcl riccati --matrices matrices.npz --out runs/candidate/diagnostics
-```
+![prompt_control_lab 能力对比矩阵](docs/assets/comparison_matrix.zh.svg)
 
-输入格式：
+![prompt_control_lab 创新栈](docs/assets/innovation_stack.zh.svg)
 
-- `--trajectory` 读取包含 `states` 的 `hidden_states.npz`。
-- `--matrices` 读取包含 `A`、`B`、`Q`、`R` 的 `matrices.npz`。
+## 面向谁 👥
 
-得到：
-
-- `runs/candidate/diagnostics/riccati.json`
-
-说明什么问题：
-
-这个文件会给出 closed-loop spectral radius、diagnostic decay rate 和 surrogate 是否稳定。它只是在检查拟合出的有限维 surrogate 是否自洽稳定，不是对完整语言模型的数学证明。
-
-### 14. `pcl tv-soft`：比较 static 和 time-varying 方法组
-
-操作：
-
-```bash
-pcl tv-soft --predictions scored_methods.jsonl --out runs/candidate/diagnostics
-```
-
-输入格式：
-
-- `scored_methods.jsonl` 使用已经打分的 prediction record，字段包括 `id`、`output`、`expected`、`score`、`slice` 和 `method`。
-- 常见 `method` 名称包括 `static`、`time_varying`、`shuffled_tv` 和 `random_tv`。
-
-得到：
-
-- `runs/candidate/diagnostics/tv_soft.json`
-
-说明什么问题：
-
-如果 `time_varying` 明显优于 `static`，但 `shuffled_tv` 和 `random_tv` 没有同样提升，收益更可能来自时序结构。如果 shuffled 或 random 也提升，应该检查参数容量和选择效应。
+- 只想快速得到更好 prompt 的普通用户。
+- 希望 Claude Code、Cursor、Codex 在执行前先整理 prompt 的开发者。
+- 需要本地 prompt regression report 的 LLM 工程团队。
+- 需要干净 train/val/withheld 协议的 prompt optimization 研究者。
+- 需要 soft-to-hard 部署风险分析的 soft prompt 研究者。
+- 研究 trajectory、turnpike-like 行为和 Riccati surrogate 的解释性 / 控制方向研究者。
 
 ## 文档 📚
 
@@ -489,7 +401,8 @@ pcl tv-soft --predictions scored_methods.jsonl --out runs/candidate/diagnostics
 - [一步一步教程](docs/tutorial.zh.md)
 - [产物说明](docs/artifacts.zh.md)
 - [创新点和贡献](docs/innovation.zh.md)
+- [插件适配](plugins/)
 
 ## License 📄
 
-Apache-2.0。
+Apache-2.0

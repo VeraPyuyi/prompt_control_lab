@@ -6,222 +6,205 @@
 [![License](https://img.shields.io/github/license/VeraPyuyi/prompt_control_lab)](LICENSE)
 [![Python](https://img.shields.io/badge/python-3.10%2B-blue)](pyproject.toml)
 
-prompt_control_lab is an open-source toolkit for prompt evaluation, prompt diagnostics,
-reproducibility, and control-oriented analysis.
+`prompt_control_lab` is an open-source toolkit for prompt improvement, prompt guarding,
+prompt evaluation, reproducibility, and control-oriented diagnostics. It starts simple:
+paste one prompt, get a clearer and more token-conscious version. Then it scales up to
+CLI reports, IDE/agent plugins, withheld evaluation, soft-to-hard checks, trajectory
+diagnostics, and Riccati surrogate analysis. ٩(ˊᗜˋ*)و
 
-It helps researchers and engineering teams answer practical questions without turning prompt
-work into guesswork:
-
-- Did a prompt change really improve the result?
-- Was the improvement caused by validation overfitting?
-- Were train, validation, and withheld examples kept separate?
-- How much behavior may be lost when a soft prompt is projected to hard tokens?
-- Do hidden-state trajectories show drift, decay, or turnpike-like behavior?
-- Does a time-varying prompt help because of temporal structure, or just because it has
-  more parameters?
-
-prompt_control_lab is not just a score table. It creates a friendly, reproducible audit trail
-that explains what was tested, how it was split, how outputs were scored, whether the change is
-reliable, and which diagnostics need inspection.
-
-> 📌 The repository is currently private, so public badge services may show zero or unavailable
-> counts until the repository is made public.
+> 📌 The repository is currently private, so public badge services may show zero or
+> unavailable counts until the repository is made public.
 
 Chinese documentation is available in [README.zh.md](README.zh.md).
 
-## Visual Overview 🗺️
+## Quick Map 🗺️
+
+Use this order if you are new:
+
+1. **Just improve one prompt** → `pcl improve`
+2. **Guard prompts before Claude Code / Cursor / Codex** → `pcl guard` + `plugins/`
+3. **Generate one complete report** → `pcl analyze`
+4. **Control every evaluation step** → `split → eval → stats → report → explain → gate`
+5. **Run research diagnostics** → `soft-hard → trajectory → riccati → tv-soft`
 
 ![prompt_control_lab workflow](docs/assets/workflow.svg)
 
-The toolkit follows a simple path: prepare a task pool, make a clean tri-split, score
-baseline and candidate outputs, run paired statistics, then write a report. Optional
-diagnostics can be added when soft prompts or hidden states are available.
+The main idea is small and practical: do not trust one score alone. Keep the split, outputs,
+statistics, explanations, diagnostics, and prompt rewrites as inspectable artifacts.
 
 ![prompt_control_lab artifacts](docs/assets/artifacts.svg)
 
-Every run writes a small audit trail. The files are designed to be readable by people,
-scripts, papers, and future dashboards without rerunning the experiment.
+## Install The CLI ⚙️
 
-![prompt_control_lab command examples](docs/assets/commands.svg)
-
-The sections below give one concrete example for every CLI command. Each example follows
-the same pattern: what to run, what file you get, and what question the result answers.
-
-![prompt_control_lab two modes](docs/assets/modes.svg)
-
-## Two Modes 🧭
-
-prompt_control_lab now has two ways to use the same open-source tool.
-
-![Quick Mode](docs/assets/quick_mode.svg)
-
-**Quick Mode** is for people who want a report quickly. Use `pcl analyze` when you
-already have a task file plus baseline and candidate outputs. It runs the normal
-pipeline for you: split, score, compare, explain, and report.
-
-![Expert Mode](docs/assets/expert_mode.svg)
-
-**Expert Mode** is for researchers and engineers who need more control. Use the
-individual commands when you want to tune split ratios, import different outputs,
-run statistics with custom sampling, attach diagnostics, or inspect every artifact.
-
-## Ecosystem Positioning and Advantages 🌱
-
-prompt_control_lab sits next to existing LLM tools. It is not meant to replace prompt
-optimizers, evaluation frameworks, or observability platforms. Its role is narrower and
-more diagnostic: after a prompt changes, it helps you decide whether the result is
-reproducible, statistically reliable, deployable, and stable enough to inspect further.
-
-![prompt_control_lab ecosystem position](docs/assets/ecosystem.svg)
-
-Adjacent tools are valuable in their own workflows:
-
-- [DSPy](https://dspy.ai/learn/optimization/optimizers/) focuses on optimizers that tune
-  prompts or language-model programs against a metric.
-- [TextGrad](https://github.com/zou-group/textgrad) explores textual gradients and
-  automatic-differentiation-style optimization over text.
-- [OpenPrompt](https://github.com/thunlp/OpenPrompt) provides prompt-learning pipelines.
-- [promptfoo](https://www.promptfoo.dev/docs/intro/) focuses on LLM evaluation, testing,
-  red-teaming, and CI workflows.
-- [DeepEval](https://deepeval.com/docs/getting-started) provides LLM evaluation metrics
-  and test cases for applications.
-- [Langfuse](https://langfuse.com/docs) and
-  [LangSmith](https://docs.smith.langchain.com/) focus on tracing, observability,
-  prompt management, experiments, and evaluation workflows.
-
-prompt_control_lab is different because it makes the diagnostic layer first-class:
-
-![prompt_control_lab comparison matrix](docs/assets/comparison_matrix.svg)
-
-| Area | What many adjacent tools emphasize | What prompt_control_lab adds |
-| --- | --- | --- |
-| Prompt improvement | Find or rewrite a better prompt/program. | `pcl improve` gives a simple offline rewrite, while reports explain why the rewrite is suggested. |
-| Evaluation | Score outputs on examples and compare runs. | `pcl split`, `pcl stats`, and `pcl report` keep train/val/withheld separate and report paired uncertainty. |
-| Reproducibility | Store configs, prompts, traces, or experiments. | Every run writes explicit artifacts, split hashes, metrics, explanations, and report files. |
-| Deployment risk | Usually handled through output-level tests. | `pcl soft-hard` measures soft-to-hard projection risk before deploying a hard prompt. |
-| Internal behavior | Often outside normal prompt-eval workflows. | `pcl trajectory` checks hidden-state drift, decay, and turnpike-like signals when hidden states are available. |
-| Control analysis | Rarely exposed as reusable prompt tooling. | `pcl riccati` and `pcl tv-soft` expose surrogate stability and time-varying control diagnostics. |
-
-The main innovation is the stack: prompt changes are not reduced to one score. They become
-a small evidence package that a researcher, engineer, or non-specialist can inspect.
-
-![prompt_control_lab innovation stack](docs/assets/innovation_stack.svg)
-
-In practical terms, the tool contributes four things to the field:
-
-- Cleaner prompt-evaluation hygiene through a built-in train/val/withheld protocol.
-- More reliable prompt comparisons through paired statistics and correction-aware reports.
-- More deployable soft-prompt research through explicit soft-to-hard risk reporting.
-- A reusable bridge from prompt engineering to control-oriented diagnostics, including
-  hidden trajectories, turnpike-like decay, Riccati surrogates, and time-varying controls.
-
-## Easiest Prompt Improvement ✨
-
-If you only have a prompt string and want a clearer version, use:
+### 1. Clone the repository
 
 ```bash
-pcl improve --prompt "Answer the user question."
+git clone https://github.com/VeraPyuyi/prompt_control_lab.git
+cd prompt_control_lab
 ```
 
-To reduce prompt-token cost more aggressively:
+If you already have the repository locally, just enter the repo folder.
+
+### 2. Install the lightweight CLI
 
 ```bash
-pcl improve --prompt "Answer the user question." --token-mode aggressive --max-tokens 80
+pip install -e .
 ```
 
-Result:
-
-- The optimized prompt is printed in the terminal.
-- If you add `--out runs/improve`, the tool writes `improved_prompt.txt`,
-  `prompt_improvement.json`, and `prompt_diff.md`.
-- The terminal and JSON output include dependency-free estimated token counts. The default
-  `balanced` mode keeps key constraints while shortening wording; `aggressive` favors a
-  shorter prompt for lower estimated token cost.
-
-What it tells you:
-
-This command gives a practical rewrite without calling any external model. If you also pass
-`--run runs/quick`, it uses the existing report to add warnings about regressed slices, broken
-examples, and deployment risk. `--max-tokens` is treated as an estimated budget, not a
-model-specific tokenizer guarantee.
-
-## Prompt Guard Plugins 🛡️
-
-`pcl guard` is the input-layer mode for IDE and CLI agents. It checks a prompt before the
-agent sees it, then returns a safer, clearer, and more token-conscious version.
+With `uv`:
 
 ```bash
-pcl guard --prompt "Fix this bug" --profile coding --token-mode balanced
+uv pip install -e .
 ```
 
-For hooks and wrappers:
+### 3. Install development and research extras
 
-```bash
-echo "Fix this bug" | pcl guard --stdin --profile coding --json
-```
-
-Result:
-
-- `action`: `suggest`, `auto`, or `block`
-- `risk_level`: `low`, `medium`, or `high`
-- `improved_prompt`: the guarded prompt
-- `token_report`: estimated token cost before and after guarding
-- `reasons`: short explanations for the decision
-
-Plugin adapters live in [`plugins/`](plugins/):
-
-- [`plugins/claude-code`](plugins/claude-code): working Claude Code `UserPromptSubmit` hook
-- [`plugins/cursor`](plugins/cursor): Cursor rules and command workflow notes
-- [`plugins/codex`](plugins/codex): Codex skill and wrapper workflow notes
-
-## Who It Is For 👥
-
-- Prompt optimization researchers who need clean train/val/withheld protocols.
-- LLM engineering teams that want local prompt regression reports.
-- Soft prompt researchers who need soft-to-hard deployment diagnostics.
-- Model migration and evaluation teams that need repeatable artifact trails.
-- Researchers studying hidden-state trajectories, turnpike-like behavior, and Riccati
-  surrogate diagnostics.
-
-## Install ⚙️
+Use this when you want tests plus optional scientific diagnostics:
 
 ```bash
 pip install -e ".[dev,research]"
 ```
 
-With uv:
+With `uv`:
 
 ```bash
 uv pip install -e ".[dev,research]"
 ```
 
-Core commands use only the standard library. Research diagnostics such as `soft-hard`,
-`trajectory`, and `riccati` use optional scientific dependencies.
-
-## Function Examples 🧩
-
-### 1. `pcl init`: create a runnable example
-
-Operation:
+### 4. Check that the CLI works
 
 ```bash
-pcl init --path demo
-cd demo
+pcl --help
+pcl improve --prompt "Answer the user question."
 ```
 
-Result:
+Expected result: `pcl --help` lists commands, and `pcl improve` prints an optimized prompt
+plus estimated token cost.
 
-- `examples/tasks.jsonl`
-- `examples/predictions_baseline.jsonl`
-- `examples/predictions_candidate.jsonl`
-- `promptcontrol.example.yaml`
+## Install IDE / CLI Plugins And Skills 🧩
 
-What it tells you:
+All integrations are thin adapters around the same stable command:
 
-This shows the minimum input format. A task has an `id`, an `input`, an `expected`
-answer, and a `slice`. A prediction file maps each `id` to a model `output`.
+```bash
+pcl guard --prompt "Fix this bug" --profile coding --token-mode balanced --json
+```
 
-### 2. `pcl improve`: rewrite one prompt directly
+For hooks and wrappers, use stdin:
+
+```bash
+echo "Fix this bug" | pcl guard --stdin --profile coding --json
+```
+
+### Claude Code Hook 🪝
+
+Claude Code supports `UserPromptSubmit` hooks. This repository includes a working hook:
+
+```text
+plugins/claude-code/hooks/prompt_guard.py
+```
+
+Install steps:
+
+1. Install the CLI first with `pip install -e .`.
+2. Open your Claude Code settings file.
+3. Add a `UserPromptSubmit` hook like this:
+
+```json
+{
+  "hooks": {
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python \"D:/path/to/prompt_control_lab/plugins/claude-code/hooks/prompt_guard.py\" --mode suggest --profile coding --token-mode balanced --max-tokens 300"
+          }
+        ]
+      }
+    ]
+  }
+}
+```
+
+4. Adjust the path to your local checkout.
+5. Test the hook manually:
+
+```powershell
+'{"hook_event_name":"UserPromptSubmit","prompt":"Fix this bug"}' |
+  python plugins\claude-code\hooks\prompt_guard.py --mode suggest --profile coding
+```
+
+Expected result: JSON with `additionalContext`. In `--mode gate`, risky prompts can return
+`decision: "block"` with a clear reason. (ง •̀_•́)ง
+
+More details: [plugins/claude-code](plugins/claude-code).
+
+### Cursor Rules 🖱️
+
+Cursor is best supported today through rules plus explicit `pcl guard` commands.
+
+Install steps inside a Cursor project:
+
+```powershell
+New-Item -ItemType Directory -Force .cursor\rules
+Copy-Item plugins\cursor\rules\prompt_control_lab.mdc .cursor\rules\prompt_control_lab.mdc
+```
+
+Then ask Cursor to follow the rule, or run this before sending an expensive prompt:
+
+```bash
+pcl guard --prompt "Refactor this module" --profile coding --token-mode balanced
+```
+
+Expected result: Cursor has a project rule that nudges agents to use `pcl guard` for vague,
+broad, risky, or expensive prompts. This is not full prompt interception yet; it is a practical
+rules workflow.
+
+More details: [plugins/cursor](plugins/cursor).
+
+### Codex Skill 🛠️
+
+The repository includes a local Codex skill template:
+
+```text
+plugins/codex/skills/prompt_control_lab/SKILL.md
+```
+
+Install steps on Windows PowerShell:
+
+```powershell
+New-Item -ItemType Directory -Force "$env:USERPROFILE\.codex\skills\prompt_control_lab"
+Copy-Item -Recurse -Force .\plugins\codex\skills\prompt_control_lab\* "$env:USERPROFILE\.codex\skills\prompt_control_lab\"
+```
+
+Then restart Codex so it can discover the skill. Use it when you want Codex to guard a prompt
+before doing expensive work:
+
+```text
+$prompt_control_lab Guard this prompt before implementation: "Build the feature"
+```
+
+Expected result: Codex should consult the skill instructions and use `pcl guard` before
+turning the prompt into a larger coding task. (｡•̀ᴗ-)✧
+
+More details: [plugins/codex](plugins/codex).
+
+### Generic Shell Wrapper 🐚
+
+Any CLI tool can use the JSON interface:
+
+```bash
+echo "Write tests for this feature" | pcl guard --stdin --profile coding --json
+```
+
+Use the `improved_prompt` field as the prompt sent to your agent, or use `action=block` as
+a stop signal in gate mode.
+
+## Feature Path: Simple To Expert 🚀
+
+The sections below are ordered from direct, friendly workflows to more flexible research tools.
+
+### 1. `pcl improve`: rewrite one prompt directly ✨
 
 Operation:
 
@@ -235,29 +218,18 @@ Token-conscious operation:
 pcl improve --prompt "Answer the user question." --token-mode aggressive --max-tokens 80
 ```
 
-Operation with an existing report:
-
-```bash
-pcl improve --prompt-file prompts/current.txt --run runs/quick --out runs/improve
-```
-
 Result:
 
-- terminal output with the optimized prompt
-- `runs/improve/improved_prompt.txt`
-- `runs/improve/prompt_improvement.json`
-- `runs/improve/prompt_diff.md`
-- estimated token counts in the terminal, JSON, and Markdown diff
+- optimized prompt in the terminal
+- estimated token count before and after rewriting
+- with `--out runs/improve`: `improved_prompt.txt`, `prompt_improvement.json`, `prompt_diff.md`
 
-What it tells you:
+What it means:
 
-This gives a clearer prompt with task goal, output-format constraints, and stability rules. With
-`--run`, it also uses previous diagnostics to add simple warnings about task slices or examples
-that regressed. The default token mode is `balanced`: it tries to keep useful constraints while
-avoiding unnecessary wording. `aggressive` is shorter and better for cost, but may remove some
-guardrails.
+Use this when you only have a prompt string. It adds task goal, output-format constraints,
+stability rules, and optional token-budget pressure without calling any external model.
 
-### 3. `pcl guard`: protect prompts before IDE or CLI agents use them
+### 2. `pcl guard`: protect prompts before IDE or CLI agents use them 🛡️
 
 Operation:
 
@@ -273,31 +245,24 @@ echo "Answer the user question." | pcl guard --stdin --mode gate --max-tokens 80
 
 Result:
 
-- JSON with `action`, `risk_level`, `improved_prompt`, `token_report`, and `reasons`
-- `action=block` when gate mode sees a high-risk or over-budget prompt
+- `action`: `suggest`, `auto`, or `block`
+- `risk_level`: `low`, `medium`, or `high`
+- `improved_prompt`: guarded prompt
+- `token_report`: estimated token cost
+- `reasons`: why the guard suggested or blocked
 
-What it tells you:
+What it means:
 
-This is the pre-model prompt guard. It is useful for Claude Code hooks, Cursor rules, Codex
-skills, and shell wrappers where you want prompt cleanup before the model spends tokens.
+Use this before Claude Code, Cursor, Codex, or a shell wrapper spends tokens. It catches vague,
+over-budget, or underspecified prompts early.
 
-### 4. `pcl analyze`: run Quick Mode end to end
+### 3. `pcl analyze`: one command, one report 📦
 
 Operation:
 
 ```bash
-pcl analyze \
-  --data examples/tasks.jsonl \
-  --baseline-predictions examples/predictions_baseline.jsonl \
-  --candidate-predictions examples/predictions_candidate.jsonl \
-  --metric exact_match \
-  --out runs/quick \
-  --explain-level plain
-```
-
-Equivalent config-driven operation:
-
-```bash
+pcl init --path demo
+cd demo
 pcl analyze --config promptcontrol.example.yaml --out runs/quick
 ```
 
@@ -311,241 +276,126 @@ Result:
 - `runs/quick/report.md`
 - `runs/quick/report.html`
 
-What it tells you:
+What it means:
 
-This is the easiest path for non-specialists. It answers: did the candidate prompt
-improve, is the evidence reliable, did any task slice regress, and what should be
-checked next?
+This is the easiest full evaluation path. It answers: did the candidate improve, is the
+evidence reliable, did any task slice regress, and what should be checked next?
 
-### 5. `pcl split`: separate train, validation, and withheld examples
+### 4. `pcl init`: create a runnable example 🌱
 
 Operation:
 
 ```bash
-pcl split --data examples/tasks.jsonl --out runs/candidate --seed 0
+pcl init --path demo
+cd demo
 ```
 
 Result:
 
-- `runs/candidate/splits.json`
+- `examples/tasks.jsonl`
+- `examples/predictions_baseline.jsonl`
+- `examples/predictions_candidate.jsonl`
+- `promptcontrol.example.yaml`
 
-What it tells you:
+What it means:
 
-The file contains train, validation, and withheld ids, a split hash, and a leakage
-report. If `has_leakage` is false, the three split groups do not overlap. The split
-hash lets another person reproduce the same split.
+These files show the minimal input format: task `id`, `input`, `expected`, `slice`, and model
+`output` records.
 
-### 6. `pcl eval`: score raw model outputs
+### 5. `pcl report`, `pcl explain`, `pcl gate`: read and decide ✅
 
-Operation:
-
-```bash
-pcl eval --data examples/tasks.jsonl \
-  --predictions examples/predictions_baseline.jsonl \
-  --out runs/baseline \
-  --metric exact_match \
-  --method baseline
-
-pcl eval --data examples/tasks.jsonl \
-  --predictions examples/predictions_candidate.jsonl \
-  --out runs/candidate \
-  --metric exact_match \
-  --method candidate
-```
-
-Result:
-
-- `runs/baseline/predictions.jsonl`
-- `runs/baseline/metrics.json`
-- `runs/candidate/predictions.jsonl`
-- `runs/candidate/metrics.json`
-
-What it tells you:
-
-`predictions.jsonl` explains what happened on every example: output, expected answer,
-score, slice, and any error. `metrics.json` gives the overall mean score and slice-level
-scores, so you can see whether one task group regressed even if the average improved.
-
-### 7. `pcl stats`: check whether the change is reliable
-
-Operation:
+Operations:
 
 ```bash
-pcl stats --baseline runs/baseline/predictions.jsonl \
-  --candidate runs/candidate/predictions.jsonl \
-  --out runs/candidate/stats.json
-```
-
-Result:
-
-- `runs/candidate/stats.json`
-
-What it tells you:
-
-The file reports the baseline mean, candidate mean, mean delta, bootstrap confidence
-interval, paired permutation p-value, and Holm-adjusted p-value. If the confidence
-interval crosses zero, treat the apparent improvement as uncertain. If the interval is
-above zero and the adjusted p-value is small, the candidate improvement is more reliable.
-
-### 8. `pcl report`: turn artifacts into a readable report
-
-Operation:
-
-```bash
-pcl report --run runs/candidate --title "Candidate Prompt Report"
-```
-
-Result:
-
-- `runs/candidate/report.md`
-- `runs/candidate/report.html`
-
-What it tells you:
-
-The report gathers split hygiene, metrics, statistical comparison, and any diagnostics
-that were already written under `diagnostics/`. It gives a readable summary of whether
-the prompt change looks useful and what should be checked next.
-
-### 9. `pcl explain`: turn artifacts into a direct explanation
-
-Operation:
-
-```bash
+pcl report --run runs/quick --title "Candidate Prompt Report"
 pcl explain --run runs/quick --level plain
-pcl explain --run runs/quick --level technical
-```
-
-Result:
-
-- `runs/quick/explanation.json`
-
-What it tells you:
-
-`plain` explains the run in direct language for readers who only need the conclusion.
-`technical` keeps artifact paths and raw comparison details so researchers can audit
-the result.
-
-### 10. `pcl gate`: check a run against policy thresholds
-
-Operation:
-
-```bash
 pcl gate --run runs/quick --policy examples/gate.policy.yaml
 ```
 
 Result:
 
-- `runs/quick/gate_result.json`
+- `report.md` / `report.html`
+- `explanation.json`
+- `gate_result.json`
 
-What it tells you:
+What it means:
 
-The file returns `pass`, `needs_review`, or `fail`. It explains whether the candidate
-score, regression size, adjusted p-value, and optional diagnostic risk meet the policy.
+These commands turn artifacts into decisions: keep the prompt, review it, or hold it.
 
-### 11. `pcl soft-hard`: inspect soft-to-hard deployment risk
+### 6. Expert evaluation: `split → eval → stats` 🧠
 
-Operation:
+Operations:
 
 ```bash
-pcl soft-hard --soft soft_prompt.npz \
-  --vocab vocab_embeddings.npz \
-  --out runs/candidate/diagnostics
+pcl split --data examples/tasks.jsonl --out runs/candidate --seed 0
+pcl eval --data examples/tasks.jsonl --predictions examples/predictions_candidate.jsonl --out runs/candidate --method candidate
+pcl stats --baseline runs/baseline/predictions.jsonl --candidate runs/candidate/predictions.jsonl --out runs/candidate/stats.json
 ```
-
-Input format:
-
-- `soft_prompt.npz` must contain a rank-2 array named `soft`.
-- `vocab_embeddings.npz` must contain a rank-2 array named `embeddings`.
 
 Result:
 
-- `runs/candidate/diagnostics/soft_hard.json`
+- reproducible train/val/withheld split
+- scored predictions and slice metrics
+- paired confidence intervals, permutation p-values, and Holm-adjusted p-values
 
-What it tells you:
+What it means:
 
-The file reports nearest-token indices, mean projection distance, max projection
-distance, and a risk label. Large distances mean the learned soft vectors are far from
-real token embeddings, so converting the soft prompt into hard tokens may lose behavior.
+This is for users who want full control over protocol hygiene and statistical comparison.
 
-## Research Diagnostics 🔬
+### 7. Deployment and research diagnostics 🔬
 
-![prompt_control_lab diagnostics](docs/assets/diagnostics.svg)
+Soft-to-hard risk:
 
-### 12. `pcl trajectory`: measure hidden-state drift and decay
+```bash
+pcl soft-hard --soft soft_prompt.npz --vocab vocab_embeddings.npz --out runs/candidate/diagnostics
+```
 
-Operation:
+Hidden-state trajectory:
 
 ```bash
 pcl trajectory --states hidden_states.npz --out runs/candidate/diagnostics
 ```
 
-Input format:
-
-- `hidden_states.npz` must contain a rank-2 array named `states`, shaped
-  `[steps, hidden_dim]`.
-
-Result:
-
-- `runs/candidate/diagnostics/trajectory.json`
-
-What it tells you:
-
-The file reports mean step drift, max step drift, log-decay slope, fit quality, and a
-turnpike-like signal. A negative slope with reasonable fit quality suggests motion
-toward a stable region. High drift or weak fit suggests more heterogeneous behavior.
-
-### 13. `pcl riccati`: check a finite-dimensional surrogate
-
-Operation:
+Riccati surrogate:
 
 ```bash
-pcl riccati --trajectory hidden_states.npz --out runs/candidate/diagnostics
+pcl riccati --matrices surrogate_mats.npz --out runs/candidate/diagnostics
 ```
 
-Alternative input:
+Time-varying soft-control lane:
 
 ```bash
-pcl riccati --matrices matrices.npz --out runs/candidate/diagnostics
+pcl tv-soft --predictions method_predictions.jsonl --out runs/candidate/diagnostics
 ```
 
-Input format:
+What it means:
 
-- `--trajectory` reads `hidden_states.npz` with an array named `states`.
-- `--matrices` reads `matrices.npz` with arrays named `A`, `B`, `Q`, and `R`.
+These commands move beyond output scores. They inspect soft-to-hard deployment risk,
+hidden-state drift, fitted surrogate stability, and whether time-varying gains look like
+temporal structure or just extra capacity.
 
-Result:
+![prompt_control_lab diagnostics](docs/assets/diagnostics.svg)
 
-- `runs/candidate/diagnostics/riccati.json`
+## Ecosystem Positioning 🌱
 
-What it tells you:
+`prompt_control_lab` complements prompt optimizers, eval tools, and observability platforms.
+Its focus is the diagnostic layer: withheld protocol, paired statistics, soft-to-hard risk,
+hidden trajectory diagnostics, control surrogates, and prompt-input guarding.
 
-The file reports the closed-loop spectral radius, a diagnostic decay rate, and whether
-the fitted surrogate is stable. This is a check on the finite-dimensional surrogate. It
-is not a proof about the full language model.
+![prompt_control_lab ecosystem position](docs/assets/ecosystem.svg)
 
-### 14. `pcl tv-soft`: compare static and time-varying method groups
+![prompt_control_lab comparison matrix](docs/assets/comparison_matrix.svg)
 
-Operation:
+![prompt_control_lab innovation stack](docs/assets/innovation_stack.svg)
 
-```bash
-pcl tv-soft --predictions scored_methods.jsonl --out runs/candidate/diagnostics
-```
+## Who It Is For 👥
 
-Input format:
-
-- `scored_methods.jsonl` uses scored prediction records with `id`, `output`, `expected`,
-  `score`, `slice`, and `method`.
-- Typical method names are `static`, `time_varying`, `shuffled_tv`, and `random_tv`.
-
-Result:
-
-- `runs/candidate/diagnostics/tv_soft.json`
-
-What it tells you:
-
-If `time_varying` beats `static` while `shuffled_tv` and `random_tv` do not, the gain is
-more consistent with temporal structure. If shuffled or random variants also improve,
-inspect parameter capacity and selection effects.
+- People who want a clearer prompt quickly.
+- Developers who want Claude Code, Cursor, or Codex prompts guarded before execution.
+- LLM teams that need local prompt regression reports.
+- Researchers comparing prompt optimizers with clean train/val/withheld protocols.
+- Soft-prompt researchers checking soft-to-hard deployment risk.
+- Interpretability/control researchers studying trajectories and surrogate stability.
 
 ## Documentation 📚
 
@@ -553,8 +403,9 @@ inspect parameter capacity and selection effects.
 - [Users](docs/users.en.md)
 - [Tutorial](docs/tutorial.en.md)
 - [Artifacts](docs/artifacts.en.md)
-- [Innovation and contribution](docs/innovation.en.md)
+- [Innovation and Contribution](docs/innovation.en.md)
+- [Plugin adapters](plugins/)
 
 ## License 📄
 
-Apache-2.0.
+Apache-2.0

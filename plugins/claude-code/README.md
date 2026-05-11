@@ -22,7 +22,7 @@ the script path if needed:
         "hooks": [
           {
             "type": "command",
-            "command": "python D:/Vibe Research Projects/PromptControlLab/plugins/claude-code/hooks/prompt_guard.py --mode suggest --profile coding --token-mode balanced --max-tokens 300"
+            "command": "python \"D:/path/to/prompt_control_lab/plugins/claude-code/hooks/prompt_guard.py\" --mode suggest --profile coding --token-mode balanced --max-tokens 300"
           }
         ]
       }
