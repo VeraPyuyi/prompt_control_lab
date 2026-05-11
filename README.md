@@ -38,6 +38,105 @@ statistics, explanations, diagnostics, and prompt rewrites as inspectable artifa
 
 ![prompt_control_lab artifacts](docs/assets/artifacts.svg)
 
+## Two-Minute Demo: Agent Prompt Guard 🎬
+
+The shortest value story is not "another eval dashboard." It is:
+
+> Put `prompt_control_lab` before Claude Code, Cursor, Codex, or another AI coding agent.
+> Catch vague, broad, risky, or expensive prompts before the agent spends tokens or edits files.
+
+### 0:00-0:15: show the risky prompt
+
+```text
+Fix this bug.
+```
+
+Why this often fails: the agent does not know the target files, the failing behavior, the edit
+boundary, or which tests should prove the fix.
+
+### 0:15-0:45: run the local preflight
+
+```bash
+pcl guard --prompt "Fix this bug" --profile coding --token-mode balanced
+```
+
+Typical result:
+
+```text
+Action: suggest
+Risk: medium
+Plain summary: This request is too broad. Add the failing behavior, target files,
+test plan, and edit boundary before sending it to an agent.
+Estimated tokens: controlled by balanced mode
+```
+
+### 0:45-1:10: use JSON in IDEs, hooks, or wrappers
+
+```bash
+echo "Refactor this module" | pcl guard --stdin --profile coding --json
+```
+
+Result: Claude Code hooks, Cursor MCP-style tools, Codex skills, and shell wrappers can read
+`plain_summary`, `risk_level`, `action`, `improved_prompt`, and `token_report`.
+
+### 1:10-1:40: compare before and after
+
+| item | raw prompt | guarded prompt |
+|---|---|---|
+| Scope | unclear | asks for failing behavior and relevant files |
+| Edit boundary | missing | says not to refactor unrelated code |
+| Tests | missing | asks the agent to list and run relevant tests |
+| Token cost | uncontrolled | estimated and constrained by token mode |
+| Agent risk | higher | reviewed before expensive execution |
+
+Example guarded prompt:
+
+```text
+Fix the reported bug with the smallest safe code change.
+
+Before editing:
+1. Identify the failing behavior and relevant files.
+2. State the likely root cause.
+3. List the tests you will run.
+
+Constraints:
+- Do not refactor unrelated code.
+- Do not change public APIs unless necessary.
+- Keep the patch minimal and explain every changed file.
+
+After editing:
+1. Run the relevant tests.
+2. Summarize the fix.
+3. Mention any remaining uncertainty.
+```
+
+### 1:40-2:00: turn prompt changes into evidence
+
+```bash
+pcl init --path demo
+cd demo
+pcl analyze --config promptcontrol.example.yaml --out runs/quick
+```
+
+The smoke demo writes `runs/quick/report.md`, `report.html`, `stats.json`, and
+`explanation.json`. It proves the pipeline works end to end; it is not a claim that every
+real agent task improves.
+
+For a real Claude Code / Cursor / Codex pilot, collect 20-50 coding tasks and record:
+
+| measurement | before raw prompts | after `pcl guard` | desired direction |
+|---|---:|---:|---|
+| task success rate | TBD | TBD | higher |
+| average touched files | TBD | TBD | lower or more focused |
+| tests passed | TBD | TBD | higher |
+| prompts sent to review | 0 | TBD | nonzero for risky prompts |
+| average prompt token estimate | TBD | TBD | controlled |
+| human intervention count | TBD | TBD | lower |
+
+Careful interpretation: the built-in demo shows reproducible workflow. A real pilot should
+measure whether guarded prompts reduce failed tasks, token waste, and unnecessary file edits
+in your own agent setup.
+
 ## Install The CLI ⚙️
 
 Python 3.10 or newer is required. On some machines the command is `python`,
@@ -396,7 +495,7 @@ What it means:
 
 This is for users who want full control over protocol hygiene and statistical comparison.
 
-### 8. Deployment and research diagnostics 🔬
+### 8. Advanced / Research Mode diagnostics 🔬
 
 Soft-to-hard risk:
 
@@ -433,15 +532,19 @@ temporal structure or just extra capacity.
 ## Ecosystem Positioning 🌱
 
 `prompt_control_lab` complements prompt optimizers, eval tools, and observability platforms.
-Its focus is the diagnostic layer: withheld protocol, paired statistics, soft-to-hard risk,
-hidden trajectory diagnostics, control surrogates, and prompt-input guarding.
+Its most practical day-to-day lane is the prompt-input guard: a local preflight check before
+AI coding agents spend tokens or edit files. Its deeper lane is the diagnostic layer:
+withheld protocol, paired statistics, soft-to-hard risk, hidden trajectory diagnostics, and
+control surrogates.
 
 Adjacent examples:
 
 - DSPy, TextGrad, and OpenPrompt focus on prompt/program optimization or prompt-learning workflows.
 - promptfoo and DeepEval focus on LLM evaluation, tests, red-team checks, and metrics.
 - Langfuse, LangSmith, and Phoenix focus on traces, observability, experiments, and app-level evaluation.
-- `prompt_control_lab` adds reproducible protocol hygiene, statistical comparison, deployment-risk checks, internal trajectory diagnostics, and prompt-input guarding.
+- `prompt_control_lab` adds a lightweight local preflight before agent execution, then keeps
+  reproducible protocol hygiene, statistical comparison, deployment-risk checks, and advanced
+  research diagnostics when users need them.
 
 ![prompt_control_lab ecosystem position](docs/assets/ecosystem.svg)
 

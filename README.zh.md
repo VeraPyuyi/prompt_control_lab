@@ -37,6 +37,103 @@ English documentation is available in [README.md](README.md).
 
 ![prompt_control_lab 产物结构](docs/assets/artifacts.zh.svg)
 
+## 两分钟 Demo：AI 编程 Agent 的 Prompt 安全带 🎬
+
+最容易被普通开发者理解的价值，不是“又一个评测 dashboard”，而是：
+
+> 把 `prompt_control_lab` 放在 Claude Code、Cursor、Codex 或其他 AI 编程 agent 前面。
+> 在 agent 花 token、改文件之前，先拦一下模糊、过宽、高风险或高成本 prompt。
+
+### 0:00-0:15：展示高风险原始 prompt
+
+```text
+修复这个 bug。
+```
+
+这类 prompt 容易失败，因为 agent 不知道该看哪些文件、失败现象是什么、哪些代码不能动、
+最后应该跑哪些测试。
+
+### 0:15-0:45：先做本地预检
+
+```bash
+pcl guard --prompt "修复这个 bug" --profile coding --token-mode balanced
+```
+
+典型结果：
+
+```text
+Action: suggest
+Risk: medium
+Plain summary: 这条指令太宽。发送给 agent 前，请补充失败现象、
+目标文件、测试计划和修改边界。
+Estimated tokens: 由 balanced 模式控制
+```
+
+### 0:45-1:10：给 IDE、hook 或 wrapper 使用 JSON
+
+```bash
+echo "重构这个模块" | pcl guard --stdin --profile coding --json
+```
+
+得到：Claude Code hook、Cursor MCP-style 工具、Codex skill 和 shell wrapper 可以稳定读取
+`plain_summary`、`risk_level`、`action`、`improved_prompt` 和 `token_report`。
+
+### 1:10-1:40：看 Before / After
+
+| 项目 | 原始 prompt | 守护后的 prompt |
+|---|---|---|
+| 范围 | 不清楚 | 要求说明失败现象和相关文件 |
+| 修改边界 | 没有 | 明确不要重构无关代码 |
+| 测试 | 没有 | 要求列出并运行相关测试 |
+| Token 成本 | 不受控 | 由 token mode 估算和约束 |
+| Agent 风险 | 更高 | 执行前先复查 |
+
+示例守护 prompt：
+
+```text
+用最小且安全的代码改动修复这个 bug。
+
+编辑前：
+1. 先确认失败现象和相关文件。
+2. 说明可能的根因。
+3. 列出你会运行的测试。
+
+约束：
+- 不要重构无关代码。
+- 除非必要，不要修改公开 API。
+- 保持 patch 尽可能小，并说明每个被修改文件的原因。
+
+编辑后：
+1. 运行相关测试。
+2. 总结修复内容。
+3. 说明仍然不确定的地方。
+```
+
+### 1:40-2:00：把 prompt 改动变成证据
+
+```bash
+pcl init --path demo
+cd demo
+pcl analyze --config promptcontrol.example.yaml --out runs/quick
+```
+
+内置 smoke demo 会生成 `runs/quick/report.md`、`report.html`、`stats.json` 和
+`explanation.json`。它证明工具链能完整跑通；它不声称所有真实 agent 任务都会提升。
+
+如果要做真实 Claude Code / Cursor / Codex 试点，建议收集 20-50 个 coding 任务并记录：
+
+| 指标 | 原始 prompt | 使用 `pcl guard` 后 | 期望方向 |
+|---|---:|---:|---|
+| 任务成功率 | TBD | TBD | 更高 |
+| 平均修改文件数 | TBD | TBD | 更少或更聚焦 |
+| 测试通过情况 | TBD | TBD | 更高 |
+| 被要求人工复查的 prompt | 0 | TBD | 高风险 prompt 应该非零 |
+| 平均 prompt token 估算 | TBD | TBD | 受控 |
+| 人工介入次数 | TBD | TBD | 更低 |
+
+谨慎解释：内置 demo 证明的是可复现流程。真实试点应该在你自己的 agent 环境中测量：
+守护后的 prompt 是否减少失败任务、token 浪费和误改文件。
+
 ## 安装 CLI ⚙️
 
 需要 Python 3.10 或更新版本。有些机器用 `python`，有些机器用 `python3`
@@ -393,7 +490,7 @@ pcl stats --baseline runs/baseline/predictions.jsonl --candidate runs/candidate/
 
 适合需要精细控制评测协议和统计比较的研究者或工程团队。
 
-### 8. 部署和研究诊断 🔬
+### 8. Advanced / Research Mode：部署和研究诊断 🔬
 
 Soft-to-hard 风险：
 
@@ -428,16 +525,18 @@ pcl tv-soft --predictions method_predictions.jsonl --out runs/candidate/diagnost
 
 ## 生态定位 🌱
 
-`prompt_control_lab` 不替代 prompt optimizer、eval 工具或 observability 平台。它补的是
-诊断层：withheld 协议、paired statistics、soft-to-hard 风险、hidden trajectory、
-control surrogate，以及 prompt 输入守护。
+`prompt_control_lab` 不替代 prompt optimizer、eval 工具或 observability 平台。它最适合
+日常开发者的入口，是 agent prompt 输入层守护：在 AI 编程 agent 花 token、改文件前做一次
+本地轻量 preflight。更深入时，它再提供 withheld 协议、paired statistics、soft-to-hard
+风险、hidden trajectory 和 control surrogate 等诊断能力。
 
 相邻工具示例：
 
 - DSPy、TextGrad、OpenPrompt 更偏向 prompt / program optimization 或 prompt-learning workflow。
 - promptfoo、DeepEval 更偏向 LLM evaluation、测试、red-team 检查和指标。
 - Langfuse、LangSmith、Phoenix 更偏向 traces、observability、experiments 和应用级评测。
-- `prompt_control_lab` 补上可复现协议、统计比较、部署风险检查、内部轨迹诊断和 prompt 输入守护。
+- `prompt_control_lab` 先补一个本地轻量 preflight 层，守护 agent 输入；需要深入时，再提供
+  可复现协议、统计比较、部署风险检查和 Advanced / Research Mode 诊断。
 
 ![prompt_control_lab 生态位置](docs/assets/ecosystem.zh.svg)
 
