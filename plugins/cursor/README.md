@@ -1,6 +1,8 @@
 # prompt_control_lab for Cursor
 
-Cursor integration is currently a lightweight rules and command pattern.
+Cursor integration is currently a lightweight rules and command pattern. Cursor does not expose
+the same repository-local prompt interception hook as Claude Code in this repo, so this adapter
+does not claim full automatic interception yet.
 
 Bundled rule file:
 
@@ -19,7 +21,8 @@ Recommended use:
 
 1. Keep prompt guidance in `.cursor/rules`.
 2. Use `pcl guard` before sending expensive or ambiguous prompts.
-3. For team workflows, wrap agent prompts with:
+3. Show `plain_summary` from JSON output when building custom wrappers.
+4. For team workflows, wrap agent prompts with:
 
 ```bash
 echo "Refactor this module" | pcl guard --stdin --profile coding --token-mode balanced --json
@@ -36,3 +39,15 @@ Prefer prompts that define scope, target files, expected output, tests, and veri
 
 This adapter does not claim full prompt interception in Cursor. It provides a practical workflow
 until a deeper extension or MCP adapter is added.
+
+## Path Toward Automatic Guarding
+
+A deeper Cursor integration should be implemented as one of these:
+
+- a Cursor extension that calls `pcl guard --json` before prompt submission
+- an MCP server that exposes `guard_prompt` as a callable tool
+- a local wrapper command that reads a prompt, shows `plain_summary`, and copies or forwards the
+  guarded prompt
+
+The stable integration contract is the `pcl guard --json` payload, especially
+`plain_summary`, `action`, `risk_level`, `improved_prompt`, and `token_report`.

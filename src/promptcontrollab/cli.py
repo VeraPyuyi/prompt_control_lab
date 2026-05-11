@@ -61,6 +61,36 @@ def build_parser() -> argparse.ArgumentParser:
     )
     subcommands = parser.add_subparsers(dest="command", required=True)
 
+    start_parser = subcommands.add_parser(
+        "start",
+        help="Beginner mode: choose a scenario and get guided output.",
+    )
+    start_parser.add_argument(
+        "--choice",
+        choices=["improve", "guard", "analyze"],
+        default=None,
+        help="Skip the menu and choose a beginner scenario.",
+    )
+    start_parser.add_argument("--prompt", default=None, help="Prompt string for improve/guard.")
+    start_parser.add_argument("--prompt-file", type=Path, default=None, help="Prompt text file.")
+    start_parser.add_argument("--run", type=Path, default=None, help="Optional run directory.")
+    start_parser.add_argument("--out", type=Path, default=None, help="Optional output directory.")
+    start_parser.add_argument(
+        "--profile",
+        choices=["general", "coding", "research"],
+        default="coding",
+        help="Prompt profile used when choice is guard.",
+    )
+    start_parser.add_argument(
+        "--token-mode",
+        choices=["balanced", "aggressive"],
+        default="balanced",
+        help="Token-cost mode used for prompt rewriting.",
+    )
+    start_parser.add_argument("--max-tokens", type=int, default=None)
+    start_parser.add_argument("--config", type=Path, default=None, help="Config for analyze mode.")
+    start_parser.set_defaults(func=_cmd_start)
+
     init_parser = subcommands.add_parser("init", help="Create an example project.")
     init_parser.add_argument("--path", type=Path, default=Path("."), help="Project directory.")
     init_parser.set_defaults(func=_cmd_init)
@@ -288,6 +318,91 @@ def build_parser() -> argparse.ArgumentParser:
 def _cmd_init(args: argparse.Namespace) -> None:
     write_example_project(args.path)
     print(f"Created PromptControlLab example at {args.path}")
+
+
+def _cmd_start(args: argparse.Namespace) -> None:
+    choice = _start_choice(args.choice)
+    if choice == "improve":
+        prompt = _read_start_prompt(args.prompt, args.prompt_file)
+        print("Beginner mode: improve a prompt")
+        context = load_prompt_context(args.run)
+        improvement = improve_prompt(
+            prompt,
+            context=context,
+            goal="stability",
+            language="auto",
+            style="stable",
+            token_mode=args.token_mode,
+            max_tokens=args.max_tokens,
+        )
+        print(
+            _format_improvement_output(
+                improvement.improved_prompt,
+                improvement.changes,
+                improvement.token_report.to_json(),
+            )
+        )
+        if args.out is not None:
+            ensure_dir(args.out)
+            (args.out / "improved_prompt.txt").write_text(
+                improvement.improved_prompt + "\n",
+                encoding="utf-8",
+            )
+            write_json(args.out / "prompt_improvement.json", improvement.to_json())
+            (args.out / "prompt_diff.md").write_text(
+                render_prompt_diff(improvement),
+                encoding="utf-8",
+            )
+        return
+
+    if choice == "guard":
+        prompt = _read_start_prompt(args.prompt, args.prompt_file)
+        print("Beginner mode: guard a prompt")
+        result = guard_prompt(
+            prompt,
+            context=load_prompt_context(args.run),
+            mode="suggest",
+            profile=args.profile,
+            token_mode=args.token_mode,
+            max_tokens=args.max_tokens,
+        )
+        print(_format_guard_output(result.to_json()))
+        return
+
+    print("Beginner mode: create a prompt evaluation report")
+    if args.config is not None:
+        analyze_args = argparse.Namespace(
+            config=args.config,
+            data=None,
+            baseline_predictions=None,
+            candidate_predictions=None,
+            out=args.out,
+            metric=None,
+            train_ratio=None,
+            val_ratio=None,
+            seed=None,
+            bootstrap_samples=None,
+            permutation_samples=None,
+            explain_level=None,
+            policy=None,
+            title=None,
+        )
+        _cmd_analyze(analyze_args)
+        return
+    print(
+        "\n".join(
+            [
+                "To create your first report, run:",
+                "",
+                "  pcl init --path demo",
+                "  cd demo",
+                "  pcl analyze --config promptcontrol.example.yaml --out runs/quick",
+                "",
+                "Result: a report.md/report.html that says whether the prompt change "
+                "is worth keeping.",
+            ]
+        )
+    )
 
 
 def _cmd_improve(args: argparse.Namespace) -> None:
@@ -542,6 +657,9 @@ def _read_guard_prompt(prompt: str | None, prompt_file: Path | None, use_stdin: 
 
 def _format_guard_output(payload: JsonDict) -> str:
     lines = [
+        "Plain summary:",
+        str(payload.get("plain_summary", "Review the guarded prompt before sending.")),
+        "",
         "Prompt guard result:",
         f"- Action: {payload['action']}",
         f"- Risk: {payload['risk_level']}",
@@ -586,3 +704,37 @@ def _format_improvement_output(
         lines.append(f"- Max tokens: {token_report['max_tokens']}")
         lines.append(f"- Within budget: {token_report['within_budget']}")
     return "\n".join(lines)
+
+
+def _start_choice(value: str | None) -> str:
+    if value is not None:
+        return value
+    print(
+        "\n".join(
+            [
+                "What do you want to do?",
+                "1) Make my prompt clearer",
+                "2) Check a prompt before sending it to an AI tool",
+                "3) Compare prompts and create a report",
+            ]
+        )
+    )
+    raw = input("Choose 1, 2, or 3: ").strip().lower()
+    choices = {
+        "1": "improve",
+        "improve": "improve",
+        "2": "guard",
+        "guard": "guard",
+        "3": "analyze",
+        "analyze": "analyze",
+    }
+    if raw not in choices:
+        msg = "Choose 1, 2, or 3"
+        raise ValueError(msg)
+    return choices[raw]
+
+
+def _read_start_prompt(prompt: str | None, prompt_file: Path | None) -> str:
+    if prompt is not None or prompt_file is not None:
+        return _read_improve_prompt(prompt, prompt_file)
+    return input("Paste your prompt: ")

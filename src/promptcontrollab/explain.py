@@ -36,6 +36,7 @@ def generate_explanation(run_dir: Path, *, level: str) -> JsonDict:
     verdict = _verdict(mean_delta, comparison)
     payload: JsonDict = {
         "level": level,
+        "plain_summary": _plain_summary(verdict, mean_delta),
         "overall_summary": {
             "verdict": verdict,
             "baseline_mean": baseline_mean,
@@ -50,6 +51,7 @@ def generate_explanation(run_dir: Path, *, level: str) -> JsonDict:
         "deployment_risk": _deployment_risk(diagnostics),
         "next_action": _next_action(verdict, diagnostics),
     }
+    payload["deployment_recommendation"] = _deployment_recommendation(payload["next_action"])
     if level == "technical":
         payload["artifact_paths"] = _artifact_paths(run_dir)
         payload["raw_comparison"] = comparison
@@ -99,6 +101,16 @@ def _summary_sentence(verdict: str, mean_delta: float) -> str:
     if mean_delta > 0:
         return "The candidate prompt is higher on average, but the evidence should be reviewed."
     return "The candidate prompt does not show a clear improvement yet."
+
+
+def _plain_summary(verdict: str, mean_delta: float) -> str:
+    if verdict == "keep":
+        return "The candidate prompt looks better and the evidence supports keeping it."
+    if verdict == "hold":
+        return "Do not keep this prompt yet. It regressed or triggered risk signals."
+    if mean_delta > 0:
+        return "The candidate prompt is higher on average, but it still needs review."
+    return "There is no clear improvement yet. Review the prompt before using it."
 
 
 def _evidence_strength(comparison: JsonDict) -> JsonDict:
@@ -242,6 +254,34 @@ def _next_action(verdict: str, diagnostics: dict[str, JsonDict]) -> JsonDict:
     return {
         "recommendation": "review_candidate",
         "reason": "The result is promising but uncertain.",
+    }
+
+
+def _deployment_recommendation(next_action: object) -> JsonDict:
+    recommendation = next_action.get("recommendation") if isinstance(next_action, dict) else None
+    reason = next_action.get("reason") if isinstance(next_action, dict) else ""
+    if recommendation == "keep_candidate":
+        return {
+            "label": "yes",
+            "color": "green",
+            "what_this_means": (
+                "The candidate can be kept if the surrounding product constraints are "
+                "acceptable."
+            ),
+            "reason": reason,
+        }
+    if recommendation in {"do_not_keep_yet", "inspect_before_keep"}:
+        return {
+            "label": "no",
+            "color": "red",
+            "what_this_means": "Do not deploy this prompt until the flagged issue is inspected.",
+            "reason": reason,
+        }
+    return {
+        "label": "needs_review",
+        "color": "yellow",
+        "what_this_means": "A person should review the evidence before using this prompt.",
+        "reason": reason,
     }
 
 

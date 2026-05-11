@@ -34,7 +34,7 @@ PromptControlLab 的核心思想是：每次运行都应该留下可复查的文
 
 ## `explanation.json`
 
-记录这次运行的直白或技术解释，包括总体结论、证据强度、数据隔离、slice 变化、样本变化、部署风险和下一步建议。
+记录这次运行的直白或技术解释，包括总体结论、证据强度、数据隔离、slice 变化、样本变化、部署风险、下一步建议、`plain_summary` 和 `deployment_recommendation`。
 
 说明什么问题：不用逐个阅读所有 JSON 文件，也能知道这次 prompt 改动说明了什么。
 
@@ -42,7 +42,20 @@ PromptControlLab 的核心思想是：每次运行都应该留下可复查的文
 
 记录策略阈值判断结果。
 
-说明什么问题：这次运行是 `pass`、`needs_review` 还是 `fail`，以及触发原因是什么。
+说明什么问题：这次运行是 `pass`、`needs_review` 还是 `fail`，以及触发原因是什么。它也会包含 `plain_summary`，方便插件和报告直接展示直白结论。
+
+## `pcl guard --json` 输出
+
+记录 hook、rules 或 shell wrapper 使用的输入层 prompt 守护结果。
+
+重要字段：
+
+- `plain_summary`：给普通用户看的直白建议，例如“补充目标文件和验收标准”
+- `action`：`suggest`、`auto` 或 `block`
+- `risk_level`：`low`、`medium` 或 `high`
+- `improved_prompt`：建议继续发送给 AI 工具的守护版 prompt
+
+说明什么问题：这条 prompt 是否已经足够清楚，发送前还应该补什么。
 
 ## `improved_prompt.txt`
 

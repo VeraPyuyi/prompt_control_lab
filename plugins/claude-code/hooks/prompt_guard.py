@@ -67,11 +67,14 @@ def _claude_response(result: dict[str, Any]) -> dict[str, Any]:
     if result["action"] == "block":
         return {
             "decision": "block",
-            "reason": "prompt_control_lab blocked this prompt: " + "; ".join(result["reasons"]),
+            "reason": "prompt_control_lab blocked this prompt: " + str(result["plain_summary"]),
         }
     context = "\n".join(
         [
             "prompt_control_lab guard suggestion:",
+            "",
+            "Plain summary:",
+            str(result["plain_summary"]),
             "",
             str(result["improved_prompt"]),
             "",

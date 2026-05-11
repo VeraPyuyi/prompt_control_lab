@@ -45,6 +45,7 @@ def run_gate(run_dir: Path, *, policy_path: Path) -> JsonDict:
         "status": status,
         "policy_path": str(policy_path),
         "checks": checks,
+        "plain_summary": _plain_summary(status),
         "what_this_means": _status_sentence(status),
     }
     write_json(run_dir / "gate_result.json", payload)
@@ -157,6 +158,17 @@ def _status_sentence(status: str) -> str:
     if status == "fail":
         return "At least one required threshold failed."
     return "The run did not hard-fail, but one or more checks need review."
+
+
+def _plain_summary(status: str) -> str:
+    if status == "pass":
+        return "Deployment recommendation: yes. The configured checks passed."
+    if status == "fail":
+        return "Deployment recommendation: no. At least one required check failed."
+    return (
+        "Deployment recommendation: needs human review. No hard failure was found, "
+        "but one or more checks need attention."
+    )
 
 
 def _optional_float(value: Any) -> float | None:

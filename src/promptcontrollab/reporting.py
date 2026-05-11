@@ -51,6 +51,7 @@ def render_markdown(
     """Render a compact diagnostic report."""
 
     lines: list[str] = [f"# {title}", ""]
+    lines += _deployment_recommendation_lines(explanation, gate)
     if manifest:
         lines += [
             "## Run",
@@ -198,3 +199,62 @@ def _get(value: object, key: str) -> object:
     if isinstance(value, dict):
         return value.get(key, "missing")
     return "missing"
+
+
+def _deployment_recommendation_lines(explanation: JsonDict, gate: JsonDict) -> list[str]:
+    card = _deployment_card(explanation, gate)
+    return [
+        "## Deployment Recommendation",
+        "",
+        f"- Recommendation: `{card['recommendation']}`",
+        f"- Status source: `{card['source']}`",
+        f"- Risk color: `{card['color']}`",
+        f"- Why: {card['reason']}",
+        "",
+        "This is the first-pass release decision. Use it as a prompt change gate: deploy, "
+        "hold, or send to a human reviewer.",
+        "",
+    ]
+
+
+def _deployment_card(explanation: JsonDict, gate: JsonDict) -> JsonDict:
+    if gate:
+        status = str(gate.get("status", "needs_review"))
+        if status == "pass":
+            return {
+                "recommendation": "yes",
+                "source": "gate_result.json",
+                "color": "green",
+                "reason": gate.get("plain_summary", gate.get("what_this_means", "")),
+            }
+        if status == "fail":
+            return {
+                "recommendation": "no",
+                "source": "gate_result.json",
+                "color": "red",
+                "reason": gate.get("plain_summary", gate.get("what_this_means", "")),
+            }
+        return {
+            "recommendation": "needs_review",
+            "source": "gate_result.json",
+            "color": "yellow",
+            "reason": gate.get("plain_summary", gate.get("what_this_means", "")),
+        }
+
+    recommendation = explanation.get("deployment_recommendation", {})
+    if isinstance(recommendation, dict):
+        return {
+            "recommendation": recommendation.get("label", "needs_review"),
+            "source": "explanation.json",
+            "color": recommendation.get("color", "yellow"),
+            "reason": recommendation.get(
+                "reason",
+                recommendation.get("what_this_means", "Review the prompt before deployment."),
+            ),
+        }
+    return {
+        "recommendation": "needs_review",
+        "source": "missing_artifacts",
+        "color": "yellow",
+        "reason": "No explanation or gate result is available yet.",
+    }

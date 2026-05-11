@@ -2,6 +2,22 @@
 
 本教程采用“怎么操作 -> 得到什么结果 -> 能说明什么问题”的格式。
 
+## 新手模式：选择场景
+
+操作：
+
+```bash
+pcl start
+```
+
+得到：
+
+- 一个三选一菜单：优化 prompt、守护 prompt、生成报告
+- 当前场景的直白输出
+
+说明：
+如果你还不熟悉 `profile`、`gate` 或 `stats` 这些词，就先从这里开始。
+
 ## 快速模式：一个命令生成报告
 
 操作：
@@ -74,6 +90,7 @@ echo "修复这个 bug" | pcl guard --stdin --profile coding --json
 
 得到：
 
+- `plain_summary`
 - `action`
 - `risk_level`
 - `improved_prompt`
@@ -82,7 +99,7 @@ echo "修复这个 bug" | pcl guard --stdin --profile coding --json
 
 说明：
 
-这个命令是给 prompt 输入层插件用的。Claude Code、Cursor、Codex 或 shell wrapper 在把 prompt 发给模型前，可以先调用它。`suggest` 返回更稳的 prompt，`auto` 表示可自动使用，`gate` 可以阻断高风险或超过 token 预算的 prompt。
+这个命令是给 prompt 输入层插件用的。Claude Code、Cursor、Codex 或 shell wrapper 在把 prompt 发给模型前，可以先调用它。`plain_summary` 给人看，`action`、`risk_level` 和 `token_report` 给插件稳定读取。`suggest` 返回更稳的 prompt，`auto` 表示可自动使用，`gate` 可以阻断高风险或超过 token 预算的 prompt。
 
 ## 专家模式：一步一步控制
 

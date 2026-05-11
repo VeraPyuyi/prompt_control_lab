@@ -20,11 +20,12 @@ English documentation is available in [README.md](README.md).
 
 如果你第一次使用，建议按这个顺序看：
 
-1. **只想直接优化一个 prompt** → `pcl improve`
-2. **想在 Claude Code / Cursor / Codex 输入前守护 prompt** → `pcl guard` + `plugins/`
-3. **想一键生成完整分析报告** → `pcl analyze`
-4. **想专业控制每一步评测** → `split → eval → stats → report → explain → gate`
-5. **想做研究诊断** → `soft-hard → trajectory → riccati → tv-soft`
+1. **我只想让 AI 更懂我** → `pcl start`
+2. **只想直接优化一个 prompt** → `pcl improve`
+3. **想在 Claude Code / Cursor / Codex 输入前守护 prompt** → `pcl guard` + `plugins/`
+4. **想一键生成完整分析报告** → `pcl analyze`
+5. **想专业控制每一步评测** → `split → eval → stats → report → explain → gate`
+6. **想做研究诊断** → `soft-hard → trajectory → riccati → tv-soft`
 
 在这份 README 里，**Quick Mode（快速模式）** 指 `pcl analyze` 这条集成路径；
 **Expert Mode（专家模式）** 指逐个命令自由组合的专业工作流。先简单，后专业。
@@ -37,6 +38,15 @@ English documentation is available in [README.md](README.md).
 ![prompt_control_lab 产物结构](docs/assets/artifacts.zh.svg)
 
 ## 安装 CLI ⚙️
+
+需要 Python 3.10 或更新版本。有些机器用 `python`，有些机器用 `python3`
+或 `py -3.10`。如果第一步安装时提示找不到 Python，可以先试：
+
+```bash
+python --version
+python3 --version
+py -3.10 --version
+```
 
 ### 1. 克隆仓库
 
@@ -77,11 +87,12 @@ uv pip install -e ".[dev,research]"
 
 ```bash
 pcl --help
+pcl start --choice improve --prompt "回答下面的问题"
 pcl improve --prompt "回答下面的问题"
 ```
 
-预期结果：`pcl --help` 能看到命令列表，`pcl improve` 会输出优化后的 prompt 和
-estimated token 成本。
+预期结果：`pcl --help` 能看到命令列表，`pcl start` 会进入新手路径，
+`pcl improve` 会输出优化后的 prompt 和 estimated token 成本。
 
 ## 安装 IDE / CLI 插件和 Skills 🧩
 
@@ -205,7 +216,33 @@ echo "给这个功能写测试" | pcl guard --stdin --profile coding --json
 
 下面的功能顺序是从“最直白、最高度集成”到“更专业、更灵活”。
 
-### 1. `pcl improve`：直接改写一个 prompt ✨
+### 1. `pcl start`：新手场景菜单 🌈
+
+操作：
+
+```bash
+pcl start
+```
+
+非交互操作：
+
+```bash
+pcl start --choice improve --prompt "回答下面的问题"
+pcl start --choice guard --prompt "修复这个 bug"
+```
+
+得到：
+
+- 一个只有三个场景的菜单：优化 prompt、守护 prompt、生成报告
+- 不需要先理解 `profile`、`gate` 或 JSON，也能看到直白结果
+- 中间产物和专家命令仍然保留，后续可以继续深入分析
+
+说明什么问题：
+
+如果你只会用普通话描述需求，例如“让 AI 更懂我”“这条指令是不是太宽”，
+就从这里开始。
+
+### 2. `pcl improve`：直接改写一个 prompt ✨
 
 操作：
 
@@ -230,7 +267,7 @@ pcl improve --prompt "回答下面的问题" --token-mode aggressive --max-token
 如果你只有一段 prompt 字符串，这就是最简单入口。它会补充任务目标、输出格式约束、
 稳定性要求，并且可以按 token 预算压缩措辞。
 
-### 2. `pcl guard`：在 IDE 或 CLI agent 使用前守护 prompt 🛡️
+### 3. `pcl guard`：在 IDE 或 CLI agent 使用前守护 prompt 🛡️
 
 操作：
 
@@ -246,6 +283,7 @@ echo "回答用户问题" | pcl guard --stdin --mode gate --max-tokens 80 --json
 
 得到：
 
+- `plain_summary`：给非技术用户看的直白摘要
 - `action`：`suggest`、`auto` 或 `block`
 - `risk_level`：`low`、`medium` 或 `high`
 - `improved_prompt`：守护后的 prompt
@@ -257,7 +295,7 @@ echo "回答用户问题" | pcl guard --stdin --mode gate --max-tokens 80 --json
 在 Claude Code、Cursor、Codex 或 shell wrapper 真正花 token 前，先检查 prompt 是否
 太模糊、超预算或缺少关键约束。
 
-### 3. `pcl analyze`：一个命令生成完整报告 📦
+### 4. `pcl analyze`：一个命令生成完整报告 📦
 
 操作：
 
@@ -282,7 +320,7 @@ pcl analyze --config promptcontrol.example.yaml --out runs/quick
 这是最简单的完整评测路径。它会回答 candidate 是否更好、证据是否可靠、有没有任务
 slice 退化、下一步应该检查哪里。
 
-### 4. `pcl init`：生成可运行示例 🌱
+### 5. `pcl init`：生成可运行示例 🌱
 
 操作：
 
@@ -303,7 +341,7 @@ cd demo
 这些文件展示最小输入格式：任务 `id`、`input`、`expected`、`slice`，以及模型
 `output`。
 
-### 5. `pcl report`、`pcl explain`、`pcl gate`：阅读并做决定 ✅
+### 6. `pcl report`、`pcl explain`、`pcl gate`：阅读并做决定 ✅
 
 操作：
 
@@ -318,12 +356,13 @@ pcl gate --run runs/quick --policy examples/gate.policy.yaml
 - `report.md` / `report.html`
 - `explanation.json`
 - `gate_result.json`
+- 报告首页的上线建议：`yes`、`no` 或 `needs_review`
 
 说明什么问题：
 
 这些命令把产物变成结论：保留 prompt、继续复查，或者暂时不要使用。
 
-### 6. 专家评测：`split → eval → stats` 🧠
+### 7. 专家评测：`split → eval → stats` 🧠
 
 操作：
 
@@ -343,7 +382,7 @@ pcl stats --baseline runs/baseline/predictions.jsonl --candidate runs/candidate/
 
 适合需要精细控制评测协议和统计比较的研究者或工程团队。
 
-### 7. 部署和研究诊断 🔬
+### 8. 部署和研究诊断 🔬
 
 Soft-to-hard 风险：
 
@@ -411,6 +450,7 @@ control surrogate，以及 prompt 输入守护。
 - [一步一步教程](docs/tutorial.zh.md)
 - [产物说明](docs/artifacts.zh.md)
 - [创新点和贡献](docs/innovation.zh.md)
+- [统计和上线决策指南](docs/decision_guide.zh.md)
 - [插件适配](plugins/)
 
 ## License 📄

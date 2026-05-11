@@ -130,6 +130,8 @@ def test_cli_quick_analyze_explain_and_report(tmp_path: Path) -> None:
     assert explanation["example_changes"]["fixed_ids"] == ["arith-2"]
 
     report = (run / "report.md").read_text(encoding="utf-8")
+    assert "Deployment Recommendation" in report
+    assert "Recommendation:" in report
     assert "Quick Mode Explanation" in report
     assert "What this means" in report
 
@@ -179,6 +181,7 @@ def test_cli_gate_uses_policy_thresholds(tmp_path: Path) -> None:
     assert main(["gate", "--run", str(run), "--policy", str(policy)]) == 0
     gate = json.loads((run / "gate_result.json").read_text(encoding="utf-8"))
     assert gate["status"] == "pass"
+    assert gate["plain_summary"].startswith("Deployment recommendation:")
     assert gate["checks"]["candidate_score"]["passed"] is True
 
 
@@ -435,8 +438,40 @@ def test_cli_guard_json_suggests_improved_prompt(
     assert payload["profile"] == "general"
     assert "improved_prompt" in payload
     assert payload["improved_prompt"] != payload["original_prompt"]
+    assert "plain_summary" in payload
+    assert "add" in payload["plain_summary"].lower()
     assert payload["token_report"]["token_mode"] == "balanced"
     assert payload["reasons"]
+
+
+def test_cli_guard_default_output_starts_with_plain_summary(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    assert main(["guard", "--prompt", "Fix this bug", "--profile", "coding"]) == 0
+    output = capsys.readouterr().out
+    assert "Plain summary:" in output
+    assert "Add target files" in output
+
+
+def test_cli_start_choice_improve_outputs_beginner_prompt(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    assert main(["start", "--choice", "improve", "--prompt", "Answer the question"]) == 0
+    output = capsys.readouterr().out
+    assert "Beginner mode: improve a prompt" in output
+    assert "Optimized prompt:" in output
+
+
+def test_cli_start_interactive_guard_menu(
+    capsys: pytest.CaptureFixture[str],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr("sys.stdin", io.StringIO("2\nFix this bug\n"))
+    assert main(["start"]) == 0
+    output = capsys.readouterr().out
+    assert "What do you want to do?" in output
+    assert "Beginner mode: guard a prompt" in output
+    assert "Plain summary:" in output
 
 
 def test_cli_guard_gate_blocks_over_budget_prompt(

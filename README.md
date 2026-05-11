@@ -21,11 +21,12 @@ Chinese documentation is available in [README.zh.md](README.zh.md).
 
 Use this order if you are new:
 
-1. **Just improve one prompt** → `pcl improve`
-2. **Guard prompts before Claude Code / Cursor / Codex** → `pcl guard` + `plugins/`
-3. **Generate one complete report** → `pcl analyze`
-4. **Control every evaluation step** → `split → eval → stats → report → explain → gate`
-5. **Run research diagnostics** → `soft-hard → trajectory → riccati → tv-soft`
+1. **I just want AI to understand me better** → `pcl start`
+2. **Just improve one prompt** → `pcl improve`
+3. **Guard prompts before Claude Code / Cursor / Codex** → `pcl guard` + `plugins/`
+4. **Generate one complete report** → `pcl analyze`
+5. **Control every evaluation step** → `split → eval → stats → report → explain → gate`
+6. **Run research diagnostics** → `soft-hard → trajectory → riccati → tv-soft`
 
 In this README, **Quick Mode** means the integrated `pcl analyze` path, while
 **Expert Mode** means the flexible command-by-command workflow. Simple first, expert later.
@@ -38,6 +39,16 @@ statistics, explanations, diagnostics, and prompt rewrites as inspectable artifa
 ![prompt_control_lab artifacts](docs/assets/artifacts.svg)
 
 ## Install The CLI ⚙️
+
+Python 3.10 or newer is required. On some machines the command is `python`,
+on others it is `python3` or `py -3.10`. If `pip install -e .` fails because
+Python is not found, try:
+
+```bash
+python --version
+python3 --version
+py -3.10 --version
+```
 
 ### 1. Clone the repository
 
@@ -78,11 +89,12 @@ uv pip install -e ".[dev,research]"
 
 ```bash
 pcl --help
+pcl start --choice improve --prompt "Answer the user question."
 pcl improve --prompt "Answer the user question."
 ```
 
-Expected result: `pcl --help` lists commands, and `pcl improve` prints an optimized prompt
-plus estimated token cost.
+Expected result: `pcl --help` lists commands, `pcl start` shows the beginner path,
+and `pcl improve` prints an optimized prompt plus estimated token cost.
 
 ## Install IDE / CLI Plugins And Skills 🧩
 
@@ -207,7 +219,33 @@ a stop signal in gate mode.
 
 The sections below are ordered from direct, friendly workflows to more flexible research tools.
 
-### 1. `pcl improve`: rewrite one prompt directly ✨
+### 1. `pcl start`: beginner scenario menu 🌈
+
+Operation:
+
+```bash
+pcl start
+```
+
+Non-interactive operation:
+
+```bash
+pcl start --choice improve --prompt "Answer the user question."
+pcl start --choice guard --prompt "Fix this bug"
+```
+
+Result:
+
+- a simple menu with three scenarios: improve, guard, or analyze
+- plain-language output without needing to understand `profile`, `gate`, or JSON first
+- all expert commands remain available after the beginner path
+
+What it means:
+
+Use this when you only know what you want in ordinary language: make the prompt clearer,
+check whether it is too broad, or learn how to generate a full report.
+
+### 2. `pcl improve`: rewrite one prompt directly ✨
 
 Operation:
 
@@ -232,7 +270,7 @@ What it means:
 Use this when you only have a prompt string. It adds task goal, output-format constraints,
 stability rules, and optional token-budget pressure without calling any external model.
 
-### 2. `pcl guard`: protect prompts before IDE or CLI agents use them 🛡️
+### 3. `pcl guard`: protect prompts before IDE or CLI agents use them 🛡️
 
 Operation:
 
@@ -248,6 +286,7 @@ echo "Answer the user question." | pcl guard --stdin --mode gate --max-tokens 80
 
 Result:
 
+- `plain_summary`: a human-readable sentence for non-technical users
 - `action`: `suggest`, `auto`, or `block`
 - `risk_level`: `low`, `medium`, or `high`
 - `improved_prompt`: guarded prompt
@@ -259,7 +298,7 @@ What it means:
 Use this before Claude Code, Cursor, Codex, or a shell wrapper spends tokens. It catches vague,
 over-budget, or underspecified prompts early.
 
-### 3. `pcl analyze`: one command, one report 📦
+### 4. `pcl analyze`: one command, one report 📦
 
 Operation:
 
@@ -284,7 +323,7 @@ What it means:
 This is the easiest full evaluation path. It answers: did the candidate improve, is the
 evidence reliable, did any task slice regress, and what should be checked next?
 
-### 4. `pcl init`: create a runnable example 🌱
+### 5. `pcl init`: create a runnable example 🌱
 
 Operation:
 
@@ -305,7 +344,7 @@ What it means:
 These files show the minimal input format: task `id`, `input`, `expected`, `slice`, and model
 `output` records.
 
-### 5. `pcl report`, `pcl explain`, `pcl gate`: read and decide ✅
+### 6. `pcl report`, `pcl explain`, `pcl gate`: read and decide ✅
 
 Operations:
 
@@ -320,12 +359,13 @@ Result:
 - `report.md` / `report.html`
 - `explanation.json`
 - `gate_result.json`
+- a top-of-report deployment recommendation: `yes`, `no`, or `needs_review`
 
 What it means:
 
 These commands turn artifacts into decisions: keep the prompt, review it, or hold it.
 
-### 6. Expert evaluation: `split → eval → stats` 🧠
+### 7. Expert evaluation: `split → eval → stats` 🧠
 
 Operations:
 
@@ -345,7 +385,7 @@ What it means:
 
 This is for users who want full control over protocol hygiene and statistical comparison.
 
-### 7. Deployment and research diagnostics 🔬
+### 8. Deployment and research diagnostics 🔬
 
 Soft-to-hard risk:
 
@@ -414,6 +454,7 @@ Adjacent examples:
 - [Tutorial](docs/tutorial.en.md)
 - [Artifacts](docs/artifacts.en.md)
 - [Innovation and Contribution](docs/innovation.en.md)
+- [Decision Guide](docs/decision_guide.en.md)
 - [Plugin adapters](plugins/)
 
 ## License 📄

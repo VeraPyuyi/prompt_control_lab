@@ -2,6 +2,24 @@
 
 This tutorial uses the format "operation -> result -> what it explains".
 
+## Beginner Mode: Choose a Scenario
+
+Operation:
+
+```bash
+pcl start
+```
+
+Result:
+
+- a three-option menu: improve a prompt, guard a prompt, or create a report
+- plain-language output for the selected scenario
+
+What it explains:
+
+This is the lowest-friction entry point. Use it when terms like `profile`, `gate`, or
+`stats` are not familiar yet.
+
 ## Quick Mode: One Command
 
 Operation:
@@ -79,6 +97,7 @@ echo "Fix this bug" | pcl guard --stdin --profile coding --json
 
 Result:
 
+- `plain_summary`
 - `action`
 - `risk_level`
 - `improved_prompt`
@@ -88,8 +107,9 @@ Result:
 What it explains:
 
 This command is for prompt-input plugins. Use it before Claude Code, Cursor, Codex, or a shell
-wrapper sends a prompt to a model. `suggest` returns a safer prompt, `auto` marks it as ready to
-use, and `gate` can block high-risk or over-budget prompts.
+wrapper sends a prompt to a model. `plain_summary` is written for humans; `action`, `risk_level`,
+and `token_report` are stable fields for plugins. `suggest` returns a safer prompt, `auto` marks
+it as ready to use, and `gate` can block high-risk or over-budget prompts.
 
 ## Expert Mode: Step by Step
 

@@ -36,7 +36,8 @@ What it explains: whether an observed change is reliable or still uncertain.
 ## `explanation.json`
 
 Stores a plain or technical explanation of the run: verdict, evidence strength, data hygiene,
-slice changes, example changes, deployment risk, and next action.
+slice changes, example changes, deployment risk, next action, `plain_summary`, and a
+`deployment_recommendation`.
 
 What it explains: what the artifacts mean for a reader who does not want to inspect every file.
 
@@ -44,7 +45,21 @@ What it explains: what the artifacts mean for a reader who does not want to insp
 
 Stores the result of applying a policy file to a run.
 
-What it explains: whether the run passes, needs review, or fails configured thresholds.
+What it explains: whether the run passes, needs review, or fails configured thresholds. It also
+includes `plain_summary`, so plugins and reports can show the result without exposing raw JSON.
+
+## `pcl guard --json` output
+
+Stores an input-layer prompt guard result when used by hooks, rules, or shell wrappers.
+
+Important fields:
+
+- `plain_summary`: human-readable advice, such as "add target files and acceptance criteria"
+- `action`: `suggest`, `auto`, or `block`
+- `risk_level`: `low`, `medium`, or `high`
+- `improved_prompt`: the guarded prompt to send onward
+
+What it explains: whether a prompt is clear enough to send to an AI tool and what to add first.
 
 ## `improved_prompt.txt`
 
