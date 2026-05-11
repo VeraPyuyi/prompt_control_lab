@@ -11,13 +11,15 @@
     <text x="88" y="195" font-size="15" fill="#475569">For non-specialists and fast reviews</text>
     <rect x="88" y="222" width="170" height="42" rx="8" fill="#e0f2fe"/>
     <text x="173" y="249" text-anchor="middle" font-size="16" font-weight="700" fill="#075985">pcl analyze</text>
-    <text x="88" y="292" font-size="15" fill="#334155">Outputs: split, metrics, stats, explanation, report</text>
+    <text x="88" y="288" font-size="15" fill="#334155">Outputs: split, metrics, stats, explanation</text>
+    <text x="88" y="312" font-size="15" fill="#334155">and report</text>
 
     <rect x="585" y="125" width="455" height="205" rx="14" fill="#ffffff" stroke="#22c55e" stroke-width="2"/>
     <text x="613" y="165" font-size="23" font-weight="700" fill="#0f172a">Expert Mode</text>
     <text x="613" y="195" font-size="15" fill="#475569">For researchers and engineering teams</text>
     <rect x="613" y="222" width="170" height="42" rx="8" fill="#dcfce7"/>
     <text x="698" y="249" text-anchor="middle" font-size="16" font-weight="700" fill="#166534">pcl split + eval</text>
-    <text x="613" y="292" font-size="15" fill="#334155">Control each step: stats, soft-hard, trajectory, Riccati</text>
+    <text x="613" y="288" font-size="15" fill="#334155">Control each step: stats, soft-hard, trajectory</text>
+    <text x="613" y="312" font-size="15" fill="#334155">and Riccati</text>
   </g>
 </svg>

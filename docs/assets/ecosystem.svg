@@ -5,7 +5,7 @@
     <style>
       .bg{fill:#f8fafc}.title{font:700 30px Arial,sans-serif;fill:#102033}.sub{font:400 16px Arial,sans-serif;fill:#52616f}
       .card{fill:#ffffff;stroke:#cbd5e1;stroke-width:2}.pcl{fill:#ecfeff;stroke:#0e7490;stroke-width:3}
-      .h{font:700 19px Arial,sans-serif;fill:#102033}.t{font:400 14px Arial,sans-serif;fill:#405160}.pill{fill:#0e7490}
+      .h{font:700 19px Arial,sans-serif;fill:#102033}.t{font:400 13px Arial,sans-serif;fill:#405160}.pill{fill:#0e7490}
       .pillText{font:700 13px Arial,sans-serif;fill:#ffffff}.arrow{stroke:#64748b;stroke-width:2.5;fill:none;marker-end:url(#arrow)}
     </style>
     <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto">
@@ -38,8 +38,8 @@
   <text x="608" y="261" class="t">LangSmith, Phoenix</text>
 
   <rect x="852" y="96" width="210" height="238" rx="12" class="pcl"/>
-  <rect x="888" y="119" width="138" height="28" rx="14" class="pill"/>
-  <text x="911" y="138" class="pillText">DIAGNOSTIC LAYER</text>
+  <rect x="876" y="119" width="162" height="28" rx="14" class="pill"/>
+  <text x="957" y="138" text-anchor="middle" class="pillText">DIAGNOSTIC LAYER</text>
   <text x="878" y="178" class="h">prompt_control_lab</text>
   <text x="878" y="209" class="t">Tri-split protocol</text>
   <text x="878" y="231" class="t">Paired statistics</text>

@@ -20,13 +20,14 @@
 
     <rect x="278" y="145" width="145" height="88" rx="12" fill="#ffffff" stroke="#34d399" stroke-width="2"/>
     <text x="351" y="181" text-anchor="middle" font-size="18" font-weight="700" fill="#0f172a">Tri-split</text>
-    <text x="351" y="207" text-anchor="middle" font-size="13" fill="#475569">train / val / withheld</text>
+    <text x="351" y="202" text-anchor="middle" font-size="13" fill="#475569">train / val</text>
+    <text x="351" y="220" text-anchor="middle" font-size="13" fill="#475569">withheld</text>
 
     <line x1="435" y1="189" x2="498" y2="189" stroke="#64748b" stroke-width="2" marker-end="url(#arrow)"/>
 
     <rect x="511" y="145" width="145" height="88" rx="12" fill="#ffffff" stroke="#fbbf24" stroke-width="2"/>
     <text x="584" y="181" text-anchor="middle" font-size="18" font-weight="700" fill="#0f172a">Eval / import</text>
-    <text x="584" y="207" text-anchor="middle" font-size="13" fill="#475569">outputs and scores</text>
+    <text x="584" y="207" text-anchor="middle" font-size="12" fill="#475569">outputs and scores</text>
 
     <line x1="668" y1="189" x2="731" y2="189" stroke="#64748b" stroke-width="2" marker-end="url(#arrow)"/>
 
@@ -36,12 +37,12 @@
 
     <line x1="901" y1="189" x2="964" y2="189" stroke="#64748b" stroke-width="2" marker-end="url(#arrow)"/>
 
-    <rect x="977" y="145" width="78" height="88" rx="12" fill="#ffffff" stroke="#fb7185" stroke-width="2"/>
+    <rect x="970" y="145" width="92" height="88" rx="12" fill="#ffffff" stroke="#fb7185" stroke-width="2"/>
     <text x="1016" y="181" text-anchor="middle" font-size="18" font-weight="700" fill="#0f172a">Report</text>
     <text x="1016" y="207" text-anchor="middle" font-size="13" fill="#475569">MD/HTML</text>
 
     <path d="M584 236 C584 282, 742 286, 817 238" fill="none" stroke="#94a3b8" stroke-width="2" stroke-dasharray="6 6" marker-end="url(#arrow)"/>
-    <rect x="290" y="272" width="520" height="46" rx="10" fill="#eef2ff" stroke="#c7d2fe"/>
+    <rect x="260" y="272" width="580" height="46" rx="10" fill="#eef2ff" stroke="#c7d2fe"/>
     <text x="550" y="301" text-anchor="middle" font-size="15" font-weight="700" fill="#3730a3">Optional diagnostics: soft-hard, trajectory, Riccati, tv-soft</text>
   </g>
 </svg>
