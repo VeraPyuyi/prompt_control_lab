@@ -122,20 +122,37 @@ The smoke demo writes `runs/quick/report.md`, `report.html`, `stats.json`, and
 `explanation.json`. It proves the pipeline works end to end; it is not a claim that every
 real agent task improves.
 
-For a real Claude Code / Cursor / Codex pilot, collect 20-50 coding tasks and record:
+## Real Pilot Result: Codex Local Guard Study 📊
 
-| measurement | before raw prompts | after `pcl guard` | desired direction |
-|---|---:|---:|---|
-| task success rate | TBD | TBD | higher |
-| average touched files | TBD | TBD | lower or more focused |
-| tests passed | TBD | TBD | higher |
-| prompts sent to review | 0 | TBD | nonzero for risky prompts |
-| average prompt token estimate | TBD | TBD | controlled |
-| human intervention count | TBD | TBD | lower |
+Status: **in progress**.
 
-Careful interpretation: the built-in demo shows reproducible workflow. A real pilot should
-measure whether guarded prompts reduce failed tasks, token waste, and unnecessary file edits
-in your own agent setup.
+I searched the local `D:\Vibe Research Projects` workspace for existing agent records. The
+workspace contains real Cursor/Codex transcripts, but not a 20-task paired study where the same
+coding tasks were run once with a raw prompt and once after `pcl guard`.
+
+| Requirement | Current state |
+|---|---:|
+| Paired local Codex tasks collected | 0/20 |
+| README success-rate table published | No |
+| Public pilot CSV schema | [`docs/case_studies/agent_guard_pilot.csv`](docs/case_studies/agent_guard_pilot.csv) |
+| Case-study protocol | [`docs/case_studies/agent_guard_pilot.en.md`](docs/case_studies/agent_guard_pilot.en.md) |
+
+The result table will be published only after at least 20 paired rows exist and the summary can
+be recomputed from the CSV. This avoids presenting retrospective logs or simulated numbers as
+real success-rate improvements.
+
+Planned result table:
+
+| Metric | Raw prompt | After `pcl guard` |
+|---|---:|---:|
+| Completed tasks | pending | pending |
+| Tests passed | pending | pending |
+| Average unnecessary file edits | pending | pending |
+| Human correction turns | pending | pending |
+| Average estimated prompt tokens | pending | pending |
+
+Careful interpretation: this will be a small local Codex pilot, not a universal benchmark. It
+will show how the guard behaved on that task set.
 
 ## Install The CLI ⚙️
 
@@ -567,6 +584,7 @@ Adjacent examples:
 - [Users](docs/users.en.md)
 - [Tutorial](docs/tutorial.en.md)
 - [Artifacts](docs/artifacts.en.md)
+- [Agent guard pilot case study](docs/case_studies/agent_guard_pilot.en.md)
 - [Innovation and Contribution](docs/innovation.en.md)
 - [Decision Guide](docs/decision_guide.en.md)
 - [Plugin adapters](plugins/)
