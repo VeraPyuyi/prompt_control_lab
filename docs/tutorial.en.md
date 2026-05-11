@@ -63,6 +63,34 @@ broken examples, or deployment risk. The default token mode is `balanced`, which
 constraints while reducing unnecessary wording. `aggressive` is shorter and useful when cost is
 more important, but it may remove some guardrails. `--max-tokens` is an estimated budget.
 
+## Prompt Guard for IDE and CLI Agents
+
+Operation:
+
+```bash
+pcl guard --prompt "Fix this bug" --profile coding --token-mode balanced --json
+```
+
+Hook-friendly operation:
+
+```bash
+echo "Fix this bug" | pcl guard --stdin --profile coding --json
+```
+
+Result:
+
+- `action`
+- `risk_level`
+- `improved_prompt`
+- `token_report`
+- `reasons`
+
+What it explains:
+
+This command is for prompt-input plugins. Use it before Claude Code, Cursor, Codex, or a shell
+wrapper sends a prompt to a model. `suggest` returns a safer prompt, `auto` marks it as ready to
+use, and `gate` can block high-risk or over-budget prompts.
+
 ## Expert Mode: Step by Step
 
 ## 1. Initialize an Example

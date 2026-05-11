@@ -58,6 +58,32 @@ pcl improve --prompt-file prompts/current.txt --run runs/quick --out runs/improv
 
 这个命令会给出一个更清楚的 prompt，包含任务目标、输出格式要求和稳定性要求。结合 `--run` 时，它还会根据已有诊断加入退化 slice、变差样本或部署风险提示。默认 token 模式是 `balanced`：尽量保留关键约束，同时减少不必要措辞。`aggressive` 更短、更省成本，但可能减少一部分保护性规则。`--max-tokens` 是估算预算。
 
+## 给 IDE 和 CLI agent 用的 Prompt Guard
+
+操作：
+
+```bash
+pcl guard --prompt "修复这个 bug" --profile coding --token-mode balanced --json
+```
+
+适合 hook 的操作：
+
+```bash
+echo "修复这个 bug" | pcl guard --stdin --profile coding --json
+```
+
+得到：
+
+- `action`
+- `risk_level`
+- `improved_prompt`
+- `token_report`
+- `reasons`
+
+说明：
+
+这个命令是给 prompt 输入层插件用的。Claude Code、Cursor、Codex 或 shell wrapper 在把 prompt 发给模型前，可以先调用它。`suggest` 返回更稳的 prompt，`auto` 表示可自动使用，`gate` 可以阻断高风险或超过 token 预算的 prompt。
+
 ## 专家模式：一步一步控制
 
 ## 1. 初始化示例

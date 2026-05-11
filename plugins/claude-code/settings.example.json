@@ -1,0 +1,14 @@
+{
+  "hooks": {
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python plugins/claude-code/hooks/prompt_guard.py --mode suggest --profile coding --token-mode balanced --max-tokens 300"
+          }
+        ]
+      }
+    ]
+  }
+}

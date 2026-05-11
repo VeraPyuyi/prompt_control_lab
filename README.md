@@ -145,6 +145,35 @@ This command gives a practical rewrite without calling any external model. If yo
 examples, and deployment risk. `--max-tokens` is treated as an estimated budget, not a
 model-specific tokenizer guarantee.
 
+## Prompt Guard Plugins 🛡️
+
+`pcl guard` is the input-layer mode for IDE and CLI agents. It checks a prompt before the
+agent sees it, then returns a safer, clearer, and more token-conscious version.
+
+```bash
+pcl guard --prompt "Fix this bug" --profile coding --token-mode balanced
+```
+
+For hooks and wrappers:
+
+```bash
+echo "Fix this bug" | pcl guard --stdin --profile coding --json
+```
+
+Result:
+
+- `action`: `suggest`, `auto`, or `block`
+- `risk_level`: `low`, `medium`, or `high`
+- `improved_prompt`: the guarded prompt
+- `token_report`: estimated token cost before and after guarding
+- `reasons`: short explanations for the decision
+
+Plugin adapters live in [`plugins/`](plugins/):
+
+- [`plugins/claude-code`](plugins/claude-code): working Claude Code `UserPromptSubmit` hook
+- [`plugins/cursor`](plugins/cursor): Cursor rules and command workflow notes
+- [`plugins/codex`](plugins/codex): Codex skill and wrapper workflow notes
+
 ## Who It Is For 👥
 
 - Prompt optimization researchers who need clean train/val/withheld protocols.
@@ -228,7 +257,31 @@ that regressed. The default token mode is `balanced`: it tries to keep useful co
 avoiding unnecessary wording. `aggressive` is shorter and better for cost, but may remove some
 guardrails.
 
-### 3. `pcl analyze`: run Quick Mode end to end
+### 3. `pcl guard`: protect prompts before IDE or CLI agents use them
+
+Operation:
+
+```bash
+pcl guard --prompt "Fix this bug" --profile coding --token-mode balanced --json
+```
+
+Gate operation:
+
+```bash
+echo "Answer the user question." | pcl guard --stdin --mode gate --max-tokens 80 --json
+```
+
+Result:
+
+- JSON with `action`, `risk_level`, `improved_prompt`, `token_report`, and `reasons`
+- `action=block` when gate mode sees a high-risk or over-budget prompt
+
+What it tells you:
+
+This is the pre-model prompt guard. It is useful for Claude Code hooks, Cursor rules, Codex
+skills, and shell wrappers where you want prompt cleanup before the model spends tokens.
+
+### 4. `pcl analyze`: run Quick Mode end to end
 
 Operation:
 
@@ -264,7 +317,7 @@ This is the easiest path for non-specialists. It answers: did the candidate prom
 improve, is the evidence reliable, did any task slice regress, and what should be
 checked next?
 
-### 4. `pcl split`: separate train, validation, and withheld examples
+### 5. `pcl split`: separate train, validation, and withheld examples
 
 Operation:
 
@@ -282,7 +335,7 @@ The file contains train, validation, and withheld ids, a split hash, and a leaka
 report. If `has_leakage` is false, the three split groups do not overlap. The split
 hash lets another person reproduce the same split.
 
-### 5. `pcl eval`: score raw model outputs
+### 6. `pcl eval`: score raw model outputs
 
 Operation:
 
@@ -313,7 +366,7 @@ What it tells you:
 score, slice, and any error. `metrics.json` gives the overall mean score and slice-level
 scores, so you can see whether one task group regressed even if the average improved.
 
-### 6. `pcl stats`: check whether the change is reliable
+### 7. `pcl stats`: check whether the change is reliable
 
 Operation:
 
@@ -334,7 +387,7 @@ interval, paired permutation p-value, and Holm-adjusted p-value. If the confiden
 interval crosses zero, treat the apparent improvement as uncertain. If the interval is
 above zero and the adjusted p-value is small, the candidate improvement is more reliable.
 
-### 7. `pcl report`: turn artifacts into a readable report
+### 8. `pcl report`: turn artifacts into a readable report
 
 Operation:
 
@@ -353,7 +406,7 @@ The report gathers split hygiene, metrics, statistical comparison, and any diagn
 that were already written under `diagnostics/`. It gives a readable summary of whether
 the prompt change looks useful and what should be checked next.
 
-### 8. `pcl explain`: turn artifacts into a direct explanation
+### 9. `pcl explain`: turn artifacts into a direct explanation
 
 Operation:
 
@@ -372,7 +425,7 @@ What it tells you:
 `technical` keeps artifact paths and raw comparison details so researchers can audit
 the result.
 
-### 9. `pcl gate`: check a run against policy thresholds
+### 10. `pcl gate`: check a run against policy thresholds
 
 Operation:
 
@@ -389,7 +442,7 @@ What it tells you:
 The file returns `pass`, `needs_review`, or `fail`. It explains whether the candidate
 score, regression size, adjusted p-value, and optional diagnostic risk meet the policy.
 
-### 10. `pcl soft-hard`: inspect soft-to-hard deployment risk
+### 11. `pcl soft-hard`: inspect soft-to-hard deployment risk
 
 Operation:
 
@@ -418,7 +471,7 @@ real token embeddings, so converting the soft prompt into hard tokens may lose b
 
 ![prompt_control_lab diagnostics](docs/assets/diagnostics.svg)
 
-### 11. `pcl trajectory`: measure hidden-state drift and decay
+### 12. `pcl trajectory`: measure hidden-state drift and decay
 
 Operation:
 
@@ -441,7 +494,7 @@ The file reports mean step drift, max step drift, log-decay slope, fit quality, 
 turnpike-like signal. A negative slope with reasonable fit quality suggests motion
 toward a stable region. High drift or weak fit suggests more heterogeneous behavior.
 
-### 12. `pcl riccati`: check a finite-dimensional surrogate
+### 13. `pcl riccati`: check a finite-dimensional surrogate
 
 Operation:
 
@@ -470,7 +523,7 @@ The file reports the closed-loop spectral radius, a diagnostic decay rate, and w
 the fitted surrogate is stable. This is a check on the finite-dimensional surrogate. It
 is not a proof about the full language model.
 
-### 13. `pcl tv-soft`: compare static and time-varying method groups
+### 14. `pcl tv-soft`: compare static and time-varying method groups
 
 Operation:
 

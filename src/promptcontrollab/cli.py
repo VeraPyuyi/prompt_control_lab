@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import json
 import sys
 from collections.abc import Sequence
 from pathlib import Path
@@ -20,6 +21,7 @@ from promptcontrollab.files import JsonDict, ensure_dir, write_json
 from promptcontrollab.gate import run_gate
 from promptcontrollab.prompt_context import load_prompt_context
 from promptcontrollab.prompt_diff import render_prompt_diff
+from promptcontrollab.prompt_guard import guard_prompt
 from promptcontrollab.prompt_improver import improve_prompt
 from promptcontrollab.reporting import generate_report
 from promptcontrollab.riccati import analyze_riccati
@@ -91,6 +93,50 @@ def build_parser() -> argparse.ArgumentParser:
         help="Optional estimated-token budget for the rewritten prompt.",
     )
     improve_parser.set_defaults(func=_cmd_improve)
+
+    guard_parser = subcommands.add_parser(
+        "guard",
+        help="Guard and improve one prompt before an IDE or CLI agent uses it.",
+    )
+    guard_parser.add_argument("--prompt", default=None, help="Prompt string to guard.")
+    guard_parser.add_argument("--prompt-file", type=Path, default=None, help="Prompt text file.")
+    guard_parser.add_argument(
+        "--stdin",
+        action="store_true",
+        help="Read prompt text from stdin. Useful for hooks and wrappers.",
+    )
+    guard_parser.add_argument("--run", type=Path, default=None, help="Optional run directory.")
+    guard_parser.add_argument(
+        "--mode",
+        choices=["suggest", "auto", "gate"],
+        default="suggest",
+        help="suggest returns a recommendation, auto marks it auto-usable, gate can block.",
+    )
+    guard_parser.add_argument(
+        "--profile",
+        choices=["general", "coding", "research"],
+        default="general",
+        help="Prompt profile for context-specific guardrails.",
+    )
+    guard_parser.add_argument("--language", choices=["auto", "zh", "en"], default="auto")
+    guard_parser.add_argument(
+        "--token-mode",
+        choices=["balanced", "aggressive"],
+        default="balanced",
+        help="Token-cost mode passed to the prompt improver.",
+    )
+    guard_parser.add_argument(
+        "--max-tokens",
+        type=int,
+        default=None,
+        help="Optional estimated-token budget for the guarded prompt.",
+    )
+    guard_parser.add_argument(
+        "--json",
+        action="store_true",
+        help="Emit stable JSON for IDE hooks and wrappers.",
+    )
+    guard_parser.set_defaults(func=_cmd_guard)
 
     analyze_parser = subcommands.add_parser(
         "analyze",
@@ -276,6 +322,25 @@ def _cmd_improve(args: argparse.Namespace) -> None:
         )
 
 
+def _cmd_guard(args: argparse.Namespace) -> None:
+    prompt = _read_guard_prompt(args.prompt, args.prompt_file, args.stdin)
+    context = load_prompt_context(args.run)
+    result = guard_prompt(
+        prompt,
+        context=context,
+        mode=args.mode,
+        profile=args.profile,
+        token_mode=args.token_mode,
+        max_tokens=args.max_tokens,
+        language=args.language,
+    )
+    payload = result.to_json()
+    if args.json:
+        print(json.dumps(payload, ensure_ascii=False, sort_keys=True))
+        return
+    print(_format_guard_output(payload))
+
+
 def _cmd_analyze(args: argparse.Namespace) -> None:
     config = load_analyze_config(args.config) if args.config is not None else {}
     paths = (
@@ -458,6 +523,49 @@ def _read_improve_prompt(prompt: str | None, prompt_file: Path | None) -> str:
         msg = "Provide --prompt or --prompt-file"
         raise ValueError(msg)
     return prompt
+
+
+def _read_guard_prompt(prompt: str | None, prompt_file: Path | None, use_stdin: bool) -> str:
+    sources = sum(source is not None for source in [prompt, prompt_file]) + int(use_stdin)
+    if sources != 1:
+        msg = "Provide exactly one of --prompt, --prompt-file, or --stdin"
+        raise ValueError(msg)
+    if use_stdin:
+        return sys.stdin.read()
+    if prompt_file is not None:
+        return prompt_file.read_text(encoding="utf-8")
+    if prompt is None:
+        msg = "Provide exactly one of --prompt, --prompt-file, or --stdin"
+        raise ValueError(msg)
+    return prompt
+
+
+def _format_guard_output(payload: JsonDict) -> str:
+    lines = [
+        "Prompt guard result:",
+        f"- Action: {payload['action']}",
+        f"- Risk: {payload['risk_level']}",
+        f"- Profile: {payload['profile']}",
+        "",
+        "Improved prompt:",
+        "",
+        str(payload["improved_prompt"]),
+        "",
+        "Reasons:",
+    ]
+    lines.extend(f"- {reason}" for reason in payload["reasons"])
+    token_report = payload["token_report"]
+    lines += [
+        "",
+        "Estimated token cost:",
+        f"- Original prompt: {token_report['original_estimated_tokens']}",
+        f"- Guarded prompt: {token_report['improved_estimated_tokens']}",
+        f"- Token mode: {token_report['token_mode']}",
+    ]
+    if token_report["max_tokens"] is not None:
+        lines.append(f"- Max tokens: {token_report['max_tokens']}")
+        lines.append(f"- Within budget: {payload['within_budget']}")
+    return "\n".join(lines)
 
 
 def _format_improvement_output(

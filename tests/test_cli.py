@@ -1,6 +1,9 @@
 from __future__ import annotations
 
+import io
 import json
+import subprocess
+import sys
 from pathlib import Path
 
 import pytest
@@ -420,3 +423,93 @@ def test_cli_improve_validates_prompt_source(tmp_path: Path) -> None:
     prompt_file.write_text("Answer the question.", encoding="utf-8")
     assert main(["improve"]) == 2
     assert main(["improve", "--prompt", "x", "--prompt-file", str(prompt_file)]) == 2
+
+
+def test_cli_guard_json_suggests_improved_prompt(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    assert main(["guard", "--prompt", "Fix this bug", "--json"]) == 0
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["action"] == "suggest"
+    assert payload["risk_level"] in {"low", "medium", "high"}
+    assert payload["profile"] == "general"
+    assert "improved_prompt" in payload
+    assert payload["improved_prompt"] != payload["original_prompt"]
+    assert payload["token_report"]["token_mode"] == "balanced"
+    assert payload["reasons"]
+
+
+def test_cli_guard_gate_blocks_over_budget_prompt(
+    capsys: pytest.CaptureFixture[str],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr("sys.stdin", io.StringIO("Answer the user question."))
+    assert (
+        main(
+            [
+                "guard",
+                "--stdin",
+                "--mode",
+                "gate",
+                "--max-tokens",
+                "8",
+                "--json",
+            ]
+        )
+        == 0
+    )
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["action"] == "block"
+    assert payload["within_budget"] is False
+    assert any("token budget" in reason for reason in payload["reasons"])
+
+
+def test_claude_code_hook_emits_additional_context() -> None:
+    hook = Path("plugins/claude-code/hooks/prompt_guard.py")
+    event = {
+        "hook_event_name": "UserPromptSubmit",
+        "prompt": "Fix this bug",
+    }
+    completed = subprocess.run(
+        [
+            sys.executable,
+            str(hook),
+            "--mode",
+            "suggest",
+            "--profile",
+            "coding",
+        ],
+        input=json.dumps(event),
+        text=True,
+        capture_output=True,
+        check=True,
+    )
+    payload = json.loads(completed.stdout)
+    assert "additionalContext" in payload
+    assert "prompt_control_lab" in payload["additionalContext"]
+    assert "Coding profile adds file, test, and verification focus." in payload["additionalContext"]
+
+
+def test_claude_code_hook_can_block_over_budget_prompt() -> None:
+    hook = Path("plugins/claude-code/hooks/prompt_guard.py")
+    event = {
+        "hook_event_name": "UserPromptSubmit",
+        "prompt": "Answer the user question.",
+    }
+    completed = subprocess.run(
+        [
+            sys.executable,
+            str(hook),
+            "--mode",
+            "gate",
+            "--max-tokens",
+            "8",
+        ],
+        input=json.dumps(event),
+        text=True,
+        capture_output=True,
+        check=True,
+    )
+    payload = json.loads(completed.stdout)
+    assert payload["decision"] == "block"
+    assert "token budget" in payload["reason"]

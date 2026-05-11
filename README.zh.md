@@ -113,6 +113,34 @@ pcl improve --prompt "回答下面的问题" --token-mode aggressive --max-token
 
 这个命令不调用外部模型，只用离线规则改写 prompt。它会补充任务目标、输出格式约束和稳定性要求。如果再加上 `--run runs/quick`，它会读取已有检测报告，把退化的任务 slice、变差样本和风险提示加入 prompt。`--max-tokens` 是估算预算，不是某个模型 tokenizer 的精确保证。
 
+## Prompt Guard 插件 🛡️
+
+`pcl guard` 是给 IDE 和 CLI agent 用的输入层模式。它会在模型真正处理 prompt 之前，先检查 prompt 是否太模糊、太长、缺少格式要求，随后返回一个更清楚、更省 token、更适合执行的版本。
+
+```bash
+pcl guard --prompt "修复这个 bug" --profile coding --token-mode balanced
+```
+
+给 hook 或 wrapper 使用时，可以走 stdin：
+
+```bash
+echo "修复这个 bug" | pcl guard --stdin --profile coding --json
+```
+
+得到：
+
+- `action`：`suggest`、`auto` 或 `block`
+- `risk_level`：`low`、`medium` 或 `high`
+- `improved_prompt`：守护后的 prompt
+- `token_report`：守护前后的 estimated token 成本
+- `reasons`：为什么这样建议或阻断
+
+插件适配放在 [`plugins/`](plugins/)：
+
+- [`plugins/claude-code`](plugins/claude-code)：可运行的 Claude Code `UserPromptSubmit` hook
+- [`plugins/cursor`](plugins/cursor)：Cursor rules 和命令工作流说明
+- [`plugins/codex`](plugins/codex)：Codex skill / wrapper 工作流说明
+
 ## 面向谁 👥
 
 - prompt optimization 研究者：需要干净的 train/val/withheld 协议。
@@ -189,7 +217,30 @@ pcl improve --prompt-file prompts/current.txt --run runs/quick --out runs/improv
 
 这个命令会给出一个更清楚的 prompt，包含任务目标、输出格式要求和稳定性要求。结合 `--run` 时，它还会根据已有报告加入退化 slice、变差样本和部署风险提示。默认 token 模式是 `balanced`：尽量保留有用约束，同时避免不必要措辞。`aggressive` 更短、更省成本，但可能减少一部分保护性规则。
 
-### 3. `pcl analyze`：一键运行快速模式
+### 3. `pcl guard`：在 IDE 或 CLI agent 使用前守护 prompt
+
+操作：
+
+```bash
+pcl guard --prompt "修复这个 bug" --profile coding --token-mode balanced --json
+```
+
+Gate 操作：
+
+```bash
+echo "回答用户问题" | pcl guard --stdin --mode gate --max-tokens 80 --json
+```
+
+得到：
+
+- 包含 `action`、`risk_level`、`improved_prompt`、`token_report` 和 `reasons` 的 JSON
+- 当 gate 模式发现 prompt 风险高或超过预算时，`action=block`
+
+说明什么问题：
+
+这是模型调用前的 prompt 守门员。它适合 Claude Code hook、Cursor rules、Codex skills 和 shell wrapper，让 prompt 在花 token 之前先被整理一遍。
+
+### 4. `pcl analyze`：一键运行快速模式
 
 操作：
 
@@ -223,7 +274,7 @@ pcl analyze --config promptcontrol.example.yaml --out runs/quick
 
 这是给非专业人员的最快路径。它直接回答：candidate prompt 是否变好、证据是否可靠、是否有任务子类退化、下一步应该保留还是继续检查。
 
-### 4. `pcl split`：切分 train、validation 和 withheld
+### 5. `pcl split`：切分 train、validation 和 withheld
 
 操作：
 
@@ -239,7 +290,7 @@ pcl split --data examples/tasks.jsonl --out runs/candidate --seed 0
 
 这个文件包含 train、validation、withheld 的样本 id、split hash 和 leakage report。如果 `has_leakage` 是 false，说明三组样本没有交叉。split hash 可以用来复现同一次切分。
 
-### 5. `pcl eval`：给模型输出打分
+### 6. `pcl eval`：给模型输出打分
 
 操作：
 
@@ -268,7 +319,7 @@ pcl eval --data examples/tasks.jsonl `
 
 `predictions.jsonl` 说明每条样本的输出、期望答案、得分、slice 和错误信息。`metrics.json` 说明总体平均分和每个 slice 的平均分。这样可以发现“平均分变好，但某类任务变差”的情况。
 
-### 6. `pcl stats`：判断提升是否可靠
+### 7. `pcl stats`：判断提升是否可靠
 
 操作：
 
@@ -286,7 +337,7 @@ pcl stats --baseline runs/baseline/predictions.jsonl `
 
 这个文件包含 baseline 均值、candidate 均值、mean delta、bootstrap 置信区间、paired permutation p-value 和 Holm-adjusted p-value。如果置信区间跨过 0，说明提升还不稳。如果区间在 0 以上且 adjusted p-value 很小，说明 candidate 的提升更可靠。
 
-### 7. `pcl report`：把产物汇总成人能读的报告
+### 8. `pcl report`：把产物汇总成人能读的报告
 
 操作：
 
@@ -303,7 +354,7 @@ pcl report --run runs/candidate --title "Candidate Prompt Report"
 
 报告会汇总 split hygiene、metrics、统计比较，以及已经写入 `diagnostics/` 的诊断结果。它能直白说明这次 prompt 改动是否值得保留，以及下一步应该检查哪里。
 
-### 8. `pcl explain`：把产物解释成直白结论
+### 9. `pcl explain`：把产物解释成直白结论
 
 操作：
 
@@ -320,7 +371,7 @@ pcl explain --run runs/quick --level technical
 
 `plain` 适合只想看结论的人，会直白说明是否值得保留、证据是否可靠、哪些样本变好或变差。`technical` 适合专业用户，会保留 artifact path 和原始统计比较细节。
 
-### 9. `pcl gate`：用策略阈值判断是否通过
+### 10. `pcl gate`：用策略阈值判断是否通过
 
 操作：
 
@@ -336,7 +387,7 @@ pcl gate --run runs/quick --policy examples/gate.policy.yaml
 
 结果会是 `pass`、`needs_review` 或 `fail`。它会解释 candidate 分数、退化幅度、adjusted p-value，以及可选诊断风险是否满足策略。
 
-### 10. `pcl soft-hard`：检查 soft prompt 转 hard prompt 的风险
+### 11. `pcl soft-hard`：检查 soft prompt 转 hard prompt 的风险
 
 操作：
 
@@ -363,7 +414,7 @@ pcl soft-hard --soft soft_prompt.npz `
 
 ![prompt_control_lab 研究诊断](docs/assets/diagnostics.zh.svg)
 
-### 11. `pcl trajectory`：分析 hidden-state 轨迹漂移和衰减
+### 12. `pcl trajectory`：分析 hidden-state 轨迹漂移和衰减
 
 操作：
 
@@ -383,7 +434,7 @@ pcl trajectory --states hidden_states.npz --out runs/candidate/diagnostics
 
 这个文件会给出 mean step drift、max step drift、log-decay slope、拟合质量和 turnpike-like signal。如果 slope 为负且拟合质量较好，说明轨迹可能向某个稳定区域靠近。如果 drift 高或拟合弱，说明内部行为可能更异质或更不稳定。
 
-### 12. `pcl riccati`：检查有限维 surrogate 是否稳定
+### 13. `pcl riccati`：检查有限维 surrogate 是否稳定
 
 操作：
 
@@ -410,7 +461,7 @@ pcl riccati --matrices matrices.npz --out runs/candidate/diagnostics
 
 这个文件会给出 closed-loop spectral radius、diagnostic decay rate 和 surrogate 是否稳定。它只是在检查拟合出的有限维 surrogate 是否自洽稳定，不是对完整语言模型的数学证明。
 
-### 13. `pcl tv-soft`：比较 static 和 time-varying 方法组
+### 14. `pcl tv-soft`：比较 static 和 time-varying 方法组
 
 操作：
 
