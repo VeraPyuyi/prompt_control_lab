@@ -117,35 +117,6 @@ pcl analyze --config promptcontrol.example.yaml --out runs/quick
 内置 smoke demo 会生成 `runs/quick/report.md`、`report.html`、`stats.json` 和
 `explanation.json`。它证明工具链能完整跑通；它不声称所有真实 agent 任务都会提升。
 
-## 真实试点结果：Codex 本地 Guard Study 📊
-
-状态：**正在收集**。
-
-我已经在本地 `D:\Vibe Research Projects` 工作区搜索过现有 agent 记录。该工作区包含真实
-Cursor / Codex transcript，但还没有 20 个 coding 任务分别用 raw prompt 和 `pcl guard`
-后 prompt 各跑一次的成对实验。
-
-| 要求 | 当前状态 |
-|---|---:|
-| 已收集 Codex 本地成对任务 | 0/20 |
-| README 是否发布成功率表 | 否 |
-| 公开试点 CSV schema | [`docs/case_studies/agent_guard_pilot.csv`](docs/case_studies/agent_guard_pilot.csv) |
-| Case-study 协议 | [`docs/case_studies/agent_guard_pilot.zh.md`](docs/case_studies/agent_guard_pilot.zh.md) |
-
-只有当 CSV 至少包含 20 条成对任务记录，并且 README 汇总表可以从 CSV 重新计算出来时，
-才会发布真实结果表。这样可以避免把历史日志或模拟数字写成真实成功率提升。
-
-计划发布的结果表：
-
-| 指标 | 原始 prompt | 使用 `pcl guard` 后 |
-|---|---:|---:|
-| 完成任务数 | 待收集 | 待收集 |
-| 测试通过数 | 待收集 | 待收集 |
-| 平均误改文件数 | 待收集 | 待收集 |
-| 人工纠偏轮次 | 待收集 | 待收集 |
-| 平均 estimated prompt tokens | 待收集 | 待收集 |
-
-谨慎解释：这将是一个小样本 Codex 本地试点，不是通用 benchmark。它只说明 guard 在这批任务上的表现。
 
 ## 安装 CLI ⚙️
 
