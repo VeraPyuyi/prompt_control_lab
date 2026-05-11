@@ -11,9 +11,6 @@ prompt 评测、复现和控制论诊断。它可以从最简单的“一句话 
 逐步扩展到 CLI 报告、Claude Code / Cursor / Codex 插件、withheld 评测、
 soft-to-hard 风险、hidden-state trajectory 和 Riccati surrogate 分析。٩(ˊᗜˋ*)و
 
-> 📌 当前仓库还是 private，公开徽章服务可能暂时显示 0 或无法显示真实统计；
-> 仓库公开后，stars、forks 和 watching 徽章会更自然地展示出来。
-
 English documentation is available in [README.md](README.md).
 
 ## 快速地图 🗺️
