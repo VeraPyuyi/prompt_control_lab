@@ -27,6 +27,9 @@ Use this order if you are new:
 4. **Control every evaluation step** → `split → eval → stats → report → explain → gate`
 5. **Run research diagnostics** → `soft-hard → trajectory → riccati → tv-soft`
 
+In this README, **Quick Mode** means the integrated `pcl analyze` path, while
+**Expert Mode** means the flexible command-by-command workflow. Simple first, expert later.
+
 ![prompt_control_lab workflow](docs/assets/workflow.svg)
 
 The main idea is small and practical: do not trust one score alone. Keep the split, outputs,
@@ -381,6 +384,13 @@ temporal structure or just extra capacity.
 `prompt_control_lab` complements prompt optimizers, eval tools, and observability platforms.
 Its focus is the diagnostic layer: withheld protocol, paired statistics, soft-to-hard risk,
 hidden trajectory diagnostics, control surrogates, and prompt-input guarding.
+
+Adjacent examples:
+
+- DSPy, TextGrad, and OpenPrompt focus on prompt/program optimization or prompt-learning workflows.
+- promptfoo and DeepEval focus on LLM evaluation, tests, red-team checks, and metrics.
+- Langfuse, LangSmith, and Phoenix focus on traces, observability, experiments, and app-level evaluation.
+- `prompt_control_lab` adds reproducible protocol hygiene, statistical comparison, deployment-risk checks, internal trajectory diagnostics, and prompt-input guarding.
 
 ![prompt_control_lab ecosystem position](docs/assets/ecosystem.svg)
 

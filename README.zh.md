@@ -26,6 +26,9 @@ English documentation is available in [README.md](README.md).
 4. **想专业控制每一步评测** → `split → eval → stats → report → explain → gate`
 5. **想做研究诊断** → `soft-hard → trajectory → riccati → tv-soft`
 
+在这份 README 里，**Quick Mode（快速模式）** 指 `pcl analyze` 这条集成路径；
+**Expert Mode（专家模式）** 指逐个命令自由组合的专业工作流。先简单，后专业。
+
 ![prompt_control_lab 工作流](docs/assets/workflow.zh.svg)
 
 核心思想很直白：不要只相信一个分数。把切分、输出、统计、解释、诊断和 prompt
@@ -378,6 +381,13 @@ pcl tv-soft --predictions method_predictions.jsonl --out runs/candidate/diagnost
 `prompt_control_lab` 不替代 prompt optimizer、eval 工具或 observability 平台。它补的是
 诊断层：withheld 协议、paired statistics、soft-to-hard 风险、hidden trajectory、
 control surrogate，以及 prompt 输入守护。
+
+相邻工具示例：
+
+- DSPy、TextGrad、OpenPrompt 更偏向 prompt / program optimization 或 prompt-learning workflow。
+- promptfoo、DeepEval 更偏向 LLM evaluation、测试、red-team 检查和指标。
+- Langfuse、LangSmith、Phoenix 更偏向 traces、observability、experiments 和应用级评测。
+- `prompt_control_lab` 补上可复现协议、统计比较、部署风险检查、内部轨迹诊断和 prompt 输入守护。
 
 ![prompt_control_lab 生态位置](docs/assets/ecosystem.zh.svg)
 
