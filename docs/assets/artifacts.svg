@@ -6,15 +6,15 @@
   <text x="44" y="84" font-family="Segoe UI, Arial, sans-serif" font-size="15" fill="#4b5563">Artifacts explain how the score was produced and what should be inspected next.</text>
 
   <g font-family="Segoe UI, Arial, sans-serif">
-    <rect x="48" y="128" width="315" height="270" rx="14" fill="#ffffff" stroke="#94a3b8" stroke-width="2"/>
+    <rect x="48" y="128" width="340" height="270" rx="14" fill="#ffffff" stroke="#94a3b8" stroke-width="2"/>
     <text x="78" y="164" font-size="20" font-weight="700" fill="#0f172a">runs/candidate/</text>
-    <text x="88" y="199" font-size="15" fill="#334155">manifest.json</text>
-    <text x="88" y="227" font-size="15" fill="#334155">splits.json</text>
-    <text x="88" y="255" font-size="15" fill="#334155">predictions.jsonl</text>
-    <text x="88" y="283" font-size="15" fill="#334155">metrics.json / metrics.csv</text>
-    <text x="88" y="311" font-size="15" fill="#334155">stats.json</text>
-    <text x="88" y="339" font-size="15" fill="#334155">diagnostics/*.json</text>
-    <text x="88" y="367" font-size="15" fill="#334155">report.md / report.html</text>
+    <text x="88" y="199" font-size="14" fill="#334155">manifest.json</text>
+    <text x="88" y="227" font-size="14" fill="#334155">splits.json</text>
+    <text x="88" y="255" font-size="14" fill="#334155">predictions.jsonl</text>
+    <text x="88" y="283" font-size="14" fill="#334155">metrics.json / metrics.csv</text>
+    <text x="88" y="311" font-size="14" fill="#334155">stats.json</text>
+    <text x="88" y="339" font-size="14" fill="#334155">diagnostics/*.json</text>
+    <text x="88" y="367" font-size="14" fill="#334155">report.md / report.html</text>
 
     <rect x="430" y="128" width="275" height="98" rx="14" fill="#ecfeff" stroke="#67e8f9"/>
     <text x="568" y="164" text-anchor="middle" font-size="18" font-weight="700" fill="#164e63">Reproducibility</text>
