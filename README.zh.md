@@ -6,90 +6,123 @@
 [![License](https://img.shields.io/github/license/VeraPyuyi/prompt_control_lab)](LICENSE)
 [![Python](https://img.shields.io/badge/python-3.10%2B-blue)](pyproject.toml)
 
-`prompt_control_lab` 是一个开源工具包，用于 prompt 优化、prompt 输入守护、
-prompt 评测、复现和控制论诊断。它可以从最简单的“一句话 prompt 改写”开始，
-逐步扩展到 CLI 报告、Claude Code / Cursor / Codex 插件、withheld 评测、
-soft-to-hard 风险、hidden-state trajectory 和 Riccati surrogate 分析。٩(ˊᗜˋ*)و
+**AI 编程 Agent 的执行前检查、模型溯源和可复现评测工具。**
+
+`prompt_control_lab` 不是普通的 prompt 管理器。它更像 Claude Code、Cursor、Codex 和其他
+AI 编程 agent 前面的一条本地安全带：在 agent 花 token、改文件、影响代码库之前，先检查
+prompt 是否模糊、危险、缺少测试计划、范围太宽，或者绑定了没有记录清楚的模型变化。٩(ˊᗜˋ*)و
+
+它也会把 prompt 实验变得可复查：train/validation/withheld 切分、成对统计、模型来源、模型漂移、
+可读报告和可选研究诊断都会留下可检查的产物。
+
+> 📌 仓库当前是 private，所以公开 badge 服务可能显示为 0 或暂时不可用；公开后会正常更新。
 
 English documentation is available in [README.md](README.md).
 
-## 快速地图 🗺️
+## 为什么需要它 🚦
 
+AI 编程工具已经进入开发流程，但信任还没有跟上。Stack Overflow 2025 Developer Survey 显示，
+**84%** 的开发者已经使用或计划使用 AI 工具；同时，**46%** 的开发者不信任 AI 输出准确性，
+**45%** 认为 debug AI 生成代码更耗时
+（[AI survey](https://survey.stackoverflow.co/2025/ai)，
+[leaders summary](https://stackoverflow.co/internal/resources/2025-stack-overflow-developer-survey-for-leaders/ai-adoption/)）。
+
+这正是 `prompt_control_lab` 的切入点：
+
+- **执行前：** 拦截或复核模糊、破坏性、安全敏感、范围过宽或超 token 预算的 prompt。
+- **评测时：** 判断 candidate prompt 是否真的优于 baseline，而不是碰巧在某个 validation slice 上更好。
+- **运行后：** 记录输出来自哪个公开 model id / provider，并在模型漂移让 prompt-only 对比失效时给出 warning。
+
+## 快速地图 🗺️
 如果你第一次使用，建议按这个顺序看：
 
-1. **我只想让 AI 更懂我** → `pcl start`
-2. **只想直接优化一个 prompt** → `pcl improve`
-3. **想在 Claude Code / Cursor / Codex 输入前守护 prompt** → `pcl guard` + `plugins/`
-4. **想一键生成完整分析报告** → `pcl analyze`
-5. **想确认这次输出到底是哪一个模型生成的** → `pcl model-detect`
-6. **想专业控制每一步评测** → `split → eval → stats → report → explain → gate`
-7. **想做研究诊断** → `soft-hard → trajectory → riccati → tv-soft`
+1. **在 Claude Code / Cursor / Codex 执行前守护 prompt** → `pcl guard --policy`
+2. **审计模型身份和模型漂移** → `pcl model-detect` / `pcl model-drift`
+3. **生成可复现 prompt 报告** → `pcl analyze` → `pcl gate`
+4. **用直白语言优化一个 prompt** → `pcl improve`
+5. **安装 IDE / CLI 适配器** → `plugins/` 和 Codex skills
+6. **专业控制每一步评测** → `split → eval → stats → report → explain → gate`
+7. **Advanced / Research Mode** → `soft-hard → trajectory → riccati → tv-soft`
 
 在这份 README 里，**Quick Mode（快速模式）** 指 `pcl analyze` 这条集成路径；
 **Expert Mode（专家模式）** 指逐个命令自由组合的专业工作流。先简单，后专业。
 
 ![prompt_control_lab 工作流](docs/assets/workflow.zh.svg)
 
-核心思想很直白：不要只相信一个分数。把切分、输出、统计、解释、诊断和 prompt
-改写都留下来，方便复查和复现。
+核心思想很直白：不要让 AI 编程 agent 只靠信任直接运行。把 prompt、策略判断、模型记录、数据切分、
+输出、统计、解释和诊断都留下来，方便复查和复现。
 
 ![prompt_control_lab 产物结构](docs/assets/artifacts.zh.svg)
 
-## 两分钟 Demo：AI 编程 Agent 的 Prompt 安全带 🎬
+## 两分钟 Demo：在 Agent 执行前拦住高风险 Prompt 🎬
 
-最容易被普通开发者理解的价值，不是“又一个评测 dashboard”，而是：
+把 `prompt_control_lab` 放在你的 prompt 和 AI 编程 agent 中间。低风险 prompt 会变得更清晰；
+中风险 prompt 会要求补充上下文；高风险 prompt 可以被阻断或要求人工复核。
 
-> 把 `prompt_control_lab` 放在 Claude Code、Cursor、Codex 或其他 AI 编程 agent 前面。
-> 在 agent 花 token、改文件之前，先拦一下模糊、过宽、高风险或高成本 prompt。
-
-### 0:00-0:15：展示高风险原始 prompt
+### 0:00-0:15：从一个模糊 prompt 开始
 
 ```text
 修复这个 bug。
 ```
 
-这类 prompt 容易失败，因为 agent 不知道该看哪些文件、失败现象是什么、哪些代码不能动、
-最后应该跑哪些测试。
+这类 prompt 容易失败：agent 不知道目标文件、失败现象、修改边界，也不知道应该跑哪些测试。
 
-### 0:15-0:45：先做本地预检
+### 0:15-0:45：运行本地策略预检
 
 ```bash
-pcl guard --prompt "修复这个 bug" --profile coding --token-mode balanced
+pcl guard \
+  --prompt "修复这个 bug" \
+  --profile coding \
+  --policy examples/guard.policy.yaml \
+  --token-mode balanced \
+  --json
 ```
 
 典型结果：
 
-```text
-Action: suggest
-Risk: medium
-Plain summary: 这条指令太宽。发送给 agent 前，请补充失败现象、
-目标文件、测试计划和修改边界。
-Estimated tokens: 由 balanced 模式控制
+```json
+{
+  "action": "suggest",
+  "risk_level": "medium",
+  "risk_categories": ["missing_context"],
+  "required_review": true,
+  "policy_violations": [
+    {"id": "missing_target_files", "severity": "medium"}
+  ],
+  "improved_prompt": "用最小且安全的代码改动修复报告的 bug..."
+}
 ```
 
-### 0:45-1:10：给 IDE、hook 或 wrapper 使用 JSON
+### 0:45-1:10：阻断危险指令
 
 ```bash
-echo "重构这个模块" | pcl guard --stdin --profile coding --json
+pcl guard \
+  --prompt "Delete database and remove auth" \
+  --profile coding \
+  --policy examples/guard.policy.yaml \
+  --mode gate \
+  --json
 ```
 
-得到：Claude Code hook、Cursor MCP-style 工具、Codex skill 和 shell wrapper 可以稳定读取
-`plain_summary`、`risk_level`、`action`、`improved_prompt` 和 `token_report`。
+JSON 会稳定输出 `risk_level`、`risk_categories`、`policy_violations`、`required_review` 和
+`action`，所以 Claude Code hook、Cursor MCP-style 工具、Codex skill 和 shell wrapper 都可以在
+agent 真正改仓库前拦住它。
 
-### 1:10-1:40：看 Before / After
+### 1:10-1:40：看原始 prompt 和守护后 prompt 的差异
 
 | 项目 | 原始 prompt | 守护后的 prompt |
 |---|---|---|
 | 范围 | 不清楚 | 要求说明失败现象和相关文件 |
 | 修改边界 | 没有 | 明确不要重构无关代码 |
 | 测试 | 没有 | 要求列出并运行相关测试 |
+| 模型记录 | 通常缺失 | 后续评测产物可以附带模型来源 |
 | Token 成本 | 不受控 | 由 token mode 估算和约束 |
-| Agent 风险 | 更高 | 执行前先复查 |
+| Agent 风险 | 未检查 | 执行前先复查 |
 
 示例守护 prompt：
 
 ```text
-用最小且安全的代码改动修复这个 bug。
+用最小且安全的代码改动修复报告的 bug。
 
 编辑前：
 1. 先确认失败现象和相关文件。
@@ -115,8 +148,8 @@ cd demo
 pcl analyze --config promptcontrol.example.yaml --out runs/quick
 ```
 
-内置 smoke demo 会生成 `runs/quick/report.md`、`report.html`、`stats.json` 和
-`explanation.json`。它证明工具链能完整跑通；它不声称所有真实 agent 任务都会提升。
+内置 smoke demo 会生成 `runs/quick/report.md`、`report.html`、`stats.json` 和 `explanation.json`。
+它证明工具链能完整跑通；它不声称所有真实 agent 任务都会提升。
 
 ## 安装 CLI ⚙️
 
@@ -580,33 +613,31 @@ pcl tv-soft --predictions method_predictions.jsonl --out runs/candidate/diagnost
 
 ## 生态定位 🌱
 
-`prompt_control_lab` 不替代 prompt optimizer、eval 工具或 observability 平台。它最适合
-日常开发者的入口，是 agent prompt 输入层守护：在 AI 编程 agent 花 token、改文件前做一次
-本地轻量 preflight。更深入时，它再提供 withheld 协议、paired statistics、soft-to-hard
-风险、hidden trajectory 和 control surrogate 等诊断能力。
+不要把 `prompt_control_lab` 理解成又一个泛用 LLM dashboard。它更窄、更直接的定位是：
+**agent prompt 执行前门禁 + 模型来源记录 + 可复现 prompt regression**。
 
-相邻工具示例：
+相邻工具覆盖的是其他重要层：
 
-- DSPy、TextGrad、OpenPrompt 更偏向 prompt / program optimization 或 prompt-learning workflow。
 - promptfoo、DeepEval 更偏向 LLM evaluation、测试、red-team 检查和指标。
 - Langfuse、LangSmith、Phoenix 更偏向 traces、observability、experiments 和应用级评测。
-- `prompt_control_lab` 先补一个本地轻量 preflight 层，守护 agent 输入；需要深入时，再提供
-  可复现协议、统计比较、部署风险检查和 Advanced / Research Mode 诊断。
+- DSPy、TextGrad、OpenPrompt 更偏向 prompt/program optimization 或 prompt-learning workflow。
+- `prompt_control_lab` 补的是 AI 编程 agent 执行前的本地轻量门禁，并继续记录 prompt-only 对比有效性、模型来源、统计证据和研究诊断。
+
+研究模块和项目背后的控制论框架有关；但对工程团队来说，最直接的价值是 guard / policy / model audit 这条围绕真实 coding agent 的工作流。
 
 ![prompt_control_lab 生态位置](docs/assets/ecosystem.zh.svg)
 
-![prompt_control_lab 能力对比矩阵](docs/assets/comparison_matrix.zh.svg)
+![prompt_control_lab 对比矩阵](docs/assets/comparison_matrix.zh.svg)
 
 ![prompt_control_lab 创新栈](docs/assets/innovation_stack.zh.svg)
 
 ## 面向谁 👥
 
-- 只想快速得到更好 prompt 的普通用户。
-- 希望 Claude Code、Cursor、Codex 在执行前先整理 prompt 的开发者。
-- 需要本地 prompt regression report 的 LLM 工程团队。
-- 需要干净 train/val/withheld 协议的 prompt optimization 研究者。
-- 需要 soft-to-hard 部署风险分析的 soft prompt 研究者。
-- 研究 trajectory、turnpike-like 行为和 Riccati surrogate 的解释性 / 控制方向研究者。
+- 使用 Claude Code、Cursor、Codex 或 shell-based coding agent，希望 prompt 进入 agent 前先做本地预检的开发者。
+- 需要团队级 prompt policy gate 的工程团队，用来处理高风险、范围过宽、破坏性、安全敏感或缺少测试计划的 coding 请求。
+- 需要 prompt regression 报告、模型来源记录、模型漂移 warning 和 prompt-only 对比检查的 LLM 工程团队。
+- 需要 train/val/withheld 切分和成对统计来比较 prompt 方法的研究者和复现团队。
+- 研究 soft-hard 部署风险、hidden-state trajectory、Riccati surrogate 和 time-varying soft-control 行为的高级用户。
 
 ## 文档 📚
 

@@ -6,89 +6,127 @@
 [![License](https://img.shields.io/github/license/VeraPyuyi/prompt_control_lab)](LICENSE)
 [![Python](https://img.shields.io/badge/python-3.10%2B-blue)](pyproject.toml)
 
-`prompt_control_lab` is an open-source toolkit for prompt improvement, prompt guarding,
-prompt evaluation, reproducibility, and control-oriented diagnostics. It starts simple:
-paste one prompt, get a clearer and more token-conscious version. Then it scales up to
-CLI reports, IDE/agent plugins, withheld evaluation, soft-to-hard checks, trajectory
-diagnostics, and Riccati surrogate analysis. ٩(ˊᗜˋ*)و
+**Preflight, provenance, and reproducible evaluation for AI coding agents.**
 
-> 📌 The repository is currently private, so public badge services may show zero or
-> unavailable counts until the repository is made public.
+`prompt_control_lab` is not a generic prompt manager. It is a local safety belt for Claude Code,
+Cursor, Codex, and other AI coding agents: before an agent spends tokens, edits files, or touches
+your codebase, it checks whether the prompt is vague, risky, missing tests, too broad, or tied to
+an untracked model change. ٩(ˊᗜˋ*)و
+
+It also keeps prompt experiments reproducible: train/validation/withheld splits, paired
+statistics, model provenance, model drift audits, readable reports, and optional research
+diagnostics are saved as inspectable artifacts.
+
+> 📌 The repository is currently private, so public badge services may show zero or unavailable
+> counts until the repository is made public.
 
 Chinese documentation is available in [README.zh.md](README.zh.md).
 
-## Quick Map 🗺️
+## Why This Exists 🚦
 
+AI coding tools are already in the workflow, but trust has not caught up. Stack Overflow's 2025
+Developer Survey reports that **84%** of developers use or plan to use AI tools in development,
+while **46%** distrust AI output accuracy and **45%** say debugging AI-generated code is more
+time-consuming ([AI survey](https://survey.stackoverflow.co/2025/ai),
+[leaders summary](https://stackoverflow.co/internal/resources/2025-stack-overflow-developer-survey-for-leaders/ai-adoption/)).
+
+That gap is where `prompt_control_lab` fits:
+
+- **Before execution:** block or review vague, destructive, security-sensitive, broad, or
+  over-budget prompts.
+- **During evaluation:** check whether a candidate prompt really improves over a baseline, not
+  just on a lucky validation slice.
+- **After a run:** record which public model id/provider produced the result, and warn when model
+  drift makes a prompt-only comparison invalid.
+
+## Quick Map 🗺️
 Use this order if you are new:
 
-1. **I just want AI to understand me better** → `pcl start`
-2. **Just improve one prompt** → `pcl improve`
-3. **Guard prompts before Claude Code / Cursor / Codex** → `pcl guard` + `plugins/`
-4. **Generate one complete report** → `pcl analyze`
-5. **Audit which model produced the outputs** → `pcl model-detect`
+1. **Guard prompts before Claude Code / Cursor / Codex** → `pcl guard --policy`
+2. **Audit model identity and drift** → `pcl model-detect` / `pcl model-drift`
+3. **Generate a reproducible prompt report** → `pcl analyze` → `pcl gate`
+4. **Improve one prompt in plain language** → `pcl improve`
+5. **Install IDE / CLI adapters** → `plugins/` and Codex skills
 6. **Control every evaluation step** → `split → eval → stats → report → explain → gate`
-7. **Run research diagnostics** → `soft-hard → trajectory → riccati → tv-soft`
+7. **Advanced / Research Mode** → `soft-hard → trajectory → riccati → tv-soft`
 
-In this README, **Quick Mode** means the integrated `pcl analyze` path, while
-**Expert Mode** means the flexible command-by-command workflow. Simple first, expert later.
+In this README, **Quick Mode** means the integrated `pcl analyze` path, while **Expert Mode**
+means the flexible command-by-command workflow. Simple first, expert later.
 
 ![prompt_control_lab workflow](docs/assets/workflow.svg)
 
-The main idea is small and practical: do not trust one score alone. Keep the split, outputs,
-statistics, explanations, diagnostics, and prompt rewrites as inspectable artifacts.
+The main idea is small and practical: do not let an AI coding agent run on trust alone. Keep the
+prompt, policy decision, model record, split, outputs, statistics, explanations, and diagnostics as
+inspectable artifacts.
 
 ![prompt_control_lab artifacts](docs/assets/artifacts.svg)
 
-## Two-Minute Demo: Agent Prompt Guard 🎬
+## Two-Minute Demo: Stop Risky Agent Prompts Before They Run 🎬
 
-The shortest value story is not "another eval dashboard." It is:
+Put `prompt_control_lab` between your prompt and the coding agent. Low-risk prompts pass with
+clearer wording; medium-risk prompts ask for missing context; high-risk prompts can be blocked or
+sent to human review.
 
-> Put `prompt_control_lab` before Claude Code, Cursor, Codex, or another AI coding agent.
-> Catch vague, broad, risky, or expensive prompts before the agent spends tokens or edits files.
-
-### 0:00-0:15: show the risky prompt
+### 0:00-0:15: start with a vague prompt
 
 ```text
 Fix this bug.
 ```
 
-Why this often fails: the agent does not know the target files, the failing behavior, the edit
-boundary, or which tests should prove the fix.
+Why this often fails: the agent does not know the target files, failing behavior, edit boundary,
+or tests that should prove the fix.
 
-### 0:15-0:45: run the local preflight
+### 0:15-0:45: run the local policy preflight
 
 ```bash
-pcl guard --prompt "Fix this bug" --profile coding --token-mode balanced
+pcl guard \
+  --prompt "Fix this bug" \
+  --profile coding \
+  --policy examples/guard.policy.yaml \
+  --token-mode balanced \
+  --json
 ```
 
 Typical result:
 
-```text
-Action: suggest
-Risk: medium
-Plain summary: This request is too broad. Add the failing behavior, target files,
-test plan, and edit boundary before sending it to an agent.
-Estimated tokens: controlled by balanced mode
+```json
+{
+  "action": "suggest",
+  "risk_level": "medium",
+  "risk_categories": ["missing_context"],
+  "required_review": true,
+  "policy_violations": [
+    {"id": "missing_target_files", "severity": "medium"}
+  ],
+  "improved_prompt": "Fix the reported bug with the smallest safe code change..."
+}
 ```
 
-### 0:45-1:10: use JSON in IDEs, hooks, or wrappers
+### 0:45-1:10: block dangerous instructions
 
 ```bash
-echo "Refactor this module" | pcl guard --stdin --profile coding --json
+pcl guard \
+  --prompt "Delete database and remove auth" \
+  --profile coding \
+  --policy examples/guard.policy.yaml \
+  --mode gate \
+  --json
 ```
 
-Result: Claude Code hooks, Cursor MCP-style tools, Codex skills, and shell wrappers can read
-`plain_summary`, `risk_level`, `action`, `improved_prompt`, and `token_report`.
+The JSON output exposes `risk_level`, `risk_categories`, `policy_violations`,
+`required_review`, and `action`, so Claude Code hooks, Cursor MCP-style tools, Codex skills, and
+shell wrappers can stop the agent before it touches the repo.
 
-### 1:10-1:40: compare before and after
+### 1:10-1:40: compare raw vs guarded prompts
 
 | item | raw prompt | guarded prompt |
 |---|---|---|
 | Scope | unclear | asks for failing behavior and relevant files |
 | Edit boundary | missing | says not to refactor unrelated code |
 | Tests | missing | asks the agent to list and run relevant tests |
+| Model record | usually absent | can be attached to later eval artifacts |
 | Token cost | uncontrolled | estimated and constrained by token mode |
-| Agent risk | higher | reviewed before expensive execution |
+| Agent risk | unchecked | reviewed before expensive execution |
 
 Example guarded prompt:
 
@@ -120,8 +158,8 @@ pcl analyze --config promptcontrol.example.yaml --out runs/quick
 ```
 
 The smoke demo writes `runs/quick/report.md`, `report.html`, `stats.json`, and
-`explanation.json`. It proves the pipeline works end to end; it is not a claim that every
-real agent task improves.
+`explanation.json`. It proves the pipeline works end to end; it is not a claim that every real
+agent task improves.
 
 ## Install The CLI ⚙️
 
@@ -590,20 +628,19 @@ temporal structure or just extra capacity.
 
 ## Ecosystem Positioning 🌱
 
-`prompt_control_lab` complements prompt optimizers, eval tools, and observability platforms.
-Its most practical day-to-day lane is the prompt-input guard: a local preflight check before
-AI coding agents spend tokens or edit files. Its deeper lane is the diagnostic layer:
-withheld protocol, paired statistics, soft-to-hard risk, hidden trajectory diagnostics, and
-control surrogates.
+`prompt_control_lab` should not be read as another broad LLM dashboard. Its narrow, practical lane
+is **agent prompt preflight + model provenance + reproducible prompt regression**.
 
-Adjacent examples:
+Adjacent tools cover important neighboring layers:
 
-- DSPy, TextGrad, and OpenPrompt focus on prompt/program optimization or prompt-learning workflows.
 - promptfoo and DeepEval focus on LLM evaluation, tests, red-team checks, and metrics.
 - Langfuse, LangSmith, and Phoenix focus on traces, observability, experiments, and app-level evaluation.
-- `prompt_control_lab` adds a lightweight local preflight before agent execution, then keeps
-  reproducible protocol hygiene, statistical comparison, deployment-risk checks, and advanced
-  research diagnostics when users need them.
+- DSPy, TextGrad, and OpenPrompt focus on prompt/program optimization or prompt-learning workflows.
+- `prompt_control_lab` adds a lightweight local gate before AI coding agents execute, then records
+  prompt-only comparison validity, model provenance, statistical evidence, and research diagnostics.
+
+The research modules connect to the control-theoretic framing behind the project, but the most
+practical engineering value is the guard/policy/model-audit workflow around real coding agents.
 
 ![prompt_control_lab ecosystem position](docs/assets/ecosystem.svg)
 
@@ -613,12 +650,16 @@ Adjacent examples:
 
 ## Who It Is For 👥
 
-- People who want a clearer prompt quickly.
-- Developers who want Claude Code, Cursor, or Codex prompts guarded before execution.
-- LLM teams that need local prompt regression reports.
-- Researchers comparing prompt optimizers with clean train/val/withheld protocols.
-- Soft-prompt researchers checking soft-to-hard deployment risk.
-- Interpretability/control researchers studying trajectories and surrogate stability.
+- Developers using Claude Code, Cursor, Codex, or shell-based coding agents who want a local
+  preflight before prompts reach the agent.
+- Engineering teams that need configurable prompt policy gates for risky, broad, destructive,
+  security-sensitive, or untested coding requests.
+- LLM teams that need prompt regression reports, model provenance, model drift warnings, and
+  prompt-only comparison checks.
+- Researchers and reproducibility-focused teams comparing prompt methods with train/val/withheld
+  splits and paired statistics.
+- Advanced users studying soft-hard deployment risk, hidden-state trajectories, Riccati surrogates,
+  and time-varying soft-control behavior.
 
 ## Documentation 📚
 

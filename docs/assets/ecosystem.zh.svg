@@ -1,6 +1,6 @@
 ﻿<svg xmlns="http://www.w3.org/2000/svg" width="1100" height="430" viewBox="0 0 1100 430" role="img" aria-labelledby="title desc">
   <title id="title">prompt_control_lab 生态位置</title>
-  <desc id="desc">prompt_control_lab 位于优化、评测和可观测工具旁边，提供诊断和控制分析层。</desc>
+  <desc id="desc">prompt_control_lab 位于优化、评测和可观测工具旁边，提供执行前门禁、模型来源和可复现评测层。</desc>
   <defs>
     <style>
       .bg{fill:#f8fafc}.title{font:700 30px "Microsoft YaHei","Noto Sans CJK SC",Arial,sans-serif;fill:#102033}.sub{font:400 16px "Microsoft YaHei","Noto Sans CJK SC",Arial,sans-serif;fill:#52616f}
@@ -14,7 +14,7 @@
   </defs>
   <rect class="bg" width="1100" height="430"/>
   <text x="40" y="48" class="title">prompt_control_lab 放在工具生态的哪里</text>
-  <text x="40" y="76" class="sub">它不替代相邻工具，而是补上一层可复现的 prompt 诊断和控制论证据。</text>
+  <text x="40" y="76" class="sub">它不替代相邻工具，而是补上 agent 预检、模型来源和可复现 prompt 证据。</text>
 
   <rect x="42" y="120" width="235" height="190" rx="10" class="card"/>
   <text x="68" y="154" class="h">优化类工具</text>
@@ -39,16 +39,16 @@
 
   <rect x="852" y="96" width="210" height="238" rx="12" class="pcl"/>
   <rect x="888" y="119" width="138" height="28" rx="14" class="pill"/>
-  <text x="916" y="138" class="pillText">诊断分析层</text>
+  <text x="910" y="138" class="pillText">执行前门禁</text>
   <text x="957" y="178" text-anchor="middle" class="brand">prompt_control_lab</text>
-  <text x="878" y="209" class="t">三段切分协议</text>
-  <text x="878" y="231" class="t">成对统计检验</text>
-  <text x="878" y="253" class="t">软转硬风险</text>
-  <text x="878" y="275" class="t">内部轨迹漂移</text>
-  <text x="878" y="297" class="t">Riccati 代理诊断</text>
+  <text x="878" y="209" class="t">Prompt 策略门禁</text>
+  <text x="878" y="231" class="t">模型来源记录</text>
+  <text x="878" y="253" class="t">Prompt-only 对比</text>
+  <text x="878" y="275" class="t">Withheld 评测统计</text>
+  <text x="878" y="297" class="t">高级研究诊断</text>
 
   <path d="M277 215 H312" class="arrow"/>
   <path d="M547 215 H582" class="arrow"/>
   <path d="M817 215 H852" class="arrow"/>
-  <text x="255" y="360" class="sub">prompt_control_lab 不替代这些工具，而是把 prompt 改动变成可以检查的证据链。</text>
+  <text x="225" y="360" class="sub">prompt_control_lab 不替代这些工具，而是在 agent 执行前预检，并在运行后保留证据链。</text>
 </svg>

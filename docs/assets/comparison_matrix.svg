@@ -19,8 +19,8 @@
     <text x="210" y="20" class="headText">Prompt or</text><text x="210" y="36" class="headText">program tuning</text>
     <text x="360" y="20" class="headText">Eval, CI,</text><text x="360" y="36" class="headText">red-team tests</text>
     <text x="505" y="20" class="headText">Trace and</text><text x="505" y="36" class="headText">monitoring</text>
-    <text x="640" y="20" class="headText">Withheld protocol</text><text x="640" y="36" class="headText">and paired stats</text>
-    <text x="805" y="20" class="headText">Soft-hard, trajectory,</text><text x="805" y="36" class="headText">Riccati diagnostics</text>
+    <text x="640" y="20" class="headText">Reproducible eval</text><text x="640" y="36" class="headText">and paired stats</text>
+    <text x="805" y="20" class="headText">Agent preflight,</text><text x="805" y="36" class="headText">model provenance</text>
 
     <rect y="44" width="1020" height="70" class="rowA cell"/>
     <text x="18" y="75" class="label">Optimizers</text><text x="18" y="96" class="txt">DSPy, TextGrad, OpenPrompt</text>
@@ -47,7 +47,7 @@
     <text x="840" y="225" class="txt">Limited</text>
 
     <rect y="254" width="1020" height="86" class="strong cell"/>
-    <text x="18" y="289" class="label">prompt_control_lab</text><text x="18" y="312" class="txt">Diagnostics and control analysis</text>
+    <text x="18" y="289" class="label">prompt_control_lab</text><text x="18" y="312" class="txt">Preflight and provenance</text>
     <text x="226" y="302" class="txt">Simple rewrite</text>
     <text x="380" y="302" class="txt">Local scoring</text>
     <text x="532" y="302" class="txt">Artifact trail</text>
