@@ -4,9 +4,10 @@ PromptControlLab keeps inspectable files for each run instead of only reporting 
 
 ## `manifest.json`
 
-Records tool version, run mode, method name, metric, data path, and prediction path.
+Records tool version, run mode, method name, metric, data path, prediction path, and optional
+model identity.
 
-What it explains: how the score was produced.
+What it explains: how the score was produced and which public model id was recorded.
 
 ## `splits.json`
 
@@ -16,9 +17,18 @@ What it explains: whether the data was separated cleanly and whether the split c
 
 ## `predictions.jsonl`
 
-Stores output, expected answer, score, slice, method, and error for each item.
+Stores output, expected answer, score, slice, method, error, and optional model provenance for
+each item.
 
 What it explains: which exact examples passed or failed.
+
+## `pcl model-detect` output
+
+Stores `provider`, `model_id`, `source`, `confidence`, optional public metadata such as
+`created` and `owned_by`, and warnings.
+
+What it explains: whether the artifacts record the public model id used for a run. It does not
+prove a provider's hidden internal weight build.
 
 ## `metrics.json`
 

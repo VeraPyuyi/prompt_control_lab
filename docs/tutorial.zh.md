@@ -168,6 +168,23 @@ pcl eval --data examples/tasks.jsonl `
 
 `predictions.jsonl` 说明每条样本输出了什么、得分是多少、是否缺失输出。`metrics.json` 说明总体平均分和每个 slice 的平均分。slice 分数能发现“平均分变好但某类任务变差”的情况。
 
+## 3.5. 记录模型身份
+
+操作：
+
+```bash
+pcl model-detect --predictions examples/predictions_candidate.jsonl
+```
+
+得到：
+
+- 终端里打印一段 JSON，包含 `provider`、`model_id`、`source`、`confidence` 和 warning。
+
+说明：
+
+这能告诉你 prediction 文件里记录的公开 model id 是什么。如果 baseline 和 candidate 使用不同
+model id，后面的比较就是“模型 + prompt”的共同变化，不是干净的 prompt-only 对比。
+
 ## 4. 做统计比较
 
 操作：

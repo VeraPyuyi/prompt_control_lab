@@ -14,17 +14,17 @@ TASKS_JSONL = """\
 """
 
 BASELINE_JSONL = """\
-{"id":"arith-1","output":"4"}
-{"id":"arith-2","output":"6"}
-{"id":"format-1","output":"POSITIVE"}
-{"id":"format-2","output":"negative"}
+{"id":"arith-1","output":"4","provider":"openai","model":"gpt-4o"}
+{"id":"arith-2","output":"6","provider":"openai","model":"gpt-4o"}
+{"id":"format-1","output":"POSITIVE","provider":"openai","model":"gpt-4o"}
+{"id":"format-2","output":"negative","provider":"openai","model":"gpt-4o"}
 """
 
 CANDIDATE_JSONL = """\
-{"id":"arith-1","output":"4"}
-{"id":"arith-2","output":"7"}
-{"id":"format-1","output":"POSITIVE"}
-{"id":"format-2","output":"NEGATIVE"}
+{"id":"arith-1","output":"4","provider":"openai","model":"gpt-4o"}
+{"id":"arith-2","output":"7","provider":"openai","model":"gpt-4o"}
+{"id":"format-1","output":"POSITIVE","provider":"openai","model":"gpt-4o"}
+{"id":"format-2","output":"NEGATIVE","provider":"openai","model":"gpt-4o"}
 """
 
 CONFIG_YAML = """\
@@ -34,6 +34,10 @@ data: examples/tasks.jsonl
 metric: exact_match
 baseline_predictions: examples/predictions_baseline.jsonl
 candidate_predictions: examples/predictions_candidate.jsonl
+baseline_model: gpt-4o
+candidate_model: gpt-4o
+baseline_provider: openai
+candidate_provider: openai
 out: runs/quick
 explain_level: plain
 gate_policy: examples/gate.policy.yaml

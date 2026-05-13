@@ -25,8 +25,9 @@ Use this order if you are new:
 2. **Just improve one prompt** → `pcl improve`
 3. **Guard prompts before Claude Code / Cursor / Codex** → `pcl guard` + `plugins/`
 4. **Generate one complete report** → `pcl analyze`
-5. **Control every evaluation step** → `split → eval → stats → report → explain → gate`
-6. **Run research diagnostics** → `soft-hard → trajectory → riccati → tv-soft`
+5. **Audit which model produced the outputs** → `pcl model-detect`
+6. **Control every evaluation step** → `split → eval → stats → report → explain → gate`
+7. **Run research diagnostics** → `soft-hard → trajectory → riccati → tv-soft`
 
 In this README, **Quick Mode** means the integrated `pcl analyze` path, while
 **Expert Mode** means the flexible command-by-command workflow. Simple first, expert later.
@@ -121,7 +122,6 @@ pcl analyze --config promptcontrol.example.yaml --out runs/quick
 The smoke demo writes `runs/quick/report.md`, `report.html`, `stats.json`, and
 `explanation.json`. It proves the pipeline works end to end; it is not a claim that every
 real agent task improves.
-
 
 ## Install The CLI ⚙️
 
@@ -419,7 +419,54 @@ What it means:
 This is the easiest full evaluation path. It answers: did the candidate improve, is the
 evidence reliable, did any task slice regress, and what should be checked next?
 
-### 5. `pcl init`: create a runnable example 🌱
+### 5. `pcl model-detect`: record model identity 🔎
+
+Operations:
+
+```bash
+pcl model-detect --response response.json --provider openai
+pcl model-detect --predictions examples/predictions_candidate.jsonl
+pcl model-detect --model gpt-5.2 --provider openai --verify
+```
+
+Result:
+
+```json
+{
+  "provider": "openai",
+  "model_id": "gpt-5.2",
+  "source": "response.model",
+  "confidence": "high",
+  "verified": false,
+  "warnings": []
+}
+```
+
+What it means:
+
+This records the public model id declared in API responses, prediction files, or command-line
+metadata. It helps answer whether a baseline and candidate were run on the same model. It does
+not prove the provider's hidden internal weight build.
+
+You can also attach model identity to evaluation artifacts:
+
+```bash
+pcl eval --data examples/tasks.jsonl \
+  --predictions examples/predictions_candidate.jsonl \
+  --out runs/candidate \
+  --method candidate \
+  --provider openai \
+  --model gpt-5.2
+
+pcl analyze --config promptcontrol.example.yaml \
+  --baseline-model gpt-4o \
+  --candidate-model gpt-5.2
+```
+
+If baseline and candidate use different model ids, `report.md` shows a warning because the
+comparison is no longer prompt-only.
+
+### 6. `pcl init`: create a runnable example 🌱
 
 Operation:
 
@@ -437,10 +484,10 @@ Result:
 
 What it means:
 
-These files show the minimal input format: task `id`, `input`, `expected`, `slice`, and model
-`output` records.
+These files show the minimal input format: task `id`, `input`, `expected`, `slice`, model
+`output`, and optional `provider` / `model` provenance records.
 
-### 6. `pcl report`, `pcl explain`, `pcl gate`: read and decide ✅
+### 7. `pcl report`, `pcl explain`, `pcl gate`: read and decide ✅
 
 Operations:
 
@@ -461,7 +508,7 @@ What it means:
 
 These commands turn artifacts into decisions: keep the prompt, review it, or hold it.
 
-### 7. Expert evaluation: `split → eval → stats` 🧠
+### 8. Expert evaluation: `split → eval → stats` 🧠
 
 Operations:
 
@@ -481,7 +528,7 @@ What it means:
 
 This is for users who want full control over protocol hygiene and statistical comparison.
 
-### 8. Advanced / Research Mode diagnostics 🔬
+### 9. Advanced / Research Mode diagnostics 🔬
 
 Soft-to-hard risk:
 

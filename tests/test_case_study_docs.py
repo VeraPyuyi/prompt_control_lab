@@ -23,7 +23,7 @@ EXPECTED_AGENT_GUARD_FIELDS = [
 ]
 
 
-def test_agent_guard_pilot_schema_and_readme_status() -> None:
+def test_agent_guard_pilot_schema_and_no_unsupported_readme_claims() -> None:
     csv_path = Path("docs/case_studies/agent_guard_pilot.csv")
     rows = list(csv.DictReader(csv_path.read_text(encoding="utf-8").splitlines()))
 
@@ -34,10 +34,7 @@ def test_agent_guard_pilot_schema_and_readme_status() -> None:
     readme = Path("README.md").read_text(encoding="utf-8")
     readme_zh = Path("README.zh.md").read_text(encoding="utf-8")
     if len(rows) < 20:
-        assert "Status: **in progress**" in readme
-        assert "Paired local Codex tasks collected | 0/20" in readme
-        assert "Status: **in progress**" not in readme_zh
-        assert "**正在收集**" in readme_zh
-        assert "已收集 Codex 本地成对任务 | 0/20" in readme_zh
+        assert "Completed tasks |" not in readme
+        assert "完成任务数 |" not in readme_zh
         assert "task success rate | TBD" not in readme
         assert "任务成功率 | TBD" not in readme_zh

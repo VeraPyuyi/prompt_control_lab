@@ -182,6 +182,24 @@ What it explains:
 and slice-level scores. Slice scores reveal cases where the average improves while a task group
 regresses.
 
+## 3.5. Detect Model Identity
+
+Operation:
+
+```bash
+pcl model-detect --predictions examples/predictions_candidate.jsonl
+```
+
+Result:
+
+- JSON printed in the terminal with `provider`, `model_id`, `source`, `confidence`, and warnings.
+
+What it explains:
+
+This tells you which public model id is recorded in the prediction file. If baseline and
+candidate use different model ids, the later comparison is a model+prompt comparison, not a
+clean prompt-only comparison.
+
 ## 4. Run the Statistical Comparison
 
 Operation:

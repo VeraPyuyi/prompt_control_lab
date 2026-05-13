@@ -59,8 +59,9 @@ def render_markdown(
             f"- Method: `{manifest.get('method', 'unknown')}`",
             f"- Metric: `{manifest.get('metric', 'unknown')}`",
             f"- Tool version: `{manifest.get('tool_version', 'unknown')}`",
-            "",
         ]
+        lines += _model_identity_lines(manifest)
+        lines.append("")
     if splits:
         leakage = splits.get("leakage", {})
         has_leakage = (
@@ -211,6 +212,40 @@ def _get(value: object, key: str) -> object:
     if isinstance(value, dict):
         return value.get(key, "missing")
     return "missing"
+
+
+def _model_identity_lines(manifest: JsonDict) -> list[str]:
+    lines: list[str] = []
+    model = manifest.get("model")
+    if isinstance(model, dict):
+        lines.append(f"- Model: `{_model_label(model)}`")
+        lines.append(f"- Model source: `{model.get('source', 'unknown')}`")
+        lines.append(f"- Model verified: `{model.get('verified', False)}`")
+
+    baseline = manifest.get("baseline_model")
+    candidate = manifest.get("candidate_model")
+    if isinstance(baseline, dict) or isinstance(candidate, dict):
+        baseline_dict = baseline if isinstance(baseline, dict) else {}
+        candidate_dict = candidate if isinstance(candidate, dict) else {}
+        lines.append(f"- Baseline model: `{_model_label(baseline_dict)}`")
+        lines.append(f"- Candidate model: `{_model_label(candidate_dict)}`")
+
+    warnings = manifest.get("model_warnings", [])
+    if isinstance(warnings, list):
+        for warning in warnings:
+            lines.append(f"- Model warning: {warning}")
+    if lines:
+        lines.append(
+            "- Model identity records the public model id in request/response artifacts; "
+            "it does not prove a provider's hidden internal weight build."
+        )
+    return lines
+
+
+def _model_label(model: JsonDict) -> str:
+    provider = model.get("provider", "unknown")
+    model_id = model.get("model_id", "unknown")
+    return f"{provider}/{model_id}"
 
 
 def _deployment_recommendation_lines(explanation: JsonDict, gate: JsonDict) -> list[str]:

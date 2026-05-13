@@ -21,8 +21,9 @@ English documentation is available in [README.md](README.md).
 2. **只想直接优化一个 prompt** → `pcl improve`
 3. **想在 Claude Code / Cursor / Codex 输入前守护 prompt** → `pcl guard` + `plugins/`
 4. **想一键生成完整分析报告** → `pcl analyze`
-5. **想专业控制每一步评测** → `split → eval → stats → report → explain → gate`
-6. **想做研究诊断** → `soft-hard → trajectory → riccati → tv-soft`
+5. **想确认这次输出到底是哪一个模型生成的** → `pcl model-detect`
+6. **想专业控制每一步评测** → `split → eval → stats → report → explain → gate`
+7. **想做研究诊断** → `soft-hard → trajectory → riccati → tv-soft`
 
 在这份 README 里，**Quick Mode（快速模式）** 指 `pcl analyze` 这条集成路径；
 **Expert Mode（专家模式）** 指逐个命令自由组合的专业工作流。先简单，后专业。
@@ -116,7 +117,6 @@ pcl analyze --config promptcontrol.example.yaml --out runs/quick
 
 内置 smoke demo 会生成 `runs/quick/report.md`、`report.html`、`stats.json` 和
 `explanation.json`。它证明工具链能完整跑通；它不声称所有真实 agent 任务都会提升。
-
 
 ## 安装 CLI ⚙️
 
@@ -412,7 +412,53 @@ pcl analyze --config promptcontrol.example.yaml --out runs/quick
 这是最简单的完整评测路径。它会回答 candidate 是否更好、证据是否可靠、有没有任务
 slice 退化、下一步应该检查哪里。
 
-### 5. `pcl init`：生成可运行示例 🌱
+### 5. `pcl model-detect`：记录模型身份 🔎
+
+操作：
+
+```bash
+pcl model-detect --response response.json --provider openai
+pcl model-detect --predictions examples/predictions_candidate.jsonl
+pcl model-detect --model gpt-5.2 --provider openai --verify
+```
+
+得到：
+
+```json
+{
+  "provider": "openai",
+  "model_id": "gpt-5.2",
+  "source": "response.model",
+  "confidence": "high",
+  "verified": false,
+  "warnings": []
+}
+```
+
+说明什么问题：
+
+它记录 API response、prediction 文件或命令参数里声明的公开 model id。这样你可以判断
+baseline 和 candidate 是否真的用了同一个模型。它不能证明服务商隐藏的内部权重版本。
+
+也可以把模型信息写进评测产物：
+
+```bash
+pcl eval --data examples/tasks.jsonl \
+  --predictions examples/predictions_candidate.jsonl \
+  --out runs/candidate \
+  --method candidate \
+  --provider openai \
+  --model gpt-5.2
+
+pcl analyze --config promptcontrol.example.yaml \
+  --baseline-model gpt-4o \
+  --candidate-model gpt-5.2
+```
+
+如果 baseline 和 candidate 使用不同 model id，`report.md` 会显示 warning，因为这时结果
+不再是干净的 prompt-only 对比。
+
+### 6. `pcl init`：生成可运行示例 🌱
 
 操作：
 
@@ -430,10 +476,10 @@ cd demo
 
 说明什么问题：
 
-这些文件展示最小输入格式：任务 `id`、`input`、`expected`、`slice`，以及模型
-`output`。
+这些文件展示最小输入格式：任务 `id`、`input`、`expected`、`slice`，模型 `output`，
+以及可选的 `provider` / `model` 来源记录。
 
-### 6. `pcl report`、`pcl explain`、`pcl gate`：阅读并做决定 ✅
+### 7. `pcl report`、`pcl explain`、`pcl gate`：阅读并做决定 ✅
 
 操作：
 
@@ -454,7 +500,7 @@ pcl gate --run runs/quick --policy examples/gate.policy.yaml
 
 这些命令把产物变成结论：保留 prompt、继续复查，或者暂时不要使用。
 
-### 7. 专家评测：`split → eval → stats` 🧠
+### 8. 专家评测：`split → eval → stats` 🧠
 
 操作：
 
@@ -474,7 +520,7 @@ pcl stats --baseline runs/baseline/predictions.jsonl --candidate runs/candidate/
 
 适合需要精细控制评测协议和统计比较的研究者或工程团队。
 
-### 8. Advanced / Research Mode：部署和研究诊断 🔬
+### 9. Advanced / Research Mode：部署和研究诊断 🔬
 
 Soft-to-hard 风险：
 

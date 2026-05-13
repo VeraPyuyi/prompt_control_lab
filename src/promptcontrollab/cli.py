@@ -9,6 +9,7 @@ from collections.abc import Sequence
 from pathlib import Path
 
 from promptcontrollab.config import (
+    get_config_bool,
     get_config_float,
     get_config_int,
     get_config_path,
@@ -19,6 +20,7 @@ from promptcontrollab.evaluation import run_import_eval
 from promptcontrollab.explain import generate_explanation
 from promptcontrollab.files import JsonDict, ensure_dir, write_json
 from promptcontrollab.gate import run_gate
+from promptcontrollab.model_identity import detect_model_identity
 from promptcontrollab.prompt_context import load_prompt_context
 from promptcontrollab.prompt_diff import render_prompt_diff
 from promptcontrollab.prompt_guard import guard_prompt
@@ -168,6 +170,28 @@ def build_parser() -> argparse.ArgumentParser:
     )
     guard_parser.set_defaults(func=_cmd_guard)
 
+    model_parser = subcommands.add_parser(
+        "model-detect",
+        help="Detect public model id from an API response, prediction file, or declared model.",
+    )
+    model_parser.add_argument("--response", type=Path, default=None, help="API response JSON file.")
+    model_parser.add_argument(
+        "--predictions",
+        type=Path,
+        default=None,
+        help="Raw predictions JSONL with optional model/provider fields.",
+    )
+    model_parser.add_argument("--model", default=None, help="Declared model id, such as gpt-5.2.")
+    model_parser.add_argument("--provider", default=None, help="Provider hint, such as openai.")
+    model_parser.add_argument("--api-version", default=None, help="Optional API version string.")
+    model_parser.add_argument(
+        "--verify",
+        action="store_true",
+        help="Verify public model metadata when the provider exposes a supported endpoint.",
+    )
+    model_parser.add_argument("--out", type=Path, default=None, help="Optional JSON output path.")
+    model_parser.set_defaults(func=_cmd_model_detect)
+
     analyze_parser = subcommands.add_parser(
         "analyze",
         help="Quick Mode: run split, eval, stats, explanation, gate, and report.",
@@ -193,6 +217,16 @@ def build_parser() -> argparse.ArgumentParser:
     )
     analyze_parser.add_argument("--out", type=Path, default=None, help="Quick run directory.")
     analyze_parser.add_argument("--metric", default=None, help="Deterministic metric name.")
+    analyze_parser.add_argument("--baseline-model", default=None, help="Baseline model id.")
+    analyze_parser.add_argument("--candidate-model", default=None, help="Candidate model id.")
+    analyze_parser.add_argument("--baseline-provider", default=None, help="Baseline provider.")
+    analyze_parser.add_argument("--candidate-provider", default=None, help="Candidate provider.")
+    analyze_parser.add_argument("--api-version", default=None, help="Optional shared API version.")
+    analyze_parser.add_argument(
+        "--verify-model",
+        action="store_true",
+        help="Verify public model metadata for supported providers.",
+    )
     analyze_parser.add_argument("--train-ratio", type=float, default=None)
     analyze_parser.add_argument("--val-ratio", type=float, default=None)
     analyze_parser.add_argument("--seed", type=int, default=None)
@@ -234,6 +268,18 @@ def build_parser() -> argparse.ArgumentParser:
     eval_parser.add_argument("--out", type=Path, required=True, help="Run directory.")
     eval_parser.add_argument("--metric", default="exact_match", help="Deterministic metric name.")
     eval_parser.add_argument("--method", default="candidate", help="Prompt/method name.")
+    eval_parser.add_argument("--model", default=None, help="Model id used to produce predictions.")
+    eval_parser.add_argument(
+        "--provider",
+        default=None,
+        help="Provider used to produce predictions.",
+    )
+    eval_parser.add_argument("--api-version", default=None, help="Optional API version string.")
+    eval_parser.add_argument(
+        "--verify-model",
+        action="store_true",
+        help="Verify public model metadata for supported providers.",
+    )
     eval_parser.set_defaults(func=_cmd_eval)
 
     stats_parser = subcommands.add_parser(
@@ -386,6 +432,12 @@ def _cmd_start(args: argparse.Namespace) -> None:
             explain_level=None,
             policy=None,
             title=None,
+            baseline_model=None,
+            candidate_model=None,
+            baseline_provider=None,
+            candidate_provider=None,
+            api_version=None,
+            verify_model=False,
         )
         _cmd_analyze(analyze_args)
         return
@@ -456,6 +508,25 @@ def _cmd_guard(args: argparse.Namespace) -> None:
     print(_format_guard_output(payload))
 
 
+def _cmd_model_detect(args: argparse.Namespace) -> None:
+    sources = sum(value is not None for value in [args.response, args.predictions, args.model])
+    if sources != 1:
+        msg = "Provide exactly one of --response, --predictions, or --model"
+        raise ValueError(msg)
+    identity = detect_model_identity(
+        provider=args.provider,
+        model_id=args.model,
+        response_path=args.response,
+        predictions_path=args.predictions,
+        api_version=args.api_version,
+        verify=args.verify,
+    )
+    payload = identity.to_json()
+    print(json.dumps(payload, indent=2, ensure_ascii=False, sort_keys=True))
+    if args.out is not None:
+        write_json(args.out, payload)
+
+
 def _cmd_analyze(args: argparse.Namespace) -> None:
     config = load_analyze_config(args.config) if args.config is not None else {}
     paths = (
@@ -478,6 +549,11 @@ def _cmd_analyze(args: argparse.Namespace) -> None:
     out_dir = _path_arg(args.out, config_out, "out")
     policy_path = args.policy if args.policy is not None else paths.get("gate_policy")
     metric = args.metric if args.metric is not None else config_metric(config, "exact_match")
+    baseline_model = args.baseline_model or get_config_str(config, "baseline_model", "")
+    candidate_model = args.candidate_model or get_config_str(config, "candidate_model", "")
+    baseline_provider = args.baseline_provider or get_config_str(config, "baseline_provider", "")
+    candidate_provider = args.candidate_provider or get_config_str(config, "candidate_provider", "")
+    api_version = args.api_version or get_config_str(config, "api_version", "")
     train_ratio = (
         args.train_ratio
         if args.train_ratio is not None
@@ -509,6 +585,7 @@ def _cmd_analyze(args: argparse.Namespace) -> None:
         if args.title is not None
         else get_config_str(config, "title", "PromptControlLab Quick Analysis")
     )
+    verify_model = args.verify_model or get_config_bool(config, "verify_model", False)
     run_quick_analysis(
         data_path=data_path,
         baseline_predictions_path=baseline_path,
@@ -523,6 +600,12 @@ def _cmd_analyze(args: argparse.Namespace) -> None:
         explain_level=explain_level,
         title=title,
         policy_path=policy_path,
+        baseline_provider=baseline_provider or None,
+        baseline_model=baseline_model or None,
+        candidate_provider=candidate_provider or None,
+        candidate_model=candidate_model or None,
+        api_version=api_version or None,
+        verify_model=verify_model,
     )
     print(f"Wrote quick analysis artifacts to {out_dir}")
 
@@ -546,6 +629,10 @@ def _cmd_eval(args: argparse.Namespace) -> None:
         out_dir=args.out,
         metric=args.metric,
         method=args.method,
+        provider=args.provider,
+        model_id=args.model,
+        api_version=args.api_version,
+        verify_model=args.verify_model,
     )
     print(f"Wrote scored predictions and metrics to {args.out}")
 

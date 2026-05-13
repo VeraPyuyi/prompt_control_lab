@@ -71,6 +71,16 @@ def get_config_int(config: JsonDict, key: str, default: int) -> int:
     return value
 
 
+def get_config_bool(config: JsonDict, key: str, default: bool) -> bool:
+    """Return a boolean config value."""
+
+    value = config.get(key, default)
+    if not isinstance(value, bool):
+        msg = f"Config key `{key}` must be true or false"
+        raise ValueError(msg)
+    return value
+
+
 def _parse_scalar(value: str) -> Any:
     if value == "":
         return ""

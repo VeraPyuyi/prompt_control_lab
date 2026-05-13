@@ -71,6 +71,7 @@ class PredictionRecord:
     slice: str = "default"
     method: str = "candidate"
     error: str | None = None
+    model: JsonDict = field(default_factory=dict)
 
     def to_json(self) -> JsonDict:
         return {
@@ -81,6 +82,7 @@ class PredictionRecord:
             "slice": self.slice,
             "method": self.method,
             "error": self.error,
+            "model": self.model,
         }
 
     @classmethod
@@ -93,6 +95,10 @@ class PredictionRecord:
         if error is not None and not isinstance(error, str):
             msg = "Prediction field `error` must be a string or null"
             raise ValueError(msg)
+        model = value.get("model", {})
+        if not isinstance(model, dict):
+            msg = "Prediction field `model` must be an object when provided"
+            raise ValueError(msg)
         return cls(
             id=_string(value.get("id"), "id"),
             output=_string(value.get("output"), "output"),
@@ -101,6 +107,7 @@ class PredictionRecord:
             slice=_optional_string(value.get("slice"), "default"),
             method=_optional_string(value.get("method"), "candidate"),
             error=error,
+            model=model,
         )
 
 

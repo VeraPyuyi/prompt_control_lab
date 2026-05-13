@@ -4,9 +4,9 @@ PromptControlLab 的核心思想是：每次运行都应该留下可复查的文
 
 ## `manifest.json`
 
-记录这次运行的工具版本、评测模式、方法名、metric、数据路径和 prediction 路径。
+记录这次运行的工具版本、评测模式、方法名、metric、数据路径、prediction 路径，以及可选的模型身份信息。
 
-说明什么问题：以后看到一个分数时，可以知道它是怎么来的。
+说明什么问题：以后看到一个分数时，可以知道它是怎么来的，也能知道记录中的公开 model id 是什么。
 
 ## `splits.json`
 
@@ -16,9 +16,15 @@ PromptControlLab 的核心思想是：每次运行都应该留下可复查的文
 
 ## `predictions.jsonl`
 
-每一行是一条样本的输出、期望答案、score、slice、method 和错误信息。
+每一行是一条样本的输出、期望答案、score、slice、method、错误信息，以及可选的模型来源信息。
 
 说明什么问题：不是只看平均分，而是能回到每条样本检查失败原因。
+
+## `pcl model-detect` 输出
+
+记录 `provider`、`model_id`、`source`、`confidence`、可选的公开模型元数据，以及 warning。
+
+说明什么问题：这次运行是否留下了公开 model id 记录。它不能证明服务商隐藏的内部权重版本。
 
 ## `metrics.json`
 

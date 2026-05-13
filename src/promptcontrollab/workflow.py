@@ -7,8 +7,9 @@ from pathlib import Path
 from promptcontrollab.config import get_config_path, get_config_str, read_simple_yaml
 from promptcontrollab.evaluation import run_import_eval
 from promptcontrollab.explain import generate_explanation
-from promptcontrollab.files import JsonDict, ensure_dir, write_json
+from promptcontrollab.files import JsonDict, ensure_dir, read_json, write_json
 from promptcontrollab.gate import run_gate
+from promptcontrollab.model_identity import compare_model_identities
 from promptcontrollab.reporting import generate_report
 from promptcontrollab.splitting import load_tasks, make_split, write_split
 from promptcontrollab.statistics import compare_prediction_files
@@ -30,6 +31,12 @@ def run_quick_analysis(
     explain_level: str,
     title: str,
     policy_path: Path | None = None,
+    baseline_provider: str | None = None,
+    baseline_model: str | None = None,
+    candidate_provider: str | None = None,
+    candidate_model: str | None = None,
+    api_version: str | None = None,
+    verify_model: bool = False,
 ) -> None:
     """Run split, import-eval, stats, explanation, optional gate, and report."""
 
@@ -43,6 +50,10 @@ def run_quick_analysis(
         out_dir=out_dir / "baseline",
         metric=metric,
         method="baseline",
+        provider=baseline_provider,
+        model_id=baseline_model,
+        api_version=api_version,
+        verify_model=verify_model,
     )
     run_import_eval(
         data_path=data_path,
@@ -50,6 +61,10 @@ def run_quick_analysis(
         out_dir=out_dir / "candidate",
         metric=metric,
         method="candidate",
+        provider=candidate_provider,
+        model_id=candidate_model,
+        api_version=api_version,
+        verify_model=verify_model,
     )
     compare_prediction_files(
         baseline_path=out_dir / "baseline" / "predictions.jsonl",
@@ -59,6 +74,14 @@ def run_quick_analysis(
         bootstrap_samples=bootstrap_samples,
         permutation_samples=permutation_samples,
     )
+    baseline_manifest = read_json(out_dir / "baseline" / "manifest.json")
+    candidate_manifest = read_json(out_dir / "candidate" / "manifest.json")
+    baseline_identity = baseline_manifest.get("model", {})
+    candidate_identity = candidate_manifest.get("model", {})
+    if not isinstance(baseline_identity, dict):
+        baseline_identity = {}
+    if not isinstance(candidate_identity, dict):
+        candidate_identity = {}
     manifest: JsonDict = {
         "tool": "promptcontrollab",
         "tool_version": __version__,
@@ -70,6 +93,9 @@ def run_quick_analysis(
         "candidate_predictions_path": str(candidate_predictions_path),
         "baseline_run": str(out_dir / "baseline"),
         "candidate_run": str(out_dir / "candidate"),
+        "baseline_model": baseline_identity,
+        "candidate_model": candidate_identity,
+        "model_warnings": compare_model_identities(baseline_identity, candidate_identity),
     }
     write_json(out_dir / "manifest.json", manifest)
     generate_explanation(out_dir, level=explain_level)
