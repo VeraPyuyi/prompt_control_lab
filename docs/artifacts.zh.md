@@ -1,10 +1,10 @@
 # 产物说明
 
-PromptControlLab 的核心思想是：每次运行都应该留下可复查的文件，而不是只留一个最终分数。
+prompt_control_lab 的核心思想是：每次运行都应该留下可复查的文件，而不是只留下一个最终分数。
 
 ## `manifest.json`
 
-记录这次运行的工具版本、评测模式、方法名、metric、数据路径、prediction 路径，以及可选的模型身份信息。
+记录本次运行的工具版本、评测模式、方法名、metric、数据路径、prediction 路径，以及可选的模型身份信息。
 
 说明什么问题：以后看到一个分数时，可以知道它是怎么来的，也能知道记录中的公开 model id 是什么。
 
@@ -26,6 +26,12 @@ PromptControlLab 的核心思想是：每次运行都应该留下可复查的文
 
 说明什么问题：这次运行是否留下了公开 model id 记录。它不能证明服务商隐藏的内部权重版本。
 
+## `model_drift.json`
+
+记录前后两次运行的 provider、model id、漂移风险等级和简短原因。
+
+说明什么问题：这次比较是否还是干净的 prompt-only 对比，还是已经被模型变化影响。alias model id 会被当作复现风险。
+
 ## `metrics.json`
 
 记录总体样本数、平均分和每个 slice 的平均分。
@@ -40,7 +46,7 @@ PromptControlLab 的核心思想是：每次运行都应该留下可复查的文
 
 ## `explanation.json`
 
-记录这次运行的直白或技术解释，包括总体结论、证据强度、数据隔离、slice 变化、样本变化、部署风险、下一步建议、`plain_summary` 和 `deployment_recommendation`。
+记录本次运行的直白或技术解释，包括总体结论、证据强度、数据隔离、slice 变化、样本变化、部署风险、下一步建议、`plain_summary` 和 `deployment_recommendation`。
 
 说明什么问题：不用逐个阅读所有 JSON 文件，也能知道这次 prompt 改动说明了什么。
 
@@ -48,7 +54,7 @@ PromptControlLab 的核心思想是：每次运行都应该留下可复查的文
 
 记录策略阈值判断结果。
 
-说明什么问题：这次运行是 `pass`、`needs_review` 还是 `fail`，以及触发原因是什么。它也会包含 `plain_summary`，方便插件和报告直接展示直白结论。
+说明什么问题：这次运行是 `pass`、`needs_review` 还是 `fail`，以及触发原因是什么。它也会包含 `plain_summary`，方便插件和报告直接展示直白结论。配置模型策略后，它还会记录模型来源检查，例如模型未知、baseline/candidate 模型不同、alias model、provider 白名单和 verified 要求。
 
 ## `pcl guard --json` 输出
 
@@ -60,8 +66,11 @@ PromptControlLab 的核心思想是：每次运行都应该留下可复查的文
 - `action`：`suggest`、`auto` 或 `block`
 - `risk_level`：`low`、`medium` 或 `high`
 - `improved_prompt`：建议继续发送给 AI 工具的守护版 prompt
+- `risk_categories`：例如 `destructive_change`、`security`、`production_path`、`broad_refactor`、`token_budget` 或团队策略类别
+- `policy_violations`：具体命中的内置规则或团队策略
+- `required_review`：是否需要人工复核
 
-说明什么问题：这条 prompt 是否已经足够清楚，发送前还应该补什么。
+说明什么问题：这条 prompt 是否已经足够清晰，发送前还应该补什么。
 
 ## `improved_prompt.txt`
 

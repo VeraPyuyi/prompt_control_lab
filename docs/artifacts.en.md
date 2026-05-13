@@ -30,6 +30,13 @@ Stores `provider`, `model_id`, `source`, `confidence`, optional public metadata 
 What it explains: whether the artifacts record the public model id used for a run. It does not
 prove a provider's hidden internal weight build.
 
+## `model_drift.json`
+
+Stores previous/current provider and model id, a drift risk level, and a short reason.
+
+What it explains: whether a comparison is still prompt-only, or whether model changes make the
+result harder to interpret. Alias model ids are treated as reproducibility risks.
+
 ## `metrics.json`
 
 Stores count, overall mean score, and slice-level mean scores.
@@ -57,6 +64,8 @@ Stores the result of applying a policy file to a run.
 
 What it explains: whether the run passes, needs review, or fails configured thresholds. It also
 includes `plain_summary`, so plugins and reports can show the result without exposing raw JSON.
+When model policy keys are configured, it also records model provenance checks such as unknown
+model, model mismatch, alias model, provider allow-list, and verification requirements.
 
 ## `pcl guard --json` output
 
@@ -68,6 +77,10 @@ Important fields:
 - `action`: `suggest`, `auto`, or `block`
 - `risk_level`: `low`, `medium`, or `high`
 - `improved_prompt`: the guarded prompt to send onward
+- `risk_categories`: examples include `destructive_change`, `security`, `production_path`,
+  `broad_refactor`, `token_budget`, or team policy categories
+- `policy_violations`: built-in or policy-triggered rule violations
+- `required_review`: whether a human should review the prompt before execution
 
 What it explains: whether a prompt is clear enough to send to an AI tool and what to add first.
 

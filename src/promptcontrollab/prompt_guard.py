@@ -3,8 +3,17 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from pathlib import Path
 
 from promptcontrollab.files import JsonDict
+from promptcontrollab.guard_policy import (
+    GuardViolation,
+    evaluate_guard_policy,
+    highest_severity,
+    load_guard_policy,
+    severity_at_least,
+    unique_categories,
+)
 from promptcontrollab.prompt_context import PromptContext
 from promptcontrollab.prompt_improver import PromptImprovement, improve_prompt
 
@@ -23,6 +32,9 @@ class PromptGuardResult:
     reasons: list[str]
     token_report: JsonDict
     within_budget: bool | None
+    risk_categories: list[str]
+    policy_violations: list[JsonDict]
+    required_review: bool
 
     def to_json(self) -> JsonDict:
         return {
@@ -36,6 +48,9 @@ class PromptGuardResult:
             "reasons": self.reasons,
             "token_report": self.token_report,
             "within_budget": self.within_budget,
+            "risk_categories": self.risk_categories,
+            "policy_violations": self.policy_violations,
+            "required_review": self.required_review,
         }
 
 
@@ -48,6 +63,7 @@ def guard_prompt(
     token_mode: str,
     max_tokens: int | None,
     language: str = "auto",
+    policy_path: Path | None = None,
 ) -> PromptGuardResult:
     """Inspect and improve a prompt before it reaches an IDE or CLI agent."""
 
@@ -70,20 +86,35 @@ def guard_prompt(
     )
     token_report = improvement.token_report.to_json()
     within_budget = token_report["within_budget"]
-    reasons = _reasons(prompt, improvement, profile=profile, within_budget=within_budget)
-    risk_level = _risk_level(reasons, within_budget)
-    action = _action(mode, risk_level, within_budget)
+    policy = load_guard_policy(policy_path)
+    effective_profile = policy.profile or profile if policy is not None else profile
+    violations = evaluate_guard_policy(prompt, policy)
+    reasons = _reasons(
+        prompt,
+        improvement,
+        profile=effective_profile,
+        within_budget=within_budget,
+        violations=violations,
+    )
+    risk_level = _risk_level(reasons, within_budget, violations)
+    block_at = policy.block_at if policy is not None else "high"
+    review_at = policy.review_at if policy is not None else "medium"
+    required_review = severity_at_least(risk_level, review_at)
+    action = _action(mode, risk_level, within_budget, block_at)
     plain_summary = _plain_summary(
         prompt,
         action=action,
         risk_level=risk_level,
-        profile=profile,
+        profile=effective_profile,
         reasons=reasons,
     )
+    risk_categories = unique_categories(violations)
+    if within_budget is False and "token_budget" not in risk_categories:
+        risk_categories.append("token_budget")
     return PromptGuardResult(
         action=action,
         risk_level=risk_level,
-        profile=profile,
+        profile=effective_profile,
         mode=mode,
         original_prompt=prompt.strip(),
         improved_prompt=improvement.improved_prompt,
@@ -91,6 +122,9 @@ def guard_prompt(
         reasons=reasons,
         token_report=token_report,
         within_budget=within_budget,
+        risk_categories=risk_categories,
+        policy_violations=[violation.to_json() for violation in violations],
+        required_review=required_review,
     )
 
 
@@ -121,6 +155,7 @@ def _reasons(
     *,
     profile: str,
     within_budget: bool | None,
+    violations: list[GuardViolation],
 ) -> list[str]:
     reasons: list[str] = []
     stripped = original_prompt.strip()
@@ -138,21 +173,29 @@ def _reasons(
         reasons.append("Improved prompt exceeds the requested token budget.")
     if improvement.context_notes:
         reasons.append("Existing diagnostics added run-specific caution notes.")
+    reasons.extend(violation.message for violation in violations)
     if not reasons:
         reasons.append("Prompt is usable; guard produced a clearer version.")
     return reasons
 
 
-def _risk_level(reasons: list[str], within_budget: bool | None) -> str:
+def _risk_level(
+    reasons: list[str],
+    within_budget: bool | None,
+    violations: list[GuardViolation],
+) -> str:
     if within_budget is False:
         return "high"
+    violation_risk = highest_severity([violation.severity for violation in violations])
+    if violation_risk != "low":
+        return violation_risk
     if len(reasons) >= 3:
         return "medium"
     return "low"
 
 
-def _action(mode: str, risk_level: str, within_budget: bool | None) -> str:
-    if mode == "gate" and (risk_level == "high" or within_budget is False):
+def _action(mode: str, risk_level: str, within_budget: bool | None, block_at: str) -> str:
+    if mode == "gate" and (severity_at_least(risk_level, block_at) or within_budget is False):
         return "block"
     if mode == "auto":
         return "auto"

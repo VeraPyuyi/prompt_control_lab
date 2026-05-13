@@ -136,6 +136,10 @@ def test_cli_quick_analyze_explain_and_report(tmp_path: Path) -> None:
     assert "What this means" in report
     html = (run / "report.html").read_text(encoding="utf-8")
     assert "recommendation-card" in html
+    assert "dashboard-card" in html
+    assert "Prompt-only comparison validity" in html
+    assert "Gate failures/review items" in html
+    assert "Full Markdown Audit" in html
     assert "Sample changes" in html
     assert "arith-2" in html
 
@@ -187,6 +191,73 @@ def test_cli_gate_uses_policy_thresholds(tmp_path: Path) -> None:
     assert gate["status"] == "pass"
     assert gate["plain_summary"].startswith("Deployment recommendation:")
     assert gate["checks"]["candidate_score"]["passed"] is True
+
+
+def test_cli_gate_blocks_model_mismatch_when_policy_requires_it(tmp_path: Path) -> None:
+    run = tmp_path / "run"
+    run.mkdir()
+    (run / "manifest.json").write_text(
+        json.dumps(
+            {
+                "baseline_model": {
+                    "provider": "openai",
+                    "model_id": "gpt-4o",
+                    "verified": True,
+                    "warnings": [],
+                },
+                "candidate_model": {
+                    "provider": "openai",
+                    "model_id": "gpt-5.2",
+                    "verified": True,
+                    "warnings": [],
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+    (run / "candidate").mkdir()
+    (run / "candidate" / "metrics.json").write_text(
+        json.dumps({"count": 1, "mean_score": 1.0, "by_slice": {"default": 1.0}}),
+        encoding="utf-8",
+    )
+    policy = tmp_path / "gate.policy.yaml"
+    policy.write_text(
+        "\n".join(
+            [
+                "min_candidate_score: 0.9",
+                "allowed_models: gpt-4o,gpt-5.2",
+                "allowed_providers: openai",
+                "block_if_model_mismatch: true",
+            ]
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    assert main(["gate", "--run", str(run), "--policy", str(policy)]) == 0
+
+    gate = json.loads((run / "gate_result.json").read_text(encoding="utf-8"))
+    assert gate["status"] == "fail"
+    assert gate["checks"]["model_provenance"]["passed"] is False
+    assert "model_mismatch" in gate["checks"]["model_provenance"]["violations"]
+
+
+def test_cli_gate_blocks_unknown_model_when_allow_list_is_set(tmp_path: Path) -> None:
+    run = tmp_path / "run"
+    run.mkdir()
+    (run / "manifest.json").write_text(json.dumps({"method": "candidate"}), encoding="utf-8")
+    (run / "metrics.json").write_text(
+        json.dumps({"count": 1, "mean_score": 1.0, "by_slice": {"default": 1.0}}),
+        encoding="utf-8",
+    )
+    policy = tmp_path / "gate.policy.yaml"
+    policy.write_text("allowed_models: gpt-5.2\n", encoding="utf-8")
+
+    assert main(["gate", "--run", str(run), "--policy", str(policy)]) == 0
+
+    gate = json.loads((run / "gate_result.json").read_text(encoding="utf-8"))
+    assert gate["status"] == "fail"
+    assert "model_unknown" in gate["checks"]["model_provenance"]["violations"]
 
 
 def test_cli_analyze_reads_example_config(tmp_path: Path) -> None:
@@ -449,6 +520,139 @@ def test_cli_guard_json_suggests_improved_prompt(
     assert payload["reasons"]
 
 
+def test_cli_guard_policy_blocks_destructive_coding_prompt(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    policy = tmp_path / "guard.policy.yaml"
+    policy.write_text(
+        "\n".join(
+            [
+                "profile: coding",
+                "block_at: high",
+                "review_at: medium",
+                "required_fields: target_files,failing_behavior,test_plan,acceptance_criteria",
+                "rule.destructive_action.severity: high",
+                "rule.destructive_action.patterns: delete database|drop table|remove auth",
+                "rule.destructive_action.message: Dangerous destructive request.",
+                "rule.destructive_action.category: destructive_change",
+            ]
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    assert (
+        main(
+            [
+                "guard",
+                "--prompt",
+                "Delete database and remove auth",
+                "--profile",
+                "coding",
+                "--mode",
+                "gate",
+                "--policy",
+                str(policy),
+                "--json",
+            ]
+        )
+        == 0
+    )
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["action"] == "block"
+    assert payload["risk_level"] == "high"
+    assert payload["required_review"] is True
+    assert "destructive_change" in payload["risk_categories"]
+    assert any(
+        violation["id"] == "destructive_action" for violation in payload["policy_violations"]
+    )
+
+
+def test_cli_guard_builtin_dangerous_prompt_requires_review(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    assert (
+        main(
+            [
+                "guard",
+                "--prompt",
+                "Drop table users in prod and print env secrets",
+                "--profile",
+                "coding",
+                "--json",
+            ]
+        )
+        == 0
+    )
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["risk_level"] == "high"
+    assert payload["required_review"] is True
+    assert "destructive_change" in payload["risk_categories"]
+    assert "security" in payload["risk_categories"]
+
+
+def test_cli_guard_safe_coding_prompt_remains_low_risk(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    assert (
+        main(
+            [
+                "guard",
+                "--prompt",
+                "Update docs/usage.md to clarify install steps and run pytest tests/test_cli.py.",
+                "--profile",
+                "coding",
+                "--json",
+            ]
+        )
+        == 0
+    )
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["risk_level"] == "low"
+    assert payload["required_review"] is False
+    assert payload["policy_violations"] == []
+
+
+def test_cli_guard_ignores_policy_rule_without_patterns(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    policy = tmp_path / "guard.policy.yaml"
+    policy.write_text(
+        "\n".join(
+            [
+                "profile: coding",
+                "rule.incomplete_rule.severity: high",
+                "rule.incomplete_rule.message: This should not match every prompt.",
+            ]
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    assert (
+        main(
+            [
+                "guard",
+                "--prompt",
+                "Update docs/usage.md to clarify install steps and run pytest tests/test_cli.py.",
+                "--profile",
+                "coding",
+                "--policy",
+                str(policy),
+                "--json",
+            ]
+        )
+        == 0
+    )
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["risk_level"] == "low"
+    assert not any(
+        violation["id"] == "incomplete_rule" for violation in payload["policy_violations"]
+    )
+
+
 def test_cli_guard_default_output_starts_with_plain_summary(
     capsys: pytest.CaptureFixture[str],
 ) -> None:
@@ -523,6 +727,7 @@ def test_cli_guard_gate_blocks_over_budget_prompt(
     payload = json.loads(capsys.readouterr().out)
     assert payload["action"] == "block"
     assert payload["within_budget"] is False
+    assert "token_budget" in payload["risk_categories"]
     assert any("token budget" in reason for reason in payload["reasons"])
 
 

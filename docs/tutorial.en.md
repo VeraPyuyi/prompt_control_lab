@@ -111,6 +111,15 @@ wrapper sends a prompt to a model. `plain_summary` is written for humans; `actio
 and `token_report` are stable fields for plugins. `suggest` returns a safer prompt, `auto` marks
 it as ready to use, and `gate` can block high-risk or over-budget prompts.
 
+Team policy operation:
+
+```bash
+pcl guard --prompt "Fix this bug" --profile coding --policy examples/guard.policy.yaml --json
+```
+
+This adds configurable required fields, dangerous-pattern rules, risk categories, and
+`required_review` to the guard output.
+
 ## Expert Mode: Step by Step
 
 ## 1. Initialize an Example
@@ -199,6 +208,23 @@ What it explains:
 This tells you which public model id is recorded in the prediction file. If baseline and
 candidate use different model ids, the later comparison is a model+prompt comparison, not a
 clean prompt-only comparison.
+
+## 3.6. Audit Model Drift
+
+Operation:
+
+```bash
+pcl model-drift --run runs/current --history runs/previous --out runs/current/model_drift.json
+```
+
+Result:
+
+- `runs/current/model_drift.json`
+
+What it explains:
+
+This file says whether a comparison is low risk, uncertain because model identity is missing,
+or confounded by a model/provider change. Alias model ids are marked as reproducibility risk.
 
 ## 4. Run the Statistical Comparison
 

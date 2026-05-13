@@ -140,3 +140,121 @@ def test_analyze_report_warns_when_baseline_and_candidate_models_differ(tmp_path
     assert manifest["baseline_model"]["model_id"] == "gpt-4o"
     assert manifest["candidate_model"]["model_id"] == "gpt-5.2"
     assert "Baseline and candidate used different model ids" in report
+
+
+def test_model_drift_cli_reports_high_risk_model_change(tmp_path: Path) -> None:
+    previous = tmp_path / "previous"
+    current = tmp_path / "current"
+    previous.mkdir()
+    current.mkdir()
+    (previous / "manifest.json").write_text(
+        json.dumps(
+            {
+                "candidate_model": {
+                    "provider": "openai",
+                    "model_id": "gpt-4o",
+                    "verified": True,
+                    "warnings": [],
+                }
+            }
+        ),
+        encoding="utf-8",
+    )
+    (current / "manifest.json").write_text(
+        json.dumps(
+            {
+                "candidate_model": {
+                    "provider": "openai",
+                    "model_id": "gpt-5.2",
+                    "verified": True,
+                    "warnings": [],
+                }
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    assert (
+        main(
+            [
+                "model-drift",
+                "--run",
+                str(current),
+                "--history",
+                str(previous),
+                "--out",
+                str(current / "model_drift.json"),
+            ]
+        )
+        == 0
+    )
+
+    payload = json.loads((current / "model_drift.json").read_text(encoding="utf-8"))
+    assert payload["previous_model"] == "gpt-4o"
+    assert payload["current_model"] == "gpt-5.2"
+    assert payload["risk"] == "high"
+    assert "confounded by model change" in payload["reason"]
+
+
+def test_model_drift_cli_reads_windows_bom_manifest(tmp_path: Path) -> None:
+    previous = tmp_path / "previous"
+    current = tmp_path / "current"
+    previous.mkdir()
+    current.mkdir()
+    (previous / "manifest.json").write_text(
+        '{"candidate_model":{"provider":"openai","model_id":"gpt-4o"}}',
+        encoding="utf-8-sig",
+    )
+    (current / "manifest.json").write_text(
+        '{"candidate_model":{"provider":"openai","model_id":"gpt-5.2"}}',
+        encoding="utf-8-sig",
+    )
+
+    assert (
+        main(
+            [
+                "model-drift",
+                "--run",
+                str(current),
+                "--history",
+                str(previous),
+                "--out",
+                str(current / "model_drift.json"),
+            ]
+        )
+        == 0
+    )
+
+    payload = json.loads((current / "model_drift.json").read_text(encoding="utf-8"))
+    assert payload["risk"] == "high"
+
+
+def test_model_drift_cli_reports_alias_risk(tmp_path: Path) -> None:
+    previous = tmp_path / "previous"
+    current = tmp_path / "current"
+    previous.mkdir()
+    current.mkdir()
+    for run in [previous, current]:
+        (run / "manifest.json").write_text(
+            json.dumps({"candidate_model": {"provider": "openai", "model_id": "gpt-4o"}}),
+            encoding="utf-8",
+        )
+
+    assert (
+        main(
+            [
+                "model-drift",
+                "--run",
+                str(current),
+                "--history",
+                str(previous),
+                "--out",
+                str(current / "model_drift.json"),
+            ]
+        )
+        == 0
+    )
+
+    payload = json.loads((current / "model_drift.json").read_text(encoding="utf-8"))
+    assert payload["risk"] == "medium"
+    assert "alias" in payload["reason"]

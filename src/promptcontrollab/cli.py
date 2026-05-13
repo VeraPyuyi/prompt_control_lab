@@ -20,6 +20,7 @@ from promptcontrollab.evaluation import run_import_eval
 from promptcontrollab.explain import generate_explanation
 from promptcontrollab.files import JsonDict, ensure_dir, write_json
 from promptcontrollab.gate import run_gate
+from promptcontrollab.model_drift import run_model_drift
 from promptcontrollab.model_identity import detect_model_identity
 from promptcontrollab.prompt_context import load_prompt_context
 from promptcontrollab.prompt_diff import render_prompt_diff
@@ -139,6 +140,12 @@ def build_parser() -> argparse.ArgumentParser:
     )
     guard_parser.add_argument("--run", type=Path, default=None, help="Optional run directory.")
     guard_parser.add_argument(
+        "--policy",
+        type=Path,
+        default=None,
+        help="Optional guard policy YAML.",
+    )
+    guard_parser.add_argument(
         "--mode",
         choices=["suggest", "auto", "gate"],
         default="suggest",
@@ -191,6 +198,15 @@ def build_parser() -> argparse.ArgumentParser:
     )
     model_parser.add_argument("--out", type=Path, default=None, help="Optional JSON output path.")
     model_parser.set_defaults(func=_cmd_model_detect)
+
+    drift_parser = subcommands.add_parser(
+        "model-drift",
+        help="Compare model provenance between a current run and a previous run.",
+    )
+    drift_parser.add_argument("--run", type=Path, required=True, help="Current run directory.")
+    drift_parser.add_argument("--history", type=Path, required=True, help="Previous run directory.")
+    drift_parser.add_argument("--out", type=Path, required=True, help="model_drift.json output.")
+    drift_parser.set_defaults(func=_cmd_model_drift)
 
     analyze_parser = subcommands.add_parser(
         "analyze",
@@ -500,6 +516,7 @@ def _cmd_guard(args: argparse.Namespace) -> None:
         token_mode=args.token_mode,
         max_tokens=args.max_tokens,
         language=args.language,
+        policy_path=args.policy,
     )
     payload = result.to_json()
     if args.json:
@@ -525,6 +542,11 @@ def _cmd_model_detect(args: argparse.Namespace) -> None:
     print(json.dumps(payload, indent=2, ensure_ascii=False, sort_keys=True))
     if args.out is not None:
         write_json(args.out, payload)
+
+
+def _cmd_model_drift(args: argparse.Namespace) -> None:
+    payload = run_model_drift(run_dir=args.run, history_dir=args.history, out_path=args.out)
+    print(json.dumps(payload, indent=2, ensure_ascii=False, sort_keys=True))
 
 
 def _cmd_analyze(args: argparse.Namespace) -> None:
@@ -751,6 +773,8 @@ def _format_guard_output(payload: JsonDict) -> str:
         f"- Action: {payload['action']}",
         f"- Risk: {payload['risk_level']}",
         f"- Profile: {payload['profile']}",
+        f"- Required review: {payload.get('required_review', False)}",
+        f"- Risk categories: {payload.get('risk_categories', [])}",
         "",
         "Improved prompt:",
         "",
@@ -759,6 +783,14 @@ def _format_guard_output(payload: JsonDict) -> str:
         "Reasons:",
     ]
     lines.extend(f"- {reason}" for reason in payload["reasons"])
+    violations = payload.get("policy_violations", [])
+    if violations:
+        lines += ["", "Policy violations:"]
+        lines.extend(
+            f"- {item.get('id')}: {item.get('message')} ({item.get('severity')})"
+            for item in violations
+            if isinstance(item, dict)
+        )
     token_report = payload["token_report"]
     lines += [
         "",

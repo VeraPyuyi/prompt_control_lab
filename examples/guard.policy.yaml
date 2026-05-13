@@ -1,0 +1,16 @@
+# Example guard policy for `pcl guard --policy`.
+# The format is intentionally flat so the tool stays dependency-free.
+profile: coding
+block_at: high
+review_at: medium
+required_fields: target_files,failing_behavior,test_plan,acceptance_criteria
+
+rule.destructive_action.severity: high
+rule.destructive_action.patterns: delete database|drop table|remove auth
+rule.destructive_action.message: Coding prompt asks for a destructive change.
+rule.destructive_action.category: destructive_change
+
+rule.broad_refactor.severity: medium
+rule.broad_refactor.patterns: refactor whole repo|rewrite all
+rule.broad_refactor.message: Broad refactors need human review before an agent runs.
+rule.broad_refactor.category: broad_refactor

@@ -7,6 +7,7 @@ from typing import Any
 
 from promptcontrollab.config import read_simple_yaml
 from promptcontrollab.files import JsonDict, read_json, write_json
+from promptcontrollab.model_identity import is_alias_model
 
 
 def run_gate(run_dir: Path, *, policy_path: Path) -> JsonDict:
@@ -18,12 +19,14 @@ def run_gate(run_dir: Path, *, policy_path: Path) -> JsonDict:
         candidate_metrics = _read_optional_json(run_dir / "metrics.json")
     stats = _read_optional_json(run_dir / "stats.json")
     diagnostics = _collect_diagnostics(run_dir / "diagnostics")
+    manifest = _read_optional_json(run_dir / "manifest.json")
     comparison = _first_comparison(stats)
     checks: JsonDict = {
         "candidate_score": _candidate_score_check(candidate_metrics, policy),
         "regression": _regression_check(comparison, policy),
         "statistical_evidence": _p_value_check(comparison, policy),
         "soft_hard_risk": _soft_hard_check(diagnostics, policy),
+        "model_provenance": _model_provenance_check(manifest, policy),
     }
     hard_fail = any(
         isinstance(check, dict) and check.get("severity") == "fail" and not check.get("passed")
@@ -92,9 +95,9 @@ def _candidate_score_check(metrics: JsonDict, policy: JsonDict) -> JsonDict:
 
 def _regression_check(comparison: JsonDict, policy: JsonDict) -> JsonDict:
     threshold = _optional_float(policy.get("max_regression"))
-    delta = _float(comparison.get("mean_delta"))
     if threshold is None:
         return {"passed": True, "severity": "info", "message": "No regression threshold set."}
+    delta = _float(comparison.get("mean_delta"))
     passed = delta >= -threshold
     return {
         "passed": passed,
@@ -152,6 +155,70 @@ def _soft_hard_check(diagnostics: dict[str, JsonDict], policy: JsonDict) -> Json
     }
 
 
+def _model_provenance_check(manifest: JsonDict, policy: JsonDict) -> JsonDict:
+    baseline = _model_dict(manifest.get("baseline_model"))
+    candidate = _model_dict(manifest.get("candidate_model"))
+    single = _model_dict(manifest.get("model"))
+    models = [item for item in [baseline, candidate] if item]
+    if not models and single:
+        models = [single]
+    has_policy = any(
+        key in policy
+        for key in [
+            "allowed_models",
+            "allowed_providers",
+            "block_if_model_unknown",
+            "block_if_model_mismatch",
+            "block_if_alias_model",
+            "require_model_verified",
+        ]
+    )
+    if not has_policy:
+        return {"passed": True, "severity": "info", "message": "No model policy set."}
+
+    violations: list[str] = []
+    allowed_models = set(_split_list(policy.get("allowed_models")))
+    allowed_providers = set(_split_list(policy.get("allowed_providers")))
+    unknown = not models or any(_model_id(model) == "unknown" for model in models)
+    mismatch = bool(baseline and candidate and _model_key(baseline) != _model_key(candidate))
+    alias = any(is_alias_model(_model_id(model)) for model in models)
+    unverified = any(model.get("verified") is not True for model in models)
+
+    if unknown and (
+        _bool(policy.get("block_if_model_unknown"))
+        or bool(allowed_models)
+        or bool(allowed_providers)
+        or _bool(policy.get("require_model_verified"))
+    ):
+        violations.append("model_unknown")
+    if mismatch and _bool(policy.get("block_if_model_mismatch")):
+        violations.append("model_mismatch")
+    if alias and _bool(policy.get("block_if_alias_model")):
+        violations.append("alias_model")
+    if unverified and _bool(policy.get("require_model_verified")):
+        violations.append("model_unverified")
+    if allowed_models:
+        for model in models:
+            if _model_id(model) not in allowed_models:
+                violations.append("model_not_allowed")
+                break
+    if allowed_providers:
+        for model in models:
+            if _provider(model) not in allowed_providers:
+                violations.append("provider_not_allowed")
+                break
+
+    passed = not violations
+    return {
+        "passed": passed,
+        "severity": "fail" if not passed else "info",
+        "violations": violations,
+        "baseline_model": baseline,
+        "candidate_model": candidate,
+        "message": "Model provenance meets the policy." if passed else "Model policy failed.",
+    }
+
+
 def _status_sentence(status: str) -> str:
     if status == "pass":
         return "The run meets the configured policy thresholds."
@@ -191,3 +258,33 @@ def _float(value: Any) -> float:
 
 def _risk_rank(value: str) -> int:
     return {"low": 0, "medium": 1, "high": 2}.get(value, 3)
+
+
+def _split_list(value: object) -> list[str]:
+    if value is None:
+        return []
+    if isinstance(value, list):
+        return [str(item).strip() for item in value if str(item).strip()]
+    return [item.strip() for item in str(value).replace("|", ",").split(",") if item.strip()]
+
+
+def _bool(value: object) -> bool:
+    return value is True or (isinstance(value, str) and value.lower() == "true")
+
+
+def _model_dict(value: object) -> JsonDict:
+    return value if isinstance(value, dict) else {}
+
+
+def _model_id(model: JsonDict) -> str:
+    value = model.get("model_id")
+    return value if isinstance(value, str) and value else "unknown"
+
+
+def _provider(model: JsonDict) -> str:
+    value = model.get("provider")
+    return value if isinstance(value, str) and value else "unknown"
+
+
+def _model_key(model: JsonDict) -> tuple[str, str]:
+    return (_provider(model), _model_id(model))

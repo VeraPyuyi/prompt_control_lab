@@ -373,6 +373,15 @@ Gate 操作：
 echo "回答用户问题" | pcl guard --stdin --mode gate --max-tokens 80 --json
 ```
 
+团队策略操作：
+
+```bash
+pcl guard --prompt "修复这个 bug" \
+  --profile coding \
+  --policy examples/guard.policy.yaml \
+  --json
+```
+
 得到：
 
 - `plain_summary`：给非技术用户看的直白摘要
@@ -381,11 +390,16 @@ echo "回答用户问题" | pcl guard --stdin --mode gate --max-tokens 80 --json
 - `improved_prompt`：守护后的 prompt
 - `token_report`：estimated token 成本
 - `reasons`：为什么建议或阻断
+- `risk_categories`：例如 `destructive_change`、`security`、`production_path`、
+  `broad_refactor`、`token_budget` 或团队策略类别
+- `policy_violations`：具体命中的内置规则或团队策略
+- `required_review`：是否需要人工复核
 
 说明什么问题：
 
 在 Claude Code、Cursor、Codex 或 shell wrapper 真正花 token 前，先检查 prompt 是否
-太模糊、超预算或缺少关键约束。
+太模糊、超预算、危险或缺少关键约束。加上 `--policy` 后，团队可以把它变成 AI
+编程 agent 的可配置执行前门禁。
 
 ### 4. `pcl analyze`：一个命令生成完整报告 📦
 
@@ -458,6 +472,14 @@ pcl analyze --config promptcontrol.example.yaml \
 如果 baseline 和 candidate 使用不同 model id，`report.md` 会显示 warning，因为这时结果
 不再是干净的 prompt-only 对比。
 
+模型漂移审计：
+
+```bash
+pcl model-drift --run runs/current --history runs/previous --out runs/current/model_drift.json
+```
+
+这个命令会说明一次 prompt 对比是否干净，还是被模型、provider 或 alias model id 的变化影响了。
+
 ### 6. `pcl init`：生成可运行示例 🌱
 
 操作：
@@ -472,6 +494,8 @@ cd demo
 - `examples/tasks.jsonl`
 - `examples/predictions_baseline.jsonl`
 - `examples/predictions_candidate.jsonl`
+- `examples/guard.policy.yaml`
+- `examples/gate.policy.yaml`
 - `promptcontrol.example.yaml`
 
 说明什么问题：
@@ -498,7 +522,8 @@ pcl gate --run runs/quick --policy examples/gate.policy.yaml
 
 说明什么问题：
 
-这些命令把产物变成结论：保留 prompt、继续复查，或者暂时不要使用。
+这些命令把产物变成结论：保留 prompt、继续复查，或者暂时不要使用。`gate` 现在可以同时检查分数、
+统计证据、soft-hard 风险和模型来源。
 
 ### 8. 专家评测：`split → eval → stats` 🧠
 

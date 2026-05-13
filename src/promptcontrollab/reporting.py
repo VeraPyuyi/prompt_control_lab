@@ -162,15 +162,19 @@ def render_html(markdown: str, *, title: str) -> str:
     """Render a dependency-free HTML wrapper around the Markdown text."""
 
     escaped = html.escape(markdown)
-    card = _html_recommendation_card(markdown)
-    sample_changes = _html_sample_changes(markdown)
+    dashboard = _html_dashboard(markdown)
     return (
         "<!doctype html>\n"
         "<html><head><meta charset='utf-8'>"
         f"<title>{html.escape(title)}</title>"
         "<style>body{font-family:system-ui,sans-serif;max-width:920px;margin:40px auto;"
-        "line-height:1.55;padding:0 20px}pre{background:#f6f8fa;padding:16px;"
-        "overflow:auto}code{background:#f6f8fa;padding:2px 4px}"
+        "line-height:1.55;padding:0 20px;background:#f8fafc;color:#0f172a}"
+        "pre{background:#0f172a;color:#e2e8f0;padding:16px;overflow:auto;"
+        "border-radius:8px}code{background:#e2e8f0;padding:2px 4px;border-radius:4px}"
+        ".dashboard{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));"
+        "gap:14px;margin:18px 0 26px}.dashboard-card{background:white;border:1px solid "
+        "#e2e8f0;border-radius:8px;padding:14px 16px;box-shadow:0 1px 2px #0000000d}"
+        ".dashboard-card h2{font-size:16px;margin:0 0 8px}.dashboard-card p{margin:6px 0}"
         ".recommendation-card{border-radius:10px;padding:16px 18px;margin:18px 0;"
         "border:1px solid #cbd5e1}.recommendation-card.green{background:#f0fdf4;"
         "border-color:#86efac}.recommendation-card.yellow{background:#fefce8;"
@@ -180,8 +184,9 @@ def render_html(markdown: str, *, title: str) -> str:
         "td,th{border:1px solid #e2e8f0;padding:8px;text-align:left}"
         "th{background:#f8fafc}</style>"
         "</head><body>"
-        f"{card}"
-        f"{sample_changes}"
+        f"<h1>{html.escape(title)}</h1>"
+        f"{dashboard}"
+        "<h2>Full Markdown Audit</h2>"
         f"<pre>{escaped}</pre>"
         "</body></html>\n"
     )
@@ -321,6 +326,73 @@ def _html_recommendation_card(markdown: str) -> str:
     )
 
 
+def _html_dashboard(markdown: str) -> str:
+    baseline_model = html.escape(_markdown_field(markdown, "Baseline model") or "unknown")
+    candidate_model = html.escape(_markdown_field(markdown, "Candidate model") or "unknown")
+    verified = html.escape(_markdown_field(markdown, "Model verified") or "see manifest")
+    count = html.escape(_markdown_field(markdown, "Count") or "missing")
+    mean_score = html.escape(_markdown_field(markdown, "Mean score") or "missing")
+    slice_scores = html.escape(_markdown_field(markdown, "Slice scores") or "missing")
+    gate_status = html.escape(_markdown_field(markdown, "Status") or "missing")
+    gate_meaning = html.escape(_markdown_field(markdown, "Meaning") or "No gate result found.")
+    return (
+        _html_recommendation_card(markdown)
+        + "<section class='dashboard'>"
+        + _html_dashboard_card(
+            "Prompt-only comparison validity",
+            _prompt_only_validity(markdown),
+        )
+        + _html_dashboard_card(
+            "Model provenance",
+            "<br>".join(
+                [
+                    f"Baseline: {baseline_model}",
+                    f"Candidate: {candidate_model}",
+                    f"Verified: {verified}",
+                ]
+            ),
+        )
+        + _html_dashboard_card(
+            "Metrics summary",
+            "<br>".join(
+                [
+                    f"Count: {count}",
+                    f"Mean score: {mean_score}",
+                    f"Slices: {slice_scores}",
+                ]
+            ),
+        )
+        + _html_dashboard_card(
+            "Gate failures/review items",
+            "<br>".join([f"Status: {gate_status}", f"Meaning: {gate_meaning}"]),
+        )
+        + _html_dashboard_card(
+            "Actionable next steps",
+            "Check model warnings, slice regressions, statistical uncertainty, and gate failures.",
+        )
+        + "</section>"
+        + _html_sample_changes(markdown)
+    )
+
+
+def _html_dashboard_card(title: str, body: str) -> str:
+    return (
+        "<article class='dashboard-card'>"
+        f"<h2>{html.escape(title)}</h2>"
+        f"<p>{body}</p>"
+        "</article>"
+    )
+
+
+def _prompt_only_validity(markdown: str) -> str:
+    warnings = _markdown_fields(markdown, "Model warning")
+    if any("not a clean prompt-only comparison" in warning for warning in warnings):
+        return "Needs review: baseline and candidate model ids differ."
+    if any("missing model identity" in warning for warning in warnings):
+        return "Needs review: model identity is missing."
+    return "Clean if baseline and candidate model ids match."
+
+
 def _html_sample_changes(markdown: str) -> str:
     fixed = _markdown_field(markdown, "Fixed examples") or "[]"
     broken = _markdown_field(markdown, "Broken examples") or "[]"
@@ -337,11 +409,17 @@ def _html_sample_changes(markdown: str) -> str:
 
 
 def _markdown_field(markdown: str, label: str) -> str | None:
+    values = _markdown_fields(markdown, label)
+    return values[0] if values else None
+
+
+def _markdown_fields(markdown: str, label: str) -> list[str]:
     prefix = f"- {label}:"
+    values: list[str] = []
     for line in markdown.splitlines():
         if line.startswith(prefix):
             value = line[len(prefix) :].strip()
             if value.startswith("`") and value.endswith("`"):
                 value = value[1:-1]
-            return value
-    return None
+            values.append(value)
+    return values

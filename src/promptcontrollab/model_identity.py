@@ -268,6 +268,12 @@ def infer_provider(model_id: str) -> str:
     return "unknown"
 
 
+def is_alias_model(model_id: str) -> bool:
+    """Return whether a model id is likely an alias rather than a pinned dated id."""
+
+    return model_id.endswith("-latest") or model_id in {"gpt-4o", "gpt-5.2"}
+
+
 def _verify_openai(identity: ModelIdentity) -> ModelIdentity:
     import json
     import os
@@ -361,7 +367,7 @@ def _with_warning(identity: ModelIdentity, warning: str, *, verified: bool) -> M
 
 
 def _alias_warnings(model_id: str) -> list[str]:
-    if model_id.endswith("-latest") or model_id in {"gpt-4o", "gpt-5.2"}:
+    if is_alias_model(model_id):
         return [
             "Model aliases can change over time. "
             "Pin a dated model id when strict reproduction matters."

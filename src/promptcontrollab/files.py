@@ -18,7 +18,7 @@ def ensure_dir(path: Path) -> None:
 def read_json(path: Path) -> JsonDict:
     """Read a JSON object from ``path``."""
 
-    value = json.loads(path.read_text(encoding="utf-8"))
+    value = json.loads(path.read_text(encoding="utf-8-sig"))
     if not isinstance(value, dict):
         msg = f"Expected JSON object in {path}"
         raise ValueError(msg)
@@ -36,7 +36,7 @@ def read_jsonl(path: Path) -> list[JsonDict]:
     """Read JSONL records from ``path``."""
 
     records: list[JsonDict] = []
-    for line_number, line in enumerate(path.read_text(encoding="utf-8").splitlines(), start=1):
+    for line_number, line in enumerate(path.read_text(encoding="utf-8-sig").splitlines(), start=1):
         stripped = line.strip()
         if not stripped:
             continue
@@ -63,4 +63,3 @@ def stable_digest(value: object) -> str:
 
     payload = json.dumps(value, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
     return hashlib.sha256(payload.encode("utf-8")).hexdigest()
-

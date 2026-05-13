@@ -2,3 +2,12 @@
 min_candidate_score: 0.75
 max_regression: 0.0
 require_adjusted_p_below: 1.0
+
+# Optional model provenance checks.
+# These checks verify recorded public model ids, not hidden provider weight builds.
+allowed_models: gpt-4o,gpt-5.2
+allowed_providers: openai
+block_if_model_unknown: true
+block_if_model_mismatch: true
+block_if_alias_model: false
+require_model_verified: false

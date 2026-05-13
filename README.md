@@ -380,6 +380,15 @@ Gate operation:
 echo "Answer the user question." | pcl guard --stdin --mode gate --max-tokens 80 --json
 ```
 
+Team policy operation:
+
+```bash
+pcl guard --prompt "Fix this bug" \
+  --profile coding \
+  --policy examples/guard.policy.yaml \
+  --json
+```
+
 Result:
 
 - `plain_summary`: a human-readable sentence for non-technical users
@@ -388,11 +397,16 @@ Result:
 - `improved_prompt`: guarded prompt
 - `token_report`: estimated token cost
 - `reasons`: why the guard suggested or blocked
+- `risk_categories`: examples include `destructive_change`, `security`, `production_path`,
+  `broad_refactor`, `token_budget`, or team policy categories
+- `policy_violations`: exact policy or built-in guard violations
+- `required_review`: whether a human should review before execution
 
 What it means:
 
 Use this before Claude Code, Cursor, Codex, or a shell wrapper spends tokens. It catches vague,
-over-budget, or underspecified prompts early.
+over-budget, dangerous, or underspecified prompts early. With `--policy`, teams can turn it into
+a configurable preflight gate for AI coding agents.
 
 ### 4. `pcl analyze`: one command, one report 📦
 
@@ -466,6 +480,15 @@ pcl analyze --config promptcontrol.example.yaml \
 If baseline and candidate use different model ids, `report.md` shows a warning because the
 comparison is no longer prompt-only.
 
+Model drift audit:
+
+```bash
+pcl model-drift --run runs/current --history runs/previous --out runs/current/model_drift.json
+```
+
+This reports whether a prompt comparison is clean or confounded by a model/provider change or
+alias model id.
+
 ### 6. `pcl init`: create a runnable example 🌱
 
 Operation:
@@ -480,6 +503,8 @@ Result:
 - `examples/tasks.jsonl`
 - `examples/predictions_baseline.jsonl`
 - `examples/predictions_candidate.jsonl`
+- `examples/guard.policy.yaml`
+- `examples/gate.policy.yaml`
 - `promptcontrol.example.yaml`
 
 What it means:
@@ -507,6 +532,7 @@ Result:
 What it means:
 
 These commands turn artifacts into decisions: keep the prompt, review it, or hold it.
+The gate can check metrics, statistical evidence, soft-hard risk, and model provenance.
 
 ### 8. Expert evaluation: `split → eval → stats` 🧠
 
