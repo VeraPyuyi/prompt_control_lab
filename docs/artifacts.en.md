@@ -37,6 +37,47 @@ Stores previous/current provider and model id, a drift risk level, and a short r
 What it explains: whether a comparison is still prompt-only, or whether model changes make the
 result harder to interpret. Alias model ids are treated as reproducibility risks.
 
+## `audit_result.json`
+
+Stores the result of `pcl audit-diff`: changed files, source/test/docs/config counts, dangerous
+paths, possible public API changes, test commands, test status, expected-path checks, and whether
+human review is required.
+
+What it explains: what an AI coding agent changed after it ran. If `--expected-path` is not
+provided, `unnecessary_file_edits` is `null` because the tool does not pretend to know the
+original task intent.
+
+## `audit_summary.md`
+
+Stores a readable summary of `audit_result.json`.
+
+What it explains: which files changed, which risk signals were found, and what a reviewer should
+look at first.
+
+## `history_index.json`
+
+Stores a local index of run directories, including manifest data, model identity, prompt identity,
+metrics, gate status, risk categories, and artifact paths.
+
+What it explains: what runs exist in a local `runs/` folder and what each run recorded.
+
+## `history_compare.json`
+
+Stores a comparison between two run directories: prompt identity match, model match, metric delta,
+gate status change, slice regressions, and new or resolved risk categories.
+
+What it explains: whether a newer run changed the prompt, model, score, gate result, or risk
+profile compared with an older run.
+
+## `pcl doctor` output
+
+Stores or prints local setup checks: Python version, package import, CLI parser, optional
+`OPENAI_API_KEY`, guard policy parsing, Claude Code hook, Cursor MCP server, demo report
+generation, and optional research dependencies.
+
+What it explains: whether the local installation is ready for normal CLI and plugin workflows,
+and where a user should look if setup failed.
+
 ## `metrics.json`
 
 Stores count, overall mean score, and slice-level mean scores.

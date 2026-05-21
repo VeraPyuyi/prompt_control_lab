@@ -15,8 +15,14 @@ The stable core is the CLI:
 pcl guard --prompt "Fix this bug" --profile coding --token-mode balanced --json
 ```
 
+For team-configurable preflight, pass the same policy file through CLI wrappers and IDE hooks:
+
+```bash
+pcl guard --prompt "Fix this bug" --profile coding --policy examples/guard.policy.yaml --json
+```
+
 For hook or wrapper integrations, prefer stdin:
 
 ```bash
-echo "Fix this bug" | pcl guard --stdin --profile coding --json
+echo "Fix this bug" | pcl guard --stdin --profile coding --policy examples/guard.policy.yaml --json
 ```

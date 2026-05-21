@@ -103,6 +103,8 @@ pcl guard --prompt "修复这个 bug" --profile coding --policy examples/guard.p
 
 说明：这个命令是给 prompt 输入层插件用的。Claude Code、Cursor、Codex 或 shell wrapper 在把 prompt 发给模型前，可以先调用它。`plain_summary` 给人看，`action`、`risk_level` 和 `token_report` 给插件稳定读取。`suggest` 返回更稳的 prompt，`auto` 表示可自动使用，`gate` 可以阻断高风险或超过 token 预算的 prompt。加上 `--policy` 后，团队可以配置必填信息、危险模式、风险类别和人工复核阈值。
 
+Policy 文件保持 dependency-free：内置示例使用扁平键，v0.1 也支持少量 `rules:` 嵌套写法，方便习惯 YAML 列表的用户。
+
 ## 专家模式：一步一步控制
 
 ## 1. 初始化示例

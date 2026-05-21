@@ -120,6 +120,10 @@ pcl guard --prompt "Fix this bug" --profile coding --policy examples/guard.polic
 This adds configurable required fields, dangerous-pattern rules, risk categories, and
 `required_review` to the guard output.
 
+Policy files use a dependency-free parser. The bundled example uses flat keys such as
+`rule.destructive_action.patterns`, and v0.1 also accepts a small nested `rules:` form for common
+YAML list-style policies.
+
 ## Expert Mode: Step by Step
 
 ## 1. Initialize an Example

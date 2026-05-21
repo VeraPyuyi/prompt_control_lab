@@ -8,6 +8,7 @@ import sys
 from collections.abc import Sequence
 from pathlib import Path
 
+from promptcontrollab.audit_diff import run_audit_diff
 from promptcontrollab.config import (
     get_config_bool,
     get_config_float,
@@ -15,11 +16,13 @@ from promptcontrollab.config import (
     get_config_path,
     get_config_str,
 )
+from promptcontrollab.doctor import format_doctor, run_doctor
 from promptcontrollab.errors import PromptControlLabError
 from promptcontrollab.evaluation import run_import_eval
 from promptcontrollab.explain import generate_explanation
 from promptcontrollab.files import JsonDict, ensure_dir, write_json
 from promptcontrollab.gate import run_gate
+from promptcontrollab.history import compare_history, index_history
 from promptcontrollab.model_drift import run_model_drift
 from promptcontrollab.model_identity import detect_model_identity
 from promptcontrollab.prompt_context import load_prompt_context
@@ -207,6 +210,61 @@ def build_parser() -> argparse.ArgumentParser:
     drift_parser.add_argument("--history", type=Path, required=True, help="Previous run directory.")
     drift_parser.add_argument("--out", type=Path, required=True, help="model_drift.json output.")
     drift_parser.set_defaults(func=_cmd_model_drift)
+
+    audit_parser = subcommands.add_parser(
+        "audit-diff",
+        help="Audit what an AI coding agent changed between two git refs.",
+    )
+    audit_parser.add_argument("--repo", type=Path, default=Path("."), help="Git repository path.")
+    audit_parser.add_argument("--before", required=True, help="Base git ref.")
+    audit_parser.add_argument("--after", required=True, help="Head git ref.")
+    audit_parser.add_argument("--out", type=Path, required=True, help="Audit output directory.")
+    audit_parser.add_argument(
+        "--expected-path",
+        action="append",
+        default=[],
+        help="Expected changed path prefix. Repeat for multiple allowed scopes.",
+    )
+    audit_parser.add_argument(
+        "--test-command",
+        action="append",
+        default=[],
+        help="Test command to run and record. Repeat for multiple commands.",
+    )
+    audit_parser.add_argument(
+        "--tests-run",
+        action="append",
+        default=[],
+        help="Previously run test command to record without executing.",
+    )
+    audit_parser.add_argument(
+        "--tests-passed",
+        choices=["true", "false"],
+        default=None,
+        help="Whether externally run tests passed.",
+    )
+    audit_parser.set_defaults(func=_cmd_audit_diff)
+
+    history_parser = subcommands.add_parser("history", help="Index or compare runs.")
+    history_subcommands = history_parser.add_subparsers(dest="history_command", required=True)
+    history_index = history_subcommands.add_parser("index", help="Build a run history index.")
+    history_index.add_argument("--runs", type=Path, required=True, help="Runs directory.")
+    history_index.add_argument("--out", type=Path, required=True, help="history_index.json path.")
+    history_index.set_defaults(func=_cmd_history_index)
+    history_compare = history_subcommands.add_parser("compare", help="Compare two run dirs.")
+    history_compare.add_argument("--a", type=Path, required=True, help="Older run directory.")
+    history_compare.add_argument("--b", type=Path, required=True, help="Newer run directory.")
+    history_compare.add_argument(
+        "--out",
+        type=Path,
+        required=True,
+        help="history_compare.json path.",
+    )
+    history_compare.set_defaults(func=_cmd_history_compare)
+
+    doctor_parser = subcommands.add_parser("doctor", help="Check local setup and integrations.")
+    doctor_parser.add_argument("--json", action="store_true", help="Emit stable JSON.")
+    doctor_parser.set_defaults(func=_cmd_doctor)
 
     analyze_parser = subcommands.add_parser(
         "analyze",
@@ -549,6 +607,39 @@ def _cmd_model_drift(args: argparse.Namespace) -> None:
     print(json.dumps(payload, indent=2, ensure_ascii=False, sort_keys=True))
 
 
+def _cmd_audit_diff(args: argparse.Namespace) -> None:
+    payload = run_audit_diff(
+        repo=args.repo,
+        before=args.before,
+        after=args.after,
+        out_dir=args.out,
+        expected_paths=list(args.expected_path),
+        test_commands=list(args.test_command),
+        tests_run=list(args.tests_run),
+        tests_passed=_optional_bool(args.tests_passed),
+    )
+    print(f"Wrote audit artifacts to {args.out}")
+    print(f"Human review required: {payload['human_review_required']}")
+
+
+def _cmd_history_index(args: argparse.Namespace) -> None:
+    payload = index_history(runs_dir=args.runs, out_path=args.out)
+    print(f"Wrote history index to {args.out} ({len(payload['runs'])} runs)")
+
+
+def _cmd_history_compare(args: argparse.Namespace) -> None:
+    compare_history(a_dir=args.a, b_dir=args.b, out_path=args.out)
+    print(f"Wrote history comparison to {args.out}")
+
+
+def _cmd_doctor(args: argparse.Namespace) -> None:
+    payload = run_doctor()
+    if args.json:
+        print(json.dumps(payload, ensure_ascii=False, sort_keys=True))
+    else:
+        print(format_doctor(payload))
+
+
 def _cmd_analyze(args: argparse.Namespace) -> None:
     config = load_analyze_config(args.config) if args.config is not None else {}
     paths = (
@@ -764,25 +855,37 @@ def _read_guard_prompt(prompt: str | None, prompt_file: Path | None, use_stdin: 
     return prompt
 
 
+def _optional_bool(value: str | None) -> bool | None:
+    if value is None:
+        return None
+    return value == "true"
+
+
 def _format_guard_output(payload: JsonDict) -> str:
     lines = [
+        "PromptControlLab Guard",
+        "",
+        f"Decision: {payload['action']}",
+        f"Risk: {payload['risk_level']}",
+        f"Profile: {payload['profile']}",
+        f"Required review: {payload.get('required_review', False)}",
+        f"Risk categories: {payload.get('risk_categories', [])}",
+        "",
         "Plain summary:",
         str(payload.get("plain_summary", "Review the guarded prompt before sending.")),
         "",
-        "Prompt guard result:",
-        f"- Action: {payload['action']}",
-        f"- Risk: {payload['risk_level']}",
-        f"- Profile: {payload['profile']}",
-        f"- Required review: {payload.get('required_review', False)}",
-        f"- Risk categories: {payload.get('risk_categories', [])}",
+        "Why:",
+    ]
+    lines.extend(f"- {reason}" for reason in payload["reasons"])
+    lines += [
         "",
-        "Improved prompt:",
+        "Suggested prompt:",
         "",
         str(payload["improved_prompt"]),
         "",
-        "Reasons:",
+        "Next steps:",
     ]
-    lines.extend(f"- {reason}" for reason in payload["reasons"])
+    lines.extend(_guard_next_steps(payload))
     violations = payload.get("policy_violations", [])
     if violations:
         lines += ["", "Policy violations:"]
@@ -803,6 +906,23 @@ def _format_guard_output(payload: JsonDict) -> str:
         lines.append(f"- Max tokens: {token_report['max_tokens']}")
         lines.append(f"- Within budget: {payload['within_budget']}")
     return "\n".join(lines)
+
+
+def _guard_next_steps(payload: JsonDict) -> list[str]:
+    if payload["action"] == "block":
+        return [
+            "Revise the prompt before sending it to the agent.",
+            "Add scope, target files, failing behavior, and verification steps.",
+        ]
+    if payload.get("required_review", False):
+        return [
+            "Have a human review the risky parts before agent execution.",
+            "Tighten scope and add a concrete test or verification command.",
+        ]
+    return [
+        "Use the suggested prompt directly, or copy the missing context into your original prompt.",
+        "Keep the JSON output for wrappers or IDE integrations when automation is needed.",
+    ]
 
 
 def _format_improvement_output(

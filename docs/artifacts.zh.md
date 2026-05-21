@@ -1,10 +1,10 @@
 # 产物说明
 
-prompt_control_lab 的核心思想是：每次运行都应该留下可复查的文件，而不是只留下一个最终分数。
+prompt_control_lab 的核心思路是：每次运行都应该留下可复查的文件，而不是只留下一个最终分数。
 
 ## `manifest.json`
 
-记录本次运行的工具版本、评测模式、方法名、metric、数据路径、prediction 路径，以及可选的模型身份信息。
+记录工具版本、运行模式、方法名、metric、数据路径、prediction 路径，以及可选的模型身份信息。
 
 说明什么问题：以后看到一个分数时，可以知道它是怎么来的，也能知道记录中的公开 model id 是什么。
 
@@ -31,6 +31,36 @@ prompt_control_lab 的核心思想是：每次运行都应该留下可复查的�
 记录前后两次运行的 provider、model id、漂移风险等级和简短原因。
 
 说明什么问题：这次比较是否还是干净的 prompt-only 对比，还是已经被模型变化影响。alias model id 会被当作复现风险。
+
+## `audit_result.json`
+
+记录 `pcl audit-diff` 的审计结果：改动文件、source/test/docs/config 文件数量、危险路径、可能的 public API 改动、测试命令、测试状态、预期路径检查，以及是否需要人工复核。
+
+说明什么问题：AI 编程 agent 执行后到底改了什么。如果没有提供 `--expected-path`，`unnecessary_file_edits` 会是 `null`，因为工具不会假装知道原始任务意图。
+
+## `audit_summary.md`
+
+记录 `audit_result.json` 的可读摘要。
+
+说明什么问题：哪些文件被改了，发现了哪些风险信号，reviewer 应该先看哪里。
+
+## `history_index.json`
+
+记录本地 run 目录索引，包括 manifest、模型身份、prompt 身份、metrics、gate 状态、风险类别和 artifact 路径。
+
+说明什么问题：本地 `runs/` 目录里有哪些历史运行，每次运行留下了什么记录。
+
+## `history_compare.json`
+
+记录两个 run 目录之间的对比：prompt 身份是否一致、模型是否一致、metric delta、gate 状态变化、slice 退化、新增或消失的风险类别。
+
+说明什么问题：新 run 相比旧 run 是否改了 prompt、模型、分数、门禁结果或风险画像。
+
+## `pcl doctor` 输出
+
+记录或打印本地安装检查：Python 版本、包导入、CLI parser、可选的 `OPENAI_API_KEY`、guard policy 解析、Claude Code hook、Cursor MCP server、demo report 生成和可选研究依赖。
+
+说明什么问题：本地环境是否已经能正常使用 CLI 和插件；如果安装失败，应该先检查哪里。
 
 ## `metrics.json`
 
@@ -62,13 +92,13 @@ prompt_control_lab 的核心思想是：每次运行都应该留下可复查的�
 
 重要字段：
 
-- `plain_summary`：给普通用户看的直白建议，例如“补充目标文件和验收标准”
-- `action`：`suggest`、`auto` 或 `block`
-- `risk_level`：`low`、`medium` 或 `high`
-- `improved_prompt`：建议继续发送给 AI 工具的守护版 prompt
-- `risk_categories`：例如 `destructive_change`、`security`、`production_path`、`broad_refactor`、`token_budget` 或团队策略类别
-- `policy_violations`：具体命中的内置规则或团队策略
-- `required_review`：是否需要人工复核
+- `plain_summary`：给普通用户看的直白建议，例如“补充目标文件和验收标准”。
+- `action`：`suggest`、`auto` 或 `block`。
+- `risk_level`：`low`、`medium` 或 `high`。
+- `improved_prompt`：建议继续发送给 AI 工具的守护版 prompt。
+- `risk_categories`：例如 `destructive_change`、`security`、`production_path`、`broad_refactor`、`token_budget` 或团队策略类别。
+- `policy_violations`：具体命中的内置规则或团队策略。
+- `required_review`：是否需要人工复核。
 
 说明什么问题：这条 prompt 是否已经足够清晰，发送前还应该补什么。
 
@@ -82,7 +112,7 @@ prompt_control_lab 的核心思想是：每次运行都应该留下可复查的�
 
 记录原始 prompt、优化 prompt、识别语言、优化目标、风格、改写原因和报告上下文提示。它还包含 `token_report`，用不依赖外部 tokenizer 的方式估算原始 prompt 和优化 prompt 的 token 数、token 模式、可选预算以及是否满足预算。
 
-说明什么问题：工具为什么这样改 prompt，是否使用了已有诊断报告，以及这次改写对估算 prompt token 成本有什么影响。`plain_summary` 会用一句直白的话解释结果，方便插件或简单 wrapper 直接展示给普通用户。
+说明什么问题：工具为什么这样改 prompt，是否使用了已有诊断报告，以及这次改写对估算 prompt-token 成本有什么影响。`plain_summary` 会用一句直白的话解释结果，方便插件或简单 wrapper 直接展示给普通用户。
 
 ## `prompt_diff.md`
 

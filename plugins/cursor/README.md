@@ -32,11 +32,17 @@ Recommended use:
 echo "Refactor this module" | pcl guard --stdin --profile coding --token-mode balanced --json
 ```
 
+Team policy mode:
+
+```bash
+echo "Refactor this module" | pcl guard --stdin --profile coding --policy examples/guard.policy.yaml --json
+```
+
 Suggested `.cursor/rules` snippet:
 
 ```text
 Before acting on vague, broad, or expensive prompts, ask the user to run:
-pcl guard --prompt "<their prompt>" --profile coding
+pcl guard --prompt "<their prompt>" --profile coding --policy examples/guard.policy.yaml
 
 Prefer prompts that define scope, target files, expected output, tests, and verification.
 ```
@@ -78,10 +84,14 @@ Example tool arguments:
   "prompt": "Refactor this module",
   "profile": "coding",
   "token_mode": "balanced",
-  "mode": "suggest"
+  "mode": "suggest",
+  "policy": "examples/guard.policy.yaml"
 }
 ```
 
 The tool returns a JSON text payload with `plain_summary`, `risk_level`, `improved_prompt`,
 `reasons`, and `token_report`, so a Cursor wrapper can show a human-readable suggestion before
 the agent spends tokens.
+
+Policy files use a dependency-free parser. The bundled example uses flat keys, and the MCP tool
+also accepts the small nested `rules:` style supported by the CLI.

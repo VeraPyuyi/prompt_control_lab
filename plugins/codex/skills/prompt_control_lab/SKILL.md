@@ -15,13 +15,19 @@ Use this skill before turning a broad or expensive user request into a larger Co
 pcl guard --prompt "<user prompt>" --profile coding --token-mode balanced --json
 ```
 
-2. If the prompt is from stdin or a wrapper, use:
+2. If a team policy file is available, include it:
 
 ```bash
-echo "<user prompt>" | pcl guard --stdin --profile coding --json
+pcl guard --prompt "<user prompt>" --profile coding --policy examples/guard.policy.yaml --json
 ```
 
-3. Read the JSON:
+3. If the prompt is from stdin or a wrapper, use:
+
+```bash
+echo "<user prompt>" | pcl guard --stdin --profile coding --policy examples/guard.policy.yaml --json
+```
+
+4. Read the JSON:
 
 - `action=suggest`: show or use the `improved_prompt`.
 - `action=auto`: use the `improved_prompt` directly if the user allowed automatic guarding.

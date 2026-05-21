@@ -8,13 +8,13 @@ alwaysApply: false
 Before acting on a broad, vague, risky, or expensive prompt, ask the user to run:
 
 ```bash
-pcl guard --prompt "<paste prompt here>" --profile coding --token-mode balanced
+pcl guard --prompt "<paste prompt here>" --profile coding --token-mode balanced --policy examples/guard.policy.yaml
 ```
 
 For command wrappers:
 
 ```bash
-echo "<paste prompt here>" | pcl guard --stdin --profile coding --json
+echo "<paste prompt here>" | pcl guard --stdin --profile coding --policy examples/guard.policy.yaml --json
 ```
 
 Prefer prompts that clearly state:

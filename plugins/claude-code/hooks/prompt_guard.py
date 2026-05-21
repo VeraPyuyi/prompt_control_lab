@@ -26,6 +26,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--token-mode", choices=["balanced", "aggressive"], default="balanced")
     parser.add_argument("--max-tokens", type=int, default=None)
     parser.add_argument("--run", type=Path, default=None)
+    parser.add_argument("--policy", type=Path, default=None)
     args = parser.parse_args(argv)
 
     event = _read_event()
@@ -37,6 +38,7 @@ def main(argv: list[str] | None = None) -> int:
         profile=args.profile,
         token_mode=args.token_mode,
         max_tokens=args.max_tokens,
+        policy_path=args.policy,
     )
     print(json.dumps(_claude_response(result.to_json()), ensure_ascii=False, sort_keys=True))
     return 0
@@ -65,9 +67,15 @@ def _extract_prompt(event: dict[str, Any]) -> str:
 
 def _claude_response(result: dict[str, Any]) -> dict[str, Any]:
     if result["action"] == "block":
+        violation_messages = [
+            str(item.get("message"))
+            for item in result.get("policy_violations", [])
+            if isinstance(item, dict) and item.get("message")
+        ]
+        detail = "; ".join(violation_messages) or str(result["plain_summary"])
         return {
             "decision": "block",
-            "reason": "prompt_control_lab blocked this prompt: " + str(result["plain_summary"]),
+            "reason": "prompt_control_lab blocked this prompt: " + detail,
         }
     context = "\n".join(
         [

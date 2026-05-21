@@ -39,10 +39,13 @@ AI 编程工具已经进入开发流程，但信任还没有跟上。Stack Overf
 1. **在 Claude Code / Cursor / Codex 执行前守护 prompt** → `pcl guard --policy`
 2. **审计模型身份和模型漂移** → `pcl model-detect` / `pcl model-drift`
 3. **生成可复现 prompt 报告** → `pcl analyze` → `pcl gate`
-4. **用直白语言优化一个 prompt** → `pcl improve`
-5. **安装 IDE / CLI 适配器** → `plugins/` 和 Codex skills
-6. **专业控制每一步评测** → `split → eval → stats → report → explain → gate`
-7. **Advanced / Research Mode** → `soft-hard → trajectory → riccati → tv-soft`
+4. **审计 agent 到底改了什么** → `pcl audit-diff`
+5. **沉淀和比较 run 历史** → `pcl history index` / `pcl history compare`
+6. **检查本地安装和插件环境** → `pcl doctor`
+7. **用直白语言优化一个 prompt** → `pcl improve`
+8. **安装 IDE / CLI 适配器** → `plugins/` 和 Codex skills
+9. **专业控制每一步评测** → `split → eval → stats → report → explain → gate`
+10. **Advanced / Research Mode** → `soft-hard → trajectory → riccati → tv-soft`
 
 在这份 README 里，**Quick Mode（快速模式）** 指 `pcl analyze` 这条集成路径；
 **Expert Mode（专家模式）** 指逐个命令自由组合的专业工作流。先简单，后专业。
@@ -203,10 +206,12 @@ uv pip install -e ".[dev,research]"
 pcl --help
 pcl start --choice improve --prompt "回答下面的问题"
 pcl improve --prompt "回答下面的问题"
+pcl doctor
 ```
 
 预期结果：`pcl --help` 能看到命令列表，`pcl start` 会进入新手路径，
-`pcl improve` 会输出优化后的 prompt 和 estimated token 成本。
+`pcl improve` 会输出优化后的 prompt 和 estimated token 成本，`pcl doctor` 会检查 Python、包导入、
+CLI parser、guard policy、Claude Code hook、Cursor MCP server、demo report、API key 和可选研究依赖。
 
 ## 安装 IDE / CLI 插件和 Skills 🧩
 
@@ -244,7 +249,7 @@ plugins/claude-code/hooks/prompt_guard.py
         "hooks": [
           {
             "type": "command",
-            "command": "python \"D:/path/to/prompt_control_lab/plugins/claude-code/hooks/prompt_guard.py\" --mode suggest --profile coding --token-mode balanced --max-tokens 300"
+            "command": "python \"D:/path/to/prompt_control_lab/plugins/claude-code/hooks/prompt_guard.py\" --mode suggest --profile coding --token-mode balanced --max-tokens 300 --policy \"D:/path/to/prompt_control_lab/examples/guard.policy.yaml\""
           }
         ]
       }
@@ -336,6 +341,17 @@ echo "给这个功能写测试" | pcl guard --stdin --profile coding --json
 
 你可以把 `improved_prompt` 作为真正发给 agent 的 prompt；如果是 gate 模式，也可以把
 `action=block` 当作停止信号。
+
+### GitHub Action / PR Comment 示例 🧪
+
+仓库里提供了一个可复制的 workflow 模板：
+
+```text
+examples/github-action/prompt-control-lab-gate.yml
+```
+
+如果你希望 PR 自动运行 `pcl gate`、可选地用 `pcl audit-diff` 审计代码改动，
+并在 PR 里评论简短结论，可以把它复制到 `.github/workflows/`。
 
 ## 功能路径：从简单到专业 🚀
 
@@ -434,6 +450,9 @@ pcl guard --prompt "修复这个 bug" \
 太模糊、超预算、危险或缺少关键约束。加上 `--policy` 后，团队可以把它变成 AI
 编程 agent 的可配置执行前门禁。
 
+Policy 文件保持 dependency-free：内置示例使用 `rule.destructive_action.patterns` 这样的
+扁平键，v0.1 也支持少量 `rules:` 嵌套写法，方便习惯 YAML 列表的用户。
+
 ### 4. `pcl analyze`：一个命令生成完整报告 📦
 
 操作：
@@ -513,7 +532,51 @@ pcl model-drift --run runs/current --history runs/previous --out runs/current/mo
 
 这个命令会说明一次 prompt 对比是否干净，还是被模型、provider 或 alias model id 的变化影响了。
 
-### 6. `pcl init`：生成可运行示例 🌱
+### 6. `pcl audit-diff`：审计 agent 到底改了什么 🔎
+
+操作：
+
+```bash
+pcl audit-diff --before HEAD~1 --after HEAD --out runs/audit
+```
+
+带范围和测试的用法：
+
+```bash
+pcl audit-diff \
+  --before HEAD~1 \
+  --after HEAD \
+  --expected-path src \
+  --test-command "pytest tests/test_session.py" \
+  --out runs/audit
+```
+
+得到：
+
+- `runs/audit/audit_result.json`
+- `runs/audit/audit_summary.md`
+
+说明什么问题：
+
+在 coding agent 执行后使用。它会记录改了哪些文件、source/test/docs/config 文件数量、
+是否碰到 auth 或 billing 等危险路径、是否改了 public API、测试证据、是否出现预期范围外文件，
+以及是否需要人工复核。
+
+### 7. `pcl history`：沉淀和比较 run 历史 🧭
+
+操作：
+
+```bash
+pcl history index --runs runs/ --out runs/history_index.json
+pcl history compare --a runs/old --b runs/new --out runs/history_compare.json
+```
+
+说明什么问题：
+
+`history index` 把 run 目录变成一个本地历史索引。`history compare` 会检查 prompt identity、
+model/provider、分数、gate 状态、slice 退化和新增风险类别是否发生变化。
+
+### 8. `pcl init`：生成可运行示例 🌱
 
 操作：
 
@@ -536,7 +599,7 @@ cd demo
 这些文件展示最小输入格式：任务 `id`、`input`、`expected`、`slice`，模型 `output`，
 以及可选的 `provider` / `model` 来源记录。
 
-### 7. `pcl report`、`pcl explain`、`pcl gate`：阅读并做决定 ✅
+### 9. `pcl report`、`pcl explain`、`pcl gate`：阅读并做决定 ✅
 
 操作：
 
@@ -558,7 +621,7 @@ pcl gate --run runs/quick --policy examples/gate.policy.yaml
 这些命令把产物变成结论：保留 prompt、继续复查，或者暂时不要使用。`gate` 现在可以同时检查分数、
 统计证据、soft-hard 风险和模型来源。
 
-### 8. 专家评测：`split → eval → stats` 🧠
+### 10. 专家评测：`split → eval → stats` 🧠
 
 操作：
 
@@ -578,7 +641,7 @@ pcl stats --baseline runs/baseline/predictions.jsonl --candidate runs/candidate/
 
 适合需要精细控制评测协议和统计比较的研究者或工程团队。
 
-### 9. Advanced / Research Mode：部署和研究诊断 🔬
+### 11. Advanced / Research Mode：部署和研究诊断 🔬
 
 Soft-to-hard 风险：
 

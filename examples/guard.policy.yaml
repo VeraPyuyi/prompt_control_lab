@@ -1,5 +1,5 @@
 # Example guard policy for `pcl guard --policy`.
-# The format is intentionally flat so the tool stays dependency-free.
+# The parser is dependency-free. It supports this flat style and a small nested `rules:` style.
 profile: coding
 block_at: high
 review_at: medium

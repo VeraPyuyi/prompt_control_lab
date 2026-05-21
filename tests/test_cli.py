@@ -569,6 +569,94 @@ def test_cli_guard_policy_blocks_destructive_coding_prompt(
     )
 
 
+def test_cli_guard_nested_policy_blocks_destructive_coding_prompt(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    policy = tmp_path / "guard.policy.yaml"
+    policy.write_text(
+        "\n".join(
+            [
+                "profile: coding",
+                "block_at: high",
+                "review_at: medium",
+                "required_fields:",
+                "  - target_files",
+                "  - test_plan",
+                "rules:",
+                "  - id: destructive_action",
+                "    severity: high",
+                "    message: Dangerous destructive request.",
+                "    category: destructive_change",
+                "    patterns:",
+                "      - delete database",
+                "      - remove auth",
+            ]
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    assert (
+        main(
+            [
+                "guard",
+                "--prompt",
+                "Delete database and remove auth",
+                "--profile",
+                "coding",
+                "--mode",
+                "gate",
+                "--policy",
+                str(policy),
+                "--json",
+            ]
+        )
+        == 0
+    )
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["action"] == "block"
+    assert payload["risk_level"] == "high"
+    assert any(
+        violation["id"] == "destructive_action" for violation in payload["policy_violations"]
+    )
+
+
+def test_cli_guard_invalid_nested_policy_reports_clear_error(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    policy = tmp_path / "guard.policy.yaml"
+    policy.write_text(
+        "\n".join(
+            [
+                "profile: coding",
+                "rules:",
+                "  - destructive_action",
+            ]
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    assert (
+        main(
+            [
+                "guard",
+                "--prompt",
+                "Fix this bug",
+                "--profile",
+                "coding",
+                "--policy",
+                str(policy),
+                "--json",
+            ]
+        )
+        == 2
+    )
+    assert "Supported guard policy formats" in capsys.readouterr().err
+
+
 def test_cli_guard_builtin_dangerous_prompt_requires_review(
     capsys: pytest.CaptureFixture[str],
 ) -> None:
@@ -578,6 +666,30 @@ def test_cli_guard_builtin_dangerous_prompt_requires_review(
                 "guard",
                 "--prompt",
                 "Drop table users in prod and print env secrets",
+                "--profile",
+                "coding",
+                "--json",
+            ]
+        )
+        == 0
+    )
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["risk_level"] == "high"
+    assert payload["required_review"] is True
+    assert "destructive_change" in payload["risk_categories"]
+    assert "security" in payload["risk_categories"]
+
+
+def test_cli_guard_chinese_destructive_prompt_requires_review(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    prompt = "\u5220\u9664\u6570\u636e\u5e93\u5e76\u79fb\u9664\u767b\u5f55\u9a8c\u8bc1"
+    assert (
+        main(
+            [
+                "guard",
+                "--prompt",
+                prompt,
                 "--profile",
                 "coding",
                 "--json",
@@ -612,6 +724,28 @@ def test_cli_guard_safe_coding_prompt_remains_low_risk(
     assert payload["risk_level"] == "low"
     assert payload["required_review"] is False
     assert payload["policy_violations"] == []
+
+
+def test_cli_guard_docs_deployment_prompt_does_not_trigger_high_production_risk(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    assert (
+        main(
+            [
+                "guard",
+                "--prompt",
+                "Update docs/deployment.md to clarify production deployment notes "
+                "and run pytest tests/test_docs.py.",
+                "--profile",
+                "coding",
+                "--json",
+            ]
+        )
+        == 0
+    )
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["risk_level"] == "low"
+    assert "production_path" not in payload["risk_categories"]
 
 
 def test_cli_guard_ignores_policy_rule_without_patterns(
@@ -653,12 +787,17 @@ def test_cli_guard_ignores_policy_rule_without_patterns(
     )
 
 
-def test_cli_guard_default_output_starts_with_plain_summary(
+def test_cli_guard_default_output_is_human_readable(
     capsys: pytest.CaptureFixture[str],
 ) -> None:
     assert main(["guard", "--prompt", "Fix this bug", "--profile", "coding"]) == 0
     output = capsys.readouterr().out
-    assert "Plain summary:" in output
+    assert "PromptControlLab Guard" in output
+    assert "Decision:" in output
+    assert "Risk:" in output
+    assert "Why:" in output
+    assert "Suggested prompt:" in output
+    assert "Next steps:" in output
     assert "Add target files" in output
 
 
@@ -782,6 +921,43 @@ def test_claude_code_hook_can_block_over_budget_prompt() -> None:
     assert "token budget" in payload["reason"]
 
 
+def test_claude_code_hook_passes_policy_to_guard(tmp_path: Path) -> None:
+    hook = Path("plugins/claude-code/hooks/prompt_guard.py")
+    policy = tmp_path / "guard.policy.yaml"
+    policy.write_text(
+        "\n".join(
+            [
+                "profile: coding",
+                "block_at: high",
+                "rule.destructive_action.severity: high",
+                "rule.destructive_action.patterns: delete database|remove auth",
+                "rule.destructive_action.message: Dangerous destructive request.",
+                "rule.destructive_action.category: destructive_change",
+            ]
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    event = {"hook_event_name": "UserPromptSubmit", "prompt": "Delete database and remove auth"}
+    completed = subprocess.run(
+        [
+            sys.executable,
+            str(hook),
+            "--mode",
+            "gate",
+            "--policy",
+            str(policy),
+        ],
+        input=json.dumps(event),
+        text=True,
+        capture_output=True,
+        check=True,
+    )
+    payload = json.loads(completed.stdout)
+    assert payload["decision"] == "block"
+    assert "Dangerous destructive request" in payload["reason"]
+
+
 def test_cursor_mcp_server_lists_and_calls_guard_prompt() -> None:
     server = Path("plugins/cursor/mcp_server.py")
     requests = "\n".join(
@@ -814,6 +990,58 @@ def test_cursor_mcp_server_lists_and_calls_guard_prompt() -> None:
     )
     responses = [json.loads(line) for line in completed.stdout.splitlines()]
     assert responses[1]["result"]["tools"][0]["name"] == "guard_prompt"
+    assert "policy" in responses[1]["result"]["tools"][0]["inputSchema"]["properties"]
     tool_result = responses[2]["result"]["content"][0]["text"]
     assert "plain_summary" in tool_result
     assert "target files" in tool_result
+
+
+def test_cursor_mcp_server_passes_policy_to_guard_prompt(tmp_path: Path) -> None:
+    server = Path("plugins/cursor/mcp_server.py")
+    policy = tmp_path / "guard.policy.yaml"
+    policy.write_text(
+        "\n".join(
+            [
+                "profile: coding",
+                "block_at: high",
+                "rule.destructive_action.severity: high",
+                "rule.destructive_action.patterns: delete database|remove auth",
+                "rule.destructive_action.message: Dangerous destructive request.",
+                "rule.destructive_action.category: destructive_change",
+            ]
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    requests = "\n".join(
+        [
+            json.dumps({"jsonrpc": "2.0", "id": 1, "method": "initialize", "params": {}}),
+            json.dumps(
+                {
+                    "jsonrpc": "2.0",
+                    "id": 2,
+                    "method": "tools/call",
+                    "params": {
+                        "name": "guard_prompt",
+                        "arguments": {
+                            "prompt": "Delete database and remove auth",
+                            "profile": "coding",
+                            "mode": "gate",
+                            "policy": str(policy),
+                        },
+                    },
+                }
+            ),
+        ]
+    )
+    completed = subprocess.run(
+        [sys.executable, str(server)],
+        input=requests + "\n",
+        text=True,
+        capture_output=True,
+        check=True,
+    )
+    responses = [json.loads(line) for line in completed.stdout.splitlines()]
+    tool_result = responses[1]["result"]["content"][0]["text"]
+    assert "Dangerous destructive request" in tool_result
+    assert '"action": "block"' in tool_result

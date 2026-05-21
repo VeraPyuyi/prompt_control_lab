@@ -22,7 +22,7 @@ the script path if needed:
         "hooks": [
           {
             "type": "command",
-            "command": "python \"D:/path/to/prompt_control_lab/plugins/claude-code/hooks/prompt_guard.py\" --mode suggest --profile coding --token-mode balanced --max-tokens 300"
+            "command": "python \"D:/path/to/prompt_control_lab/plugins/claude-code/hooks/prompt_guard.py\" --mode suggest --profile coding --token-mode balanced --max-tokens 300 --policy \"D:/path/to/prompt_control_lab/examples/guard.policy.yaml\""
           }
         ]
       }
@@ -36,6 +36,10 @@ the script path if needed:
 - `--mode suggest`: add a prompt suggestion as extra context.
 - `--mode auto`: mark the guarded prompt as auto-usable in the guard result.
 - `--mode gate`: block prompts that exceed the configured estimated token budget or look high risk.
+- `--policy path/to/guard.policy.yaml`: apply the same team guard policy used by `pcl guard`.
+
+Policy files use a dependency-free parser. The bundled example uses flat keys, and the hook also
+accepts the small nested `rules:` style supported by the CLI.
 
 ## Notes
 

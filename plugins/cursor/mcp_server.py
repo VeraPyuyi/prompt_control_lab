@@ -75,6 +75,7 @@ def _call_tool(params: object) -> Json:
         raise ValueError("`prompt` is required.")
     run_value = arguments.get("run")
     context = load_prompt_context(Path(str(run_value))) if run_value else load_prompt_context(None)
+    policy_value = arguments.get("policy")
     result = guard_prompt(
         prompt,
         context=context,
@@ -83,6 +84,7 @@ def _call_tool(params: object) -> Json:
         token_mode=str(arguments.get("token_mode", "balanced")),
         max_tokens=_optional_int(arguments.get("max_tokens")),
         language=str(arguments.get("language", "auto")),
+        policy_path=Path(str(policy_value)) if policy_value else None,
     ).to_json()
     return {
         "content": [
@@ -114,6 +116,7 @@ def _guard_tool_schema() -> Json:
                 "max_tokens": {"type": "integer"},
                 "language": {"type": "string", "enum": ["auto", "zh", "en"]},
                 "run": {"type": "string"},
+                "policy": {"type": "string"},
             },
             "required": ["prompt"],
         },

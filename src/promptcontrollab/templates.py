@@ -45,6 +45,7 @@ gate_policy: examples/gate.policy.yaml
 
 GUARD_POLICY_YAML = """\
 # Example guard policy for `pcl guard --policy`.
+# The parser is dependency-free. It supports this flat style and a small nested `rules:` style.
 profile: coding
 block_at: high
 review_at: medium

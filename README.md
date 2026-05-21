@@ -45,10 +45,13 @@ Use this order if you are new:
 1. **Guard prompts before Claude Code / Cursor / Codex** → `pcl guard --policy`
 2. **Audit model identity and drift** → `pcl model-detect` / `pcl model-drift`
 3. **Generate a reproducible prompt report** → `pcl analyze` → `pcl gate`
-4. **Improve one prompt in plain language** → `pcl improve`
-5. **Install IDE / CLI adapters** → `plugins/` and Codex skills
-6. **Control every evaluation step** → `split → eval → stats → report → explain → gate`
-7. **Advanced / Research Mode** → `soft-hard → trajectory → riccati → tv-soft`
+4. **Audit what an agent changed** → `pcl audit-diff`
+5. **Index and compare run history** → `pcl history index` / `pcl history compare`
+6. **Check local setup** → `pcl doctor`
+7. **Improve one prompt in plain language** → `pcl improve`
+8. **Install IDE / CLI adapters** → `plugins/` and Codex skills
+9. **Control every evaluation step** → `split → eval → stats → report → explain → gate`
+10. **Advanced / Research Mode** → `soft-hard → trajectory → riccati → tv-soft`
 
 In this README, **Quick Mode** means the integrated `pcl analyze` path, while **Expert Mode**
 means the flexible command-by-command workflow. Simple first, expert later.
@@ -214,10 +217,13 @@ uv pip install -e ".[dev,research]"
 pcl --help
 pcl start --choice improve --prompt "Answer the user question."
 pcl improve --prompt "Answer the user question."
+pcl doctor
 ```
 
 Expected result: `pcl --help` lists commands, `pcl start` shows the beginner path,
-and `pcl improve` prints an optimized prompt plus estimated token cost.
+`pcl improve` prints an optimized prompt plus estimated token cost, and `pcl doctor` checks Python,
+package import, CLI parser, guard policy parsing, Claude Code hook, Cursor MCP server, demo report
+generation, API-key presence, and optional research dependencies.
 
 ## Install IDE / CLI Plugins And Skills 🧩
 
@@ -255,7 +261,7 @@ Install steps:
         "hooks": [
           {
             "type": "command",
-            "command": "python \"D:/path/to/prompt_control_lab/plugins/claude-code/hooks/prompt_guard.py\" --mode suggest --profile coding --token-mode balanced --max-tokens 300"
+            "command": "python \"D:/path/to/prompt_control_lab/plugins/claude-code/hooks/prompt_guard.py\" --mode suggest --profile coding --token-mode balanced --max-tokens 300 --policy \"D:/path/to/prompt_control_lab/examples/guard.policy.yaml\""
           }
         ]
       }
@@ -348,6 +354,17 @@ echo "Write tests for this feature" | pcl guard --stdin --profile coding --json
 
 Use the `improved_prompt` field as the prompt sent to your agent, or use `action=block` as
 a stop signal in gate mode.
+
+### GitHub Action / PR Comment Example 🧪
+
+The repository includes a copy-ready workflow template:
+
+```text
+examples/github-action/prompt-control-lab-gate.yml
+```
+
+Copy it into `.github/workflows/` when you want PRs to run `pcl gate`, optionally audit the PR
+diff with `pcl audit-diff`, and post a short PromptControlLab result comment.
 
 ## Feature Path: Simple To Expert 🚀
 
@@ -446,6 +463,10 @@ Use this before Claude Code, Cursor, Codex, or a shell wrapper spends tokens. It
 over-budget, dangerous, or underspecified prompts early. With `--policy`, teams can turn it into
 a configurable preflight gate for AI coding agents.
 
+Policy files are dependency-free: the bundled example uses flat keys such as
+`rule.destructive_action.patterns`, and v0.1 also accepts a small nested `rules:` form for users
+who naturally write YAML lists.
+
 ### 4. `pcl analyze`: one command, one report 📦
 
 Operation:
@@ -527,7 +548,52 @@ pcl model-drift --run runs/current --history runs/previous --out runs/current/mo
 This reports whether a prompt comparison is clean or confounded by a model/provider change or
 alias model id.
 
-### 6. `pcl init`: create a runnable example 🌱
+### 6. `pcl audit-diff`: inspect what the agent changed 🔎
+
+Operation:
+
+```bash
+pcl audit-diff --before HEAD~1 --after HEAD --out runs/audit
+```
+
+Optional scope and tests:
+
+```bash
+pcl audit-diff \
+  --before HEAD~1 \
+  --after HEAD \
+  --expected-path src \
+  --test-command "pytest tests/test_session.py" \
+  --out runs/audit
+```
+
+Result:
+
+- `runs/audit/audit_result.json`
+- `runs/audit/audit_summary.md`
+
+What it means:
+
+Use this after a coding agent runs. It records touched files, source/test/docs/config changes,
+dangerous paths such as auth or billing code, public API changes, test evidence, unexpected file
+edits, and whether human review is required.
+
+### 7. `pcl history`: index and compare runs 🧭
+
+Operations:
+
+```bash
+pcl history index --runs runs/ --out runs/history_index.json
+pcl history compare --a runs/old --b runs/new --out runs/history_compare.json
+```
+
+What it means:
+
+The index turns run directories into a small local history. The comparison highlights prompt
+identity changes, model/provider changes, score deltas, gate status changes, slice regressions,
+and new risk categories.
+
+### 8. `pcl init`: create a runnable example 🌱
 
 Operation:
 
@@ -550,7 +616,7 @@ What it means:
 These files show the minimal input format: task `id`, `input`, `expected`, `slice`, model
 `output`, and optional `provider` / `model` provenance records.
 
-### 7. `pcl report`, `pcl explain`, `pcl gate`: read and decide ✅
+### 9. `pcl report`, `pcl explain`, `pcl gate`: read and decide ✅
 
 Operations:
 
@@ -572,7 +638,7 @@ What it means:
 These commands turn artifacts into decisions: keep the prompt, review it, or hold it.
 The gate can check metrics, statistical evidence, soft-hard risk, and model provenance.
 
-### 8. Expert evaluation: `split → eval → stats` 🧠
+### 10. Expert evaluation: `split → eval → stats` 🧠
 
 Operations:
 
@@ -592,7 +658,7 @@ What it means:
 
 This is for users who want full control over protocol hygiene and statistical comparison.
 
-### 9. Advanced / Research Mode diagnostics 🔬
+### 11. Advanced / Research Mode diagnostics 🔬
 
 Soft-to-hard risk:
 

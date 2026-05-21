@@ -192,6 +192,8 @@ def test_model_drift_cli_reports_high_risk_model_change(tmp_path: Path) -> None:
     payload = json.loads((current / "model_drift.json").read_text(encoding="utf-8"))
     assert payload["previous_model"] == "gpt-4o"
     assert payload["current_model"] == "gpt-5.2"
+    assert payload["same_prompt"] == "unknown"
+    assert "Prompt identity was not recorded" in payload["warnings"]
     assert payload["risk"] == "high"
     assert "confounded by model change" in payload["reason"]
 
@@ -258,3 +260,86 @@ def test_model_drift_cli_reports_alias_risk(tmp_path: Path) -> None:
     payload = json.loads((current / "model_drift.json").read_text(encoding="utf-8"))
     assert payload["risk"] == "medium"
     assert "alias" in payload["reason"]
+
+
+def test_model_drift_cli_reports_same_prompt_identity(tmp_path: Path) -> None:
+    previous = tmp_path / "previous"
+    current = tmp_path / "current"
+    previous.mkdir()
+    current.mkdir()
+    for run in [previous, current]:
+        (run / "manifest.json").write_text(
+            json.dumps(
+                {
+                    "candidate_model": {"provider": "openai", "model_id": "gpt-5.2"},
+                    "prompt_hash": "sha256:abc",
+                }
+            ),
+            encoding="utf-8",
+        )
+
+    assert (
+        main(
+            [
+                "model-drift",
+                "--run",
+                str(current),
+                "--history",
+                str(previous),
+                "--out",
+                str(current / "model_drift.json"),
+            ]
+        )
+        == 0
+    )
+
+    payload = json.loads((current / "model_drift.json").read_text(encoding="utf-8"))
+    assert payload["same_prompt"] is True
+    assert payload["previous_prompt_identity"] == {"prompt_hash": "sha256:abc"}
+    assert payload["current_prompt_identity"] == {"prompt_hash": "sha256:abc"}
+    assert payload["warnings"] == []
+
+
+def test_model_drift_cli_reports_prompt_identity_mismatch(tmp_path: Path) -> None:
+    previous = tmp_path / "previous"
+    current = tmp_path / "current"
+    previous.mkdir()
+    current.mkdir()
+    (previous / "manifest.json").write_text(
+        json.dumps(
+            {
+                "candidate_model": {"provider": "openai", "model_id": "gpt-5.2"},
+                "prompt_hash": "sha256:old",
+            }
+        ),
+        encoding="utf-8",
+    )
+    (current / "manifest.json").write_text(
+        json.dumps(
+            {
+                "candidate_model": {"provider": "openai", "model_id": "gpt-5.2"},
+                "prompt_hash": "sha256:new",
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    assert (
+        main(
+            [
+                "model-drift",
+                "--run",
+                str(current),
+                "--history",
+                str(previous),
+                "--out",
+                str(current / "model_drift.json"),
+            ]
+        )
+        == 0
+    )
+
+    payload = json.loads((current / "model_drift.json").read_text(encoding="utf-8"))
+    assert payload["same_prompt"] is False
+    assert payload["previous_prompt_identity"] == {"prompt_hash": "sha256:old"}
+    assert payload["current_prompt_identity"] == {"prompt_hash": "sha256:new"}
