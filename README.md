@@ -48,10 +48,11 @@ Use this order if you are new:
 4. **Audit what an agent changed** → `pcl audit-diff`
 5. **Index and compare run history** → `pcl history index` / `pcl history compare`
 6. **Check local setup** → `pcl doctor`
-7. **Improve one prompt in plain language** → `pcl improve`
-8. **Install IDE / CLI adapters** → `plugins/` and Codex skills
-9. **Control every evaluation step** → `split → eval → stats → report → explain → gate`
-10. **Advanced / Research Mode** → `soft-hard → trajectory → riccati → tv-soft`
+7. **Open the local dashboard** → `pcl ui`
+8. **Improve one prompt in plain language** → `pcl improve`
+9. **Install IDE / CLI adapters** → `plugins/` and Codex skills
+10. **Control every evaluation step** → `split → eval → stats → report → explain → gate`
+11. **Advanced / Research Mode** → `soft-hard → trajectory → riccati → tv-soft`
 
 In this README, **Quick Mode** means the integrated `pcl analyze` path, while **Expert Mode**
 means the flexible command-by-command workflow. Simple first, expert later.
@@ -211,19 +212,66 @@ With `uv`:
 uv pip install -e ".[dev,research]"
 ```
 
-### 4. Check that the CLI works
+### 4. Install local UI extras
+
+Use this when you want the interactive dashboard:
+
+```bash
+pip install -e ".[ui]"
+```
+
+With `uv`:
+
+```bash
+uv pip install -e ".[ui]"
+```
+
+### 5. Check that the CLI works
 
 ```bash
 pcl --help
 pcl start --choice improve --prompt "Answer the user question."
 pcl improve --prompt "Answer the user question."
 pcl doctor
+pcl ui --help
 ```
 
 Expected result: `pcl --help` lists commands, `pcl start` shows the beginner path,
 `pcl improve` prints an optimized prompt plus estimated token cost, and `pcl doctor` checks Python,
 package import, CLI parser, guard policy parsing, Claude Code hook, Cursor MCP server, demo report
 generation, API-key presence, and optional research dependencies.
+
+## Open The Local UI Dashboard 🖥️
+
+The UI is a local Streamlit dashboard. It reads artifacts from disk and does not upload prompts,
+code, or reports.
+
+```bash
+pcl ui --runs runs/ --port 8501
+```
+
+For a first demo:
+
+```bash
+pcl init --path demo
+cd demo
+pcl analyze --config promptcontrol.example.yaml --out runs/quick
+pcl ui --runs runs/ --policy examples/guard.policy.yaml --port 8501
+```
+
+The first MVP has four tabs:
+
+- **Guard Prompt:** try `pcl guard` interactively and inspect risk, policy violations, token cost,
+  and prompt diff.
+- **Run Report:** read recommendation, gate status, score delta, confidence interval, p-value,
+  slice scores, and model provenance.
+- **Model Drift:** inspect provider/model records, alias risk, warnings, and drift artifacts.
+- **Agent Diff Audit:** read `audit_result.json`, changed-file breakdown, dangerous paths, tests,
+  and review requirement.
+
+![prompt_control_lab UI guard playground](docs/assets/ui_guard.en.png)
+
+![prompt_control_lab UI run report](docs/assets/ui_report.en.png)
 
 ## Install IDE / CLI Plugins And Skills 🧩
 

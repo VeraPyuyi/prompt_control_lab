@@ -42,10 +42,11 @@ AI 编程工具已经进入开发流程，但信任还没有跟上。Stack Overf
 4. **审计 agent 到底改了什么** → `pcl audit-diff`
 5. **沉淀和比较 run 历史** → `pcl history index` / `pcl history compare`
 6. **检查本地安装和插件环境** → `pcl doctor`
-7. **用直白语言优化一个 prompt** → `pcl improve`
-8. **安装 IDE / CLI 适配器** → `plugins/` 和 Codex skills
-9. **专业控制每一步评测** → `split → eval → stats → report → explain → gate`
-10. **Advanced / Research Mode** → `soft-hard → trajectory → riccati → tv-soft`
+7. **打开本地可视化仪表盘** → `pcl ui`
+8. **用直白语言优化一个 prompt** → `pcl improve`
+9. **安装 IDE / CLI 适配器** → `plugins/` 和 Codex skills
+10. **专业控制每一步评测** → `split → eval → stats → report → explain → gate`
+11. **Advanced / Research Mode** → `soft-hard → trajectory → riccati → tv-soft`
 
 在这份 README 里，**Quick Mode（快速模式）** 指 `pcl analyze` 这条集成路径；
 **Expert Mode（专家模式）** 指逐个命令自由组合的专业工作流。先简单，后专业。
@@ -200,18 +201,61 @@ pip install -e ".[dev,research]"
 uv pip install -e ".[dev,research]"
 ```
 
-### 4. 检查 CLI 是否可用
+### 4. 安装本地 UI 依赖
+
+如果你想打开交互式可视化仪表盘：
+
+```bash
+pip install -e ".[ui]"
+```
+
+使用 `uv`：
+
+```bash
+uv pip install -e ".[ui]"
+```
+
+### 5. 检查 CLI 是否可用
 
 ```bash
 pcl --help
 pcl start --choice improve --prompt "回答下面的问题"
 pcl improve --prompt "回答下面的问题"
 pcl doctor
+pcl ui --help
 ```
 
 预期结果：`pcl --help` 能看到命令列表，`pcl start` 会进入新手路径，
 `pcl improve` 会输出优化后的 prompt 和 estimated token 成本，`pcl doctor` 会检查 Python、包导入、
 CLI parser、guard policy、Claude Code hook、Cursor MCP server、demo report、API key 和可选研究依赖。
+
+## 打开本地可视化仪表盘 🖥️
+
+UI 是一个本地 Streamlit 仪表盘。它只读取本机磁盘上的 artifacts，不会上传 prompt、代码或报告。
+
+```bash
+pcl ui --runs runs/ --port 8501
+```
+
+第一次体验可以这样跑：
+
+```bash
+pcl init --path demo
+cd demo
+pcl analyze --config promptcontrol.example.yaml --out runs/quick
+pcl ui --runs runs/ --policy examples/guard.policy.yaml --port 8501
+```
+
+第一版 MVP 有四个 tab：
+
+- **守护 Prompt：** 交互式运行 `pcl guard`，查看风险、策略违规、token 成本和 prompt diff。
+- **运行报告：** 查看部署建议、gate 状态、分数变化、置信区间、p-value、slice 分数和模型来源。
+- **模型漂移：** 查看 provider/model 记录、alias 风险、warning 和 drift artifact。
+- **Agent 改动审计：** 查看 `audit_result.json`、文件类型分布、危险路径、测试和人工复核要求。
+
+![prompt_control_lab UI 守护 Prompt](docs/assets/ui_guard.zh.png)
+
+![prompt_control_lab UI 运行报告](docs/assets/ui_report.zh.png)
 
 ## 安装 IDE / CLI 插件和 Skills 🧩
 

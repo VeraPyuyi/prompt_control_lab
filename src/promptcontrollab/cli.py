@@ -3,7 +3,10 @@
 from __future__ import annotations
 
 import argparse
+import importlib.util
 import json
+import os
+import subprocess
 import sys
 from collections.abc import Sequence
 from pathlib import Path
@@ -265,6 +268,15 @@ def build_parser() -> argparse.ArgumentParser:
     doctor_parser = subcommands.add_parser("doctor", help="Check local setup and integrations.")
     doctor_parser.add_argument("--json", action="store_true", help="Emit stable JSON.")
     doctor_parser.set_defaults(func=_cmd_doctor)
+
+    ui_parser = subcommands.add_parser("ui", help="Launch the local Streamlit dashboard.")
+    ui_parser.add_argument("--runs", type=Path, default=Path("runs"), help="Runs directory.")
+    ui_parser.add_argument("--policy", type=Path, default=None, help="Optional guard policy.")
+    ui_parser.add_argument("--host", default="localhost", help="Host address.")
+    ui_parser.add_argument("--port", type=int, default=8501, help="Port number.")
+    ui_parser.add_argument("--language", choices=["en", "zh"], default="en")
+    ui_parser.add_argument("--no-browser", action="store_true", help="Do not open a browser.")
+    ui_parser.set_defaults(func=_cmd_ui)
 
     analyze_parser = subcommands.add_parser(
         "analyze",
@@ -638,6 +650,37 @@ def _cmd_doctor(args: argparse.Namespace) -> None:
         print(json.dumps(payload, ensure_ascii=False, sort_keys=True))
     else:
         print(format_doctor(payload))
+
+
+def _cmd_ui(args: argparse.Namespace) -> None:
+    if importlib.util.find_spec("streamlit") is None:
+        msg = (
+            "pcl ui requires optional UI dependencies. Install them with "
+            '`pip install -e ".[ui]"` or `uv pip install -e ".[ui]"`.'
+        )
+        raise PromptControlLabError(msg)
+    app_path = Path(__file__).resolve().parent / "ui" / "app.py"
+    env = os.environ.copy()
+    env["PCL_UI_RUNS"] = str(args.runs)
+    env["PCL_UI_POLICY"] = str(args.policy) if args.policy is not None else ""
+    env["PCL_UI_LANGUAGE"] = args.language
+    command = [
+        sys.executable,
+        "-m",
+        "streamlit",
+        "run",
+        str(app_path),
+        f"--server.address={args.host}",
+        f"--server.port={args.port}",
+        f"--server.headless={str(args.no_browser).lower()}",
+    ]
+    try:
+        subprocess.run(command, env=env, check=True)
+    except KeyboardInterrupt:
+        return
+    except subprocess.CalledProcessError as exc:
+        msg = f"Streamlit exited with status {exc.returncode}"
+        raise PromptControlLabError(msg) from exc
 
 
 def _cmd_analyze(args: argparse.Namespace) -> None:

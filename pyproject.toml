@@ -41,6 +41,11 @@ hf = [
   "torch>=2.1",
   "transformers>=4.40"
 ]
+ui = [
+  "streamlit>=1.40",
+  "plotly>=5.24",
+  "pandas>=2.0"
+]
 dev = [
   "hatchling>=1.24",
   "mypy>=1.10",
