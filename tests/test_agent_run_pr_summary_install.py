@@ -212,6 +212,12 @@ class _FakeGithubClient:
         self.labels: list[dict[str, object]] = []
         self.checks: list[dict[str, object]] = []
 
+    def list_pull_files(self, repo: str, number: int) -> list[JsonDict]:
+        return [
+            {"filename": "auth/session.py", "patch": "+TOKEN = 'secret'"},
+            {"filename": "src/app.py", "patch": "+print('ok')"},
+        ]
+
     def create_comment(self, repo: str, number: int, body: str) -> None:
         self.comments.append({"repo": repo, "number": number, "body": body})
 

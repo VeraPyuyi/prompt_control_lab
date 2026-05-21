@@ -19,6 +19,8 @@ from promptcontrollab.pr_summary import render_pr_summary_markdown
 class PullRequestClient(Protocol):
     """Minimal client contract used by the webhook handler."""
 
+    def list_pull_files(self, repo: str, number: int) -> list[JsonDict]: ...
+
     def create_comment(self, repo: str, number: int, body: str) -> None: ...
 
     def add_labels(self, repo: str, number: int, labels: list[str]) -> None: ...
@@ -49,7 +51,7 @@ def handle_pull_request_payload(
     payload: JsonDict,
     *,
     client: PullRequestClient,
-    summary: JsonDict,
+    summary: JsonDict | None = None,
 ) -> JsonDict:
     """Post PromptControlLab review output for one pull request payload."""
 
@@ -67,6 +69,8 @@ def handle_pull_request_payload(
     if not repo or number <= 0:
         return {"handled": False, "reason": "missing_repo_or_pr_number"}
 
+    if summary is None:
+        summary = summarize_pull_files(client.list_pull_files(repo, number))
     body = render_pr_summary_markdown(summary)
     client.create_comment(repo, number, body)
     labels = summary.get("labels")
@@ -83,6 +87,51 @@ def handle_pull_request_payload(
             summary=body,
         )
     return {"handled": True, "repo": repo, "number": number, "status": status}
+
+
+def summarize_pull_files(files: list[JsonDict]) -> JsonDict:
+    """Generate a PR summary from GitHub changed-file records."""
+
+    filenames = [str(item.get("filename", "")) for item in files if item.get("filename")]
+    dangerous_paths = [path for path in filenames if _dangerous_path(path)]
+    workflow_files = [path for path in filenames if path.startswith(".github/workflows/")]
+    dependency_files = [path for path in filenames if _dependency_file(path)]
+    secret_findings = _secret_findings(files)
+    status = "pass"
+    labels: list[str] = []
+    reasons: list[str] = []
+    if dangerous_paths:
+        status = "needs_review"
+        labels.append("prompt-control-lab:needs-review")
+        labels.append("prompt-control-lab:dangerous-path")
+        reasons.append("PR changes security, auth, billing, payment, migration, or secret paths.")
+    if workflow_files:
+        status = "needs_review" if status == "pass" else status
+        labels.append("prompt-control-lab:workflow-change")
+        reasons.append("PR changes GitHub workflow files.")
+    if dependency_files:
+        status = "needs_review" if status == "pass" else status
+        labels.append("prompt-control-lab:dependency-change")
+        reasons.append("PR changes dependency or lock files.")
+    if secret_findings:
+        status = "fail"
+        labels.append("prompt-control-lab:secret-finding")
+        reasons.append("PR patch appears to add a secret-like value.")
+    if not any(_test_file(path) for path in filenames):
+        status = "needs_review" if status == "pass" else status
+        labels.append("prompt-control-lab:missing-tests")
+        reasons.append("No test file change was detected in the PR file list.")
+    return {
+        "status": status,
+        "labels": sorted(set(labels)),
+        "reasons": reasons or ["No obvious PR file risk detected."],
+        "dangerous_paths": dangerous_paths,
+        "tests_run": [],
+        "tests_passed": None,
+        "secret_findings": secret_findings,
+        "changed_files": filenames,
+        "human_review_required": status != "pass",
+    }
 
 
 def serve_github_app(*, host: str, port: int) -> None:
@@ -108,8 +157,7 @@ def serve_github_app(*, host: str, port: int) -> None:
             int(installation.get("id", 0)) if isinstance(installation, dict) else 0
         )
         client = _HttpGithubClient(config, installation_id=installation_id)
-        summary = {"status": "needs_review", "reasons": ["Webhook received."], "labels": []}
-        return handle_pull_request_payload(payload, client=client, summary=summary)
+        return handle_pull_request_payload(payload, client=client)
 
     uvicorn.run(app, host=host, port=port)
 
@@ -156,6 +204,25 @@ class _HttpGithubClient:
 
     def create_comment(self, repo: str, number: int, body: str) -> None:
         self._request("POST", f"/repos/{repo}/issues/{number}/comments", {"body": body})
+
+    def list_pull_files(self, repo: str, number: int) -> list[JsonDict]:
+        token = self._installation_token()
+        response = self.httpx.get(
+            f"https://api.github.com/repos/{repo}/pulls/{number}/files",
+            headers={
+                "Authorization": f"Bearer {token}",
+                "Accept": "application/vnd.github+json",
+                "X-GitHub-Api-Version": "2022-11-28",
+            },
+            params={"per_page": 100},
+            timeout=20,
+        )
+        response.raise_for_status()
+        payload = response.json()
+        if not isinstance(payload, list):
+            msg = "GitHub pull files response was not a list."
+            raise PromptControlLabError(msg)
+        return [item for item in payload if isinstance(item, dict)]
 
     def add_labels(self, repo: str, number: int, labels: list[str]) -> None:
         self._request("POST", f"/repos/{repo}/issues/{number}/labels", {"labels": labels})
@@ -225,3 +292,51 @@ class _HttpGithubClient:
             algorithm="RS256",
         )
         return cast(str, token)
+
+
+def _dangerous_path(path: str) -> bool:
+    lowered = path.lower()
+    return any(
+        part in lowered
+        for part in ["auth", "security", "permission", "billing", "payment", "migration", "secret"]
+    )
+
+
+def _dependency_file(path: str) -> bool:
+    name = Path(path).name.lower()
+    return name in {
+        "pyproject.toml",
+        "requirements.txt",
+        "package.json",
+        "uv.lock",
+        "poetry.lock",
+        "package-lock.json",
+        "pnpm-lock.yaml",
+        "cargo.toml",
+        "cargo.lock",
+        "go.mod",
+        "go.sum",
+    } or (name.startswith("requirements") and name.endswith(".txt"))
+
+
+def _test_file(path: str) -> bool:
+    lowered = path.lower()
+    name = Path(path).name.lower()
+    return lowered.startswith("tests/") or "/tests/" in lowered or name.startswith("test_")
+
+
+def _secret_findings(files: list[JsonDict]) -> list[JsonDict]:
+    import re
+
+    pattern = re.compile(r"(api[_-]?key|secret|token|private[_-]?key|password)\s*[:=]", re.I)
+    findings: list[JsonDict] = []
+    for item in files:
+        filename = str(item.get("filename", ""))
+        patch = item.get("patch")
+        if not isinstance(patch, str):
+            continue
+        for line in patch.splitlines():
+            if line.startswith("+") and not line.startswith("+++") and pattern.search(line):
+                findings.append({"path": filename, "kind": "secret_like", "redacted": "***"})
+                break
+    return findings
