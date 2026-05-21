@@ -5,30 +5,23 @@ from __future__ import annotations
 import html
 from pathlib import Path
 
-from promptcontrollab.files import JsonDict, read_json
+from promptcontrollab.files import JsonDict
+from promptcontrollab.report_model import ReportModel
 
 
 def generate_report(run_dir: Path, *, title: str) -> tuple[Path, Path]:
     """Generate Markdown and HTML reports for a run directory."""
 
-    manifest = _read_optional_json(run_dir / "manifest.json")
-    metrics = _read_optional_json(run_dir / "metrics.json")
-    if not metrics:
-        metrics = _read_optional_json(run_dir / "candidate" / "metrics.json")
-    stats = _read_optional_json(run_dir / "stats.json")
-    splits = _read_optional_json(run_dir / "splits.json")
-    explanation = _read_optional_json(run_dir / "explanation.json")
-    gate = _read_optional_json(run_dir / "gate_result.json")
-    diagnostics = _collect_diagnostics(run_dir / "diagnostics")
+    model = ReportModel.from_run(run_dir)
     markdown = render_markdown(
         title=title,
-        manifest=manifest,
-        metrics=metrics,
-        stats=stats,
-        splits=splits,
-        explanation=explanation,
-        gate=gate,
-        diagnostics=diagnostics,
+        manifest=model.manifest,
+        metrics=model.metrics,
+        stats=model.stats,
+        splits=model.splits,
+        explanation=model.explanation,
+        gate=model.gate,
+        diagnostics=model.diagnostics,
     )
     md_path = run_dir / "report.md"
     html_path = run_dir / "report.html"
@@ -190,21 +183,6 @@ def render_html(markdown: str, *, title: str) -> str:
         f"<pre>{escaped}</pre>"
         "</body></html>\n"
     )
-
-
-def _read_optional_json(path: Path) -> JsonDict:
-    if not path.exists():
-        return {}
-    return read_json(path)
-
-
-def _collect_diagnostics(path: Path) -> dict[str, JsonDict]:
-    if not path.exists():
-        return {}
-    diagnostics: dict[str, JsonDict] = {}
-    for item in sorted(path.glob("*.json")):
-        diagnostics[item.stem] = read_json(item)
-    return diagnostics
 
 
 def _pretty(value: JsonDict) -> str:

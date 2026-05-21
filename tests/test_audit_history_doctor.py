@@ -172,6 +172,62 @@ def test_cli_audit_diff_rejects_shell_test_command_without_opt_in(
     assert "--allow-shell-test-command" in captured.err
 
 
+def test_cli_audit_diff_reports_industrial_review_signals(tmp_path: Path) -> None:
+    repo = _make_git_repo(tmp_path)
+    _write(repo / "src" / "app.py", "def existing() -> str:\n    return 'ok'\n")
+    _write(repo / "tests" / "test_old.py", "def test_old():\n    assert True\n")
+    _write(repo / "pyproject.toml", "[project]\nname = 'demo'\n")
+    _git(repo, "add", ".")
+    _git(repo, "commit", "-m", "initial")
+
+    _write(
+        repo / "src" / "app.py",
+        "def existing() -> str:\n    return 'changed'\n\nAPI_TOKEN = 'sk-test-1234567890abcdef'\n",
+    )
+    _write(repo / "pyproject.toml", "[project]\nname = 'demo'\ndependencies = ['pytest']\n")
+    _write(repo / "uv.lock", "version = 1\n")
+    _write(repo / ".github" / "workflows" / "pcl.yml", "name: pcl\n")
+    (repo / "tests" / "test_old.py").unlink()
+    _write(repo / "dist" / "bundle.min.js", "generated();\n")
+    _git(repo, "add", "-A")
+    _git(repo, "commit", "-m", "industrial signals")
+
+    out = repo / "runs" / "audit"
+    assert (
+        main(
+            [
+                "audit-diff",
+                "--repo",
+                str(repo),
+                "--before",
+                "HEAD~1",
+                "--after",
+                "HEAD",
+                "--out",
+                str(out),
+                "--tests-run",
+                "pytest",
+                "--tests-passed",
+                "true",
+            ]
+        )
+        == 0
+    )
+
+    payload = json.loads((out / "audit_result.json").read_text(encoding="utf-8"))
+    assert payload["changed_lines"]["src/app.py"]["added"] >= 2
+    assert payload["changed_lines"]["tests/test_old.py"]["deleted"] >= 1
+    assert payload["dependency_files_changed"] == ["pyproject.toml"]
+    assert payload["lockfiles_changed"] == ["uv.lock"]
+    assert payload["workflow_files_changed"] == [".github/workflows/pcl.yml"]
+    assert payload["deleted_test_files"] == ["tests/test_old.py"]
+    assert payload["generated_files_changed"] == ["dist/bundle.min.js"]
+    assert payload["secret_findings"]
+    assert payload["secret_findings"][0]["path"] == "src/app.py"
+    assert "sk-test-1234567890abcdef" not in json.dumps(payload["secret_findings"])
+    assert payload["human_review_required"] is True
+
+
 def test_cli_history_index_and_compare(tmp_path: Path) -> None:
     runs = tmp_path / "runs"
     old = runs / "old"
@@ -245,6 +301,7 @@ def test_history_index_reads_quick_mode_candidate_metrics(tmp_path: Path) -> Non
     payload = json.loads(index_out.read_text(encoding="utf-8"))
     assert payload["runs"][0]["mean_score"] == 0.92
     assert payload["runs"][0]["by_slice"] == {"math": 1.0, "format": 0.8}
+    assert payload["runs"][0]["agent_run"] == {}
 
 
 def test_cli_doctor_json_outputs_stable_checks(capsys: pytest.CaptureFixture[str]) -> None:

@@ -4,8 +4,9 @@ PromptControlLab keeps inspectable files for each run instead of only reporting 
 
 ## `manifest.json`
 
-Records tool version, run mode, method name, metric, data path, prediction path, and optional
-model identity.
+Records tool version, run mode, method name, metric, data path, prediction path, optional
+model identity, and optional prompt identity (`prompt_hash`, `prompt_id`, `prompt_file`,
+`prompt_version`).
 
 What it explains: how the score was produced and which public model id was recorded.
 
@@ -39,10 +40,11 @@ result harder to interpret. Alias model ids are treated as reproducibility risks
 
 ## `audit_result.json`
 
-Stores the result of `pcl audit-diff`: changed files, source/test/docs/config counts, dangerous
-paths, possible public API changes, test commands, test status, per-command `test_results`
-with stdout/stderr snippets and timeout state, expected-path checks, and whether human review is
-required.
+Stores the result of `pcl audit-diff`: changed files, per-file added/deleted line counts,
+source/test/docs/config counts, dependency/lockfile/workflow changes, deleted tests, generated
+files, redacted secret findings, dangerous paths, possible public API changes, test commands,
+test status, per-command `test_results` with stdout/stderr snippets and timeout state,
+expected-path checks, and whether human review is required.
 
 What it explains: what an AI coding agent changed after it ran. If `--expected-path` is not
 provided, `unnecessary_file_edits` is `null` because the tool does not pretend to know the
@@ -69,6 +71,24 @@ gate status change, slice regressions, and new or resolved risk categories.
 
 What it explains: whether a newer run changed the prompt, model, score, gate result, or risk
 profile compared with an older run.
+
+## `agent_run.json`
+
+Stores a compact agent execution manifest: prompt identity, agent name, provider/model, policy,
+gate decision, risk level, changed files, tests, audit path, gate path, and whether human review is
+required.
+
+What it explains: how the preflight, model provenance, gate result, and diff audit connect to one
+AI coding agent run.
+
+## `pr_summary.md` / `pr_summary.json`
+
+Stores a reviewer-facing PR summary built from `audit_result.json`, `gate_result.json`, and
+optional `agent_run.json`.
+
+What it explains: whether a PR should pass, fail, or receive human review, plus labels such as
+`prompt-control-lab:needs-review`, dangerous paths, missing tests, workflow/dependency changes, or
+secret findings.
 
 ## `pcl doctor` output
 

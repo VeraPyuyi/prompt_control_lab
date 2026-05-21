@@ -112,6 +112,22 @@ def test_ui_data_loads_run_artifacts(tmp_path: Path) -> None:
             "human_review_required": True,
         },
     )
+    _write_json(run / "agent_run.json", {"agent": "codex", "model": "gpt-5.2"})
+    _write_json(
+        run / "history_index.json",
+        {
+            "runs": [
+                {
+                    "run_name": "quick",
+                    "gate_status": "needs_review",
+                    "mean_score": 0.9,
+                    "model": {"provider": "openai", "model_id": "gpt-5.2"},
+                    "prompt_identity": {"prompt_hash": "sha256:abc"},
+                    "risk_categories": ["dangerous_path"],
+                }
+            ]
+        },
+    )
 
     assert [item["name"] for item in list_runs(tmp_path / "runs")] == ["quick"]
     detail = load_run_detail(run)
@@ -123,6 +139,16 @@ def test_ui_data_loads_run_artifacts(tmp_path: Path) -> None:
     assert detail["gate"]["status"] == "needs_review"
     assert detail["model_drift"]["risk"] == "high"
     assert detail["audit"]["dangerous_paths"] == ["auth/session.py"]
+    assert detail["agent_run"]["agent"] == "codex"
+    assert detail["history_index"]["runs"][0]["run_name"] == "quick"
+
+
+def test_ui_has_history_view_order_and_text() -> None:
+    from promptcontrollab.ui import app
+
+    assert "history" in app.TEXT["en"]
+    assert "history" in app.TEXT["zh"]
+    assert app._ordered_views("history")[0] == "history"
 
 
 def test_ui_data_handles_missing_artifacts(tmp_path: Path) -> None:

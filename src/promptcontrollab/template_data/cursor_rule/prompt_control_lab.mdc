@@ -1,0 +1,20 @@
+---
+description: Use prompt_control_lab before broad, vague, risky, or expensive agent prompts.
+alwaysApply: false
+---
+
+# prompt_control_lab prompt guard
+
+Before acting on a broad, vague, risky, or expensive prompt, run:
+
+```bash
+pcl guard --prompt "<paste prompt here>" --profile coding --token-mode balanced --policy examples/guard.policy.yaml
+```
+
+For wrappers:
+
+```bash
+echo "<paste prompt here>" | pcl guard --stdin --profile coding --policy examples/guard.policy.yaml --json
+```
+
+If `pcl guard` returns `action=block`, do not continue until the prompt is revised.

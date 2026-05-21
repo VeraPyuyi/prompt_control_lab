@@ -44,9 +44,10 @@ AI 编程工具已经进入开发流程，但信任还没有跟上。Stack Overf
 6. **检查本地安装和插件环境** → `pcl doctor`
 7. **打开本地可视化仪表盘** → `pcl ui`
 8. **用直白语言优化一个 prompt** → `pcl improve`
-9. **安装 IDE / CLI 适配器** → `plugins/` 和 Codex skills
-10. **专业控制每一步评测** → `split → eval → stats → report → explain → gate`
-11. **Advanced / Research Mode** → `soft-hard → trajectory → riccati → tv-soft`
+9. **安装 IDE / CLI 适配器** → `pcl install-plugin`
+10. **总结 PR 风险** → `pcl pr-summary` / `pcl github-app serve`
+11. **专业控制每一步评测** → `split → eval → stats → report → explain → gate`
+12. **Advanced / Research Mode** → `soft-hard → trajectory → riccati → tv-soft`
 
 在这份 README 里，**Quick Mode（快速模式）** 指 `pcl analyze` 这条集成路径；
 **Expert Mode（专家模式）** 指逐个命令自由组合的专业工作流。先简单，后专业。
@@ -246,16 +247,19 @@ pcl analyze --config promptcontrol.example.yaml --out runs/quick
 pcl ui --runs runs/ --policy examples/guard.policy.yaml --port 8501
 ```
 
-第一版 MVP 有四个 tab：
+本地仪表盘有五个 tab：
 
 - **守护 Prompt：** 交互式运行 `pcl guard`，查看风险、策略违规、token 成本和 prompt diff。
 - **运行报告：** 查看部署建议、gate 状态、分数变化、置信区间、p-value、slice 分数和模型来源。
 - **模型漂移：** 查看 provider/model 记录、alias 风险、warning 和 drift artifact。
 - **Agent 改动审计：** 查看 `audit_result.json`、文件类型分布、危险路径、测试和人工复核要求。
+- **历史：** 查看 `history_index.json` 时间线、门禁趋势、分数趋势、模型变化、prompt 身份和风险类别变化。
 
 ![prompt_control_lab UI 守护 Prompt](docs/assets/ui_guard.zh.png)
 
 ![prompt_control_lab UI 运行报告](docs/assets/ui_report.zh.png)
+
+![prompt_control_lab UI 历史](docs/assets/ui_history.zh.png)
 
 ## 安装 IDE / CLI 插件和 Skills 🧩
 
@@ -270,6 +274,17 @@ pcl guard --prompt "修复这个 bug" --profile coding --token-mode balanced --j
 ```bash
 echo "修复这个 bug" | pcl guard --stdin --profile coding --json
 ```
+
+如果你是从 wheel、`pipx` 或 `uvx` 安装，可以用下面的命令安装适配器模板：
+
+```bash
+pcl install-plugin codex
+pcl install-plugin cursor
+pcl install-plugin claude-code
+pcl install-plugin github-action
+```
+
+已有文件默认不会被覆盖；只有显式传入 `--force` 才会覆盖。
 
 ### Claude Code Hook 🪝
 
@@ -399,6 +414,22 @@ examples/github-action/prompt-control-lab-gate.yml
 
 如果你希望 PR 自动运行 `pcl gate`、可选地用 `pcl audit-diff` 审计代码改动，
 并在 PR 里评论简短结论，可以把它复制到 `.github/workflows/`。
+
+如果只想生成一个可复用的本地 PR 摘要 artifact：
+
+```bash
+pcl pr-summary \
+  --audit runs/agent-audit/audit_result.json \
+  --gate runs/quick/gate_result.json \
+  --out runs/pr_summary.md \
+  --json-out runs/pr_summary.json
+```
+
+如果要启动自托管 GitHub App webhook：
+
+```bash
+pcl github-app serve --host 0.0.0.0 --port 8080
+```
 
 ## 功能路径：从简单到专业 🚀
 
@@ -612,6 +643,12 @@ pcl audit-diff \
 在 coding agent 执行后使用。它会记录改了哪些文件、source/test/docs/config 文件数量、
 是否碰到 auth 或 billing 等危险路径、是否改了 public API、测试证据、是否出现预期范围外文件，
 以及是否需要人工复核。
+
+如果要把 prompt 身份、模型来源、门禁状态和 audit 证据连接成一个紧凑 artifact：
+
+```bash
+pcl agent-run build --run runs/quick --audit runs/audit --agent codex --out runs/agent_run.json
+```
 
 ### 7. `pcl history`：沉淀和比较 run 历史 🧭
 

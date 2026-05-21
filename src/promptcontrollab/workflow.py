@@ -10,6 +10,7 @@ from promptcontrollab.explain import generate_explanation
 from promptcontrollab.files import JsonDict, ensure_dir, read_json, write_json
 from promptcontrollab.gate import run_gate
 from promptcontrollab.model_identity import compare_model_identities
+from promptcontrollab.prompt_identity import build_prompt_identity
 from promptcontrollab.reporting import generate_report
 from promptcontrollab.splitting import load_tasks, make_split, write_split
 from promptcontrollab.statistics import compare_prediction_files
@@ -37,6 +38,9 @@ def run_quick_analysis(
     candidate_model: str | None = None,
     api_version: str | None = None,
     verify_model: bool = False,
+    prompt_id: str | None = None,
+    prompt_file: Path | None = None,
+    prompt_version: str | None = None,
 ) -> None:
     """Run split, import-eval, stats, explanation, optional gate, and report."""
 
@@ -97,6 +101,13 @@ def run_quick_analysis(
         "candidate_model": candidate_identity,
         "model_warnings": compare_model_identities(baseline_identity, candidate_identity),
     }
+    prompt_identity = build_prompt_identity(
+        prompt_id=prompt_id,
+        prompt_file=prompt_file,
+        prompt_version=prompt_version,
+    )
+    if prompt_identity:
+        manifest["prompt"] = prompt_identity
     write_json(out_dir / "manifest.json", manifest)
     generate_explanation(out_dir, level=explain_level)
     if policy_path is not None:
@@ -123,6 +134,7 @@ def resolve_analyze_paths(config: JsonDict, *, config_path: Path) -> dict[str, P
             base_dir=base_dir,
         ),
         "gate_policy": get_config_path(config, "gate_policy", base_dir=base_dir),
+        "prompt_file": get_config_path(config, "prompt_file", base_dir=base_dir),
     }
 
 

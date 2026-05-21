@@ -62,6 +62,7 @@ def summarize_run(run_dir: Path) -> JsonDict:
     manifest = _read_optional_json(run_dir / "manifest.json")
     metrics = _read_metrics(run_dir)
     gate = _read_optional_json(run_dir / "gate_result.json")
+    agent_run = _read_optional_json(run_dir / "agent_run.json")
     artifacts = [
         name
         for name in [
@@ -73,6 +74,7 @@ def summarize_run(run_dir: Path) -> JsonDict:
             "explanation.json",
             "report.md",
             "report.html",
+            "agent_run.json",
         ]
         if (run_dir / name).exists()
     ]
@@ -101,6 +103,7 @@ def summarize_run(run_dir: Path) -> JsonDict:
         "by_slice": metrics.get("by_slice") if isinstance(metrics.get("by_slice"), dict) else {},
         "gate_status": gate.get("status"),
         "risk_categories": _risk_categories(gate),
+        "agent_run": agent_run,
         "warnings": warnings,
     }
 

@@ -4,7 +4,8 @@ prompt_control_lab 的核心思路是：每次运行都应该留下可复查的�
 
 ## `manifest.json`
 
-记录工具版本、运行模式、方法名、metric、数据路径、prediction 路径，以及可选的模型身份信息。
+记录工具版本、运行模式、方法名、metric、数据路径、prediction 路径、可选的模型身份信息，
+以及可选的 prompt identity：`prompt_hash`、`prompt_id`、`prompt_file`、`prompt_version`。
 
 说明什么问题：以后看到一个分数时，可以知道它是怎么来的，也能知道记录中的公开 model id 是什么。
 
@@ -34,7 +35,10 @@ prompt_control_lab 的核心思路是：每次运行都应该留下可复查的�
 
 ## `audit_result.json`
 
-记录 `pcl audit-diff` 的审计结果：改动文件、source/test/docs/config 文件数量、危险路径、可能的 public API 改动、测试命令、测试状态、每条命令的 `test_results`（stdout/stderr 摘要和超时状态）、预期路径检查，以及是否需要人工复核。
+记录 `pcl audit-diff` 的审计结果：改动文件、每个文件的新增/删除行数、source/test/docs/config 文件数量、
+dependency / lockfile / workflow 改动、删除的测试、generated 文件、脱敏后的 secret finding、危险路径、
+可能的 public API 改动、测试命令、测试状态、每条命令的 `test_results`（stdout/stderr 摘要和超时状态）、
+预期路径检查，以及是否需要人工复核。
 
 说明什么问题：AI 编程 agent 执行后到底改了什么。如果没有提供 `--expected-path`，`unnecessary_file_edits` 会是 `null`，因为工具不会假装知道原始任务意图。
 
@@ -55,6 +59,20 @@ prompt_control_lab 的核心思路是：每次运行都应该留下可复查的�
 记录两个 run 目录之间的对比：prompt 身份是否一致、模型是否一致、metric delta、gate 状态变化、slice 退化、新增或消失的风险类别。
 
 说明什么问题：新 run 相比旧 run 是否改了 prompt、模型、分数、门禁结果或风险画像。
+
+## `agent_run.json`
+
+记录一个紧凑的 agent 执行 manifest：prompt identity、agent 名称、provider/model、policy、
+gate decision、risk level、改动文件、测试、audit path、gate path，以及是否需要人工复核。
+
+说明什么问题：把执行前检查、模型溯源、门禁结果和 diff 审计连接到同一次 AI 编程 agent 运行。
+
+## `pr_summary.md` / `pr_summary.json`
+
+基于 `audit_result.json`、`gate_result.json` 和可选的 `agent_run.json` 生成给 reviewer 看的 PR 摘要。
+
+说明什么问题：PR 应该通过、失败还是进入人工复核；同时列出建议标签，例如
+`prompt-control-lab:needs-review`、危险路径、缺少测试、workflow/dependency 改动或 secret finding。
 
 ## `pcl doctor` 输出
 

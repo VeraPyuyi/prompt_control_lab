@@ -17,12 +17,7 @@ from promptcontrollab.ui.charts import (
     slice_score_heatmap,
 )
 from promptcontrollab.ui.components import badge, empty_state, metric_cards, prompt_diff
-from promptcontrollab.ui.data import (
-    list_runs,
-    load_run_detail,
-    model_rows,
-    slice_rows,
-)
+from promptcontrollab.ui.data import list_runs, load_run_detail, model_rows, slice_rows
 
 TEXT = {
     "en": {
@@ -30,17 +25,16 @@ TEXT = {
         "subtitle": "Local preflight, provenance, and audit views. No artifacts are uploaded.",
         "runs": "Runs directory",
         "policy": "Guard policy",
-        "language": "Language",
         "guard": "Guard Prompt",
         "report": "Run Report",
         "drift": "Model Drift",
         "audit": "Agent Diff Audit",
+        "history": "History",
         "prompt": "Prompt",
         "run_guard": "Run guard",
         "selected_run": "Selected run",
         "missing_run": "No run directories found.",
         "empty_run": "This run has no recognized artifacts.",
-        "next_command": "Suggested command",
         "decision": "Decision",
         "risk": "Risk",
         "review": "Required review",
@@ -83,23 +77,28 @@ TEXT = {
         "docs_files": "docs",
         "config_files": "config",
         "path": "path",
+        "no_history": "No history_index.json found.",
+        "run_timeline": "Run timeline",
+        "gate_trend": "Gate trend",
+        "score_trend": "Score trend",
+        "prompt_identity": "Prompt identity",
+        "risk_categories": "Risk categories",
     },
     "zh": {
         "title": "prompt_control_lab 本地仪表盘",
-        "subtitle": "本地执行前检查、模型溯源和 agent 审计视图。不会上传任何 artifact。",
+        "subtitle": "本地执行前检查、模型溯源和 agent 审计视图。不会上传 prompt、代码或 artifact。",
         "runs": "Runs 目录",
         "policy": "Guard 策略",
-        "language": "语言",
-        "guard": "守护 Prompt",
+        "guard": "Prompt 守护",
         "report": "运行报告",
         "drift": "模型漂移",
         "audit": "Agent 改动审计",
+        "history": "历史",
         "prompt": "提示词",
         "run_guard": "运行守护",
         "selected_run": "选择 run",
         "missing_run": "没有找到 run 目录。",
         "empty_run": "这个 run 没有识别到 artifact。",
-        "next_command": "建议命令",
         "decision": "决策",
         "risk": "风险",
         "review": "需要人工复核",
@@ -142,6 +141,12 @@ TEXT = {
         "docs_files": "文档",
         "config_files": "配置",
         "path": "路径",
+        "no_history": "没有找到 history_index.json。",
+        "run_timeline": "Run 时间线",
+        "gate_trend": "门禁趋势",
+        "score_trend": "分数趋势",
+        "prompt_identity": "Prompt 身份",
+        "risk_categories": "风险类别",
     },
 }
 
@@ -187,15 +192,16 @@ def _render_view(
         _render_model_drift_tab(st, text, detail)
     elif name == "audit":
         _render_audit_tab(st, text, detail)
+    elif name == "history":
+        _render_history_tab(st, text, detail)
 
 
 def _sidebar_language(st: Any, query: JsonDict) -> str:
     default = str(query.get("lang") or os.environ.get("PCL_UI_LANGUAGE", "en"))
-    label = "English" if default == "en" else "中文"
     selected = st.sidebar.selectbox(
         "Language / 语言",
         ["English", "中文"],
-        index=0 if label == "English" else 1,
+        index=0 if default == "en" else 1,
     )
     return "zh" if selected == "中文" else "en"
 
@@ -223,7 +229,7 @@ def _truthy(value: object) -> bool:
 
 
 def _ordered_views(first: str) -> list[str]:
-    views = ["guard", "report", "drift", "audit"]
+    views = ["guard", "report", "drift", "audit", "history"]
     if first not in views:
         return views
     return [first, *[view for view in views if view != first]]
@@ -372,7 +378,7 @@ def _render_model_drift_tab(st: Any, text: dict[str, str], detail: JsonDict) -> 
     runs = history.get("runs")
     if isinstance(runs, list) and runs:
         st.subheader(text["model_timeline"])
-        st.dataframe(runs, use_container_width=True)
+        st.dataframe(_history_model_rows(runs), use_container_width=True)
 
 
 def _render_audit_tab(st: Any, text: dict[str, str], detail: JsonDict) -> None:
@@ -413,6 +419,69 @@ def _render_audit_tab(st: Any, text: dict[str, str], detail: JsonDict) -> None:
     changed = _strings(audit.get("changed_files"))
     if changed:
         st.dataframe([{text["path"]: path} for path in changed], use_container_width=True)
+
+
+def _render_history_tab(st: Any, text: dict[str, str], detail: JsonDict) -> None:
+    history = _dict(detail.get("history_index"))
+    runs = history.get("runs")
+    if not isinstance(runs, list) or not runs:
+        empty_state(
+            st,
+            text["no_history"],
+            "pcl history index --runs runs/ --out runs/history_index.json",
+        )
+        return
+    rows = [_history_row(item) for item in runs if isinstance(item, dict)]
+    st.subheader(text["run_timeline"])
+    st.dataframe(rows, use_container_width=True)
+    gate_counts = _category_count([str(row.get("gate_status", "unknown")) for row in rows])
+    st.plotly_chart(
+        risk_category_bar(
+            gate_counts,
+            title=text["gate_trend"],
+            category_label=text["gate"],
+            count_label=text["count"],
+            none_label=text["none"],
+        ),
+        use_container_width=True,
+    )
+    risk_counts: dict[str, int] = {}
+    for row in rows:
+        for category in _strings(row.get("risk_categories")):
+            risk_counts[category] = risk_counts.get(category, 0) + 1
+    st.plotly_chart(
+        risk_category_bar(
+            risk_counts,
+            title=text["risk_categories"],
+            category_label=text["category"],
+            count_label=text["count"],
+            none_label=text["none"],
+        ),
+        use_container_width=True,
+    )
+
+
+def _history_row(item: JsonDict) -> JsonDict:
+    model = _dict(item.get("model"))
+    prompt = _dict(item.get("prompt_identity"))
+    return {
+        "run": item.get("run_name"),
+        "gate_status": item.get("gate_status"),
+        "mean_score": item.get("mean_score"),
+        "provider": model.get("provider"),
+        "model": model.get("model_id"),
+        "prompt_hash": prompt.get("prompt_hash"),
+        "risk_categories": item.get("risk_categories", []),
+    }
+
+
+def _history_model_rows(runs: list[object]) -> list[JsonDict]:
+    rows: list[JsonDict] = []
+    for item in runs:
+        if not isinstance(item, dict):
+            continue
+        rows.append(_history_row(item))
+    return rows
 
 
 def _streamlit() -> Any:

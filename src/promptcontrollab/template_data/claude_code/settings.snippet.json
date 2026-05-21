@@ -1,0 +1,14 @@
+{
+  "hooks": {
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python ~/.prompt_control_lab/claude-code/prompt_guard.py --profile coding --policy /path/to/guard.policy.yaml"
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -60,32 +60,25 @@ jobs:
 
       - name: Comment on PR
         if: always()
+        run: |
+          pcl pr-summary \
+            --audit runs/agent-audit/audit_result.json \
+            --gate runs/quick/gate_result.json \
+            --out runs/pr_summary.md \
+            --json-out runs/pr_summary.json
+
+      - name: Post PromptControlLab summary
+        if: always()
         uses: actions/github-script@v7
         with:
           script: |
             const fs = require("fs");
-            let gate = {};
+            let body = "## PromptControlLab Gate\n\nNo summary artifact was generated.";
             try {
-              gate = JSON.parse(fs.readFileSync("runs/quick/gate_result.json", "utf8"));
+              body = fs.readFileSync("runs/pr_summary.md", "utf8");
             } catch (error) {
-              gate = {
-                status: "needs_review",
-                plain_summary: "gate_result.json was not found; check the prepare/gate steps.",
-              };
+              body = "## PromptControlLab Gate\n\npr_summary.md was not found; check the prepare/gate/audit steps.";
             }
-            let audit = {};
-            try {
-              audit = JSON.parse(fs.readFileSync("runs/agent-audit/audit_result.json", "utf8"));
-            } catch (error) {
-              audit = { human_review_required: "unknown" };
-            }
-            const body = [
-              "## PromptControlLab Gate",
-              "",
-              `Status: ${gate.status}`,
-              `Reason: ${gate.plain_summary || gate.what_this_means || "See gate_result.json."}`,
-              `Agent audit review required: ${audit.human_review_required}`,
-            ].join("\n");
             await github.rest.issues.createComment({
               owner: context.repo.owner,
               repo: context.repo.repo,

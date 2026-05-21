@@ -11,6 +11,7 @@ import sys
 from collections.abc import Sequence
 from pathlib import Path
 
+from promptcontrollab.agent_run import build_agent_run_manifest
 from promptcontrollab.audit_diff import run_audit_diff
 from promptcontrollab.config import (
     get_config_bool,
@@ -28,6 +29,8 @@ from promptcontrollab.gate import run_gate
 from promptcontrollab.history import compare_history, index_history
 from promptcontrollab.model_drift import run_model_drift
 from promptcontrollab.model_identity import detect_model_identity
+from promptcontrollab.plugin_installer import install_plugin
+from promptcontrollab.pr_summary import write_pr_summary
 from promptcontrollab.prompt_context import load_prompt_context
 from promptcontrollab.prompt_diff import render_prompt_diff
 from promptcontrollab.prompt_guard import guard_prompt
@@ -279,6 +282,51 @@ def build_parser() -> argparse.ArgumentParser:
     )
     history_compare.set_defaults(func=_cmd_history_compare)
 
+    agent_parser = subcommands.add_parser("agent-run", help="Build agent run manifests.")
+    agent_subcommands = agent_parser.add_subparsers(dest="agent_command", required=True)
+    agent_build = agent_subcommands.add_parser("build", help="Build agent_run.json.")
+    agent_build.add_argument("--run", type=Path, required=True, help="PromptControlLab run dir.")
+    agent_build.add_argument("--audit", type=Path, default=None, help="Audit output directory.")
+    agent_build.add_argument("--agent", required=True, help="Agent name, such as codex.")
+    agent_build.add_argument("--out", type=Path, required=True, help="agent_run.json output path.")
+    agent_build.add_argument("--policy", default=None, help="Policy path or id used for the run.")
+    agent_build.set_defaults(func=_cmd_agent_run_build)
+
+    summary_parser = subcommands.add_parser("pr-summary", help="Build PR review summary artifacts.")
+    summary_parser.add_argument("--audit", type=Path, default=None, help="audit_result.json path.")
+    summary_parser.add_argument("--gate", type=Path, default=None, help="gate_result.json path.")
+    summary_parser.add_argument(
+        "--agent-run",
+        type=Path,
+        default=None,
+        help="agent_run.json path.",
+    )
+    summary_parser.add_argument("--out", type=Path, default=None, help="Markdown output path.")
+    summary_parser.add_argument("--json-out", type=Path, default=None, help="JSON output path.")
+    summary_parser.set_defaults(func=_cmd_pr_summary)
+
+    github_app_parser = subcommands.add_parser("github-app", help="Run GitHub App bot commands.")
+    github_app_subcommands = github_app_parser.add_subparsers(
+        dest="github_app_command",
+        required=True,
+    )
+    github_serve = github_app_subcommands.add_parser("serve", help="Serve webhook endpoint.")
+    github_serve.add_argument("--host", default="0.0.0.0", help="Host address.")
+    github_serve.add_argument("--port", type=int, default=8080, help="Port number.")
+    github_serve.set_defaults(func=_cmd_github_app_serve)
+
+    install_parser = subcommands.add_parser(
+        "install-plugin",
+        help="Install local IDE/CLI integration templates.",
+    )
+    install_parser.add_argument(
+        "plugin",
+        choices=["codex", "cursor", "claude-code", "github-action", "all"],
+    )
+    install_parser.add_argument("--target", type=Path, default=None, help="Override install path.")
+    install_parser.add_argument("--force", action="store_true", help="Overwrite existing files.")
+    install_parser.set_defaults(func=_cmd_install_plugin)
+
     doctor_parser = subcommands.add_parser("doctor", help="Check local setup and integrations.")
     doctor_parser.add_argument("--json", action="store_true", help="Emit stable JSON.")
     doctor_parser.set_defaults(func=_cmd_doctor)
@@ -322,6 +370,9 @@ def build_parser() -> argparse.ArgumentParser:
     analyze_parser.add_argument("--baseline-provider", default=None, help="Baseline provider.")
     analyze_parser.add_argument("--candidate-provider", default=None, help="Candidate provider.")
     analyze_parser.add_argument("--api-version", default=None, help="Optional shared API version.")
+    analyze_parser.add_argument("--prompt-id", default=None, help="Stable prompt id.")
+    analyze_parser.add_argument("--prompt-file", type=Path, default=None, help="Prompt text file.")
+    analyze_parser.add_argument("--prompt-version", default=None, help="Prompt version string.")
     analyze_parser.add_argument(
         "--verify-model",
         action="store_true",
@@ -538,6 +589,9 @@ def _cmd_start(args: argparse.Namespace) -> None:
             candidate_provider=None,
             api_version=None,
             verify_model=False,
+            prompt_id=None,
+            prompt_file=None,
+            prompt_version=None,
         )
         _cmd_analyze(analyze_args)
         return
@@ -660,6 +714,39 @@ def _cmd_history_compare(args: argparse.Namespace) -> None:
     print(f"Wrote history comparison to {args.out}")
 
 
+def _cmd_agent_run_build(args: argparse.Namespace) -> None:
+    build_agent_run_manifest(
+        run_dir=args.run,
+        audit_dir=args.audit,
+        agent=args.agent,
+        out_path=args.out,
+        policy=args.policy,
+    )
+    print(f"Wrote agent run manifest to {args.out}")
+
+
+def _cmd_pr_summary(args: argparse.Namespace) -> None:
+    payload = write_pr_summary(
+        audit_path=args.audit,
+        gate_path=args.gate,
+        agent_run_path=args.agent_run,
+        markdown_path=args.out,
+        json_path=args.json_out,
+    )
+    print(json.dumps(payload, indent=2, ensure_ascii=False, sort_keys=True))
+
+
+def _cmd_github_app_serve(args: argparse.Namespace) -> None:
+    from promptcontrollab.github_app import serve_github_app
+
+    serve_github_app(host=args.host, port=args.port)
+
+
+def _cmd_install_plugin(args: argparse.Namespace) -> None:
+    payload = install_plugin(args.plugin, target=args.target, force=args.force)
+    print(json.dumps(payload, indent=2, ensure_ascii=False, sort_keys=True))
+
+
 def _cmd_doctor(args: argparse.Namespace) -> None:
     payload = run_doctor()
     if args.json:
@@ -758,6 +845,12 @@ def _cmd_analyze(args: argparse.Namespace) -> None:
         else get_config_str(config, "title", "PromptControlLab Quick Analysis")
     )
     verify_model = args.verify_model or get_config_bool(config, "verify_model", False)
+    prompt_id = args.prompt_id or get_config_str(config, "prompt_id", "")
+    config_prompt_file = None
+    if args.config is not None:
+        config_prompt_file = paths.get("prompt_file")
+    prompt_file = args.prompt_file if args.prompt_file is not None else config_prompt_file
+    prompt_version = args.prompt_version or get_config_str(config, "prompt_version", "")
     run_quick_analysis(
         data_path=data_path,
         baseline_predictions_path=baseline_path,
@@ -778,6 +871,9 @@ def _cmd_analyze(args: argparse.Namespace) -> None:
         candidate_model=candidate_model or None,
         api_version=api_version or None,
         verify_model=verify_model,
+        prompt_id=prompt_id or None,
+        prompt_file=prompt_file,
+        prompt_version=prompt_version or None,
     )
     print(f"Wrote quick analysis artifacts to {out_dir}")
 

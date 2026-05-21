@@ -34,6 +34,9 @@ data: examples/tasks.jsonl
 metric: exact_match
 baseline_predictions: examples/predictions_baseline.jsonl
 candidate_predictions: examples/predictions_candidate.jsonl
+prompt_file: prompts/current.txt
+prompt_id: demo-prompt
+prompt_version: v1
 baseline_model: gpt-4o
 candidate_model: gpt-4o
 baseline_provider: openai
@@ -78,6 +81,7 @@ def write_example_project(path: Path) -> None:
     """Write a small example project."""
 
     ensure_dir(path / "examples")
+    ensure_dir(path / "prompts")
     ensure_dir(path / "runs")
     (path / "examples" / "tasks.jsonl").write_text(TASKS_JSONL, encoding="utf-8")
     (path / "examples" / "predictions_baseline.jsonl").write_text(BASELINE_JSONL, encoding="utf-8")
@@ -87,4 +91,8 @@ def write_example_project(path: Path) -> None:
     )
     (path / "examples" / "guard.policy.yaml").write_text(GUARD_POLICY_YAML, encoding="utf-8")
     (path / "examples" / "gate.policy.yaml").write_text(GATE_POLICY_YAML, encoding="utf-8")
+    (path / "prompts" / "current.txt").write_text(
+        "Answer the user question exactly and keep the requested output format.\n",
+        encoding="utf-8",
+    )
     (path / "promptcontrol.example.yaml").write_text(CONFIG_YAML, encoding="utf-8")

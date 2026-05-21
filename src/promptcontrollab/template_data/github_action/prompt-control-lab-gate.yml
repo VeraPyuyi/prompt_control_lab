@@ -1,0 +1,44 @@
+name: PromptControlLab Gate
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  pcl-gate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install PromptControlLab
+        run: python -m pip install -e .
+      - name: Run PromptControlLab gate
+        run: |
+          if [ -f promptcontrol.example.yaml ]; then
+            pcl analyze --config promptcontrol.example.yaml --out runs/quick
+            pcl gate --run runs/quick --policy examples/gate.policy.yaml
+          else
+            echo "No promptcontrol.example.yaml found; skipping gate generation."
+          fi
+      - name: Audit PR diff
+        if: always()
+        run: |
+          pcl audit-diff \
+            --before "${{ github.event.pull_request.base.sha }}" \
+            --after "${{ github.event.pull_request.head.sha }}" \
+            --out runs/agent-audit
+      - name: Build PR summary
+        if: always()
+        run: |
+          pcl pr-summary \
+            --audit runs/agent-audit/audit_result.json \
+            --gate runs/quick/gate_result.json \
+            --out runs/pr_summary.md \
+            --json-out runs/pr_summary.json

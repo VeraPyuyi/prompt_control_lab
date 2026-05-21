@@ -5,6 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from promptcontrollab.files import JsonDict, read_json
+from promptcontrollab.report_model import ReportModel
 
 RUN_ARTIFACTS = [
     "manifest.json",
@@ -15,6 +16,7 @@ RUN_ARTIFACTS = [
     "audit_result.json",
     "history_index.json",
     "history_compare.json",
+    "agent_run.json",
 ]
 
 
@@ -35,41 +37,26 @@ def list_runs(runs_dir: Path) -> list[JsonDict]:
 def load_run_detail(run_dir: Path) -> JsonDict:
     """Load all known artifacts for one run directory."""
 
-    manifest = _read_optional(run_dir / "manifest.json")
-    stats = _read_optional(run_dir / "stats.json")
-    gate = _read_optional(run_dir / "gate_result.json")
-    explanation = _read_optional(run_dir / "explanation.json")
-    model_drift = _read_optional(run_dir / "model_drift.json")
-    audit = _read_optional(run_dir / "audit_result.json")
-    history_index = _read_optional(run_dir / "history_index.json")
-    history_compare = _read_optional(run_dir / "history_compare.json")
-    baseline_metrics = _read_optional(run_dir / "baseline" / "metrics.json")
-    candidate_metrics = _read_optional(run_dir / "candidate" / "metrics.json")
-    root_metrics = _read_optional(run_dir / "metrics.json")
-    artifacts = [name for name in RUN_ARTIFACTS if (run_dir / name).exists()]
-    if (run_dir / "baseline" / "metrics.json").exists():
-        artifacts.append("baseline/metrics.json")
-    if (run_dir / "candidate" / "metrics.json").exists():
-        artifacts.append("candidate/metrics.json")
-    candidate_score = _score(candidate_metrics) or _score(root_metrics)
+    model = ReportModel.from_run(run_dir)
     return {
         "name": run_dir.name,
         "path": str(run_dir),
-        "has_artifacts": bool(artifacts),
-        "artifacts": artifacts,
-        "manifest": manifest,
-        "stats": stats,
-        "gate": gate,
-        "explanation": explanation,
-        "model_drift": model_drift,
-        "audit": audit,
-        "history_index": history_index,
-        "history_compare": history_compare,
-        "baseline_metrics": baseline_metrics,
-        "candidate_metrics": candidate_metrics,
-        "metrics": root_metrics,
-        "candidate_score": candidate_score,
-        "baseline_score": _score(baseline_metrics),
+        "has_artifacts": model.has_artifacts,
+        "artifacts": model.artifacts,
+        "manifest": model.manifest,
+        "stats": model.stats,
+        "gate": model.gate,
+        "explanation": model.explanation,
+        "model_drift": model.model_drift,
+        "audit": model.audit,
+        "history_index": model.history_index,
+        "history_compare": model.history_compare,
+        "agent_run": model.agent_run,
+        "baseline_metrics": model.baseline_metrics,
+        "candidate_metrics": model.candidate_metrics,
+        "metrics": model.metrics,
+        "candidate_score": model.candidate_score,
+        "baseline_score": model.baseline_score,
         "empty_state": (
             "Run `pcl analyze` with a config, for example "
             "`pcl analyze --config promptcontrol.example.yaml --out runs/quick`, "
@@ -131,13 +118,6 @@ def _read_optional(path: Path) -> JsonDict:
 
 def _has_any_artifact(path: Path) -> bool:
     return any((path / name).exists() for name in RUN_ARTIFACTS)
-
-
-def _score(value: JsonDict) -> float | None:
-    raw = value.get("mean_score")
-    if isinstance(raw, int | float):
-        return float(raw)
-    return None
 
 
 def _by_slice(value: object) -> dict[str, float]:

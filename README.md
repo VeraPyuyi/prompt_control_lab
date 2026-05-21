@@ -50,9 +50,10 @@ Use this order if you are new:
 6. **Check local setup** → `pcl doctor`
 7. **Open the local dashboard** → `pcl ui`
 8. **Improve one prompt in plain language** → `pcl improve`
-9. **Install IDE / CLI adapters** → `plugins/` and Codex skills
-10. **Control every evaluation step** → `split → eval → stats → report → explain → gate`
-11. **Advanced / Research Mode** → `soft-hard → trajectory → riccati → tv-soft`
+9. **Install IDE / CLI adapters** → `pcl install-plugin`
+10. **Summarize PR risk** → `pcl pr-summary` / `pcl github-app serve`
+11. **Control every evaluation step** → `split → eval → stats → report → explain → gate`
+12. **Advanced / Research Mode** → `soft-hard → trajectory → riccati → tv-soft`
 
 In this README, **Quick Mode** means the integrated `pcl analyze` path, while **Expert Mode**
 means the flexible command-by-command workflow. Simple first, expert later.
@@ -259,7 +260,7 @@ pcl analyze --config promptcontrol.example.yaml --out runs/quick
 pcl ui --runs runs/ --policy examples/guard.policy.yaml --port 8501
 ```
 
-The first MVP has four tabs:
+The local dashboard has five tabs:
 
 - **Guard Prompt:** try `pcl guard` interactively and inspect risk, policy violations, token cost,
   and prompt diff.
@@ -268,10 +269,14 @@ The first MVP has four tabs:
 - **Model Drift:** inspect provider/model records, alias risk, warnings, and drift artifacts.
 - **Agent Diff Audit:** read `audit_result.json`, changed-file breakdown, dangerous paths, tests,
   and review requirement.
+- **History:** inspect `history_index.json` timelines, gate trends, score trends, model changes,
+  prompt identity, and risk category changes.
 
 ![prompt_control_lab UI guard playground](docs/assets/ui_guard.en.png)
 
 ![prompt_control_lab UI run report](docs/assets/ui_report.en.png)
+
+![prompt_control_lab UI history](docs/assets/ui_history.en.png)
 
 ## Install IDE / CLI Plugins And Skills 🧩
 
@@ -392,6 +397,17 @@ turning the prompt into a larger coding task. (｡•̀ᴗ-)✧
 
 More details: [plugins/codex](plugins/codex).
 
+If you installed from a wheel, `pipx`, or `uvx`, install adapter templates with:
+
+```bash
+pcl install-plugin codex
+pcl install-plugin cursor
+pcl install-plugin claude-code
+pcl install-plugin github-action
+```
+
+Existing files are not overwritten unless you pass `--force`.
+
 ### Generic Shell Wrapper 🐚
 
 Any CLI tool can use the JSON interface:
@@ -416,6 +432,22 @@ examples/github-action/prompt-control-lab-gate.yml
 
 Copy it into `.github/workflows/` when you want PRs to run `pcl gate`, optionally audit the PR
 diff with `pcl audit-diff`, and post a short PromptControlLab result comment.
+
+For a reusable local summary artifact:
+
+```bash
+pcl pr-summary \
+  --audit runs/agent-audit/audit_result.json \
+  --gate runs/quick/gate_result.json \
+  --out runs/pr_summary.md \
+  --json-out runs/pr_summary.json
+```
+
+For a self-hosted GitHub App webhook:
+
+```bash
+pcl github-app serve --host 0.0.0.0 --port 8080
+```
 
 ## Feature Path: Simple To Expert 🚀
 
@@ -632,6 +664,13 @@ What it means:
 Use this after a coding agent runs. It records touched files, source/test/docs/config changes,
 dangerous paths such as auth or billing code, public API changes, test evidence, unexpected file
 edits, and whether human review is required.
+
+To connect prompt identity, model provenance, gate status, and audit evidence into one compact
+artifact:
+
+```bash
+pcl agent-run build --run runs/quick --audit runs/audit --agent codex --out runs/agent_run.json
+```
 
 ### 7. `pcl history`: index and compare runs 🧭
 
