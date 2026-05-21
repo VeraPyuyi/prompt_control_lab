@@ -7,6 +7,7 @@ from pathlib import Path
 
 import pytest
 
+from promptcontrollab import doctor
 from promptcontrollab.cli import main
 
 
@@ -88,6 +89,8 @@ def test_cli_audit_diff_can_run_test_command(tmp_path: Path) -> None:
                 str(out),
                 "--test-command",
                 command,
+                "--test-timeout",
+                "30",
             ]
         )
         == 0
@@ -97,6 +100,76 @@ def test_cli_audit_diff_can_run_test_command(tmp_path: Path) -> None:
     assert payload["tests_run"] == [command]
     assert payload["tests_passed"] is True
     assert payload["unnecessary_file_edits"] is None
+    assert payload["test_results"][0]["returncode"] == 0
+    assert payload["test_results"][0]["timeout_seconds"] == 30
+
+
+def test_cli_audit_diff_invalid_ref_reports_friendly_error(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    repo = _make_git_repo(tmp_path)
+    _write(repo / "src" / "app.py", "def existing() -> str:\n    return 'ok'\n")
+    _git(repo, "add", ".")
+    _git(repo, "commit", "-m", "initial")
+
+    assert (
+        main(
+            [
+                "audit-diff",
+                "--repo",
+                str(repo),
+                "--before",
+                "missing-ref",
+                "--after",
+                "HEAD",
+                "--out",
+                str(repo / "runs" / "audit"),
+            ]
+        )
+        == 2
+    )
+
+    captured = capsys.readouterr()
+    assert captured.err.startswith("pcl: error:")
+    assert "git diff" in captured.err
+    assert "Traceback" not in captured.err
+
+
+def test_cli_audit_diff_rejects_shell_test_command_without_opt_in(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    repo = _make_git_repo(tmp_path)
+    _write(repo / "src" / "app.py", "def existing() -> str:\n    return 'ok'\n")
+    _git(repo, "add", ".")
+    _git(repo, "commit", "-m", "initial")
+    _write(repo / "src" / "app.py", "def existing() -> str:\n    return 'changed'\n")
+    _git(repo, "add", ".")
+    _git(repo, "commit", "-m", "change")
+
+    command = f'"{sys.executable}" -c "import sys; sys.exit(0)" && echo unsafe'
+    assert (
+        main(
+            [
+                "audit-diff",
+                "--repo",
+                str(repo),
+                "--before",
+                "HEAD~1",
+                "--after",
+                "HEAD",
+                "--out",
+                str(repo / "runs" / "audit"),
+                "--test-command",
+                command,
+            ]
+        )
+        == 2
+    )
+
+    captured = capsys.readouterr()
+    assert "--allow-shell-test-command" in captured.err
 
 
 def test_cli_history_index_and_compare(tmp_path: Path) -> None:
@@ -154,6 +227,26 @@ def test_cli_history_index_and_compare(tmp_path: Path) -> None:
     assert compare["new_risk_categories"] == ["model_mismatch"]
 
 
+def test_history_index_reads_quick_mode_candidate_metrics(tmp_path: Path) -> None:
+    runs = tmp_path / "runs"
+    quick = runs / "quick"
+    _write_json(
+        quick / "manifest.json",
+        {"candidate_model": {"provider": "openai", "model_id": "gpt-5.2"}},
+    )
+    _write_json(
+        quick / "candidate" / "metrics.json",
+        {"mean_score": 0.92, "by_slice": {"math": 1.0, "format": 0.8}},
+    )
+
+    index_out = runs / "history_index.json"
+    assert main(["history", "index", "--runs", str(runs), "--out", str(index_out)]) == 0
+
+    payload = json.loads(index_out.read_text(encoding="utf-8"))
+    assert payload["runs"][0]["mean_score"] == 0.92
+    assert payload["runs"][0]["by_slice"] == {"math": 1.0, "format": 0.8}
+
+
 def test_cli_doctor_json_outputs_stable_checks(capsys: pytest.CaptureFixture[str]) -> None:
     assert main(["doctor", "--json"]) == 0
     captured = capsys.readouterr()
@@ -164,13 +257,26 @@ def test_cli_doctor_json_outputs_stable_checks(capsys: pytest.CaptureFixture[str
     assert "optional_research_dependencies" in names
 
 
+def test_doctor_python_version_fails_below_supported_minimum(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr("promptcontrollab.doctor.sys.version_info", (3, 9, 18))
+
+    payload = doctor._check_python_version()
+
+    assert payload["status"] == "fail"
+    assert "requires Python >=3.10" in payload["message"]
+
+
 def test_github_action_example_exists_and_uses_real_cli() -> None:
     action = Path("examples/github-action/prompt-control-lab-gate.yml")
     text = action.read_text(encoding="utf-8")
     assert "on:" in text
     assert "pull_request" in text
+    assert "pcl analyze --config promptcontrol.example.yaml --out runs/quick" in text
     assert "pcl gate --run runs/quick --policy examples/gate.policy.yaml" in text
     assert "pcl audit-diff" in text
+    assert "gate_result.json was not found" in text
     assert "actions/github-script" in text
 
 

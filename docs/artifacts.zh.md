@@ -34,7 +34,7 @@ prompt_control_lab 的核心思路是：每次运行都应该留下可复查的�
 
 ## `audit_result.json`
 
-记录 `pcl audit-diff` 的审计结果：改动文件、source/test/docs/config 文件数量、危险路径、可能的 public API 改动、测试命令、测试状态、预期路径检查，以及是否需要人工复核。
+记录 `pcl audit-diff` 的审计结果：改动文件、source/test/docs/config 文件数量、危险路径、可能的 public API 改动、测试命令、测试状态、每条命令的 `test_results`（stdout/stderr 摘要和超时状态）、预期路径检查，以及是否需要人工复核。
 
 说明什么问题：AI 编程 agent 执行后到底改了什么。如果没有提供 `--expected-path`，`unnecessary_file_edits` 会是 `null`，因为工具不会假装知道原始任务意图。
 

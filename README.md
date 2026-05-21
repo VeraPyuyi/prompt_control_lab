@@ -403,6 +403,9 @@ echo "Write tests for this feature" | pcl guard --stdin --profile coding --json
 Use the `improved_prompt` field as the prompt sent to your agent, or use `action=block` as
 a stop signal in gate mode.
 
+Boundary: `pcl guard` is a local heuristic and policy preflight. It catches obvious risk and
+missing context, but it does not prove an agent action is safe.
+
 ### GitHub Action / PR Comment Example 🧪
 
 The repository includes a copy-ready workflow template:
@@ -614,6 +617,10 @@ pcl audit-diff \
   --test-command "pytest tests/test_session.py" \
   --out runs/audit
 ```
+
+By default, `--test-command` runs without shell control syntax, records stdout/stderr snippets,
+and times out per command. Prefer `--tests-run` / `--tests-passed` when tests were already run
+elsewhere. Use `--allow-shell-test-command` only for trusted local input.
 
 Result:
 

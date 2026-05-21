@@ -40,8 +40,9 @@ result harder to interpret. Alias model ids are treated as reproducibility risks
 ## `audit_result.json`
 
 Stores the result of `pcl audit-diff`: changed files, source/test/docs/config counts, dangerous
-paths, possible public API changes, test commands, test status, expected-path checks, and whether
-human review is required.
+paths, possible public API changes, test commands, test status, per-command `test_results`
+with stdout/stderr snippets and timeout state, expected-path checks, and whether human review is
+required.
 
 What it explains: what an AI coding agent changed after it ran. If `--expected-path` is not
 provided, `unnecessary_file_edits` is `null` because the tool does not pretend to know the

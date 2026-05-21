@@ -60,13 +60,14 @@ def summarize_run(run_dir: Path) -> JsonDict:
     """Return a compact run summary."""
 
     manifest = _read_optional_json(run_dir / "manifest.json")
-    metrics = _read_optional_json(run_dir / "metrics.json")
+    metrics = _read_metrics(run_dir)
     gate = _read_optional_json(run_dir / "gate_result.json")
     artifacts = [
         name
         for name in [
             "manifest.json",
             "metrics.json",
+            "candidate/metrics.json",
             "stats.json",
             "gate_result.json",
             "explanation.json",
@@ -108,6 +109,13 @@ def _read_optional_json(path: Path) -> JsonDict:
     if not path.exists():
         return {}
     return read_json(path)
+
+
+def _read_metrics(run_dir: Path) -> JsonDict:
+    metrics = _read_optional_json(run_dir / "metrics.json")
+    if metrics:
+        return metrics
+    return _read_optional_json(run_dir / "candidate" / "metrics.json")
 
 
 def _prompt_identity(manifest: JsonDict) -> JsonDict:

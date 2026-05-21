@@ -386,6 +386,9 @@ echo "给这个功能写测试" | pcl guard --stdin --profile coding --json
 你可以把 `improved_prompt` 作为真正发给 agent 的 prompt；如果是 gate 模式，也可以把
 `action=block` 当作停止信号。
 
+边界说明：`pcl guard` 是本地启发式检查和策略门禁。它能减少明显风险和缺失上下文，
+但不能证明 agent 的后续动作一定安全。
+
 ### GitHub Action / PR Comment 示例 🧪
 
 仓库里提供了一个可复制的 workflow 模板：
@@ -594,6 +597,10 @@ pcl audit-diff \
   --test-command "pytest tests/test_session.py" \
   --out runs/audit
 ```
+
+默认情况下，`--test-command` 不通过 shell 执行，会记录 stdout/stderr 摘要，并且每条命令都有超时限制。
+如果测试已经在外部跑过，优先用 `--tests-run` / `--tests-passed` 记录结果。
+只有在输入完全可信时，才使用 `--allow-shell-test-command`。
 
 得到：
 

@@ -45,7 +45,16 @@ def format_doctor(payload: JsonDict) -> str:
 
 
 def _check_python_version() -> JsonDict:
-    version = f"{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}"
+    major = int(sys.version_info[0])
+    minor = int(sys.version_info[1])
+    micro = int(sys.version_info[2])
+    version = f"{major}.{minor}.{micro}"
+    if (major, minor) < (3, 10):
+        return _check(
+            "python_version",
+            "fail",
+            f"Python {version} is installed; PromptControlLab requires Python >=3.10.",
+        )
     return _check("python_version", "pass", f"Python {version} is supported.")
 
 

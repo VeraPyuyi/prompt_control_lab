@@ -232,7 +232,21 @@ def build_parser() -> argparse.ArgumentParser:
         "--test-command",
         action="append",
         default=[],
-        help="Test command to run and record. Repeat for multiple commands.",
+        help=(
+            "Test command to execute without shell syntax and record. "
+            "Repeat for multiple commands."
+        ),
+    )
+    audit_parser.add_argument(
+        "--allow-shell-test-command",
+        action="store_true",
+        help="Allow --test-command to run through the shell. Use only with trusted input.",
+    )
+    audit_parser.add_argument(
+        "--test-timeout",
+        type=int,
+        default=120,
+        help="Timeout in seconds for each --test-command.",
     )
     audit_parser.add_argument(
         "--tests-run",
@@ -629,6 +643,8 @@ def _cmd_audit_diff(args: argparse.Namespace) -> None:
         test_commands=list(args.test_command),
         tests_run=list(args.tests_run),
         tests_passed=_optional_bool(args.tests_passed),
+        test_timeout=args.test_timeout,
+        allow_shell_test_command=args.allow_shell_test_command,
     )
     print(f"Wrote audit artifacts to {args.out}")
     print(f"Human review required: {payload['human_review_required']}")

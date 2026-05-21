@@ -22,8 +22,33 @@ jobs:
       - name: Install PromptControlLab
         run: python -m pip install -e .
 
+      - name: Prepare PromptControlLab run artifacts
+        shell: bash
+        run: |
+          if [ -f runs/quick/manifest.json ]; then
+            echo "Using existing runs/quick artifacts."
+          elif [ -f promptcontrol.example.yaml ]; then
+            pcl analyze --config promptcontrol.example.yaml --out runs/quick
+          else
+            echo "No runs/quick artifacts or promptcontrol.example.yaml found."
+            echo "Commit a run artifact, or add a promptcontrol.example.yaml config."
+            mkdir -p runs/quick
+            cat > runs/quick/gate_result.json <<'JSON'
+          {
+            "status": "needs_review",
+            "plain_summary": "gate_result.json was not found and no promptcontrol.example.yaml config was available."
+          }
+          JSON
+          fi
+
       - name: Run PromptControlLab gate
-        run: pcl gate --run runs/quick --policy examples/gate.policy.yaml
+        shell: bash
+        run: |
+          if [ -f runs/quick/manifest.json ]; then
+            pcl gate --run runs/quick --policy examples/gate.policy.yaml
+          else
+            echo "Skipping gate because runs/quick was not generated."
+          fi
 
       - name: Audit PR diff
         if: always()
@@ -39,7 +64,15 @@ jobs:
         with:
           script: |
             const fs = require("fs");
-            const gate = JSON.parse(fs.readFileSync("runs/quick/gate_result.json", "utf8"));
+            let gate = {};
+            try {
+              gate = JSON.parse(fs.readFileSync("runs/quick/gate_result.json", "utf8"));
+            } catch (error) {
+              gate = {
+                status: "needs_review",
+                plain_summary: "gate_result.json was not found; check the prepare/gate steps.",
+              };
+            }
             let audit = {};
             try {
               audit = JSON.parse(fs.readFileSync("runs/agent-audit/audit_result.json", "utf8"));
@@ -53,7 +86,7 @@ jobs:
               `Reason: ${gate.plain_summary || gate.what_this_means || "See gate_result.json."}`,
               `Agent audit review required: ${audit.human_review_required}`,
             ].join("\n");
-            github.rest.issues.createComment({
+            await github.rest.issues.createComment({
               owner: context.repo.owner,
               repo: context.repo.repo,
               issue_number: context.issue.number,
