@@ -19,8 +19,9 @@ def install_plugin(plugin: str, *, target: Path | None = None, force: bool = Fal
         msg = f"Unknown plugin `{plugin}`"
         raise ValueError(msg)
     if plugin == "all":
+        targets = _all_targets(target)
         installed = [
-            install_plugin(name, target=None, force=force)
+            install_plugin(name, target=targets[name], force=force)
             for name in ["codex", "cursor", "claude-code", "github-action"]
         ]
         return {"plugin": "all", "installed": installed}
@@ -48,6 +49,22 @@ def _default_target(plugin: str) -> Path:
         return Path.cwd() / ".github" / "workflows" / "prompt-control-lab-gate.yml"
     msg = f"Unknown plugin `{plugin}`"
     raise ValueError(msg)
+
+
+def _all_targets(target: Path | None) -> dict[str, Path | None]:
+    if target is None:
+        return {
+            "codex": None,
+            "cursor": None,
+            "claude-code": None,
+            "github-action": None,
+        }
+    return {
+        "codex": target / "codex",
+        "cursor": target / "cursor" / "prompt_control_lab.mdc",
+        "claude-code": target / "claude-code",
+        "github-action": target / "github-action" / "prompt-control-lab-gate.yml",
+    }
 
 
 def _resource_root() -> Any:

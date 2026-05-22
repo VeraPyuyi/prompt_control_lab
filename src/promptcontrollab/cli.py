@@ -87,6 +87,7 @@ def build_parser() -> argparse.ArgumentParser:
     start_parser.add_argument("--prompt-file", type=Path, default=None, help="Prompt text file.")
     start_parser.add_argument("--run", type=Path, default=None, help="Optional run directory.")
     start_parser.add_argument("--out", type=Path, default=None, help="Optional output directory.")
+    start_parser.add_argument("--policy", type=Path, default=None, help="Optional guard policy.")
     start_parser.add_argument(
         "--profile",
         choices=["general", "coding", "research"],
@@ -562,6 +563,7 @@ def _cmd_start(args: argparse.Namespace) -> None:
             profile=args.profile,
             token_mode=args.token_mode,
             max_tokens=args.max_tokens,
+            policy_path=args.policy,
         )
         print(_format_guard_output(result.to_json()))
         return
@@ -756,9 +758,15 @@ def _cmd_doctor(args: argparse.Namespace) -> None:
 
 
 def _cmd_ui(args: argparse.Namespace) -> None:
-    if importlib.util.find_spec("streamlit") is None:
+    missing = [
+        module
+        for module in ["streamlit", "plotly", "pandas"]
+        if importlib.util.find_spec(module) is None
+    ]
+    if missing:
         msg = (
-            "pcl ui requires optional UI dependencies. Install them with "
+            f"pcl ui requires optional UI dependencies ({', '.join(missing)} missing). "
+            "Install them with "
             '`pip install -e ".[ui]"` or `uv pip install -e ".[ui]"`.'
         )
         raise PromptControlLabError(msg)
@@ -776,6 +784,7 @@ def _cmd_ui(args: argparse.Namespace) -> None:
         f"--server.address={args.host}",
         f"--server.port={args.port}",
         f"--server.headless={str(args.no_browser).lower()}",
+        "--browser.gatherUsageStats=false",
     ]
     try:
         subprocess.run(command, env=env, check=True)

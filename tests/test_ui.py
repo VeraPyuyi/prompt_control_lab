@@ -10,6 +10,7 @@ from typing import Any
 import pytest
 
 from promptcontrollab.cli import main
+from promptcontrollab.ui import charts
 from promptcontrollab.ui.data import list_runs, load_run_detail
 
 
@@ -32,6 +33,24 @@ def test_cli_ui_reports_missing_streamlit(
     assert main(["ui", "--runs", "runs"]) == 2
 
     stderr = capsys.readouterr().err
+    assert "pip install -e \".[ui]\"" in stderr
+
+
+def test_cli_ui_reports_missing_plotly_or_pandas(
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    import importlib.util
+
+    def fake_find_spec(name: str) -> object | None:
+        return None if name == "plotly" else object()
+
+    monkeypatch.setattr(importlib.util, "find_spec", fake_find_spec)
+
+    assert main(["ui", "--runs", "runs"]) == 2
+
+    stderr = capsys.readouterr().err
+    assert "plotly" in stderr
     assert "pip install -e \".[ui]\"" in stderr
 
 
@@ -79,6 +98,7 @@ def test_cli_ui_launches_streamlit_with_environment(
     assert "--server.address=127.0.0.1" in command
     assert "--server.port=8510" in command
     assert "--server.headless=true" in command
+    assert "--browser.gatherUsageStats=false" in command
     assert env["PCL_UI_RUNS"] == str(runs)
     assert env["PCL_UI_POLICY"] == str(policy)
     assert env["PCL_UI_LANGUAGE"] == "zh"
@@ -143,6 +163,18 @@ def test_ui_data_loads_run_artifacts(tmp_path: Path) -> None:
     assert detail["history_index"]["runs"][0]["run_name"] == "quick"
 
 
+def test_ui_list_runs_prefers_child_runs_when_root_has_history_index(tmp_path: Path) -> None:
+    runs = tmp_path / "runs"
+    _write_json(runs / "history_index.json", {"runs": []})
+    _write_json(runs / "quick" / "manifest.json", {"mode": "quick"})
+    _write_json(runs / "audit" / "audit_result.json", {"touched_files": 1})
+    (runs / "scratch").mkdir()
+
+    rows = list_runs(runs)
+
+    assert [row["name"] for row in rows] == ["audit", "quick"]
+
+
 def test_ui_has_history_view_order_and_text() -> None:
     from promptcontrollab.ui import app
 
@@ -161,6 +193,37 @@ def test_ui_data_handles_missing_artifacts(tmp_path: Path) -> None:
     assert detail["has_artifacts"] is False
     assert detail["candidate_score"] is None
     assert "Run `pcl analyze`" in detail["empty_state"]
+
+
+def test_score_delta_ci_uses_upper_and_lower_error_bars(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    captured: dict[str, object] = {}
+
+    class FakeBar:
+        def __init__(self, **kwargs: object) -> None:
+            captured.update(kwargs)
+
+    class FakeFigure:
+        def add_trace(self, trace: object) -> None:
+            captured["trace"] = trace
+
+        def add_hline(self, **kwargs: object) -> None:
+            captured["hline"] = kwargs
+
+        def update_layout(self, **kwargs: object) -> None:
+            captured["layout"] = kwargs
+
+    fake_go = SimpleNamespace(Bar=FakeBar, Figure=FakeFigure)
+    monkeypatch.setattr(charts, "_plotly_graph_objects", lambda: fake_go)
+
+    charts.score_delta_ci({"mean_delta": 0.2, "bootstrap_ci": [0.1, 0.35]})
+
+    assert captured["error_y"] == {
+        "type": "data",
+        "array": [0.14999999999999997],
+        "arrayminus": [0.1],
+    }
 
 
 def _write_json(path: Path, payload: object) -> None:

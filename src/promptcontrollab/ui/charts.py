@@ -45,7 +45,11 @@ def score_delta_ci(
         go.Bar(
             x=[mean_label],
             y=[mean_delta],
-            error_y={"type": "data", "array": [max(0.0, upper - mean_delta)]},
+            error_y={
+                "type": "data",
+                "array": [max(0.0, upper - mean_delta)],
+                "arrayminus": [max(0.0, mean_delta - lower)],
+            },
         )
     )
     figure.add_hline(y=0, line_dash="dash", line_color="#64748b")

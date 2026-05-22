@@ -25,9 +25,14 @@ def list_runs(runs_dir: Path) -> list[JsonDict]:
 
     if not runs_dir.exists():
         return []
+    runs: list[JsonDict] = []
+    for child in sorted(runs_dir.iterdir(), key=lambda path: path.name):
+        if child.is_dir() and _has_any_artifact(child):
+            runs.append({"name": child.name, "path": str(child)})
+    if runs:
+        return runs
     if _has_any_artifact(runs_dir):
         return [{"name": runs_dir.name, "path": str(runs_dir)}]
-    runs: list[JsonDict] = []
     for child in sorted(runs_dir.iterdir(), key=lambda path: path.name):
         if child.is_dir():
             runs.append({"name": child.name, "path": str(child)})

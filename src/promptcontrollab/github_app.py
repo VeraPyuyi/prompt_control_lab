@@ -15,6 +15,8 @@ from promptcontrollab.files import JsonDict
 from promptcontrollab.optional import require_module
 from promptcontrollab.pr_summary import render_pr_summary_markdown
 
+SUMMARY_COMMENT_MARKER = "<!-- prompt-control-lab-summary -->"
+
 
 class PullRequestClient(Protocol):
     """Minimal client contract used by the webhook handler."""
@@ -22,6 +24,10 @@ class PullRequestClient(Protocol):
     def list_pull_files(self, repo: str, number: int) -> list[JsonDict]: ...
 
     def create_comment(self, repo: str, number: int, body: str) -> None: ...
+
+    def list_comments(self, repo: str, number: int) -> list[JsonDict]: ...
+
+    def update_comment(self, repo: str, comment_id: int, body: str) -> None: ...
 
     def add_labels(self, repo: str, number: int, labels: list[str]) -> None: ...
 
@@ -71,8 +77,8 @@ def handle_pull_request_payload(
 
     if summary is None:
         summary = summarize_pull_files(client.list_pull_files(repo, number))
-    body = render_pr_summary_markdown(summary)
-    client.create_comment(repo, number, body)
+    body = f"{SUMMARY_COMMENT_MARKER}\n{render_pr_summary_markdown(summary)}"
+    _upsert_summary_comment(client, repo, number, body)
     labels = summary.get("labels")
     if isinstance(labels, list) and labels:
         client.add_labels(repo, number, [str(label) for label in labels])
@@ -96,6 +102,8 @@ def summarize_pull_files(files: list[JsonDict]) -> JsonDict:
     dangerous_paths = [path for path in filenames if _dangerous_path(path)]
     workflow_files = [path for path in filenames if path.startswith(".github/workflows/")]
     dependency_files = [path for path in filenames if _dependency_file(path)]
+    source_changed = any(_source_file(path) for path in filenames)
+    test_changed = any(_test_file(path) for path in filenames)
     secret_findings = _secret_findings(files)
     status = "pass"
     labels: list[str] = []
@@ -117,7 +125,7 @@ def summarize_pull_files(files: list[JsonDict]) -> JsonDict:
         status = "fail"
         labels.append("prompt-control-lab:secret-finding")
         reasons.append("PR patch appears to add a secret-like value.")
-    if not any(_test_file(path) for path in filenames):
+    if source_changed and not test_changed:
         status = "needs_review" if status == "pass" else status
         labels.append("prompt-control-lab:missing-tests")
         reasons.append("No test file change was detected in the PR file list.")
@@ -132,6 +140,27 @@ def summarize_pull_files(files: list[JsonDict]) -> JsonDict:
         "changed_files": filenames,
         "human_review_required": status != "pass",
     }
+
+
+def _upsert_summary_comment(
+    client: PullRequestClient,
+    repo: str,
+    number: int,
+    body: str,
+) -> None:
+    for comment in client.list_comments(repo, number):
+        if not isinstance(comment, dict):
+            continue
+        comment_body = comment.get("body")
+        comment_id = comment.get("id")
+        if (
+            isinstance(comment_body, str)
+            and SUMMARY_COMMENT_MARKER in comment_body
+            and isinstance(comment_id, int)
+        ):
+            client.update_comment(repo, comment_id, body)
+            return
+    client.create_comment(repo, number, body)
 
 
 def serve_github_app(*, host: str, port: int) -> None:
@@ -205,24 +234,60 @@ class _HttpGithubClient:
     def create_comment(self, repo: str, number: int, body: str) -> None:
         self._request("POST", f"/repos/{repo}/issues/{number}/comments", {"body": body})
 
+    def list_comments(self, repo: str, number: int) -> list[JsonDict]:
+        token = self._installation_token()
+        comments: list[JsonDict] = []
+        page = 1
+        while True:
+            response = self.httpx.get(
+                f"https://api.github.com/repos/{repo}/issues/{number}/comments",
+                headers={
+                    "Authorization": f"Bearer {token}",
+                    "Accept": "application/vnd.github+json",
+                    "X-GitHub-Api-Version": "2022-11-28",
+                },
+                params={"per_page": 100, "page": page},
+                timeout=20,
+            )
+            response.raise_for_status()
+            payload = response.json()
+            if not isinstance(payload, list):
+                msg = "GitHub issue comments response was not a list."
+                raise PromptControlLabError(msg)
+            items = [item for item in payload if isinstance(item, dict)]
+            comments.extend(items)
+            if len(payload) < 100:
+                return comments
+            page += 1
+
+    def update_comment(self, repo: str, comment_id: int, body: str) -> None:
+        self._request("PATCH", f"/repos/{repo}/issues/comments/{comment_id}", {"body": body})
+
     def list_pull_files(self, repo: str, number: int) -> list[JsonDict]:
         token = self._installation_token()
-        response = self.httpx.get(
-            f"https://api.github.com/repos/{repo}/pulls/{number}/files",
-            headers={
-                "Authorization": f"Bearer {token}",
-                "Accept": "application/vnd.github+json",
-                "X-GitHub-Api-Version": "2022-11-28",
-            },
-            params={"per_page": 100},
-            timeout=20,
-        )
-        response.raise_for_status()
-        payload = response.json()
-        if not isinstance(payload, list):
-            msg = "GitHub pull files response was not a list."
-            raise PromptControlLabError(msg)
-        return [item for item in payload if isinstance(item, dict)]
+        files: list[JsonDict] = []
+        page = 1
+        while True:
+            response = self.httpx.get(
+                f"https://api.github.com/repos/{repo}/pulls/{number}/files",
+                headers={
+                    "Authorization": f"Bearer {token}",
+                    "Accept": "application/vnd.github+json",
+                    "X-GitHub-Api-Version": "2022-11-28",
+                },
+                params={"per_page": 100, "page": page},
+                timeout=20,
+            )
+            response.raise_for_status()
+            payload = response.json()
+            if not isinstance(payload, list):
+                msg = "GitHub pull files response was not a list."
+                raise PromptControlLabError(msg)
+            items = [item for item in payload if isinstance(item, dict)]
+            files.extend(items)
+            if len(payload) < 100:
+                return files
+            page += 1
 
     def add_labels(self, repo: str, number: int, labels: list[str]) -> None:
         self._request("POST", f"/repos/{repo}/issues/{number}/labels", {"labels": labels})
@@ -323,6 +388,35 @@ def _test_file(path: str) -> bool:
     lowered = path.lower()
     name = Path(path).name.lower()
     return lowered.startswith("tests/") or "/tests/" in lowered or name.startswith("test_")
+
+
+def _source_file(path: str) -> bool:
+    lowered = path.lower()
+    suffix = Path(path).suffix.lower()
+    if _test_file(path) or _dependency_file(path) or lowered.startswith(".github/workflows/"):
+        return False
+    if lowered.startswith(("docs/", "doc/")) or "/docs/" in lowered or "/doc/" in lowered:
+        return False
+    return suffix in {
+        ".py",
+        ".js",
+        ".jsx",
+        ".ts",
+        ".tsx",
+        ".go",
+        ".rs",
+        ".java",
+        ".kt",
+        ".c",
+        ".cc",
+        ".cpp",
+        ".h",
+        ".hpp",
+        ".cs",
+        ".rb",
+        ".php",
+        ".swift",
+    }
 
 
 def _secret_findings(files: list[JsonDict]) -> list[JsonDict]:

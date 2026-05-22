@@ -18,9 +18,16 @@ def build_pr_summary(
     audit = _read_optional(audit_path)
     gate = _read_optional(gate_path)
     agent_run = _read_optional(agent_run_path)
+    has_artifacts = any(
+        path is not None and path.exists() for path in [audit_path, gate_path, agent_run_path]
+    )
     labels: list[str] = []
     reasons: list[str] = []
     status = "pass"
+    if not has_artifacts:
+        status = "needs_review"
+        labels.append("prompt-control-lab:needs-review")
+        reasons.append("No PromptControlLab artifacts were provided.")
     gate_status = gate.get("status")
     if gate_status == "fail":
         status = "fail"
@@ -44,7 +51,7 @@ def build_pr_summary(
         status = "fail"
         labels.append("prompt-control-lab:secret-finding")
         reasons.append("Potential secret was added in the diff.")
-    if not audit.get("tests_run"):
+    if audit and not audit.get("tests_run"):
         labels.append("prompt-control-lab:missing-tests")
         reasons.append("No test command was recorded.")
     if audit.get("workflow_files_changed"):

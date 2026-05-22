@@ -80,6 +80,13 @@ def _candidate_model(manifest: JsonDict) -> JsonDict:
 
 
 def _risk_level(gate: JsonDict, audit: JsonDict) -> str | None:
+    if (
+        audit.get("secret_findings")
+        or audit.get("dangerous_paths")
+        or audit.get("workflow_files_changed")
+        or audit.get("deleted_test_files")
+    ):
+        return "high"
     if gate.get("status") == "fail":
         return "high"
     if gate.get("status") == "needs_review" or audit.get("human_review_required"):

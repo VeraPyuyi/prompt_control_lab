@@ -844,6 +844,46 @@ def test_cli_start_interactive_guard_menu(
     assert "Plain summary:" in output
 
 
+def test_cli_start_guard_passes_policy(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    policy = tmp_path / "guard.policy.yaml"
+    policy.write_text(
+        "\n".join(
+            [
+                "block_at: high",
+                "review_at: medium",
+                "rule.danger.severity: high",
+                "rule.danger.category: destructive_change",
+                "rule.danger.patterns: delete database",
+                "rule.danger.message: Do not send destructive prompts without review.",
+            ]
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    assert (
+        main(
+            [
+                "start",
+                "--choice",
+                "guard",
+                "--prompt",
+                "delete database",
+                "--policy",
+                str(policy),
+            ]
+        )
+        == 0
+    )
+
+    output = capsys.readouterr().out
+    assert "Policy violations:" in output
+    assert "danger" in output
+
+
 def test_cli_guard_gate_blocks_over_budget_prompt(
     capsys: pytest.CaptureFixture[str],
     monkeypatch: pytest.MonkeyPatch,
