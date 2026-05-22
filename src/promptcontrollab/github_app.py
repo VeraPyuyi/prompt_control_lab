@@ -142,7 +142,6 @@ def serve_github_app(*, host: str, port: int) -> None:
     app = fastapi.FastAPI(title="PromptControlLab GitHub App")
     config = _load_config()
 
-    @app.post("/webhook")  # type: ignore[misc]
     async def webhook(request: Any) -> JsonDict:  # pragma: no cover - exercised by app runtime
         body = await request.body()
         signature = request.headers.get("X-Hub-Signature-256")
@@ -159,6 +158,7 @@ def serve_github_app(*, host: str, port: int) -> None:
         client = _HttpGithubClient(config, installation_id=installation_id)
         return handle_pull_request_payload(payload, client=client)
 
+    app.add_api_route("/webhook", webhook, methods=["POST"])
     uvicorn.run(app, host=host, port=port)
 
 
