@@ -11,7 +11,7 @@ import pytest
 
 from promptcontrollab.cli import main
 from promptcontrollab.ui import charts
-from promptcontrollab.ui.data import list_runs, load_run_detail
+from promptcontrollab.ui.data import first_comparison, list_runs, load_run_detail
 
 
 def test_cli_ui_help_is_available(capsys: pytest.CaptureFixture[str]) -> None:
@@ -183,6 +183,19 @@ def test_report_model_lists_diagnostic_artifacts(tmp_path: Path) -> None:
     assert "diagnostics/trajectory.json" in detail["artifacts"]
 
 
+def test_first_comparison_reads_stats_json_and_legacy_shape() -> None:
+    stats = {
+        "comparisons": [
+            {"mean_delta": 0.25, "bootstrap_ci": [0.1, 0.4], "permutation_p_value": 0.02}
+        ],
+        "holm_family_size": 1,
+    }
+    legacy = {"mean_delta": 0.1, "bootstrap_ci": [0.0, 0.2], "permutation_p_value": 0.5}
+
+    assert first_comparison(stats)["mean_delta"] == 0.25
+    assert first_comparison(legacy)["mean_delta"] == 0.1
+
+
 def test_ui_list_runs_prefers_child_runs_when_root_has_history_index(tmp_path: Path) -> None:
     runs = tmp_path / "runs"
     _write_json(runs / "history_index.json", {"runs": []})
@@ -246,6 +259,44 @@ def test_score_delta_ci_uses_upper_and_lower_error_bars(
         "type": "data",
         "array": [0.14999999999999997],
         "arrayminus": [0.1],
+    }
+
+
+def test_score_delta_ci_accepts_stats_json_comparisons(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    captured: dict[str, object] = {}
+
+    class FakeBar:
+        def __init__(self, **kwargs: object) -> None:
+            captured.update(kwargs)
+
+    class FakeFigure:
+        def add_trace(self, trace: object) -> None:
+            captured["trace"] = trace
+
+        def add_hline(self, **kwargs: object) -> None:
+            captured["hline"] = kwargs
+
+        def update_layout(self, **kwargs: object) -> None:
+            captured["layout"] = kwargs
+
+    fake_go = SimpleNamespace(Bar=FakeBar, Figure=FakeFigure)
+    monkeypatch.setattr(charts, "_plotly_graph_objects", lambda: fake_go)
+
+    charts.score_delta_ci(
+        {
+            "comparisons": [
+                {"mean_delta": 0.0, "bootstrap_ci": [-0.2, 0.3], "permutation_p_value": 1.0}
+            ]
+        }
+    )
+
+    assert captured["y"] == [0.0]
+    assert captured["error_y"] == {
+        "type": "data",
+        "array": [0.3],
+        "arrayminus": [0.2],
     }
 
 

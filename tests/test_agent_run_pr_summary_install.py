@@ -273,6 +273,40 @@ def test_pr_summary_uses_agent_run_review_signal(tmp_path: Path) -> None:
     assert "prompt-control-lab:needs-review" in payload["labels"]
 
 
+def test_pr_summary_only_marks_missing_tests_for_source_changes(tmp_path: Path) -> None:
+    docs_audit = tmp_path / "docs_audit.json"
+    source_audit = tmp_path / "source_audit.json"
+    docs_summary = tmp_path / "docs_summary.json"
+    source_summary = tmp_path / "source_summary.json"
+    _write_json(
+        docs_audit,
+        {
+            "source_files_changed": 0,
+            "docs_files_changed": 1,
+            "tests_run": [],
+            "human_review_required": False,
+        },
+    )
+    _write_json(
+        source_audit,
+        {
+            "source_files_changed": 1,
+            "docs_files_changed": 0,
+            "tests_run": [],
+            "human_review_required": False,
+        },
+    )
+
+    assert main(["pr-summary", "--audit", str(docs_audit), "--json-out", str(docs_summary)]) == 0
+    assert (
+        main(["pr-summary", "--audit", str(source_audit), "--json-out", str(source_summary)])
+        == 0
+    )
+
+    assert "prompt-control-lab:missing-tests" not in _read_json(docs_summary)["labels"]
+    assert "prompt-control-lab:missing-tests" in _read_json(source_summary)["labels"]
+
+
 def test_github_app_upserts_existing_summary_comment() -> None:
     fake = _FakeGithubClient()
     fake.existing_comments.append(

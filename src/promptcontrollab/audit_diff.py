@@ -377,8 +377,17 @@ def _is_dangerous_path(path: str) -> bool:
 
 
 def _public_api_changed(diff_text: str) -> bool:
+    current_path = ""
     for line in diff_text.splitlines():
+        if line.startswith("--- a/"):
+            current_path = line[6:].replace("\\", "/")
+            continue
+        if line.startswith("+++ b/"):
+            current_path = line[6:].replace("\\", "/")
+            continue
         if not line.startswith(("+", "-")) or line.startswith(("+++", "---")):
+            continue
+        if _skip_public_api_scan(current_path):
             continue
         stripped = line[1:].lstrip()
         if stripped.startswith(("def ", "async def ", "class ")):
@@ -388,6 +397,18 @@ def _public_api_changed(diff_text: str) -> bool:
         if stripped.startswith("export "):
             return True
     return False
+
+
+def _skip_public_api_scan(path: str) -> bool:
+    return bool(
+        path
+        and (
+            _is_test_file(path)
+            or _is_docs_file(path)
+            or _is_generated_file(path)
+            or path.replace("\\", "/").lower().startswith("examples/")
+        )
+    )
 
 
 def _secret_findings(diff_text: str) -> list[JsonDict]:

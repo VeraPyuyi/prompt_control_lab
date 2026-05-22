@@ -70,6 +70,22 @@ def load_run_detail(run_dir: Path) -> JsonDict:
     }
 
 
+def first_comparison(stats: JsonDict) -> JsonDict:
+    """Return the primary comparison from a stats artifact.
+
+    Current ``stats.json`` files store comparison metrics in ``comparisons[0]``.
+    Older UI fixtures used top-level comparison fields, so keep that shape
+    readable for existing artifacts.
+    """
+
+    comparisons = stats.get("comparisons")
+    if isinstance(comparisons, list) and comparisons and isinstance(comparisons[0], dict):
+        return comparisons[0]
+    if any(key in stats for key in ["mean_delta", "bootstrap_ci", "permutation_p_value"]):
+        return stats
+    return {}
+
+
 def risk_category_counts(detail: JsonDict) -> dict[str, int]:
     """Return risk category counts from guard/gate-style artifacts."""
 

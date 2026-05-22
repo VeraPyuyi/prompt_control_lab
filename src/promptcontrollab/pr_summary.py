@@ -51,7 +51,8 @@ def build_pr_summary(
         status = "fail"
         labels.append("prompt-control-lab:secret-finding")
         reasons.append("Potential secret was added in the diff.")
-    if audit and not audit.get("tests_run"):
+    source_changed = _positive_count(audit.get("source_files_changed"))
+    if source_changed and not audit.get("tests_run"):
         labels.append("prompt-control-lab:missing-tests")
         reasons.append("No test command was recorded.")
     if audit.get("workflow_files_changed"):
@@ -143,3 +144,7 @@ def _read_optional(path: Path | None) -> JsonDict:
     if path is None or not path.exists():
         return {}
     return read_json(path)
+
+
+def _positive_count(value: object) -> bool:
+    return isinstance(value, int | float) and value > 0

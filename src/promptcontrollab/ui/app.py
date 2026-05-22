@@ -18,7 +18,13 @@ from promptcontrollab.ui.charts import (
     slice_score_heatmap,
 )
 from promptcontrollab.ui.components import badge, empty_state, metric_cards, prompt_diff
-from promptcontrollab.ui.data import list_runs, load_run_detail, model_rows, slice_rows
+from promptcontrollab.ui.data import (
+    first_comparison,
+    list_runs,
+    load_run_detail,
+    model_rows,
+    slice_rows,
+)
 from promptcontrollab.ui.workflows import (
     build_agent_run_workflow,
     export_report_zip_workflow,
@@ -633,6 +639,7 @@ def _render_report_tab(st: Any, text: dict[str, str], detail: JsonDict) -> None:
     explanation = _dict(detail.get("explanation"))
     gate = _dict(detail.get("gate"))
     stats = _dict(detail.get("stats"))
+    comparison = first_comparison(stats)
     metric_cards(
         st,
         [
@@ -647,13 +654,13 @@ def _render_report_tab(st: Any, text: dict[str, str], detail: JsonDict) -> None:
     metric_cards(
         st,
         [
-            (text["mean_delta"], stats.get("mean_delta")),
-            (text["p_value"], stats.get("permutation_p_value")),
+            (text["mean_delta"], comparison.get("mean_delta")),
+            (text["p_value"], comparison.get("permutation_p_value")),
         ],
     )
-    if stats:
+    if comparison:
         st.plotly_chart(
-            score_delta_ci(stats, title=text["score_ci"], mean_label=text["mean_delta"]),
+            score_delta_ci(comparison, title=text["score_ci"], mean_label=text["mean_delta"]),
             use_container_width=True,
         )
     rows = slice_rows(detail)

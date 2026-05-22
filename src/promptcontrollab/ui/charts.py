@@ -6,6 +6,7 @@ import importlib
 from typing import Any, cast
 
 from promptcontrollab.files import JsonDict
+from promptcontrollab.ui.data import first_comparison
 
 
 def risk_category_bar(
@@ -34,12 +35,17 @@ def score_delta_ci(
     """Build a score delta chart with CI when available."""
 
     go = _plotly_graph_objects()
-    mean_delta = _number(stats.get("mean_delta")) or 0.0
-    ci = stats.get("bootstrap_ci")
+    comparison = first_comparison(stats)
+    mean_delta = _number(comparison.get("mean_delta"))
+    if mean_delta is None:
+        mean_delta = 0.0
+    ci = comparison.get("bootstrap_ci")
     lower = upper = mean_delta
     if isinstance(ci, list) and len(ci) >= 2:
-        lower = _number(ci[0]) or mean_delta
-        upper = _number(ci[1]) or mean_delta
+        lower_value = _number(ci[0])
+        upper_value = _number(ci[1])
+        lower = lower_value if lower_value is not None else mean_delta
+        upper = upper_value if upper_value is not None else mean_delta
     figure = go.Figure()
     figure.add_trace(
         go.Bar(

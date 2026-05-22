@@ -64,6 +64,40 @@ def test_cli_audit_diff_reports_agent_run_risks(tmp_path: Path) -> None:
     assert (out / "audit_summary.md").exists()
 
 
+def test_cli_audit_diff_does_not_treat_tests_or_docs_as_public_api(tmp_path: Path) -> None:
+    repo = _make_git_repo(tmp_path)
+    _write(repo / "README.md", "# demo\n")
+    _git(repo, "add", ".")
+    _git(repo, "commit", "-m", "initial")
+
+    _write(repo / "tests" / "test_app.py", "def test_public_behavior():\n    assert True\n")
+    _write(repo / "docs" / "api.md", "```python\ndef public_example():\n    return True\n```\n")
+    _git(repo, "add", ".")
+    _git(repo, "commit", "-m", "docs and tests")
+
+    out = repo / "runs" / "audit"
+    assert (
+        main(
+            [
+                "audit-diff",
+                "--repo",
+                str(repo),
+                "--before",
+                "HEAD~1",
+                "--after",
+                "HEAD",
+                "--out",
+                str(out),
+            ]
+        )
+        == 0
+    )
+
+    payload = json.loads((out / "audit_result.json").read_text(encoding="utf-8"))
+    assert payload["public_api_changed"] is False
+    assert payload["human_review_required"] is False
+
+
 def test_cli_audit_diff_can_run_test_command(tmp_path: Path) -> None:
     repo = _make_git_repo(tmp_path)
     _write(repo / "src" / "app.py", "def existing() -> str:\n    return 'ok'\n")
