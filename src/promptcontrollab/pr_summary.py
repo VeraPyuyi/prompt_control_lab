@@ -58,13 +58,27 @@ def build_pr_summary(
         labels.append("prompt-control-lab:workflow-change")
     if audit.get("dependency_files_changed") or audit.get("lockfiles_changed"):
         labels.append("prompt-control-lab:dependency-change")
+    agent_risk = agent_run.get("risk_level")
+    agent_review_required = bool(
+        agent_run.get("review_required") or agent_run.get("human_review_required")
+    )
+    if agent_risk == "high":
+        status = "fail"
+        labels.append("prompt-control-lab:needs-review")
+        reasons.append("Agent run risk level is high.")
+    elif agent_review_required or agent_risk == "medium":
+        if status == "pass":
+            status = "needs_review"
+        labels.append("prompt-control-lab:needs-review")
+        reasons.append("Agent run requires human review.")
     labels = sorted(set(labels))
     return {
         "status": status,
         "labels": labels,
         "reasons": reasons,
         "gate_status": gate_status,
-        "human_review_required": bool(audit.get("human_review_required")),
+        "human_review_required": bool(audit.get("human_review_required") or agent_review_required),
+        "agent_risk_level": agent_risk,
         "dangerous_paths": audit.get("dangerous_paths", []),
         "tests_run": audit.get("tests_run", []),
         "tests_passed": audit.get("tests_passed"),

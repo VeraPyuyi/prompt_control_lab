@@ -40,8 +40,8 @@ class ReportModel:
         baseline_metrics = _read_optional(run_dir / "baseline" / "metrics.json")
         candidate_metrics = _read_optional(run_dir / "candidate" / "metrics.json")
         metrics = root_metrics or candidate_metrics
-        artifacts = _existing_artifacts(run_dir)
         diagnostics = _collect_diagnostics(run_dir / "diagnostics")
+        artifacts = _existing_artifacts(run_dir, diagnostics)
         return cls(
             run_dir=run_dir,
             manifest=manifest,
@@ -59,7 +59,7 @@ class ReportModel:
             agent_run=_read_optional(run_dir / "agent_run.json"),
             diagnostics=diagnostics,
             artifacts=artifacts,
-            candidate_score=_score(candidate_metrics) or _score(root_metrics),
+            candidate_score=_first_score(candidate_metrics, root_metrics),
             baseline_score=_score(baseline_metrics),
         )
 
@@ -76,7 +76,7 @@ def _read_optional(path: Path) -> JsonDict:
     return read_json(path)
 
 
-def _existing_artifacts(run_dir: Path) -> list[str]:
+def _existing_artifacts(run_dir: Path, diagnostics: dict[str, JsonDict]) -> list[str]:
     names = [
         "manifest.json",
         "metrics.json",
@@ -94,7 +94,9 @@ def _existing_artifacts(run_dir: Path) -> list[str]:
         "report.md",
         "report.html",
     ]
-    return [name for name in names if (run_dir / name).exists()]
+    artifacts = [name for name in names if (run_dir / name).exists()]
+    artifacts.extend(f"diagnostics/{name}.json" for name in sorted(diagnostics))
+    return artifacts
 
 
 def _collect_diagnostics(path: Path) -> dict[str, JsonDict]:
@@ -107,4 +109,12 @@ def _score(value: JsonDict) -> float | None:
     raw = value.get("mean_score")
     if isinstance(raw, int | float):
         return float(raw)
+    return None
+
+
+def _first_score(*values: JsonDict) -> float | None:
+    for value in values:
+        score = _score(value)
+        if score is not None:
+            return score
     return None

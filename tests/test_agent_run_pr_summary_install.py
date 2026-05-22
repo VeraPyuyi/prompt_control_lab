@@ -141,7 +141,7 @@ def test_agent_run_promotes_high_risk_audit_findings(tmp_path: Path) -> None:
             "changed_files": [".github/workflows/ci.yml"],
             "tests_run": ["pytest"],
             "tests_passed": True,
-            "human_review_required": True,
+            "human_review_required": False,
             "secret_findings": [{"path": "src/app.py", "kind": "secret_like"}],
             "dangerous_paths": [],
             "workflow_files_changed": [".github/workflows/ci.yml"],
@@ -168,7 +168,10 @@ def test_agent_run_promotes_high_risk_audit_findings(tmp_path: Path) -> None:
         == 0
     )
 
-    assert _read_json(out)["risk_level"] == "high"
+    payload = _read_json(out)
+    assert payload["risk_level"] == "high"
+    assert payload["review_required"] is True
+    assert payload["human_review_required"] is True
 
 
 def test_pr_summary_cli_and_github_app_helpers(tmp_path: Path) -> None:
@@ -245,6 +248,29 @@ def test_pr_summary_without_artifacts_requires_review(tmp_path: Path) -> None:
     payload = _read_json(js)
     assert payload["status"] == "needs_review"
     assert "No PromptControlLab artifacts were provided." in payload["reasons"]
+
+
+def test_pr_summary_uses_agent_run_review_signal(tmp_path: Path) -> None:
+    agent_run = tmp_path / "agent_run.json"
+    js = tmp_path / "summary.json"
+    _write_json(
+        agent_run,
+        {
+            "agent": "codex",
+            "model": "gpt-5.2",
+            "provider": "openai",
+            "risk_level": "high",
+            "review_required": True,
+        },
+    )
+
+    assert main(["pr-summary", "--agent-run", str(agent_run), "--json-out", str(js)]) == 0
+
+    payload = _read_json(js)
+    assert payload["status"] == "fail"
+    assert payload["human_review_required"] is True
+    assert "Agent run risk level is high." in payload["reasons"]
+    assert "prompt-control-lab:needs-review" in payload["labels"]
 
 
 def test_github_app_upserts_existing_summary_comment() -> None:

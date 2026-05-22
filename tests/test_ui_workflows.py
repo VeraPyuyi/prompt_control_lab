@@ -197,6 +197,7 @@ def test_cli_export_report_zip_contains_known_artifacts(tmp_path: Path) -> None:
     run_dir = tmp_path / "runs" / "quick"
     _write_json(run_dir / "manifest.json", {"mode": "quick"})
     _write(run_dir / "report.md", "# report\n")
+    _write_json(run_dir / "diagnostics" / "trajectory.json", {"drift": 0.2})
     _write(run_dir / "src.py", "print('not an artifact')\n")
     zip_path = tmp_path / "report.zip"
 
@@ -204,7 +205,7 @@ def test_cli_export_report_zip_contains_known_artifacts(tmp_path: Path) -> None:
 
     with zipfile.ZipFile(zip_path) as archive:
         names = set(archive.namelist())
-    assert names == {"manifest.json", "report.md"}
+    assert names == {"diagnostics/trajectory.json", "manifest.json", "report.md"}
 
 
 def _example_eval_files(tmp_path: Path) -> tuple[Path, Path, Path]:

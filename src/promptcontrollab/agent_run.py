@@ -29,7 +29,12 @@ def build_agent_run_manifest(
     model = _candidate_model(manifest)
     repo = audit.get("repo")
     policy_payload = {"id": policy} if policy else {}
-    review_required = bool(audit.get("human_review_required") or gate.get("status") == "fail")
+    risk_level = _risk_level(gate, audit)
+    review_required = bool(
+        audit.get("human_review_required")
+        or gate.get("status") in {"fail", "needs_review"}
+        or risk_level in {"high", "medium"}
+    )
     payload: JsonDict = {
         "schema": "prompt_control_lab.agent_run.v1",
         "created_at": datetime.now(timezone.utc).isoformat(),
@@ -47,7 +52,7 @@ def build_agent_run_manifest(
         "gate": gate,
         "audit": audit,
         "decision": gate.get("status"),
-        "risk_level": _risk_level(gate, audit),
+        "risk_level": risk_level,
         "changed_files": audit.get("changed_files", []),
         "tests_run": audit.get("tests_run", []),
         "tests_passed": audit.get("tests_passed"),

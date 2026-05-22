@@ -163,6 +163,26 @@ def test_ui_data_loads_run_artifacts(tmp_path: Path) -> None:
     assert detail["history_index"]["runs"][0]["run_name"] == "quick"
 
 
+def test_report_model_preserves_zero_candidate_score(tmp_path: Path) -> None:
+    run = tmp_path / "runs" / "quick"
+    _write_json(run / "metrics.json", {"mean_score": 0.8})
+    _write_json(run / "candidate" / "metrics.json", {"mean_score": 0.0})
+
+    detail = load_run_detail(run)
+
+    assert detail["candidate_score"] == 0.0
+
+
+def test_report_model_lists_diagnostic_artifacts(tmp_path: Path) -> None:
+    run = tmp_path / "runs" / "quick"
+    _write_json(run / "manifest.json", {"mode": "quick"})
+    _write_json(run / "diagnostics" / "trajectory.json", {"drift": 0.1})
+
+    detail = load_run_detail(run)
+
+    assert "diagnostics/trajectory.json" in detail["artifacts"]
+
+
 def test_ui_list_runs_prefers_child_runs_when_root_has_history_index(tmp_path: Path) -> None:
     runs = tmp_path / "runs"
     _write_json(runs / "history_index.json", {"runs": []})
