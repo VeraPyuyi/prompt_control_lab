@@ -260,8 +260,19 @@ pcl analyze --config promptcontrol.example.yaml --out runs/quick
 pcl ui --runs runs/ --policy examples/guard.policy.yaml --port 8501
 ```
 
-The local dashboard has five tabs:
+The local dashboard has six tabs. The **Workflows** tab can run local actions from the browser:
+guard a prompt, run analyze, run gate, audit a git diff, build `agent_run.json`, generate a PR
+summary, or export a report zip. Execution mode defaults to `confirm`; advanced users can choose
+`auto` or `command`.
 
+CLI equivalent for the zip export:
+
+```bash
+pcl export-report --run runs/quick --out runs/quick/report.zip
+```
+
+- **Workflows:** trigger allowlisted local workflows while previewing outputs before files are
+  written.
 - **Guard Prompt:** try `pcl guard` interactively and inspect risk, policy violations, token cost,
   and prompt diff.
 - **Run Report:** read recommendation, gate status, score delta, confidence interval, p-value,

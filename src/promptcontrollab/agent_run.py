@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from datetime import datetime, timezone
 from pathlib import Path
 
 from promptcontrollab.files import JsonDict, read_json, write_json
@@ -26,24 +27,35 @@ def build_agent_run_manifest(
     gate = _read_optional(gate_path)
     prompt = _prompt_identity(manifest)
     model = _candidate_model(manifest)
+    repo = audit.get("repo")
+    policy_payload = {"id": policy} if policy else {}
+    review_required = bool(audit.get("human_review_required") or gate.get("status") == "fail")
     payload: JsonDict = {
         "schema": "prompt_control_lab.agent_run.v1",
+        "created_at": datetime.now(timezone.utc).isoformat(),
         "prompt_hash": prompt.get("prompt_hash"),
         "prompt_id": prompt.get("prompt_id"),
         "prompt_version": prompt.get("prompt_version"),
         "prompt_file": prompt.get("prompt_file"),
+        "prompt": prompt,
         "agent": agent,
         "provider": model.get("provider"),
         "model": model.get("model_id"),
         "policy": policy,
+        "policy_detail": policy_payload,
+        "guard": _read_optional(run_dir / "guard_result.json"),
+        "gate": gate,
+        "audit": audit,
         "decision": gate.get("status"),
         "risk_level": _risk_level(gate, audit),
         "changed_files": audit.get("changed_files", []),
         "tests_run": audit.get("tests_run", []),
         "tests_passed": audit.get("tests_passed"),
-        "human_review_required": bool(
-            audit.get("human_review_required") or gate.get("status") == "fail"
-        ),
+        "human_review_required": review_required,
+        "review_required": review_required,
+        "repo": repo if isinstance(repo, str) else None,
+        "commit_before": audit.get("before"),
+        "commit_after": audit.get("after"),
         "audit_path": str(audit_path) if audit else None,
         "gate_path": str(gate_path) if gate else None,
     }

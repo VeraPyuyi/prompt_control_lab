@@ -12,6 +12,7 @@ from collections.abc import Sequence
 from pathlib import Path
 
 from promptcontrollab.agent_run import build_agent_run_manifest
+from promptcontrollab.artifact_export import export_report_zip
 from promptcontrollab.audit_diff import run_audit_diff
 from promptcontrollab.config import (
     get_config_bool,
@@ -340,6 +341,14 @@ def build_parser() -> argparse.ArgumentParser:
     ui_parser.add_argument("--language", choices=["en", "zh"], default="en")
     ui_parser.add_argument("--no-browser", action="store_true", help="Do not open a browser.")
     ui_parser.set_defaults(func=_cmd_ui)
+
+    export_parser = subcommands.add_parser(
+        "export-report",
+        help="Zip recognized artifacts from one run directory.",
+    )
+    export_parser.add_argument("--run", type=Path, required=True, help="Run directory.")
+    export_parser.add_argument("--out", type=Path, required=True, help="Zip output path.")
+    export_parser.set_defaults(func=_cmd_export_report)
 
     analyze_parser = subcommands.add_parser(
         "analyze",
@@ -793,6 +802,11 @@ def _cmd_ui(args: argparse.Namespace) -> None:
     except subprocess.CalledProcessError as exc:
         msg = f"Streamlit exited with status {exc.returncode}"
         raise PromptControlLabError(msg) from exc
+
+
+def _cmd_export_report(args: argparse.Namespace) -> None:
+    payload = export_report_zip(run_dir=args.run, zip_path=args.out)
+    print(json.dumps(payload, indent=2, ensure_ascii=False, sort_keys=True))
 
 
 def _cmd_analyze(args: argparse.Namespace) -> None:

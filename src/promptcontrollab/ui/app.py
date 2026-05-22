@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import importlib
 import os
+from collections.abc import Callable
 from pathlib import Path
 from typing import Any, cast
 
@@ -18,6 +19,15 @@ from promptcontrollab.ui.charts import (
 )
 from promptcontrollab.ui.components import badge, empty_state, metric_cards, prompt_diff
 from promptcontrollab.ui.data import list_runs, load_run_detail, model_rows, slice_rows
+from promptcontrollab.ui.workflows import (
+    build_agent_run_workflow,
+    export_report_zip_workflow,
+    run_analyze_workflow,
+    run_audit_workflow,
+    run_gate_workflow,
+    run_guard_workflow,
+    run_pr_summary_workflow,
+)
 
 TEXT = {
     "en": {
@@ -26,6 +36,37 @@ TEXT = {
         "runs": "Runs directory",
         "policy": "Guard policy",
         "guard": "Guard Prompt",
+        "workflows": "Workflows",
+        "execution_mode": "Execution mode",
+        "overwrite": "Overwrite existing artifacts",
+        "confirm_write": "Confirm write",
+        "run_action": "Run",
+        "workflow_preview": "Preview",
+        "workflow_result": "Workflow result",
+        "guard_workflow": "Guard prompt",
+        "analyze_workflow": "Run analyze",
+        "gate_workflow": "Run gate",
+        "audit_workflow": "Run audit-diff",
+        "agent_run_workflow": "Build agent-run",
+        "pr_summary_workflow": "Generate PR summary",
+        "export_workflow": "Export report zip",
+        "out_dir": "Output directory",
+        "data_path": "Task JSONL",
+        "baseline_predictions": "Baseline predictions",
+        "candidate_predictions": "Candidate predictions",
+        "metric": "Metric",
+        "policy_path": "Policy path",
+        "run_dir": "Run directory",
+        "repo": "Repository",
+        "before": "Before ref",
+        "after": "After ref",
+        "tests_run": "Recorded tests",
+        "audit_dir": "Audit directory",
+        "agent": "Agent",
+        "agent_run_path": "agent_run.json path",
+        "markdown_path": "Markdown path",
+        "json_path": "JSON path",
+        "zip_path": "Zip path",
         "report": "Run Report",
         "drift": "Model Drift",
         "audit": "Agent Diff Audit",
@@ -90,6 +131,37 @@ TEXT = {
         "runs": "Runs 目录",
         "policy": "Guard 策略",
         "guard": "Prompt 守护",
+        "workflows": "工作流",
+        "execution_mode": "执行模式",
+        "overwrite": "覆盖已有 artifact",
+        "confirm_write": "确认写入",
+        "run_action": "运行",
+        "workflow_preview": "预览",
+        "workflow_result": "工作流结果",
+        "guard_workflow": "守护 Prompt",
+        "analyze_workflow": "运行 analyze",
+        "gate_workflow": "运行 gate",
+        "audit_workflow": "运行 audit-diff",
+        "agent_run_workflow": "生成 agent-run",
+        "pr_summary_workflow": "生成 PR summary",
+        "export_workflow": "导出报告 zip",
+        "out_dir": "输出目录",
+        "data_path": "任务 JSONL",
+        "baseline_predictions": "Baseline predictions",
+        "candidate_predictions": "Candidate predictions",
+        "metric": "指标",
+        "policy_path": "策略路径",
+        "run_dir": "Run 目录",
+        "repo": "仓库",
+        "before": "Before ref",
+        "after": "After ref",
+        "tests_run": "已记录测试",
+        "audit_dir": "Audit 目录",
+        "agent": "Agent",
+        "agent_run_path": "agent_run.json 路径",
+        "markdown_path": "Markdown 路径",
+        "json_path": "JSON 路径",
+        "zip_path": "Zip 路径",
         "report": "运行报告",
         "drift": "模型漂移",
         "audit": "Agent 改动审计",
@@ -163,16 +235,31 @@ def main() -> None:
     default_policy = os.environ.get("PCL_UI_POLICY", "")
     policy_raw = st.sidebar.text_input(text["policy"], default_policy)
     policy_path = Path(policy_raw) if policy_raw else None
+    execution_mode = str(
+        st.sidebar.selectbox(text["execution_mode"], ["confirm", "auto", "command"], index=0)
+    )
+    overwrite = bool(st.sidebar.checkbox(text["overwrite"], value=False))
     st.title(text["title"])
     st.caption(text["subtitle"])
 
     runs = list_runs(runs_dir)
     detail = _select_run(st, runs, text)
-    views = _ordered_views(str(query.get("view", "guard")))
+    views = _ordered_views(str(query.get("view", "workflows")))
     tabs = st.tabs([text[name] for name in views])
     for tab, name in zip(tabs, views, strict=True):
         with tab:
-            _render_view(st, name, text, language, policy_path, detail, query)
+            _render_view(
+                st,
+                name,
+                text,
+                language,
+                policy_path,
+                detail,
+                query,
+                runs_dir,
+                execution_mode,
+                overwrite,
+            )
 
 
 def _render_view(
@@ -183,8 +270,22 @@ def _render_view(
     policy_path: Path | None,
     detail: JsonDict,
     query: JsonDict,
+    runs_dir: Path,
+    execution_mode: str,
+    overwrite: bool,
 ) -> None:
-    if name == "guard":
+    if name == "workflows":
+        _render_workflows_tab(
+            st,
+            text,
+            language,
+            policy_path,
+            detail,
+            runs_dir,
+            execution_mode,
+            overwrite,
+        )
+    elif name == "guard":
         _render_guard_tab(st, text, language, policy_path, _truthy(query.get("demo")))
     elif name == "report":
         _render_report_tab(st, text, detail)
@@ -229,7 +330,7 @@ def _truthy(value: object) -> bool:
 
 
 def _ordered_views(first: str) -> list[str]:
-    views = ["guard", "report", "drift", "audit", "history"]
+    views = ["workflows", "guard", "report", "drift", "audit", "history"]
     if first not in views:
         return views
     return [first, *[view for view in views if view != first]]
@@ -248,6 +349,224 @@ def _select_run(st: Any, runs: list[JsonDict], text: dict[str, str]) -> JsonDict
     selected = st.sidebar.selectbox(text["selected_run"], names)
     match = next(item for item in runs if item["name"] == selected)
     return load_run_detail(Path(str(match["path"])))
+
+
+def _render_workflows_tab(
+    st: Any,
+    text: dict[str, str],
+    language: str,
+    policy_path: Path | None,
+    detail: JsonDict,
+    runs_dir: Path,
+    execution_mode: str,
+    overwrite: bool,
+) -> None:
+    run_path = Path(str(detail.get("path") or runs_dir / "quick"))
+    with st.expander(text["guard_workflow"], expanded=True):
+        prompt = st.text_area(
+            text["prompt"],
+            "Fix this bug in auth/session.py and run tests.",
+            height=100,
+            key="wf_guard_prompt",
+        )
+        out_dir = Path(st.text_input(text["out_dir"], str(runs_dir / "guard"), key="wf_guard_out"))
+        confirmed = _confirm_checkbox(st, text, execution_mode, "wf_guard_confirm")
+        if st.button(text["run_action"], key="wf_guard_run"):
+            _render_workflow_result(
+                st,
+                text,
+                lambda: run_guard_workflow(
+                    prompt=prompt,
+                    out_dir=out_dir,
+                    execution_mode=execution_mode,
+                    confirmed=confirmed,
+                    overwrite=overwrite,
+                    policy_path=policy_path,
+                    language=language,
+                ),
+            )
+
+    with st.expander(text["analyze_workflow"]):
+        data_path = Path(st.text_input(text["data_path"], "examples/tasks.jsonl", key="wf_data"))
+        baseline_path = Path(
+            st.text_input(
+                text["baseline_predictions"],
+                "examples/predictions_baseline.jsonl",
+                key="wf_baseline",
+            )
+        )
+        candidate_path = Path(
+            st.text_input(
+                text["candidate_predictions"],
+                "examples/predictions_candidate.jsonl",
+                key="wf_candidate",
+            )
+        )
+        out_dir = Path(
+            st.text_input(text["out_dir"], str(runs_dir / "quick"), key="wf_analyze_out")
+        )
+        metric = st.text_input(text["metric"], "exact_match", key="wf_metric")
+        confirmed = _confirm_checkbox(st, text, execution_mode, "wf_analyze_confirm")
+        if st.button(text["run_action"], key="wf_analyze_run"):
+            _render_workflow_result(
+                st,
+                text,
+                lambda: run_analyze_workflow(
+                    data_path=data_path,
+                    baseline_predictions_path=baseline_path,
+                    candidate_predictions_path=candidate_path,
+                    out_dir=out_dir,
+                    execution_mode=execution_mode,
+                    confirmed=confirmed,
+                    overwrite=overwrite,
+                    policy_path=policy_path,
+                    metric=metric,
+                ),
+            )
+
+    with st.expander(text["gate_workflow"]):
+        selected_run_dir = Path(st.text_input(text["run_dir"], str(run_path), key="wf_gate_run"))
+        gate_policy = Path(
+            st.text_input(
+                text["policy_path"],
+                str(policy_path or Path("examples/gate.policy.yaml")),
+                key="wf_gate_policy",
+            )
+        )
+        confirmed = _confirm_checkbox(st, text, execution_mode, "wf_gate_confirm")
+        if st.button(text["run_action"], key="wf_gate_run_button"):
+            _render_workflow_result(
+                st,
+                text,
+                lambda: run_gate_workflow(
+                    run_dir=selected_run_dir,
+                    policy_path=gate_policy,
+                    execution_mode=execution_mode,
+                    confirmed=confirmed,
+                    overwrite=overwrite,
+                ),
+            )
+
+    with st.expander(text["audit_workflow"]):
+        repo = Path(st.text_input(text["repo"], ".", key="wf_audit_repo"))
+        before = st.text_input(text["before"], "HEAD~1", key="wf_audit_before")
+        after = st.text_input(text["after"], "HEAD", key="wf_audit_after")
+        out_dir = Path(st.text_input(text["out_dir"], str(runs_dir / "audit"), key="wf_audit_out"))
+        tests_run = _split_lines(st.text_area(text["tests_run"], "", key="wf_tests_run"))
+        tests_passed = _optional_bool_label(
+            st.selectbox(text["tests_passed"], ["unknown", "true", "false"], key="wf_tests_passed")
+        )
+        confirmed = _confirm_checkbox(st, text, execution_mode, "wf_audit_confirm")
+        if st.button(text["run_action"], key="wf_audit_run"):
+            _render_workflow_result(
+                st,
+                text,
+                lambda: run_audit_workflow(
+                    repo=repo,
+                    before=before,
+                    after=after,
+                    out_dir=out_dir,
+                    execution_mode=execution_mode,
+                    confirmed=confirmed,
+                    overwrite=overwrite,
+                    tests_run=tests_run,
+                    tests_passed=tests_passed,
+                ),
+            )
+
+    with st.expander(text["agent_run_workflow"]):
+        selected_run_dir = Path(st.text_input(text["run_dir"], str(run_path), key="wf_agent_run"))
+        audit_dir = Path(
+            st.text_input(text["audit_dir"], str(runs_dir / "audit"), key="wf_agent_audit")
+        )
+        agent = st.text_input(text["agent"], "codex", key="wf_agent")
+        out_path = Path(
+            st.text_input(
+                text["agent_run_path"],
+                str(selected_run_dir / "agent_run.json"),
+                key="wf_agent_out",
+            )
+        )
+        confirmed = _confirm_checkbox(st, text, execution_mode, "wf_agent_confirm")
+        if st.button(text["run_action"], key="wf_agent_run_button"):
+            _render_workflow_result(
+                st,
+                text,
+                lambda: build_agent_run_workflow(
+                    run_dir=selected_run_dir,
+                    audit_dir=audit_dir,
+                    agent=agent,
+                    out_path=out_path,
+                    execution_mode=execution_mode,
+                    confirmed=confirmed,
+                    overwrite=overwrite,
+                    policy=str(policy_path) if policy_path is not None else None,
+                ),
+            )
+
+    with st.expander(text["pr_summary_workflow"]):
+        audit_path = _optional_path(
+            st.text_input(
+                text["audit_dir"],
+                str(runs_dir / "audit" / "audit_result.json"),
+                key="wf_pr_audit",
+            )
+        )
+        gate_path = _optional_path(
+            st.text_input(
+                text["run_dir"],
+                str(run_path / "gate_result.json"),
+                key="wf_pr_gate",
+            )
+        )
+        agent_run_path = _optional_path(
+            st.text_input(
+                text["agent_run_path"],
+                str(run_path / "agent_run.json"),
+                key="wf_pr_agent",
+            )
+        )
+        markdown_path = _optional_path(
+            st.text_input(text["markdown_path"], str(run_path / "pr_summary.md"), key="wf_pr_md")
+        )
+        json_path = _optional_path(
+            st.text_input(text["json_path"], str(run_path / "pr_summary.json"), key="wf_pr_json")
+        )
+        confirmed = _confirm_checkbox(st, text, execution_mode, "wf_pr_confirm")
+        if st.button(text["run_action"], key="wf_pr_run"):
+            _render_workflow_result(
+                st,
+                text,
+                lambda: run_pr_summary_workflow(
+                    audit_path=audit_path,
+                    gate_path=gate_path,
+                    agent_run_path=agent_run_path,
+                    markdown_path=markdown_path,
+                    json_path=json_path,
+                    execution_mode=execution_mode,
+                    confirmed=confirmed,
+                    overwrite=overwrite,
+                ),
+            )
+
+    with st.expander(text["export_workflow"]):
+        selected_run_dir = Path(st.text_input(text["run_dir"], str(run_path), key="wf_zip_run"))
+        zip_path = Path(
+            st.text_input(text["zip_path"], str(selected_run_dir / "report.zip"), key="wf_zip")
+        )
+        confirmed = _confirm_checkbox(st, text, execution_mode, "wf_zip_confirm")
+        if st.button(text["run_action"], key="wf_zip_run_button"):
+            _render_workflow_result(
+                st,
+                text,
+                lambda: export_report_zip_workflow(
+                    run_dir=selected_run_dir,
+                    zip_path=zip_path,
+                    execution_mode=execution_mode,
+                    confirmed=confirmed,
+                    overwrite=overwrite,
+                ),
+            )
 
 
 def _render_guard_tab(
@@ -511,6 +830,53 @@ def _recommendation_label(value: object) -> object:
     if isinstance(value, dict):
         return value.get("label") or value.get("recommendation") or value.get("verdict")
     return value
+
+
+def _confirm_checkbox(
+    st: Any,
+    text: dict[str, str],
+    execution_mode: str,
+    key: str,
+) -> bool:
+    if execution_mode != "confirm":
+        return False
+    return bool(st.checkbox(text["confirm_write"], value=False, key=key))
+
+
+def _render_workflow_result(
+    st: Any,
+    text: dict[str, str],
+    callback: Callable[[], JsonDict],
+) -> None:
+    try:
+        result = callback()
+    except Exception as exc:
+        st.error(str(exc))
+        return
+    title = (
+        text["workflow_preview"]
+        if result.get("status") == "preview"
+        else text["workflow_result"]
+    )
+    st.subheader(title)
+    st.json(result)
+
+
+def _optional_path(value: str) -> Path | None:
+    stripped = value.strip()
+    return Path(stripped) if stripped else None
+
+
+def _split_lines(value: str) -> list[str]:
+    return [line.strip() for line in value.splitlines() if line.strip()]
+
+
+def _optional_bool_label(value: object) -> bool | None:
+    if value == "true":
+        return True
+    if value == "false":
+        return False
+    return None
 
 
 if __name__ == "__main__":

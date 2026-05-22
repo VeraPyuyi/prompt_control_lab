@@ -180,6 +180,9 @@ def test_ui_has_history_view_order_and_text() -> None:
 
     assert "history" in app.TEXT["en"]
     assert "history" in app.TEXT["zh"]
+    assert "workflows" in app.TEXT["en"]
+    assert "workflows" in app.TEXT["zh"]
+    assert app._ordered_views("workflows")[0] == "workflows"
     assert app._ordered_views("history")[0] == "history"
 
 

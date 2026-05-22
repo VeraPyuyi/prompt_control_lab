@@ -247,7 +247,20 @@ pcl analyze --config promptcontrol.example.yaml --out runs/quick
 pcl ui --runs runs/ --policy examples/guard.policy.yaml --port 8501
 ```
 
-本地仪表盘有五个 tab：
+本地 UI 现在包含 **工作流** tab，可以在浏览器里触发本地动作：守护 prompt、运行
+analyze、运行 gate、审计 git diff、生成 `agent_run.json`、生成 PR summary，以及导出报告
+zip。默认执行模式是 `confirm`，会先预览将要写入的文件；高级用户可以切换到 `auto` 或
+`command`。
+
+导出 zip 的 CLI 等价命令：
+
+```bash
+pcl export-report --run runs/quick --out runs/quick/report.zip
+```
+
+- **工作流：** 触发 allowlisted 本地工作流，并在写入文件前预览输出。
+
+其余五个 tab：
 
 - **守护 Prompt：** 交互式运行 `pcl guard`，查看风险、策略违规、token 成本和 prompt diff。
 - **运行报告：** 查看部署建议、gate 状态、分数变化、置信区间、p-value、slice 分数和模型来源。
