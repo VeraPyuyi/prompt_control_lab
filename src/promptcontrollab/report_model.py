@@ -69,6 +69,37 @@ class ReportModel:
 
         return bool(self.artifacts)
 
+    @property
+    def first_comparison(self) -> JsonDict:
+        """Primary statistical comparison, normalized across old and new stats shapes."""
+
+        return _first_comparison(self.stats)
+
+    @property
+    def mean_delta(self) -> float | None:
+        """Mean candidate-baseline score delta for the primary comparison."""
+
+        return _optional_number(self.first_comparison.get("mean_delta"))
+
+    @property
+    def bootstrap_ci(self) -> list[object] | None:
+        """Bootstrap confidence interval for the primary comparison."""
+
+        value = self.first_comparison.get("bootstrap_ci")
+        return value if isinstance(value, list) else None
+
+    @property
+    def permutation_p_value(self) -> float | None:
+        """Permutation-test p-value for the primary comparison."""
+
+        return _optional_number(self.first_comparison.get("permutation_p_value"))
+
+    @property
+    def holm_adjusted_p_value(self) -> float | None:
+        """Holm-adjusted p-value for the primary comparison."""
+
+        return _optional_number(self.first_comparison.get("holm_adjusted_p_value"))
+
 
 def _read_optional(path: Path) -> JsonDict:
     if not path.exists():
@@ -117,4 +148,27 @@ def _first_score(*values: JsonDict) -> float | None:
         score = _score(value)
         if score is not None:
             return score
+    return None
+
+
+def _first_comparison(stats: JsonDict) -> JsonDict:
+    comparisons = stats.get("comparisons")
+    if isinstance(comparisons, list) and comparisons and isinstance(comparisons[0], dict):
+        return comparisons[0]
+    if any(
+        key in stats
+        for key in [
+            "mean_delta",
+            "bootstrap_ci",
+            "permutation_p_value",
+            "holm_adjusted_p_value",
+        ]
+    ):
+        return stats
+    return {}
+
+
+def _optional_number(value: object) -> float | None:
+    if isinstance(value, int | float):
+        return float(value)
     return None

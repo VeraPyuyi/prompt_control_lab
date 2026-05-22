@@ -10,8 +10,15 @@ from typing import Any
 import pytest
 
 from promptcontrollab.cli import main
+from promptcontrollab.report_model import ReportModel
 from promptcontrollab.ui import charts
-from promptcontrollab.ui.data import first_comparison, list_runs, load_run_detail
+from promptcontrollab.ui.data import (
+    audit_detail_sections,
+    first_comparison,
+    history_rows,
+    list_runs,
+    load_run_detail,
+)
 
 
 def test_cli_ui_help_is_available(capsys: pytest.CaptureFixture[str]) -> None:
@@ -183,6 +190,32 @@ def test_report_model_lists_diagnostic_artifacts(tmp_path: Path) -> None:
     assert "diagnostics/trajectory.json" in detail["artifacts"]
 
 
+def test_report_model_exposes_primary_comparison_fields(tmp_path: Path) -> None:
+    run = tmp_path / "runs" / "quick"
+    _write_json(
+        run / "stats.json",
+        {
+            "comparisons": [
+                {
+                    "mean_delta": 0.0,
+                    "bootstrap_ci": [-0.1, 0.2],
+                    "permutation_p_value": 1.0,
+                    "holm_adjusted_p_value": 1.0,
+                }
+            ],
+            "holm_family_size": 1,
+        },
+    )
+
+    model = ReportModel.from_run(run)
+
+    assert model.first_comparison["mean_delta"] == 0.0
+    assert model.mean_delta == 0.0
+    assert model.bootstrap_ci == [-0.1, 0.2]
+    assert model.permutation_p_value == 1.0
+    assert model.holm_adjusted_p_value == 1.0
+
+
 def test_first_comparison_reads_stats_json_and_legacy_shape() -> None:
     stats = {
         "comparisons": [
@@ -194,6 +227,86 @@ def test_first_comparison_reads_stats_json_and_legacy_shape() -> None:
 
     assert first_comparison(stats)["mean_delta"] == 0.25
     assert first_comparison(legacy)["mean_delta"] == 0.1
+
+
+def test_history_rows_normalize_trend_fields() -> None:
+    detail = {
+        "history_index": {
+            "runs": [
+                {
+                    "run_name": "old",
+                    "mean_score": 0.8,
+                    "gate_status": "pass",
+                    "risk_level": "low",
+                    "review_required": False,
+                    "model": {"provider": "openai", "model_id": "gpt-4o"},
+                    "prompt_identity": {"prompt_hash": "sha256:old"},
+                    "risk_categories": [],
+                },
+                {
+                    "run_name": "new",
+                    "mean_score": 0.7,
+                    "gate_status": "needs_review",
+                    "risk_level": "high",
+                    "review_required": True,
+                    "model": {"provider": "anthropic", "model_id": "claude-sonnet"},
+                    "prompt_identity": {"prompt_hash": "sha256:new"},
+                    "risk_categories": ["secret"],
+                },
+            ]
+        }
+    }
+
+    rows = history_rows(detail)
+
+    assert rows == [
+        {
+            "order": 1,
+            "run": "old",
+            "gate_status": "pass",
+            "mean_score": 0.8,
+            "risk_level": "low",
+            "review_required": False,
+            "provider": "openai",
+            "model": "gpt-4o",
+            "prompt_hash": "sha256:old",
+            "risk_categories": [],
+        },
+        {
+            "order": 2,
+            "run": "new",
+            "gate_status": "needs_review",
+            "mean_score": 0.7,
+            "risk_level": "high",
+            "review_required": True,
+            "provider": "anthropic",
+            "model": "claude-sonnet",
+            "prompt_hash": "sha256:new",
+            "risk_categories": ["secret"],
+        },
+    ]
+
+
+def test_audit_detail_sections_expose_high_signal_fields() -> None:
+    audit = {
+        "secret_findings": [{"path": "src/app.py", "kind": "token", "redacted": "***"}],
+        "dependency_files_changed": ["pyproject.toml"],
+        "lockfiles_changed": ["uv.lock"],
+        "workflow_files_changed": [".github/workflows/ci.yml"],
+        "deleted_test_files": ["tests/test_old.py"],
+        "unexpected_files": ["auth/session.py"],
+        "test_results": [{"command": "pytest", "returncode": 1, "stderr": "failed"}],
+    }
+
+    sections = audit_detail_sections(audit)
+
+    assert sections["secret_findings"][0]["path"] == "src/app.py"
+    assert sections["dependency_files_changed"] == [{"path": "pyproject.toml"}]
+    assert sections["lockfiles_changed"] == [{"path": "uv.lock"}]
+    assert sections["workflow_files_changed"] == [{"path": ".github/workflows/ci.yml"}]
+    assert sections["deleted_test_files"] == [{"path": "tests/test_old.py"}]
+    assert sections["unexpected_files"] == [{"path": "auth/session.py"}]
+    assert sections["test_results"][0]["stderr"] == "failed"
 
 
 def test_ui_list_runs_prefers_child_runs_when_root_has_history_index(tmp_path: Path) -> None:

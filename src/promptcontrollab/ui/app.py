@@ -13,13 +13,17 @@ from promptcontrollab.prompt_context import load_prompt_context
 from promptcontrollab.prompt_guard import guard_prompt
 from promptcontrollab.ui.charts import (
     file_breakdown_bar,
+    history_category_timeline,
+    history_numeric_trend,
     risk_category_bar,
     score_delta_ci,
     slice_score_heatmap,
 )
 from promptcontrollab.ui.components import badge, empty_state, metric_cards, prompt_diff
 from promptcontrollab.ui.data import (
+    audit_detail_sections,
     first_comparison,
+    history_rows,
     list_runs,
     load_run_detail,
     model_rows,
@@ -33,6 +37,7 @@ from promptcontrollab.ui.workflows import (
     run_gate_workflow,
     run_guard_workflow,
     run_pr_summary_workflow,
+    save_guard_outputs,
 )
 
 TEXT = {
@@ -104,6 +109,9 @@ TEXT = {
         "token_mode": "Token mode",
         "max_tokens": "Max tokens",
         "guarded_prompt": "Guarded prompt",
+        "save_guard": "Save guard artifacts",
+        "save_guard_dir": "Guard save directory",
+        "saved_guard": "Saved guard artifacts",
         "risk_chart": "Risk Categories",
         "count": "count",
         "category": "category",
@@ -128,7 +136,18 @@ TEXT = {
         "run_timeline": "Run timeline",
         "gate_trend": "Gate trend",
         "score_trend": "Score trend",
+        "risk_trend": "Risk trend",
+        "review_trend": "Review trend",
         "prompt_identity": "Prompt identity",
+        "model_changes": "Model/provider changes",
+        "audit_details": "Audit details",
+        "secret_findings": "Secret findings",
+        "dependency_files": "Dependency files",
+        "lockfiles": "Lockfiles",
+        "workflow_files": "Workflow files",
+        "deleted_test_files": "Deleted test files",
+        "unexpected_files": "Unexpected files",
+        "test_results": "Test results",
         "risk_categories": "Risk categories",
     },
     "zh": {
@@ -199,6 +218,9 @@ TEXT = {
         "token_mode": "Token 模式",
         "max_tokens": "最大 Token",
         "guarded_prompt": "守护后的提示词",
+        "save_guard": "保存 guard artifact",
+        "save_guard_dir": "Guard 保存目录",
+        "saved_guard": "已保存 guard artifact",
         "risk_chart": "风险类别",
         "count": "数量",
         "category": "类别",
@@ -223,7 +245,18 @@ TEXT = {
         "run_timeline": "Run 时间线",
         "gate_trend": "门禁趋势",
         "score_trend": "分数趋势",
+        "risk_trend": "风险趋势",
+        "review_trend": "复核趋势",
         "prompt_identity": "Prompt 身份",
+        "model_changes": "模型 / provider 变化",
+        "audit_details": "审计明细",
+        "secret_findings": "疑似密钥",
+        "dependency_files": "依赖文件",
+        "lockfiles": "锁文件",
+        "workflow_files": "Workflow 文件",
+        "deleted_test_files": "删除的测试文件",
+        "unexpected_files": "意外文件",
+        "test_results": "测试结果",
         "risk_categories": "风险类别",
     },
 }
@@ -292,7 +325,15 @@ def _render_view(
             overwrite,
         )
     elif name == "guard":
-        _render_guard_tab(st, text, language, policy_path, _truthy(query.get("demo")))
+        _render_guard_tab(
+            st,
+            text,
+            language,
+            policy_path,
+            runs_dir,
+            _truthy(query.get("demo")),
+            overwrite,
+        )
     elif name == "report":
         _render_report_tab(st, text, detail)
     elif name == "drift":
@@ -580,7 +621,9 @@ def _render_guard_tab(
     text: dict[str, str],
     language: str,
     policy_path: Path | None,
+    runs_dir: Path,
     run_demo: bool = False,
+    overwrite: bool = False,
 ) -> None:
     prompt = st.text_area(
         text["prompt"],
@@ -593,6 +636,10 @@ def _render_guard_tab(
     token_mode = columns[2].selectbox(text["token_mode"], ["balanced", "aggressive"])
     max_tokens_raw = columns[3].number_input(text["max_tokens"], min_value=0, value=0)
     max_tokens = int(max_tokens_raw) if max_tokens_raw else None
+    save_guard = bool(st.checkbox(text["save_guard"], value=False))
+    save_dir = Path(
+        st.text_input(text["save_guard_dir"], str(runs_dir / "guard-ui"), disabled=not save_guard)
+    )
     if st.button(text["run_guard"], type="primary") or run_demo:
         result = guard_prompt(
             prompt,
@@ -630,6 +677,18 @@ def _render_guard_tab(
         st.subheader(text["diff"])
         st.code(prompt_diff(prompt, str(result.get("improved_prompt", ""))), language="diff")
         st.text_area(text["guarded_prompt"], str(result.get("improved_prompt", "")), height=180)
+        if save_guard:
+            outputs = [
+                save_dir / "guard_result.json",
+                save_dir / "improved_prompt.txt",
+                save_dir / "guarded_prompt.txt",
+            ]
+            existing = [path for path in outputs if path.exists()]
+            if existing and not overwrite:
+                st.warning("Output artifacts already exist; enable overwrite to replace them.")
+            else:
+                written = save_guard_outputs(result, out_dir=save_dir)
+                st.success(f"{text['saved_guard']}: {', '.join(str(path) for path in written)}")
 
 
 def _render_report_tab(st: Any, text: dict[str, str], detail: JsonDict) -> None:
@@ -638,8 +697,9 @@ def _render_report_tab(st: Any, text: dict[str, str], detail: JsonDict) -> None:
         return
     explanation = _dict(detail.get("explanation"))
     gate = _dict(detail.get("gate"))
-    stats = _dict(detail.get("stats"))
-    comparison = first_comparison(stats)
+    comparison = _dict(detail.get("first_comparison")) or first_comparison(
+        _dict(detail.get("stats"))
+    )
     metric_cards(
         st,
         [
@@ -745,6 +805,23 @@ def _render_audit_tab(st: Any, text: dict[str, str], detail: JsonDict) -> None:
     changed = _strings(audit.get("changed_files"))
     if changed:
         st.dataframe([{text["path"]: path} for path in changed], use_container_width=True)
+    sections = audit_detail_sections(audit)
+    detail_labels = {
+        "secret_findings": text["secret_findings"],
+        "dependency_files_changed": text["dependency_files"],
+        "lockfiles_changed": text["lockfiles"],
+        "workflow_files_changed": text["workflow_files"],
+        "deleted_test_files": text["deleted_test_files"],
+        "unexpected_files": text["unexpected_files"],
+        "test_results": text["test_results"],
+    }
+    if any(sections.values()):
+        st.subheader(text["audit_details"])
+    for key, label in detail_labels.items():
+        rows = sections.get(key, [])
+        if rows:
+            st.markdown(f"**{label}**")
+            st.dataframe(rows, use_container_width=True)
 
 
 def _render_history_tab(st: Any, text: dict[str, str], detail: JsonDict) -> None:
@@ -757,9 +834,58 @@ def _render_history_tab(st: Any, text: dict[str, str], detail: JsonDict) -> None
             "pcl history index --runs runs/ --out runs/history_index.json",
         )
         return
-    rows = [_history_row(item) for item in runs if isinstance(item, dict)]
+    rows = history_rows(detail)
     st.subheader(text["run_timeline"])
     st.dataframe(rows, use_container_width=True)
+    st.plotly_chart(
+        history_numeric_trend(
+            rows,
+            y_key="mean_score",
+            title=text["score_trend"],
+            value_label=text["candidate_score"],
+        ),
+        use_container_width=True,
+    )
+    st.plotly_chart(
+        history_category_timeline(
+            rows,
+            y_key="gate_status",
+            title=text["gate_trend"],
+            category_label=text["gate"],
+        ),
+        use_container_width=True,
+    )
+    st.plotly_chart(
+        history_category_timeline(
+            rows,
+            y_key="risk_level",
+            title=text["risk_trend"],
+            category_label=text["risk"],
+        ),
+        use_container_width=True,
+    )
+    st.plotly_chart(
+        history_category_timeline(
+            rows,
+            y_key="review_required",
+            title=text["review_trend"],
+            category_label=text["review"],
+        ),
+        use_container_width=True,
+    )
+    st.subheader(text["model_changes"])
+    st.dataframe(
+        [
+            {
+                "run": row.get("run"),
+                "provider": row.get("provider"),
+                "model": row.get("model"),
+                "prompt_hash": row.get("prompt_hash"),
+            }
+            for row in rows
+        ],
+        use_container_width=True,
+    )
     gate_counts = _category_count([str(row.get("gate_status", "unknown")) for row in rows])
     st.plotly_chart(
         risk_category_bar(

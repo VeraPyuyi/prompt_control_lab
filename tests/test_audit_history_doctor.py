@@ -296,6 +296,18 @@ def test_cli_history_index_and_compare(tmp_path: Path) -> None:
             "checks": {"model_provenance": {"violations": ["model_mismatch"]}},
         },
     )
+    _write_json(
+        new / "audit_result.json",
+        {
+            "human_review_required": True,
+            "secret_findings": [{"path": "src/app.py", "kind": "secret_like"}],
+            "workflow_files_changed": [".github/workflows/ci.yml"],
+        },
+    )
+    _write_json(
+        new / "agent_run.json",
+        {"risk_level": "high", "review_required": True, "agent": "codex"},
+    )
     _write(runs / "notes.txt", "not a run")
 
     index_out = runs / "history_index.json"
@@ -314,7 +326,11 @@ def test_cli_history_index_and_compare(tmp_path: Path) -> None:
     assert compare["gate_status_change"] == {"a": "pass", "b": "fail"}
     assert compare["metric_delta"] == -0.05
     assert compare["regressed_slices"] == [{"slice": "math", "a": 0.9, "b": 0.8, "delta": -0.1}]
-    assert compare["new_risk_categories"] == ["model_mismatch"]
+    assert compare["new_risk_categories"] == ["model_mismatch", "secret", "workflow"]
+    new_summary = next(item for item in index["runs"] if item["run_name"] == "new")
+    assert new_summary["risk_level"] == "high"
+    assert new_summary["review_required"] is True
+    assert new_summary["human_review_required"] is True
 
 
 def test_history_index_reads_quick_mode_candidate_metrics(tmp_path: Path) -> None:
@@ -368,7 +384,14 @@ def test_github_action_example_exists_and_uses_real_cli() -> None:
     assert "pcl gate --run runs/quick --policy examples/gate.policy.yaml" in text
     assert "pcl audit-diff" in text
     assert "gate_result.json was not found" in text
+    assert "cat > runs/quick/manifest.json" in text
+    assert "[ -f runs/quick/candidate/metrics.json ]" in text
     assert "actions/github-script" in text
+
+    template = Path("src/promptcontrollab/template_data/github_action/prompt-control-lab-gate.yml")
+    template_text = template.read_text(encoding="utf-8")
+    assert "cat > runs/quick/manifest.json" in template_text
+    assert "[ -f runs/quick/candidate/metrics.json ]" in template_text
 
 
 def _make_git_repo(tmp_path: Path) -> Path:

@@ -113,6 +113,69 @@ def file_breakdown_bar(
     return px.bar(rows, x=kind_label, y=count_label, title=title)
 
 
+def history_numeric_trend(
+    rows: list[JsonDict],
+    *,
+    y_key: str,
+    title: str,
+    run_label: str = "run",
+    value_label: str = "value",
+) -> Any:
+    """Build a numeric trend chart over ordered runs."""
+
+    px = _plotly_express()
+    chart_rows = [
+        {
+            "order": row.get("order"),
+            run_label: row.get("run"),
+            value_label: _number(row.get(y_key)),
+        }
+        for row in rows
+        if _number(row.get(y_key)) is not None
+    ]
+    if not chart_rows:
+        chart_rows = [{"order": 0, run_label: "none", value_label: 0.0}]
+    return px.line(
+        chart_rows,
+        x="order",
+        y=value_label,
+        hover_name=run_label,
+        markers=True,
+        title=title,
+    )
+
+
+def history_category_timeline(
+    rows: list[JsonDict],
+    *,
+    y_key: str,
+    title: str,
+    run_label: str = "run",
+    category_label: str = "category",
+) -> Any:
+    """Build a categorical run timeline chart."""
+
+    px = _plotly_express()
+    chart_rows = [
+        {
+            "order": row.get("order"),
+            run_label: row.get("run"),
+            category_label: str(row.get(y_key) or "unknown"),
+        }
+        for row in rows
+    ]
+    if not chart_rows:
+        chart_rows = [{"order": 0, run_label: "none", category_label: "unknown"}]
+    return px.scatter(
+        chart_rows,
+        x="order",
+        y=category_label,
+        color=category_label,
+        hover_name=run_label,
+        title=title,
+    )
+
+
 def _plotly_express() -> Any:
     return cast(Any, importlib.import_module("plotly.express"))
 

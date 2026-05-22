@@ -62,6 +62,11 @@ def load_run_detail(run_dir: Path) -> JsonDict:
         "metrics": model.metrics,
         "candidate_score": model.candidate_score,
         "baseline_score": model.baseline_score,
+        "first_comparison": model.first_comparison,
+        "mean_delta": model.mean_delta,
+        "bootstrap_ci": model.bootstrap_ci,
+        "permutation_p_value": model.permutation_p_value,
+        "holm_adjusted_p_value": model.holm_adjusted_p_value,
         "empty_state": (
             "Run `pcl analyze` with a config, for example "
             "`pcl analyze --config promptcontrol.example.yaml --out runs/quick`, "
@@ -81,9 +86,65 @@ def first_comparison(stats: JsonDict) -> JsonDict:
     comparisons = stats.get("comparisons")
     if isinstance(comparisons, list) and comparisons and isinstance(comparisons[0], dict):
         return comparisons[0]
-    if any(key in stats for key in ["mean_delta", "bootstrap_ci", "permutation_p_value"]):
+    if any(
+        key in stats
+        for key in [
+            "mean_delta",
+            "bootstrap_ci",
+            "permutation_p_value",
+            "holm_adjusted_p_value",
+        ]
+    ):
         return stats
     return {}
+
+
+def history_rows(detail: JsonDict) -> list[JsonDict]:
+    """Return normalized history rows for tables and trend charts."""
+
+    history = detail.get("history_index")
+    if not isinstance(history, dict):
+        return []
+    runs = history.get("runs")
+    if not isinstance(runs, list):
+        return []
+    rows: list[JsonDict] = []
+    for index, item in enumerate(runs, start=1):
+        if not isinstance(item, dict):
+            continue
+        model = item.get("model")
+        model_dict = model if isinstance(model, dict) else {}
+        prompt = item.get("prompt_identity")
+        prompt_dict = prompt if isinstance(prompt, dict) else {}
+        rows.append(
+            {
+                "order": index,
+                "run": item.get("run_name"),
+                "gate_status": item.get("gate_status"),
+                "mean_score": item.get("mean_score"),
+                "risk_level": item.get("risk_level"),
+                "review_required": item.get("review_required"),
+                "provider": model_dict.get("provider"),
+                "model": model_dict.get("model_id"),
+                "prompt_hash": prompt_dict.get("prompt_hash"),
+                "risk_categories": item.get("risk_categories", []),
+            }
+        )
+    return rows
+
+
+def audit_detail_sections(audit: JsonDict) -> dict[str, list[JsonDict]]:
+    """Return high-signal audit detail sections for display."""
+
+    return {
+        "secret_findings": _dict_rows(audit.get("secret_findings")),
+        "dependency_files_changed": _path_rows(audit.get("dependency_files_changed")),
+        "lockfiles_changed": _path_rows(audit.get("lockfiles_changed")),
+        "workflow_files_changed": _path_rows(audit.get("workflow_files_changed")),
+        "deleted_test_files": _path_rows(audit.get("deleted_test_files")),
+        "unexpected_files": _path_rows(audit.get("unexpected_files")),
+        "test_results": _dict_rows(audit.get("test_results")),
+    }
 
 
 def risk_category_counts(detail: JsonDict) -> dict[str, int]:
@@ -173,3 +234,21 @@ def _extract_categories(value: object) -> list[str]:
     if value.get("public_api_changed"):
         categories.append("public_api")
     return categories
+
+
+def _path_rows(value: object) -> list[JsonDict]:
+    if not isinstance(value, list):
+        return []
+    return [{"path": str(item)} for item in value]
+
+
+def _dict_rows(value: object) -> list[JsonDict]:
+    if not isinstance(value, list):
+        return []
+    rows: list[JsonDict] = []
+    for item in value:
+        if isinstance(item, dict):
+            rows.append(dict(item))
+        else:
+            rows.append({"value": str(item)})
+    return rows

@@ -55,6 +55,7 @@ def test_guard_workflow_preview_auto_and_command_modes(tmp_path: Path) -> None:
 
     assert result["status"] == "completed"
     assert (out_dir / "guard_result.json").exists()
+    assert (out_dir / "improved_prompt.txt").exists()
     assert (out_dir / "guarded_prompt.txt").exists()
 
 
@@ -115,6 +116,8 @@ def test_analyze_gate_agent_pr_and_zip_workflows(tmp_path: Path) -> None:
     assert payload["gate"]["status"] == "pass"
     assert payload["audit"]["tests_run"] == ["pytest"]
     assert payload["review_required"] is False
+    assert payload["policy_detail"]["policy_file"] == str(gate_policy)
+    assert str(payload["policy_detail"]["policy_hash"]).startswith("sha256:")
 
     summary = run_pr_summary_workflow(
         audit_path=audit_dir / "audit_result.json",

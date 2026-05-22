@@ -22,6 +22,7 @@ def generate_report(run_dir: Path, *, title: str) -> tuple[Path, Path]:
         explanation=model.explanation,
         gate=model.gate,
         diagnostics=model.diagnostics,
+        first_comparison=model.first_comparison,
     )
     md_path = run_dir / "report.md"
     html_path = run_dir / "report.html"
@@ -40,6 +41,7 @@ def render_markdown(
     explanation: JsonDict,
     gate: JsonDict,
     diagnostics: dict[str, JsonDict],
+    first_comparison: JsonDict | None = None,
 ) -> str:
     """Render a compact diagnostic report."""
 
@@ -115,9 +117,11 @@ def render_markdown(
     if stats:
         lines += ["## Statistical Comparison", ""]
         comparisons = stats.get("comparisons", [])
+        rendered = False
         if isinstance(comparisons, list):
             for comparison in comparisons:
                 if isinstance(comparison, dict):
+                    rendered = True
                     lines += [
                         f"- Mean delta: `{comparison.get('mean_delta')}`",
                         f"- Bootstrap CI: `{comparison.get('bootstrap_ci')}`",
@@ -125,6 +129,14 @@ def render_markdown(
                         f"- Holm-adjusted p-value: `{comparison.get('holm_adjusted_p_value')}`",
                         f"- Interpretation: `{comparison.get('interpretation')}`",
                     ]
+        if not rendered and first_comparison:
+            lines += [
+                f"- Mean delta: `{first_comparison.get('mean_delta')}`",
+                f"- Bootstrap CI: `{first_comparison.get('bootstrap_ci')}`",
+                f"- Permutation p-value: `{first_comparison.get('permutation_p_value')}`",
+                f"- Holm-adjusted p-value: `{first_comparison.get('holm_adjusted_p_value')}`",
+                f"- Interpretation: `{first_comparison.get('interpretation')}`",
+            ]
         lines += [
             "",
             "This section explains whether the observed change is reliable or still uncertain.",

@@ -72,6 +72,8 @@ def test_cli_analyze_writes_prompt_identity(tmp_path: Path) -> None:
 def test_agent_run_build_and_report_model(tmp_path: Path) -> None:
     run = tmp_path / "runs" / "quick"
     audit = tmp_path / "runs" / "audit"
+    policy = tmp_path / "guard.policy.yaml"
+    policy.write_text("block_at: high\n", encoding="utf-8")
     _write_json(
         run / "manifest.json",
         {
@@ -106,6 +108,8 @@ def test_agent_run_build_and_report_model(tmp_path: Path) -> None:
                 "codex",
                 "--out",
                 str(out),
+                "--policy",
+                str(policy),
             ]
         )
         == 0
@@ -119,12 +123,44 @@ def test_agent_run_build_and_report_model(tmp_path: Path) -> None:
     assert payload["decision"] == "needs_review"
     assert payload["changed_files"] == ["src/app.py"]
     assert payload["human_review_required"] is True
+    assert payload["policy_detail"]["policy_file"] == str(policy)
+    assert str(payload["policy_detail"]["policy_hash"]).startswith("sha256:")
 
     (run / "agent_run.json").write_text(out.read_text(encoding="utf-8"), encoding="utf-8")
     model = ReportModel.from_run(run)
     assert model.agent_run["agent"] == "codex"
     assert model.candidate_score == 0.9
     assert model.gate["status"] == "needs_review"
+
+
+def test_agent_run_missing_policy_records_warning(tmp_path: Path) -> None:
+    run = tmp_path / "runs" / "quick"
+    out = tmp_path / "agent_run.json"
+    missing_policy = tmp_path / "missing.policy.yaml"
+    _write_json(run / "manifest.json", {})
+
+    assert (
+        main(
+            [
+                "agent-run",
+                "build",
+                "--run",
+                str(run),
+                "--agent",
+                "codex",
+                "--out",
+                str(out),
+                "--policy",
+                str(missing_policy),
+            ]
+        )
+        == 0
+    )
+
+    payload = _read_json(out)
+    assert payload["policy_detail"]["policy_file"] == str(missing_policy)
+    assert "policy_hash" not in payload["policy_detail"]
+    assert "Policy file was not found" in payload["warnings"][0]
 
 
 def test_agent_run_promotes_high_risk_audit_findings(tmp_path: Path) -> None:

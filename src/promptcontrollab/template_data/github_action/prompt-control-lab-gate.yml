@@ -19,13 +19,40 @@ jobs:
           python-version: "3.11"
       - name: Install PromptControlLab
         run: python -m pip install -e .
-      - name: Run PromptControlLab gate
+      - name: Prepare PromptControlLab run artifacts
+        shell: bash
         run: |
-          if [ -f promptcontrol.example.yaml ]; then
+          if [ -f runs/quick/manifest.json ]; then
+            echo "Using existing runs/quick artifacts."
+          elif [ -f promptcontrol.example.yaml ]; then
             pcl analyze --config promptcontrol.example.yaml --out runs/quick
+          else
+            echo "No runs/quick artifacts or promptcontrol.example.yaml found."
+            mkdir -p runs/quick
+            cat > runs/quick/manifest.json <<'JSON'
+          {
+            "mode": "ci-fallback",
+            "method": "missing-artifact",
+            "metric": "unknown",
+            "model_warnings": [
+              "No PromptControlLab run artifact or promptcontrol.example.yaml config was available."
+            ]
+          }
+          JSON
+            cat > runs/quick/gate_result.json <<'JSON'
+          {
+            "status": "needs_review",
+            "plain_summary": "gate_result.json was not found and no promptcontrol.example.yaml config was available."
+          }
+          JSON
+          fi
+      - name: Run PromptControlLab gate
+        shell: bash
+        run: |
+          if [ -f runs/quick/candidate/metrics.json ] || [ -f runs/quick/metrics.json ]; then
             pcl gate --run runs/quick --policy examples/gate.policy.yaml
           else
-            echo "No promptcontrol.example.yaml found; skipping gate generation."
+            echo "Skipping gate because runs/quick does not contain metrics artifacts."
           fi
       - name: Audit PR diff
         if: always()

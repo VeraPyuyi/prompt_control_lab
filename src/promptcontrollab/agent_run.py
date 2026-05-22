@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -28,7 +29,7 @@ def build_agent_run_manifest(
     prompt = _prompt_identity(manifest)
     model = _candidate_model(manifest)
     repo = audit.get("repo")
-    policy_payload = {"id": policy} if policy else {}
+    policy_payload, warnings = _policy_detail(policy)
     risk_level = _risk_level(gate, audit)
     review_required = bool(
         audit.get("human_review_required")
@@ -63,6 +64,7 @@ def build_agent_run_manifest(
         "commit_after": audit.get("after"),
         "audit_path": str(audit_path) if audit else None,
         "gate_path": str(gate_path) if gate else None,
+        "warnings": warnings,
     }
     write_json(out_path, payload)
     return payload
@@ -111,3 +113,24 @@ def _risk_level(gate: JsonDict, audit: JsonDict) -> str | None:
     if gate.get("status") == "pass":
         return "low"
     return None
+
+
+def _policy_detail(policy: str | None) -> tuple[JsonDict, list[str]]:
+    if not policy:
+        return {}, []
+    payload: JsonDict = {"id": policy, "policy_file": policy}
+    warnings: list[str] = []
+    path = Path(policy)
+    if path.exists():
+        payload["policy_hash"] = _sha256_file(path)
+    else:
+        warnings.append(f"Policy file was not found: {policy}")
+    return payload, warnings
+
+
+def _sha256_file(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return f"sha256:{digest.hexdigest()}"

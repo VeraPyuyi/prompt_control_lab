@@ -62,6 +62,7 @@ def summarize_run(run_dir: Path) -> JsonDict:
     manifest = _read_optional_json(run_dir / "manifest.json")
     metrics = _read_metrics(run_dir)
     gate = _read_optional_json(run_dir / "gate_result.json")
+    audit = _read_optional_json(run_dir / "audit_result.json")
     agent_run = _read_optional_json(run_dir / "agent_run.json")
     artifacts = [
         name
@@ -72,6 +73,7 @@ def summarize_run(run_dir: Path) -> JsonDict:
             "stats.json",
             "gate_result.json",
             "explanation.json",
+            "audit_result.json",
             "report.md",
             "report.html",
             "agent_run.json",
@@ -102,7 +104,10 @@ def summarize_run(run_dir: Path) -> JsonDict:
         "mean_score": metrics.get("mean_score"),
         "by_slice": metrics.get("by_slice") if isinstance(metrics.get("by_slice"), dict) else {},
         "gate_status": gate.get("status"),
-        "risk_categories": _risk_categories(gate),
+        "risk_categories": _combined_risk_categories(gate, audit),
+        "risk_level": _risk_level(gate, audit, agent_run),
+        "review_required": _review_required(gate, audit, agent_run),
+        "human_review_required": _review_required(gate, audit, agent_run),
         "agent_run": agent_run,
         "warnings": warnings,
     }
@@ -157,6 +162,57 @@ def _risk_categories(gate: JsonDict) -> list[str]:
             if isinstance(values, list):
                 categories.extend(str(item) for item in values)
     return sorted(set(categories))
+
+
+def _combined_risk_categories(gate: JsonDict, audit: JsonDict) -> list[str]:
+    categories = _risk_categories(gate)
+    if audit.get("dangerous_paths"):
+        categories.append("dangerous_path")
+    if audit.get("public_api_changed"):
+        categories.append("public_api")
+    if audit.get("secret_findings"):
+        categories.append("secret")
+    if audit.get("dependency_files_changed"):
+        categories.append("dependency")
+    if audit.get("lockfiles_changed"):
+        categories.append("lockfile")
+    if audit.get("workflow_files_changed"):
+        categories.append("workflow")
+    if audit.get("deleted_test_files"):
+        categories.append("deleted_test")
+    if audit.get("unexpected_files"):
+        categories.append("unexpected_file")
+    return sorted(set(categories))
+
+
+def _risk_level(gate: JsonDict, audit: JsonDict, agent_run: JsonDict) -> str | None:
+    agent_risk = agent_run.get("risk_level")
+    if isinstance(agent_risk, str) and agent_risk:
+        return agent_risk
+    if (
+        audit.get("secret_findings")
+        or audit.get("dangerous_paths")
+        or audit.get("workflow_files_changed")
+        or audit.get("deleted_test_files")
+    ):
+        return "high"
+    if gate.get("status") == "fail":
+        return "high"
+    if gate.get("status") == "needs_review" or audit.get("human_review_required"):
+        return "medium"
+    if gate.get("status") == "pass":
+        return "low"
+    return None
+
+
+def _review_required(gate: JsonDict, audit: JsonDict, agent_run: JsonDict) -> bool:
+    return bool(
+        gate.get("status") in {"fail", "needs_review"}
+        or audit.get("human_review_required")
+        or agent_run.get("review_required")
+        or agent_run.get("human_review_required")
+        or _risk_level(gate, audit, agent_run) in {"high", "medium"}
+    )
 
 
 def _same_or_unknown(a: object, b: object) -> bool | str:

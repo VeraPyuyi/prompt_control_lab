@@ -35,7 +35,11 @@ def run_guard_workflow(
 ) -> JsonDict:
     """Run or preview the Guard Prompt workflow."""
 
-    outputs = [out_dir / "guard_result.json", out_dir / "guarded_prompt.txt"]
+    outputs = [
+        out_dir / "guard_result.json",
+        out_dir / "improved_prompt.txt",
+        out_dir / "guarded_prompt.txt",
+    ]
     command = _command(
         [
             "pcl",
@@ -67,12 +71,7 @@ def run_guard_workflow(
             language=language,
             policy_path=policy_path,
         ).to_json()
-        ensure_dir(out_dir)
-        write_json(out_dir / "guard_result.json", result)
-        (out_dir / "guarded_prompt.txt").write_text(
-            str(result.get("improved_prompt", "")) + "\n",
-            encoding="utf-8",
-        )
+        save_guard_outputs(result, out_dir=out_dir)
         return {"guard": result}
 
     return _handle_execution(
@@ -84,6 +83,20 @@ def run_guard_workflow(
         overwrite=overwrite,
         runner=runner,
     )
+
+
+def save_guard_outputs(result: JsonDict, *, out_dir: Path) -> list[Path]:
+    """Persist guard output in UI-friendly artifact names."""
+
+    ensure_dir(out_dir)
+    guard_path = out_dir / "guard_result.json"
+    improved_path = out_dir / "improved_prompt.txt"
+    legacy_path = out_dir / "guarded_prompt.txt"
+    improved_prompt = str(result.get("improved_prompt", ""))
+    write_json(guard_path, result)
+    improved_path.write_text(improved_prompt + "\n", encoding="utf-8")
+    legacy_path.write_text(improved_prompt + "\n", encoding="utf-8")
+    return [guard_path, improved_path, legacy_path]
 
 
 def run_analyze_workflow(
