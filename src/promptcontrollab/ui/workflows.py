@@ -11,9 +11,11 @@ from promptcontrollab.artifact_export import export_report_zip
 from promptcontrollab.audit_diff import run_audit_diff
 from promptcontrollab.files import JsonDict, ensure_dir, write_json
 from promptcontrollab.gate import run_gate
+from promptcontrollab.history import index_history
 from promptcontrollab.pr_summary import write_pr_summary
 from promptcontrollab.prompt_context import load_prompt_context
 from promptcontrollab.prompt_guard import guard_prompt
+from promptcontrollab.templates import write_example_project
 from promptcontrollab.workflow import run_quick_analysis
 
 ExecutionRunner = Callable[[], JsonDict]
@@ -32,6 +34,8 @@ def run_guard_workflow(
     token_mode: str = "balanced",
     max_tokens: int | None = None,
     language: str = "auto",
+    safe_root: Path | None = None,
+    allow_external_outputs: bool = False,
 ) -> JsonDict:
     """Run or preview the Guard Prompt workflow."""
 
@@ -81,6 +85,8 @@ def run_guard_workflow(
         execution_mode=execution_mode,
         confirmed=confirmed,
         overwrite=overwrite,
+        safe_root=safe_root,
+        allow_external_outputs=allow_external_outputs,
         runner=runner,
     )
 
@@ -117,6 +123,8 @@ def run_analyze_workflow(
     permutation_samples: int = 1000,
     explain_level: str = "plain",
     title: str = "PromptControlLab Quick Analysis",
+    safe_root: Path | None = None,
+    allow_external_outputs: bool = False,
 ) -> JsonDict:
     """Run or preview Quick Mode analysis from the local UI."""
 
@@ -186,6 +194,8 @@ def run_analyze_workflow(
         execution_mode=execution_mode,
         confirmed=confirmed,
         overwrite=overwrite,
+        safe_root=safe_root,
+        allow_external_outputs=allow_external_outputs,
         runner=runner,
     )
 
@@ -197,6 +207,8 @@ def run_gate_workflow(
     execution_mode: str,
     confirmed: bool,
     overwrite: bool,
+    safe_root: Path | None = None,
+    allow_external_outputs: bool = False,
 ) -> JsonDict:
     """Run or preview a gate check."""
 
@@ -213,6 +225,8 @@ def run_gate_workflow(
         execution_mode=execution_mode,
         confirmed=confirmed,
         overwrite=overwrite,
+        safe_root=safe_root,
+        allow_external_outputs=allow_external_outputs,
         runner=runner,
     )
 
@@ -229,6 +243,8 @@ def run_audit_workflow(
     expected_paths: list[str] | None = None,
     tests_run: list[str] | None = None,
     tests_passed: bool | None = None,
+    safe_root: Path | None = None,
+    allow_external_outputs: bool = False,
 ) -> JsonDict:
     """Run or preview an audit-diff action without shell test execution."""
 
@@ -276,6 +292,8 @@ def run_audit_workflow(
         execution_mode=execution_mode,
         confirmed=confirmed,
         overwrite=overwrite,
+        safe_root=safe_root,
+        allow_external_outputs=allow_external_outputs,
         runner=runner,
     )
 
@@ -290,6 +308,8 @@ def build_agent_run_workflow(
     confirmed: bool,
     overwrite: bool,
     policy: str | None = None,
+    safe_root: Path | None = None,
+    allow_external_outputs: bool = False,
 ) -> JsonDict:
     """Run or preview agent_run.json generation."""
 
@@ -327,6 +347,8 @@ def build_agent_run_workflow(
         execution_mode=execution_mode,
         confirmed=confirmed,
         overwrite=overwrite,
+        safe_root=safe_root,
+        allow_external_outputs=allow_external_outputs,
         runner=runner,
     )
 
@@ -341,6 +363,8 @@ def run_pr_summary_workflow(
     execution_mode: str,
     confirmed: bool,
     overwrite: bool,
+    safe_root: Path | None = None,
+    allow_external_outputs: bool = False,
 ) -> JsonDict:
     """Run or preview PR summary generation."""
 
@@ -375,6 +399,8 @@ def run_pr_summary_workflow(
         execution_mode=execution_mode,
         confirmed=confirmed,
         overwrite=overwrite,
+        safe_root=safe_root,
+        allow_external_outputs=allow_external_outputs,
         runner=runner,
     )
 
@@ -386,6 +412,8 @@ def export_report_zip_workflow(
     execution_mode: str,
     confirmed: bool,
     overwrite: bool,
+    safe_root: Path | None = None,
+    allow_external_outputs: bool = False,
 ) -> JsonDict:
     """Export known run artifacts to a zip archive."""
 
@@ -401,6 +429,93 @@ def export_report_zip_workflow(
         execution_mode=execution_mode,
         confirmed=confirmed,
         overwrite=overwrite,
+        safe_root=safe_root,
+        allow_external_outputs=allow_external_outputs,
+        runner=runner,
+    )
+
+
+def create_demo_artifacts_workflow(
+    *,
+    runs_dir: Path,
+    execution_mode: str,
+    confirmed: bool,
+    overwrite: bool,
+    safe_root: Path | None = None,
+    allow_external_outputs: bool = False,
+) -> JsonDict:
+    """Create a local demo project and quick run artifacts."""
+
+    project_dir = runs_dir / "_demo_project"
+    out_dir = runs_dir / "demo"
+    outputs = [
+        project_dir / "promptcontrol.example.yaml",
+        out_dir / "manifest.json",
+        out_dir / "report.md",
+        out_dir / "report.html",
+        runs_dir / "history_index.json",
+    ]
+    command = _command_sequence(
+        [
+            ["pcl", "init", "--path", str(project_dir)],
+            [
+                "pcl",
+                "analyze",
+                "--config",
+                str(project_dir / "promptcontrol.example.yaml"),
+                "--out",
+                str(out_dir),
+            ],
+            [
+                "pcl",
+                "gate",
+                "--run",
+                str(out_dir),
+                "--policy",
+                str(project_dir / "examples" / "gate.policy.yaml"),
+            ],
+            [
+                "pcl",
+                "history",
+                "index",
+                "--runs",
+                str(runs_dir),
+                "--out",
+                str(runs_dir / "history_index.json"),
+            ],
+        ]
+    )
+
+    def runner() -> JsonDict:
+        write_example_project(project_dir)
+        run_quick_analysis(
+            data_path=project_dir / "examples" / "tasks.jsonl",
+            baseline_predictions_path=project_dir / "examples" / "predictions_baseline.jsonl",
+            candidate_predictions_path=project_dir / "examples" / "predictions_candidate.jsonl",
+            out_dir=out_dir,
+            metric="exact_match",
+            train_ratio=0.5,
+            val_ratio=0.25,
+            seed=0,
+            bootstrap_samples=50,
+            permutation_samples=50,
+            explain_level="plain",
+            title="PromptControlLab Demo Analysis",
+            policy_path=project_dir / "examples" / "gate.policy.yaml",
+        )
+        run_gate(out_dir, policy_path=project_dir / "examples" / "gate.policy.yaml")
+        index_history(runs_dir=runs_dir, out_path=runs_dir / "history_index.json")
+        return {"run_dir": str(out_dir), "demo_project": str(project_dir)}
+
+    return _handle_execution(
+        name="create-demo",
+        command=command,
+        outputs=outputs,
+        execution_mode=execution_mode,
+        confirmed=confirmed,
+        overwrite=overwrite,
+        safe_root=safe_root or runs_dir,
+        allow_external_outputs=allow_external_outputs,
         runner=runner,
     )
 
@@ -414,18 +529,25 @@ def _handle_execution(
     confirmed: bool,
     overwrite: bool,
     runner: ExecutionRunner,
+    safe_root: Path | None = None,
+    allow_external_outputs: bool = False,
 ) -> JsonDict:
     _validate_execution_mode(execution_mode)
+    path_warnings = _external_output_warnings(outputs, safe_root)
     payload: JsonDict = {
         "workflow": name,
         "command": command,
         "outputs": [str(path) for path in outputs],
         "existing_outputs": [str(path) for path in outputs if path.exists()],
+        "path_warnings": path_warnings,
     }
     if execution_mode == "command":
         return {"status": "command", **payload}
     if execution_mode == "confirm" and not confirmed:
         return {"status": "preview", **payload}
+    if execution_mode == "auto" and path_warnings and not allow_external_outputs:
+        msg = "Output path is outside the configured runs directory; enable external writes."
+        raise ValueError(msg)
     if payload["existing_outputs"] and not overwrite:
         msg = "Output artifacts already exist; enable overwrite to replace them."
         raise ValueError(msg)
@@ -443,9 +565,35 @@ def _command(parts: list[str]) -> str:
     return " ".join(shlex.quote(part) for part in parts)
 
 
+def _command_sequence(commands: list[list[str]]) -> str:
+    return " && ".join(_command(parts) for parts in commands)
+
+
 def _option(flag: str, value: str) -> list[str]:
     return [flag, value]
 
 
 def _path_option(flag: str, path: Path | None) -> list[str]:
     return [flag, str(path)] if path is not None else []
+
+
+def _external_output_warnings(outputs: list[Path], safe_root: Path | None) -> list[str]:
+    if safe_root is None:
+        return []
+    root = safe_root.resolve(strict=False)
+    warnings: list[str] = []
+    for output in outputs:
+        resolved = output.resolve(strict=False)
+        if not _is_relative_to(resolved, root):
+            warnings.append(
+                f"Output path is outside the configured runs directory: {output}"
+            )
+    return warnings
+
+
+def _is_relative_to(path: Path, root: Path) -> bool:
+    try:
+        path.relative_to(root)
+    except ValueError:
+        return False
+    return True

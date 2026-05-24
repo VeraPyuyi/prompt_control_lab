@@ -260,10 +260,42 @@ def test_cli_gate_blocks_unknown_model_when_allow_list_is_set(tmp_path: Path) ->
     assert "model_unknown" in gate["checks"]["model_provenance"]["violations"]
 
 
+def test_cli_gate_uses_project_config_policy(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    run = tmp_path / "run"
+    run.mkdir()
+    (run / "manifest.json").write_text(
+        json.dumps({"method": "candidate", "candidate_model": {"model_id": "gpt-4o"}}),
+        encoding="utf-8",
+    )
+    (run / "metrics.json").write_text(
+        json.dumps({"count": 1, "mean_score": 1.0, "by_slice": {"default": 1.0}}),
+        encoding="utf-8",
+    )
+    policy = tmp_path / "gate.policy.yaml"
+    policy.write_text("allowed_models: gpt-5.2\n", encoding="utf-8")
+    (tmp_path / ".promptcontrol.yaml").write_text(
+        f"gate_policy: {policy.name}\n",
+        encoding="utf-8",
+    )
+    monkeypatch.chdir(tmp_path)
+
+    assert main(["gate", "--run", str(run)]) == 0
+
+    gate = json.loads((run / "gate_result.json").read_text(encoding="utf-8"))
+    assert gate["status"] == "fail"
+    assert "model_not_allowed" in gate["checks"]["model_provenance"]["violations"]
+
+
 def test_cli_analyze_reads_example_config(tmp_path: Path) -> None:
     demo = tmp_path / "demo"
     run = demo / "runs" / "from-config"
     assert main(["init", "--path", str(demo)]) == 0
+    project_config = (demo / ".promptcontrol.yaml").read_text(encoding="utf-8")
+    assert "guard_policy: examples/guard.policy.yaml" in project_config
+    assert "gate_policy: examples/gate.policy.yaml" in project_config
 
     assert (
         main(
@@ -285,6 +317,82 @@ def test_cli_analyze_reads_example_config(tmp_path: Path) -> None:
     manifest = json.loads((run / "manifest.json").read_text(encoding="utf-8"))
     assert manifest["mode"] == "quick"
     assert manifest["metric"] == "exact_match"
+
+
+def test_cli_start_analyze_passes_policy_to_analyze(tmp_path: Path) -> None:
+    demo = tmp_path / "demo"
+    assert main(["init", "--path", str(demo)]) == 0
+    config = demo / "promptcontrol.fast.yaml"
+    config.write_text(
+        "\n".join(
+            [
+                "mode: quick",
+                "data: examples/tasks.jsonl",
+                "metric: exact_match",
+                "baseline_predictions: examples/predictions_baseline.jsonl",
+                "candidate_predictions: examples/predictions_candidate.jsonl",
+                "out: runs/start-analyze",
+                "bootstrap_samples: 10",
+                "permutation_samples: 10",
+            ]
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    policy = demo / "examples" / "gate.strict.yaml"
+    policy.write_text("allowed_models: gpt-5.2\n", encoding="utf-8")
+
+    assert (
+        main(
+            [
+                "start",
+                "--choice",
+                "analyze",
+                "--config",
+                str(config),
+                "--policy",
+                str(policy),
+            ]
+        )
+        == 0
+    )
+
+    gate = json.loads((demo / "runs" / "start-analyze" / "gate_result.json").read_text())
+    assert gate["status"] == "fail"
+    assert "model_not_allowed" in gate["checks"]["model_provenance"]["violations"]
+
+
+def test_cli_guard_uses_project_config_policy(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    policy = tmp_path / "guard.policy.yaml"
+    policy.write_text(
+        "\n".join(
+            [
+                "block_at: high",
+                "review_at: medium",
+                "rule.danger.severity: high",
+                "rule.danger.category: destructive_change",
+                "rule.danger.patterns: delete database",
+                "rule.danger.message: Do not send destructive prompts without review.",
+            ]
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    (tmp_path / ".promptcontrol.yaml").write_text(
+        f"guard_policy: {policy.name}\n",
+        encoding="utf-8",
+    )
+    monkeypatch.chdir(tmp_path)
+
+    assert main(["guard", "--prompt", "delete database", "--json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["risk_level"] == "high"
+    assert any(item["id"] == "danger" for item in payload["policy_violations"])
 
 
 def test_cli_analyze_uses_configured_out_and_explain_level(tmp_path: Path) -> None:

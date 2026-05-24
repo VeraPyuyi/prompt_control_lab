@@ -64,6 +64,57 @@ def test_cli_audit_diff_reports_agent_run_risks(tmp_path: Path) -> None:
     assert (out / "audit_summary.md").exists()
 
 
+def test_cli_audit_diff_uses_project_config_defaults(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    repo = _make_git_repo(tmp_path)
+    _write(repo / "src" / "app.py", "def existing() -> str:\n    return 'ok'\n")
+    _write(repo / "README.md", "# demo\n")
+    _git(repo, "add", ".")
+    _git(repo, "commit", "-m", "initial")
+
+    _write(repo / "src" / "app.py", "def existing() -> str:\n    return 'changed'\n")
+    _write(repo / "docs" / "guide.md", "changed\n")
+    _git(repo, "add", ".")
+    _git(repo, "commit", "-m", "agent changes")
+    (repo / ".promptcontrol.yaml").write_text(
+        "\n".join(
+            [
+                "expected_paths:",
+                "  - src",
+                "test_commands:",
+                f"  - \"{sys.executable}\" --version",
+            ]
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    monkeypatch.chdir(repo)
+
+    out = repo / "runs" / "audit"
+    assert (
+        main(
+            [
+                "audit-diff",
+                "--before",
+                "HEAD~1",
+                "--after",
+                "HEAD",
+                "--out",
+                str(out),
+            ]
+        )
+        == 0
+    )
+
+    payload = json.loads((out / "audit_result.json").read_text(encoding="utf-8"))
+    assert payload["expected_paths"] == ["src"]
+    assert payload["unexpected_files"] == ["docs/guide.md"]
+    assert payload["tests_run"]
+    assert payload["tests_passed"] is True
+
+
 def test_cli_audit_diff_does_not_treat_tests_or_docs_as_public_api(tmp_path: Path) -> None:
     repo = _make_git_repo(tmp_path)
     _write(repo / "README.md", "# demo\n")

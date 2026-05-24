@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1100" height="420" viewBox="0 0 1100 420" role="img" aria-label="prompt_control_lab report tutorial">
+  <rect width="1100" height="420" fill="#f8fafc"/>
+  <text x="44" y="58" font-family="Inter, Arial, sans-serif" font-size="28" font-weight="700" fill="#111827">Analyze, Gate, Report</text>
+  <text x="44" y="88" font-family="Inter, Arial, sans-serif" font-size="15" fill="#475569">Turn prompt changes into reproducible evidence instead of one-off impressions.</text>
+  <g font-family="Inter, Arial, sans-serif">
+    <rect x="70" y="135" width="280" height="170" rx="14" fill="#ffffff" stroke="#fde68a" stroke-width="2"/>
+    <text x="95" y="174" font-size="18" font-weight="700" fill="#92400e">Artifacts</text>
+    <text x="95" y="208" font-size="13" fill="#475569">metrics.json</text>
+    <text x="95" y="236" font-size="13" fill="#475569">stats.json</text>
+    <text x="95" y="264" font-size="13" fill="#475569">explanation.json</text>
+
+    <rect x="410" y="135" width="280" height="170" rx="14" fill="#ffffff" stroke="#93c5fd" stroke-width="2"/>
+    <text x="435" y="174" font-size="18" font-weight="700" fill="#1e3a8a">Evidence</text>
+    <text x="435" y="208" font-size="13" fill="#475569">mean_delta and CI</text>
+    <text x="435" y="236" font-size="13" fill="#475569">p-value and slices</text>
+    <text x="435" y="264" font-size="13" fill="#475569">model provenance</text>
+
+    <rect x="750" y="135" width="280" height="170" rx="14" fill="#ffffff" stroke="#86efac" stroke-width="2"/>
+    <text x="775" y="174" font-size="18" font-weight="700" fill="#166534">Decision</text>
+    <text x="775" y="208" font-size="13" fill="#475569">pass</text>
+    <text x="775" y="236" font-size="13" fill="#475569">needs_review</text>
+    <text x="775" y="264" font-size="13" fill="#475569">fail</text>
+
+    <rect x="190" y="340" width="720" height="38" rx="10" fill="#ecfeff" stroke="#67e8f9"/>
+    <text x="286" y="364" font-size="15" font-weight="700" fill="#155e75">Use the report to decide whether the prompt change is reliable.</text>
+  </g>
+</svg>

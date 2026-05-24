@@ -18,8 +18,10 @@ from promptcontrollab.config import (
     get_config_bool,
     get_config_float,
     get_config_int,
+    get_config_list,
     get_config_path,
     get_config_str,
+    load_project_config,
 )
 from promptcontrollab.doctor import format_doctor, run_doctor
 from promptcontrollab.errors import PromptControlLabError
@@ -334,7 +336,7 @@ def build_parser() -> argparse.ArgumentParser:
     doctor_parser.set_defaults(func=_cmd_doctor)
 
     ui_parser = subcommands.add_parser("ui", help="Launch the local Streamlit dashboard.")
-    ui_parser.add_argument("--runs", type=Path, default=Path("runs"), help="Runs directory.")
+    ui_parser.add_argument("--runs", type=Path, default=None, help="Runs directory.")
     ui_parser.add_argument("--policy", type=Path, default=None, help="Optional guard policy.")
     ui_parser.add_argument("--host", default="localhost", help="Host address.")
     ui_parser.add_argument("--port", type=int, default=8501, help="Port number.")
@@ -475,7 +477,7 @@ def build_parser() -> argparse.ArgumentParser:
 
     gate_parser = subcommands.add_parser("gate", help="Evaluate a run against policy thresholds.")
     gate_parser.add_argument("--run", type=Path, required=True, help="Run directory.")
-    gate_parser.add_argument("--policy", type=Path, required=True, help="Gate policy YAML.")
+    gate_parser.add_argument("--policy", type=Path, default=None, help="Gate policy YAML.")
     gate_parser.set_defaults(func=_cmd_gate)
 
     soft_parser = subcommands.add_parser("soft-hard", help="Analyze soft-to-hard projection risk.")
@@ -592,7 +594,7 @@ def _cmd_start(args: argparse.Namespace) -> None:
             bootstrap_samples=None,
             permutation_samples=None,
             explain_level=None,
-            policy=None,
+            policy=args.policy,
             title=None,
             baseline_model=None,
             candidate_model=None,
@@ -657,6 +659,12 @@ def _cmd_improve(args: argparse.Namespace) -> None:
 def _cmd_guard(args: argparse.Namespace) -> None:
     prompt = _read_guard_prompt(args.prompt, args.prompt_file, args.stdin)
     context = load_prompt_context(args.run)
+    project_config, project_config_path = load_project_config()
+    policy_path = args.policy or _config_path(
+        project_config,
+        project_config_path,
+        "guard_policy",
+    )
     result = guard_prompt(
         prompt,
         context=context,
@@ -665,7 +673,7 @@ def _cmd_guard(args: argparse.Namespace) -> None:
         token_mode=args.token_mode,
         max_tokens=args.max_tokens,
         language=args.language,
-        policy_path=args.policy,
+        policy_path=policy_path,
     )
     payload = result.to_json()
     if args.json:
@@ -699,13 +707,16 @@ def _cmd_model_drift(args: argparse.Namespace) -> None:
 
 
 def _cmd_audit_diff(args: argparse.Namespace) -> None:
+    project_config, _project_config_path = load_project_config(args.repo)
+    expected_paths = list(args.expected_path) or get_config_list(project_config, "expected_paths")
+    test_commands = list(args.test_command) or get_config_list(project_config, "test_commands")
     payload = run_audit_diff(
         repo=args.repo,
         before=args.before,
         after=args.after,
         out_dir=args.out,
-        expected_paths=list(args.expected_path),
-        test_commands=list(args.test_command),
+        expected_paths=expected_paths,
+        test_commands=test_commands,
         tests_run=list(args.tests_run),
         tests_passed=_optional_bool(args.tests_passed),
         test_timeout=args.test_timeout,
@@ -767,9 +778,19 @@ def _cmd_doctor(args: argparse.Namespace) -> None:
 
 
 def _cmd_ui(args: argparse.Namespace) -> None:
+    project_config, project_config_path = load_project_config()
+    runs_dir = args.runs or _config_path(project_config, project_config_path, "runs_dir") or Path(
+        "runs"
+    )
+    policy_path = args.policy or _config_path(
+        project_config,
+        project_config_path,
+        "guard_policy",
+    )
+    default_view = get_config_str(project_config, "ui.default_view", "workflows")
     missing = [
         module
-        for module in ["streamlit", "plotly", "pandas"]
+        for module in ["streamlit", "plotly"]
         if importlib.util.find_spec(module) is None
     ]
     if missing:
@@ -781,9 +802,11 @@ def _cmd_ui(args: argparse.Namespace) -> None:
         raise PromptControlLabError(msg)
     app_path = Path(__file__).resolve().parent / "ui" / "app.py"
     env = os.environ.copy()
-    env["PCL_UI_RUNS"] = str(args.runs)
-    env["PCL_UI_POLICY"] = str(args.policy) if args.policy is not None else ""
+    env["PCL_UI_RUNS"] = str(runs_dir)
+    env["PCL_UI_POLICY"] = str(policy_path) if policy_path is not None else ""
     env["PCL_UI_LANGUAGE"] = args.language
+    env["PCL_UI_DEFAULT_VIEW"] = default_view
+    env["PCL_UI_CONFIG"] = str(project_config_path) if project_config_path is not None else ""
     command = [
         sys.executable,
         "-m",
@@ -794,6 +817,7 @@ def _cmd_ui(args: argparse.Namespace) -> None:
         f"--server.port={args.port}",
         f"--server.headless={str(args.no_browser).lower()}",
         "--browser.gatherUsageStats=false",
+        "--client.toolbarMode=viewer",
     ]
     try:
         subprocess.run(command, env=env, check=True)
@@ -810,6 +834,7 @@ def _cmd_export_report(args: argparse.Namespace) -> None:
 
 
 def _cmd_analyze(args: argparse.Namespace) -> None:
+    project_config, project_config_path = load_project_config()
     config = load_analyze_config(args.config) if args.config is not None else {}
     paths = (
         resolve_analyze_paths(config, config_path=args.config) if args.config is not None else {}
@@ -829,7 +854,10 @@ def _cmd_analyze(args: argparse.Namespace) -> None:
     if args.config is not None:
         config_out = get_config_path(config, "out", base_dir=args.config.parent)
     out_dir = _path_arg(args.out, config_out, "out")
+    project_gate_policy = _config_path(project_config, project_config_path, "gate_policy")
     policy_path = args.policy if args.policy is not None else paths.get("gate_policy")
+    if policy_path is None:
+        policy_path = project_gate_policy
     metric = args.metric if args.metric is not None else config_metric(config, "exact_match")
     baseline_model = args.baseline_model or get_config_str(config, "baseline_model", "")
     candidate_model = args.candidate_model or get_config_str(config, "candidate_model", "")
@@ -951,7 +979,12 @@ def _cmd_explain(args: argparse.Namespace) -> None:
 
 
 def _cmd_gate(args: argparse.Namespace) -> None:
-    run_gate(args.run, policy_path=args.policy)
+    project_config, project_config_path = load_project_config()
+    policy_path = args.policy or _config_path(project_config, project_config_path, "gate_policy")
+    if policy_path is None:
+        msg = "Missing required --policy argument or .promptcontrol.yaml gate_policy"
+        raise ValueError(msg)
+    run_gate(args.run, policy_path=policy_path)
     print(f"Wrote gate result to {args.run / 'gate_result.json'}")
 
 
@@ -994,6 +1027,12 @@ def _path_arg(value: Path | None, config_value: Path | None, name: str) -> Path:
         msg = f"Missing required --{name} argument or config key"
         raise ValueError(msg)
     return path
+
+
+def _config_path(config: JsonDict, config_path: Path | None, key: str) -> Path | None:
+    if config_path is None:
+        return None
+    return get_config_path(config, key, base_dir=config_path.parent)
 
 
 def _maybe_refresh_explanation(out_dir: Path, level: str | None) -> None:

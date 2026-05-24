@@ -242,6 +242,27 @@ Expected result: `pcl --help` lists commands, `pcl start` shows the beginner pat
 package import, CLI parser, guard policy parsing, Claude Code hook, Cursor MCP server, demo report
 generation, API-key presence, and optional research dependencies.
 
+## Optional Project Defaults ⚙️
+
+`pcl init` now writes `.promptcontrol.yaml` next to `promptcontrol.example.yaml`. The project file
+keeps local defaults for day-to-day commands:
+
+```yaml
+guard_policy: examples/guard.policy.yaml
+gate_policy: examples/gate.policy.yaml
+runs_dir: runs
+expected_paths:
+  - src
+  - tests
+test_commands:
+  - pytest
+allowed_models: gpt-4o,gpt-5.2
+ui.default_view: workflows
+```
+
+CLI arguments still win. The precedence is: explicit CLI flags → command-specific config such as
+`promptcontrol.example.yaml` → `.promptcontrol.yaml` → built-in defaults.
+
 ## Open The Local UI Dashboard 🖥️
 
 The UI is a local Streamlit dashboard. It reads artifacts from disk and does not upload prompts,
@@ -260,10 +281,12 @@ pcl analyze --config promptcontrol.example.yaml --out runs/quick
 pcl ui --runs runs/ --policy examples/guard.policy.yaml --port 8501
 ```
 
-The local dashboard has six tabs. The **Workflows** tab can run local actions from the browser:
+The local dashboard has seven tabs. The **Tutorial** tab teaches the full flow with diagrams and
+step-by-step explanations; the **Workflows** tab can run local actions from the browser:
 guard a prompt, run analyze, run gate, audit a git diff, build `agent_run.json`, generate a PR
 summary, or export a report zip. Execution mode defaults to `confirm`; advanced users can choose
-`auto` or `command`.
+`auto` or `command`. Streamlit's native deploy/menu controls are hidden so the local app stays
+focused on prompt_control_lab.
 
 CLI equivalent for the zip export:
 
@@ -273,6 +296,8 @@ pcl export-report --run runs/quick --out runs/quick/report.zip
 
 - **Workflows:** trigger allowlisted local workflows while previewing outputs before files are
   written.
+- **Tutorial:** learn each feature as “operation -> artifact -> meaning -> next step”, with
+  bilingual diagrams.
 - **Guard Prompt:** try `pcl guard` interactively and inspect risk, policy violations, token cost,
   and prompt diff.
 - **Run Report:** read recommendation, gate status, score delta, confidence interval, p-value,

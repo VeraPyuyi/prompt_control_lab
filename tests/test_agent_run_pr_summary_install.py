@@ -12,6 +12,7 @@ from promptcontrollab.github_app import (
     summarize_pull_files,
     verify_webhook_signature,
 )
+from promptcontrollab.pr_summary import build_pr_summary, render_pr_summary_markdown
 from promptcontrollab.report_model import ReportModel
 
 
@@ -125,6 +126,9 @@ def test_agent_run_build_and_report_model(tmp_path: Path) -> None:
     assert payload["human_review_required"] is True
     assert payload["policy_detail"]["policy_file"] == str(policy)
     assert str(payload["policy_detail"]["policy_hash"]).startswith("sha256:")
+    assert payload["policy_detail"]["path"] == str(policy)
+    assert str(payload["policy_detail"]["sha256"]).startswith("sha256:")
+    assert payload["policy_detail"]["exists"] is True
 
     (run / "agent_run.json").write_text(out.read_text(encoding="utf-8"), encoding="utf-8")
     model = ReportModel.from_run(run)
@@ -160,6 +164,8 @@ def test_agent_run_missing_policy_records_warning(tmp_path: Path) -> None:
     payload = _read_json(out)
     assert payload["policy_detail"]["policy_file"] == str(missing_policy)
     assert "policy_hash" not in payload["policy_detail"]
+    assert payload["policy_detail"]["path"] == str(missing_policy)
+    assert payload["policy_detail"]["exists"] is False
     assert "Policy file was not found" in payload["warnings"][0]
 
 
@@ -343,6 +349,22 @@ def test_pr_summary_only_marks_missing_tests_for_source_changes(tmp_path: Path) 
     assert "prompt-control-lab:missing-tests" in _read_json(source_summary)["labels"]
 
 
+def test_pr_summary_records_artifact_coverage_warning_for_gate_only(tmp_path: Path) -> None:
+    gate = tmp_path / "gate_result.json"
+    _write_json(gate, {"status": "pass"})
+
+    payload = build_pr_summary(gate_path=gate)
+
+    assert payload["status"] == "pass"
+    assert payload["coverage"] == {"gate": True, "audit": False, "agent_run": False}
+    assert payload["warnings"] == [
+        "No audit artifact was provided; diff-level PR risk was not checked."
+    ]
+    markdown = render_pr_summary_markdown(payload)
+    assert "Coverage" in markdown
+    assert "Warnings" in markdown
+
+
 def test_github_app_upserts_existing_summary_comment() -> None:
     fake = _FakeGithubClient()
     fake.existing_comments.append(
@@ -369,6 +391,46 @@ def test_github_app_upserts_existing_summary_comment() -> None:
         {"repo": "owner/repo", "comment_id": 42, "body": fake.last_body}
     ]
     assert "<!-- prompt-control-lab-summary -->" in fake.last_body
+    assert fake.checks[0]["conclusion"] == "success"
+
+
+def test_github_app_creates_check_run_for_all_statuses() -> None:
+    for status, conclusion in [
+        ("pass", "success"),
+        ("needs_review", "neutral"),
+        ("fail", "failure"),
+    ]:
+        fake = _FakeGithubClient()
+
+        handle_pull_request_payload(
+            {
+                "action": "opened",
+                "repository": {"full_name": "owner/repo"},
+                "pull_request": {"number": 7, "head": {"sha": "abc"}},
+            },
+            client=fake,
+            summary={"status": status, "reasons": [status], "labels": []},
+        )
+
+        assert fake.checks[0]["conclusion"] == conclusion
+        assert fake.checks[0]["title"] == f"PromptControlLab: {status}"
+
+
+def test_github_app_unknown_status_uses_neutral_check_run() -> None:
+    fake = _FakeGithubClient()
+
+    handle_pull_request_payload(
+        {
+            "action": "opened",
+            "repository": {"full_name": "owner/repo"},
+            "pull_request": {"number": 7, "head": {"sha": "abc"}},
+        },
+        client=fake,
+        summary={"status": "unexpected", "reasons": ["unexpected"], "labels": []},
+    )
+
+    assert fake.checks[0]["conclusion"] == "neutral"
+    assert fake.checks[0]["title"] == "PromptControlLab: unexpected"
 
 
 def test_github_app_pull_files_are_paginated() -> None:

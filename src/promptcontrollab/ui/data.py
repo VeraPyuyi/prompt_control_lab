@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 from promptcontrollab.files import JsonDict, read_json
@@ -133,6 +134,32 @@ def history_rows(detail: JsonDict) -> list[JsonDict]:
     return rows
 
 
+def filter_history_rows(
+    rows: list[JsonDict],
+    *,
+    only_review_required: bool = False,
+    only_high_risk: bool = False,
+    provider: str = "",
+    model: str = "",
+) -> list[JsonDict]:
+    """Filter normalized history rows for dashboard views."""
+
+    provider_filter = provider.strip().lower()
+    model_filter = model.strip().lower()
+    filtered: list[JsonDict] = []
+    for row in rows:
+        if only_review_required and not row.get("review_required"):
+            continue
+        if only_high_risk and row.get("risk_level") != "high":
+            continue
+        if provider_filter and provider_filter not in str(row.get("provider") or "").lower():
+            continue
+        if model_filter and model_filter not in str(row.get("model") or "").lower():
+            continue
+        filtered.append(row)
+    return filtered
+
+
 def audit_detail_sections(audit: JsonDict) -> dict[str, list[JsonDict]]:
     """Return high-signal audit detail sections for display."""
 
@@ -144,6 +171,51 @@ def audit_detail_sections(audit: JsonDict) -> dict[str, list[JsonDict]]:
         "deleted_test_files": _path_rows(audit.get("deleted_test_files")),
         "unexpected_files": _path_rows(audit.get("unexpected_files")),
         "test_results": _dict_rows(audit.get("test_results")),
+    }
+
+
+def changed_line_rows(audit: JsonDict) -> list[JsonDict]:
+    """Return changed-line rows annotated with the highest visible audit risk."""
+
+    changed_lines = audit.get("changed_lines")
+    if not isinstance(changed_lines, dict):
+        return []
+    secret_paths = _paths_from_findings(audit.get("secret_findings"))
+    workflow_paths = set(_strings(audit.get("workflow_files_changed")))
+    dependency_paths = set(_strings(audit.get("dependency_files_changed")))
+    lockfile_paths = set(_strings(audit.get("lockfiles_changed")))
+    deleted_test_paths = set(_strings(audit.get("deleted_test_files")))
+    dangerous_paths = set(_strings(audit.get("dangerous_paths")))
+    rows: list[JsonDict] = []
+    for path in sorted(str(item) for item in changed_lines):
+        counts = changed_lines.get(path)
+        counts_dict = counts if isinstance(counts, dict) else {}
+        rows.append(
+            {
+                "file": path,
+                "added": counts_dict.get("added", 0),
+                "deleted": counts_dict.get("deleted", 0),
+                "risk": _file_risk(
+                    path,
+                    secret_paths=secret_paths,
+                    workflow_paths=workflow_paths,
+                    dependency_paths=dependency_paths,
+                    lockfile_paths=lockfile_paths,
+                    deleted_test_paths=deleted_test_paths,
+                    dangerous_paths=dangerous_paths,
+                ),
+            }
+        )
+    return rows
+
+
+def guard_download_payloads(result: JsonDict) -> dict[str, str]:
+    """Return text payloads for Guard tab download buttons."""
+
+    return {
+        "guard_result.json": json.dumps(result, indent=2, ensure_ascii=False, sort_keys=True)
+        + "\n",
+        "improved_prompt.txt": str(result.get("improved_prompt", "")) + "\n",
     }
 
 
@@ -252,3 +324,42 @@ def _dict_rows(value: object) -> list[JsonDict]:
         else:
             rows.append({"value": str(item)})
     return rows
+
+
+def _strings(value: object) -> list[str]:
+    return [str(item) for item in value] if isinstance(value, list) else []
+
+
+def _paths_from_findings(value: object) -> set[str]:
+    paths: set[str] = set()
+    if not isinstance(value, list):
+        return paths
+    for item in value:
+        if isinstance(item, dict) and item.get("path"):
+            paths.add(str(item["path"]))
+    return paths
+
+
+def _file_risk(
+    path: str,
+    *,
+    secret_paths: set[str],
+    workflow_paths: set[str],
+    dependency_paths: set[str],
+    lockfile_paths: set[str],
+    deleted_test_paths: set[str],
+    dangerous_paths: set[str],
+) -> str:
+    if path in secret_paths:
+        return "secret"
+    if path in dangerous_paths:
+        return "dangerous_path"
+    if path in workflow_paths:
+        return "workflow"
+    if path in dependency_paths:
+        return "dependency"
+    if path in lockfile_paths:
+        return "lockfile"
+    if path in deleted_test_paths:
+        return "deleted_test"
+    return "normal"

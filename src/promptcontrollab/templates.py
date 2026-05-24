@@ -76,6 +76,20 @@ block_if_alias_model: false
 require_model_verified: false
 """
 
+PROJECT_CONFIG_YAML = """\
+# Project defaults for local PromptControlLab commands.
+guard_policy: examples/guard.policy.yaml
+gate_policy: examples/gate.policy.yaml
+runs_dir: runs
+expected_paths:
+  - src
+  - tests
+test_commands:
+  - pytest
+allowed_models: gpt-4o,gpt-5.2
+ui.default_view: workflows
+"""
+
 
 def write_example_project(path: Path) -> None:
     """Write a small example project."""
@@ -96,3 +110,4 @@ def write_example_project(path: Path) -> None:
         encoding="utf-8",
     )
     (path / "promptcontrol.example.yaml").write_text(CONFIG_YAML, encoding="utf-8")
+    (path / ".promptcontrol.yaml").write_text(PROJECT_CONFIG_YAML, encoding="utf-8")

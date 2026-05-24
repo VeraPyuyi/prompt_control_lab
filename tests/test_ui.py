@@ -14,7 +14,10 @@ from promptcontrollab.report_model import ReportModel
 from promptcontrollab.ui import charts
 from promptcontrollab.ui.data import (
     audit_detail_sections,
+    changed_line_rows,
+    filter_history_rows,
     first_comparison,
+    guard_download_payloads,
     history_rows,
     list_runs,
     load_run_detail,
@@ -43,7 +46,7 @@ def test_cli_ui_reports_missing_streamlit(
     assert "pip install -e \".[ui]\"" in stderr
 
 
-def test_cli_ui_reports_missing_plotly_or_pandas(
+def test_cli_ui_reports_missing_plotly(
     monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
 ) -> None:
@@ -58,6 +61,7 @@ def test_cli_ui_reports_missing_plotly_or_pandas(
 
     stderr = capsys.readouterr().err
     assert "plotly" in stderr
+    assert "pandas" not in stderr
     assert "pip install -e \".[ui]\"" in stderr
 
 
@@ -106,9 +110,46 @@ def test_cli_ui_launches_streamlit_with_environment(
     assert "--server.port=8510" in command
     assert "--server.headless=true" in command
     assert "--browser.gatherUsageStats=false" in command
+    assert "--client.toolbarMode=viewer" in command
     assert env["PCL_UI_RUNS"] == str(runs)
     assert env["PCL_UI_POLICY"] == str(policy)
     assert env["PCL_UI_LANGUAGE"] == "zh"
+
+
+def test_cli_ui_uses_project_config_defaults(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    import importlib.util
+
+    calls: list[dict[str, Any]] = []
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(importlib.util, "find_spec", lambda name: object())
+
+    def fake_run(command: list[str], *, env: dict[str, str], check: bool) -> SimpleNamespace:
+        calls.append({"command": command, "env": env, "check": check})
+        return SimpleNamespace(returncode=0)
+
+    monkeypatch.setattr(subprocess, "run", fake_run)
+    (tmp_path / ".promptcontrol.yaml").write_text(
+        "\n".join(
+            [
+                "runs_dir: local-runs",
+                "guard_policy: policies/guard.policy.yaml",
+                "ui.default_view: history",
+            ]
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    assert main(["ui", "--no-browser"]) == 0
+
+    env = calls[0]["env"]
+    assert env["PCL_UI_RUNS"] == str(tmp_path / "local-runs")
+    assert env["PCL_UI_POLICY"] == str(tmp_path / "policies" / "guard.policy.yaml")
+    assert env["PCL_UI_DEFAULT_VIEW"] == "history"
+    assert env["PCL_UI_CONFIG"] == str(tmp_path / ".promptcontrol.yaml")
 
 
 def test_ui_data_loads_run_artifacts(tmp_path: Path) -> None:
@@ -287,6 +328,30 @@ def test_history_rows_normalize_trend_fields() -> None:
     ]
 
 
+def test_filter_history_rows_supports_risky_and_model_filters() -> None:
+    rows = [
+        {
+            "run": "old",
+            "risk_level": "low",
+            "review_required": False,
+            "provider": "openai",
+            "model": "gpt-4o",
+        },
+        {
+            "run": "new",
+            "risk_level": "high",
+            "review_required": True,
+            "provider": "anthropic",
+            "model": "claude-sonnet",
+        },
+    ]
+
+    assert [row["run"] for row in filter_history_rows(rows, only_review_required=True)] == ["new"]
+    assert [row["run"] for row in filter_history_rows(rows, only_high_risk=True)] == ["new"]
+    assert [row["run"] for row in filter_history_rows(rows, provider="openai")] == ["old"]
+    assert [row["run"] for row in filter_history_rows(rows, model="sonnet")] == ["new"]
+
+
 def test_audit_detail_sections_expose_high_signal_fields() -> None:
     audit = {
         "secret_findings": [{"path": "src/app.py", "kind": "token", "redacted": "***"}],
@@ -309,6 +374,38 @@ def test_audit_detail_sections_expose_high_signal_fields() -> None:
     assert sections["test_results"][0]["stderr"] == "failed"
 
 
+def test_changed_line_rows_mark_file_risks() -> None:
+    audit = {
+        "changed_lines": {
+            "src/app.py": {"added": 2, "deleted": 1},
+            ".github/workflows/ci.yml": {"added": 5, "deleted": 0},
+            "pyproject.toml": {"added": 1, "deleted": 0},
+            "auth/session.py": {"added": 1, "deleted": 0},
+        },
+        "secret_findings": [{"path": "src/app.py", "kind": "token"}],
+        "workflow_files_changed": [".github/workflows/ci.yml"],
+        "dependency_files_changed": ["pyproject.toml"],
+        "dangerous_paths": ["auth/session.py"],
+    }
+
+    rows = changed_line_rows(audit)
+
+    assert rows[0]["file"] == ".github/workflows/ci.yml"
+    by_file = {row["file"]: row for row in rows}
+    assert by_file["src/app.py"]["risk"] == "secret"
+    assert by_file[".github/workflows/ci.yml"]["risk"] == "workflow"
+    assert by_file["pyproject.toml"]["risk"] == "dependency"
+    assert by_file["auth/session.py"]["risk"] == "dangerous_path"
+
+
+def test_guard_download_payloads_return_json_and_text() -> None:
+    payloads = guard_download_payloads({"action": "suggest", "improved_prompt": "Do X"})
+
+    assert payloads["guard_result.json"].startswith("{")
+    assert '"action": "suggest"' in payloads["guard_result.json"]
+    assert payloads["improved_prompt.txt"] == "Do X\n"
+
+
 def test_ui_list_runs_prefers_child_runs_when_root_has_history_index(tmp_path: Path) -> None:
     runs = tmp_path / "runs"
     _write_json(runs / "history_index.json", {"runs": []})
@@ -326,10 +423,105 @@ def test_ui_has_history_view_order_and_text() -> None:
 
     assert "history" in app.TEXT["en"]
     assert "history" in app.TEXT["zh"]
+    assert "tutorial" in app.TEXT["en"]
+    assert "tutorial" in app.TEXT["zh"]
     assert "workflows" in app.TEXT["en"]
     assert "workflows" in app.TEXT["zh"]
     assert app._ordered_views("workflows")[0] == "workflows"
     assert app._ordered_views("history")[0] == "history"
+    assert app._ordered_views("tutorial")[0] == "tutorial"
+
+
+def test_ui_choice_labels_are_localized_but_keep_internal_values() -> None:
+    from promptcontrollab.ui import app
+
+    assert app._choice_labels("execution_mode", "zh") == [
+        "确认后执行",
+        "自动执行",
+        "只生成命令",
+    ]
+    assert app._choice_value("execution_mode", "确认后执行", "zh") == "confirm"
+    assert app._choice_value("profile", "编程", "zh") == "coding"
+    assert app._choice_value("guard_mode", "给出建议", "zh") == "suggest"
+    assert app._choice_value("token_mode", "平衡省 token", "zh") == "balanced"
+    assert app._choice_value("tests_passed", "未知", "zh") == "unknown"
+    assert app._choice_labels("profile", "en") == ["coding", "general", "research"]
+
+
+def test_ui_tutorial_sections_are_complete_and_localized() -> None:
+    from promptcontrollab.ui import app
+
+    expected_ids = {
+        "guard",
+        "workflows",
+        "report",
+        "drift",
+        "audit",
+        "history",
+        "project_defaults",
+        "export_pr",
+    }
+    sections = app.tutorial_sections("zh")
+
+    assert {section["id"] for section in sections} == expected_ids
+    for section in sections:
+        assert section["operation"]
+        assert section["result"]
+        assert section["meaning"]
+        assert section["next_step"]
+        assert section["command"].startswith("pcl ")
+    assert not _contains_replacement_character(app.TEXT["zh"])
+    assert not _contains_replacement_character(sections)
+
+
+def test_tutorial_svg_assets_exist_and_use_prompt_control_lab() -> None:
+    assets = [
+        "tutorial_overview.svg",
+        "tutorial_overview.zh.svg",
+        "tutorial_guard.svg",
+        "tutorial_guard.zh.svg",
+        "tutorial_report.svg",
+        "tutorial_report.zh.svg",
+        "tutorial_audit_history.svg",
+        "tutorial_audit_history.zh.svg",
+    ]
+    for name in assets:
+        path = Path("docs") / "assets" / name
+        assert path.exists(), name
+        text = path.read_text(encoding="utf-8")
+        assert "prompt_control_lab" in text
+        assert "promptcontrollab" not in text
+        assert 'viewBox="0 0 ' in text
+
+
+def test_tutorial_svg_renderer_reads_utf8_svg(tmp_path: Path) -> None:
+    from promptcontrollab.ui import app
+
+    svg = tmp_path / "tutorial.zh.svg"
+    svg.write_text(
+        '<svg viewBox="0 0 100 40"><text>中文 prompt_control_lab</text></svg>',
+        encoding="utf-8",
+    )
+    calls: list[dict[str, object]] = []
+
+    class FakeStreamlit:
+        def markdown(self, body: str, *, unsafe_allow_html: bool = False) -> None:
+            calls.append({"body": body, "unsafe": unsafe_allow_html})
+
+    app._render_svg(FakeStreamlit(), svg)
+
+    assert calls[0]["unsafe"] is True
+    assert "中文 prompt_control_lab" in str(calls[0]["body"])
+
+
+def _contains_replacement_character(value: object) -> bool:
+    if isinstance(value, str):
+        return "\ufffd" in value
+    if isinstance(value, dict):
+        return any(_contains_replacement_character(item) for item in value.values())
+    if isinstance(value, list):
+        return any(_contains_replacement_character(item) for item in value)
+    return False
 
 
 def test_ui_data_handles_missing_artifacts(tmp_path: Path) -> None:

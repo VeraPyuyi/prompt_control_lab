@@ -1,4 +1,5 @@
 """Streamlit app for the local prompt_control_lab dashboard."""
+# ruff: noqa: E501,RUF001
 
 from __future__ import annotations
 
@@ -22,7 +23,10 @@ from promptcontrollab.ui.charts import (
 from promptcontrollab.ui.components import badge, empty_state, metric_cards, prompt_diff
 from promptcontrollab.ui.data import (
     audit_detail_sections,
+    changed_line_rows,
+    filter_history_rows,
     first_comparison,
+    guard_download_payloads,
     history_rows,
     list_runs,
     load_run_detail,
@@ -31,6 +35,7 @@ from promptcontrollab.ui.data import (
 )
 from promptcontrollab.ui.workflows import (
     build_agent_run_workflow,
+    create_demo_artifacts_workflow,
     export_report_zip_workflow,
     run_analyze_workflow,
     run_audit_workflow,
@@ -48,10 +53,30 @@ TEXT = {
         "policy": "Guard policy",
         "guard": "Guard Prompt",
         "workflows": "Workflows",
+        "tutorial": "Tutorial",
+        "tutorial_intro": (
+            "Follow the cards below from top to bottom. Each card shows what to do, "
+            "what artifact you get, what the result means, and what to do next."
+        ),
+        "tutorial_framework_note": (
+            "The native Streamlit deploy/menu controls are hidden in this app so the local "
+            "dashboard stays focused on prompt_control_lab workflows."
+        ),
+        "tutorial_operation": "Operation",
+        "tutorial_result": "What you get",
+        "tutorial_meaning": "What it means",
+        "tutorial_next_step": "Next step",
+        "tutorial_command": "CLI equivalent",
         "execution_mode": "Execution mode",
         "overwrite": "Overwrite existing artifacts",
+        "allow_external_outputs": "Allow writing outside runs directory",
+        "write_boundary": (
+            "Workflow writes should stay under the selected runs directory. "
+            "External output paths are warned and blocked in auto mode unless explicitly allowed."
+        ),
         "confirm_write": "Confirm write",
         "run_action": "Run",
+        "create_demo": "Create demo artifacts",
         "workflow_preview": "Preview",
         "workflow_result": "Workflow result",
         "guard_workflow": "Guard prompt",
@@ -112,6 +137,8 @@ TEXT = {
         "save_guard": "Save guard artifacts",
         "save_guard_dir": "Guard save directory",
         "saved_guard": "Saved guard artifacts",
+        "download_guard_json": "Download guard_result.json",
+        "download_improved_prompt": "Download improved_prompt.txt",
         "risk_chart": "Risk Categories",
         "count": "count",
         "category": "category",
@@ -148,6 +175,14 @@ TEXT = {
         "deleted_test_files": "Deleted test files",
         "unexpected_files": "Unexpected files",
         "test_results": "Test results",
+        "changed_lines": "Changed lines",
+        "file": "file",
+        "added": "added",
+        "deleted": "deleted",
+        "only_review_required": "Only review-required runs",
+        "only_high_risk": "Only high-risk runs",
+        "provider_filter": "Provider filter",
+        "model_filter": "Model filter",
         "risk_categories": "Risk categories",
     },
     "zh": {
@@ -157,10 +192,30 @@ TEXT = {
         "policy": "Guard 策略",
         "guard": "Prompt 守护",
         "workflows": "工作流",
+        "tutorial": "教程",
+        "tutorial_intro": (
+            "建议从上到下阅读。每个卡片都会说明：怎么操作、会得到什么文件、"
+            "这个结果说明什么问题，以及下一步该怎么做。"
+        ),
+        "tutorial_framework_note": (
+            "Streamlit 自带的 Deploy 和三点菜单属于框架原生控件，本应用会隐藏这些入口，"
+            "让本地仪表盘保持中文和 prompt_control_lab 工作流为主。"
+        ),
+        "tutorial_operation": "操作",
+        "tutorial_result": "得到什么",
+        "tutorial_meaning": "说明什么问题",
+        "tutorial_next_step": "下一步",
+        "tutorial_command": "CLI 等价命令",
         "execution_mode": "执行模式",
         "overwrite": "覆盖已有 artifact",
+        "allow_external_outputs": "允许写入 runs 目录之外",
+        "write_boundary": (
+            "工作流默认应写入当前 runs 目录下。"
+            "外部输出路径会提示风险, 并在 auto 模式下被阻止, 除非显式允许。"
+        ),
         "confirm_write": "确认写入",
         "run_action": "运行",
+        "create_demo": "创建 demo artifact",
         "workflow_preview": "预览",
         "workflow_result": "工作流结果",
         "guard_workflow": "守护 Prompt",
@@ -221,6 +276,8 @@ TEXT = {
         "save_guard": "保存 guard artifact",
         "save_guard_dir": "Guard 保存目录",
         "saved_guard": "已保存 guard artifact",
+        "download_guard_json": "下载 guard_result.json",
+        "download_improved_prompt": "下载 improved_prompt.txt",
         "risk_chart": "风险类别",
         "count": "数量",
         "category": "类别",
@@ -257,9 +314,463 @@ TEXT = {
         "deleted_test_files": "删除的测试文件",
         "unexpected_files": "意外文件",
         "test_results": "测试结果",
+        "changed_lines": "改动行数",
+        "file": "文件",
+        "added": "新增",
+        "deleted": "删除",
+        "only_review_required": "只看需要复核的 run",
+        "only_high_risk": "只看高风险 run",
+        "provider_filter": "Provider 过滤",
+        "model_filter": "模型过滤",
         "risk_categories": "风险类别",
     },
 }
+
+CHOICE_OPTIONS = {
+    "execution_mode": [
+        ("confirm", "confirm", "确认后执行"),
+        ("auto", "auto", "自动执行"),
+        ("command", "command", "只生成命令"),
+    ],
+    "profile": [
+        ("coding", "coding", "编程"),
+        ("general", "general", "通用"),
+        ("research", "research", "研究"),
+    ],
+    "guard_mode": [
+        ("suggest", "suggest", "给出建议"),
+        ("auto", "auto", "自动改写"),
+        ("gate", "gate", "门禁检查"),
+    ],
+    "token_mode": [
+        ("balanced", "balanced", "平衡省 token"),
+        ("aggressive", "aggressive", "激进省 token"),
+    ],
+    "tests_passed": [
+        ("unknown", "unknown", "未知"),
+        ("true", "true", "通过"),
+        ("false", "false", "失败"),
+    ],
+}
+
+TUTORIAL_IMAGES = {
+    "overview": ("tutorial_overview.svg", "tutorial_overview.zh.svg"),
+    "guard": ("tutorial_guard.svg", "tutorial_guard.zh.svg"),
+    "report": ("tutorial_report.svg", "tutorial_report.zh.svg"),
+    "audit_history": ("tutorial_audit_history.svg", "tutorial_audit_history.zh.svg"),
+}
+
+TUTORIAL_SECTIONS = {
+    "en": [
+        {
+            "id": "guard",
+            "image": "guard",
+            "title": "1. Guard a prompt before an agent runs",
+            "operation": "Open Guard Prompt, paste the instruction, choose a profile and policy, then run guard.",
+            "result": "`guard_result.json`, an improved prompt, risk level, policy violations, and token estimate.",
+            "meaning": "You can see whether the prompt is vague, risky, too broad, or missing files/tests.",
+            "next_step": "Send the improved prompt to Claude Code, Cursor, Codex, or keep editing it.",
+            "command": "pcl guard --prompt \"Fix this bug\" --profile coding --policy examples/guard.policy.yaml --json",
+        },
+        {
+            "id": "workflows",
+            "image": "overview",
+            "title": "2. Create demo artifacts from the UI",
+            "operation": "Open Workflows and click Create demo artifacts.",
+            "result": "A local demo project, `runs/demo`, reports, gate result, and `history_index.json`.",
+            "meaning": "The dashboard has real artifacts to render, so every tab becomes easier to inspect.",
+            "next_step": "Switch to Run Report or History and inspect the generated data.",
+            "command": "pcl init --path demo && cd demo && pcl analyze --config promptcontrol.example.yaml --out runs/quick",
+        },
+        {
+            "id": "report",
+            "image": "report",
+            "title": "3. Analyze, gate, and read the report",
+            "operation": "Run analyze from Workflows or CLI, then run gate with a policy.",
+            "result": "`metrics.json`, `stats.json`, `explanation.json`, `gate_result.json`, and report files.",
+            "meaning": "You can judge whether the candidate prompt improved reliably and passed policy.",
+            "next_step": "Keep the prompt, revise it, or inspect failed slices and examples.",
+            "command": "pcl analyze --config promptcontrol.example.yaml --out runs/quick && pcl gate --run runs/quick --policy examples/gate.policy.yaml",
+        },
+        {
+            "id": "drift",
+            "image": "report",
+            "title": "4. Check model provenance and drift",
+            "operation": "Open Model Drift or run model-drift between two run directories.",
+            "result": "`model_drift.json` with provider/model comparison and drift risk.",
+            "meaning": "If models changed, the comparison is not a clean prompt-only comparison.",
+            "next_step": "Pin model ids or rerun baseline/candidate under the same model.",
+            "command": "pcl model-drift --run runs/current --history runs/previous --out runs/current/model_drift.json",
+        },
+        {
+            "id": "audit",
+            "image": "audit_history",
+            "title": "5. Audit what the coding agent changed",
+            "operation": "Run audit-diff against two git refs after an agent finishes.",
+            "result": "`audit_result.json` and `audit_summary.md` with files, line counts, risks, and tests.",
+            "meaning": "You can see whether the agent touched dangerous paths, dependencies, workflows, or tests.",
+            "next_step": "Review high-risk files before merging, then build an agent-run manifest.",
+            "command": "pcl audit-diff --before HEAD~1 --after HEAD --out runs/audit",
+        },
+        {
+            "id": "history",
+            "image": "audit_history",
+            "title": "6. Build local run history",
+            "operation": "Index a runs directory after several analyses or audits.",
+            "result": "`history_index.json` with model, score, gate, prompt, and risk timeline data.",
+            "meaning": "You can spot score regressions, model changes, and risky agent runs over time.",
+            "next_step": "Use History filters to show only high-risk or review-required runs.",
+            "command": "pcl history index --runs runs/ --out runs/history_index.json",
+        },
+        {
+            "id": "project_defaults",
+            "image": "overview",
+            "title": "7. Use project defaults",
+            "operation": "Keep `.promptcontrol.yaml` in the repo root for policies, runs, paths, and tests.",
+            "result": "Shorter commands because guard, gate, audit-diff, and UI can read local defaults.",
+            "meaning": "Teams can share the same policy and expected paths without copy-pasting flags.",
+            "next_step": "Edit `.promptcontrol.yaml` when the project policy changes.",
+            "command": "pcl guard --prompt \"Fix this bug\" --profile coding",
+        },
+        {
+            "id": "export_pr",
+            "image": "audit_history",
+            "title": "8. Export and summarize for review",
+            "operation": "Generate a PR summary or export a report zip from Workflows.",
+            "result": "`pr_summary.md/json` or a zip containing recognized run artifacts.",
+            "meaning": "Reviewers get a compact, shareable summary without reading every JSON file.",
+            "next_step": "Attach the summary to a PR or archive the zip with the run.",
+            "command": "pcl export-report --run runs/quick --out runs/quick/report.zip",
+        },
+    ],
+    "zh": [
+        {
+            "id": "guard",
+            "image": "guard",
+            "title": "1. 在 Agent 执行前守护 Prompt",
+            "operation": "打开“Prompt 守护”，粘贴指令，选择场景和策略，然后运行守护。",
+            "result": "`guard_result.json`、改写后的 prompt、风险等级、策略违规和 token 估算。",
+            "meaning": "你可以判断 prompt 是否模糊、危险、范围太宽，或缺少目标文件和测试计划。",
+            "next_step": "把改写后的 prompt 发给 Claude Code、Cursor、Codex，或继续手动调整。",
+            "command": "pcl guard --prompt \"修复这个 bug\" --profile coding --policy examples/guard.policy.yaml --json",
+        },
+        {
+            "id": "workflows",
+            "image": "overview",
+            "title": "2. 一键创建演示数据",
+            "operation": "打开“工作流”，点击“创建演示数据”。",
+            "result": "本地 demo 项目、`runs/demo`、报告、gate 结果和 `history_index.json`。",
+            "meaning": "仪表盘会有真实 artifacts 可读，所有页面都能立刻看到示例。",
+            "next_step": "切到“运行报告”或“历史”，查看刚生成的数据。",
+            "command": "pcl init --path demo && cd demo && pcl analyze --config promptcontrol.example.yaml --out runs/quick",
+        },
+        {
+            "id": "report",
+            "image": "report",
+            "title": "3. 运行评测、门禁并阅读报告",
+            "operation": "在“工作流”里运行 analyze，或用 CLI 运行 analyze，再用策略运行 gate。",
+            "result": "`metrics.json`、`stats.json`、`explanation.json`、`gate_result.json` 和报告文件。",
+            "meaning": "你可以判断 candidate prompt 是否真的更好，以及是否通过团队策略。",
+            "next_step": "保留 prompt、继续修改，或检查退化的 slice 和失败样本。",
+            "command": "pcl analyze --config promptcontrol.example.yaml --out runs/quick && pcl gate --run runs/quick --policy examples/gate.policy.yaml",
+        },
+        {
+            "id": "drift",
+            "image": "report",
+            "title": "4. 检查模型来源和漂移",
+            "operation": "打开“模型漂移”，或对两个 run 目录运行 model-drift。",
+            "result": "`model_drift.json`，记录 provider/model 对比和漂移风险。",
+            "meaning": "如果模型变了，这次比较就不是干净的 prompt-only 比较。",
+            "next_step": "固定模型 id，或在同一模型下重新跑 baseline/candidate。",
+            "command": "pcl model-drift --run runs/current --history runs/previous --out runs/current/model_drift.json",
+        },
+        {
+            "id": "audit",
+            "image": "audit_history",
+            "title": "5. 审计编程 Agent 改了什么",
+            "operation": "Agent 运行后，对两个 git ref 执行 audit-diff。",
+            "result": "`audit_result.json` 和 `audit_summary.md`，包含文件、行数、风险和测试记录。",
+            "meaning": "你能看到 Agent 是否改了危险路径、依赖、workflow 或测试文件。",
+            "next_step": "合并前优先复查高风险文件，再生成 agent-run manifest。",
+            "command": "pcl audit-diff --before HEAD~1 --after HEAD --out runs/audit",
+        },
+        {
+            "id": "history",
+            "image": "audit_history",
+            "title": "6. 建立本地运行历史",
+            "operation": "当你有多次分析或审计后，对 runs 目录建立索引。",
+            "result": "`history_index.json`，记录模型、分数、gate、prompt 和风险时间线。",
+            "meaning": "你可以发现分数退化、模型变化和高风险 Agent 运行。",
+            "next_step": "用“历史”页面过滤只看高风险或需要复核的 run。",
+            "command": "pcl history index --runs runs/ --out runs/history_index.json",
+        },
+        {
+            "id": "project_defaults",
+            "image": "overview",
+            "title": "7. 使用项目默认配置",
+            "operation": "在仓库根目录保留 `.promptcontrol.yaml`，记录策略、runs、路径和测试默认值。",
+            "result": "guard、gate、audit-diff 和 UI 可以自动读取默认值，命令更短。",
+            "meaning": "团队不用反复复制参数，也能共享同一套策略和预期路径。",
+            "next_step": "当项目策略变化时，更新 `.promptcontrol.yaml`。",
+            "command": "pcl guard --prompt \"修复这个 bug\" --profile coding",
+        },
+        {
+            "id": "export_pr",
+            "image": "audit_history",
+            "title": "8. 导出报告并生成 PR 摘要",
+            "operation": "在“工作流”里生成 PR summary，或导出 report zip。",
+            "result": "`pr_summary.md/json`，或一个包含 run artifacts 的 zip。",
+            "meaning": "Reviewer 不用逐个打开 JSON，也能快速看到结论和风险。",
+            "next_step": "把 summary 放进 PR，或把 zip 和本次 run 一起归档。",
+            "command": "pcl export-report --run runs/quick --out runs/quick/report.zip",
+        },
+    ],
+}
+
+TEXT["zh"].update(
+    {
+        "title": "prompt_control_lab 本地仪表盘",
+        "subtitle": "本地执行前检查、模型溯源和 agent 审计视图。不会上传 prompt、代码或 artifact。",
+        "runs": "Runs 目录",
+        "policy": "Guard 策略",
+        "guard": "Prompt 守护",
+        "workflows": "工作流",
+        "tutorial": "教程",
+        "tutorial_intro": "建议从上到下阅读。每个卡片都会说明：怎么操作、会得到什么文件、结果说明什么问题，以及下一步怎么做。",
+        "tutorial_framework_note": "Streamlit 自带的 Deploy 和三点菜单属于框架原生控件，本应用会隐藏这些入口，让本地仪表盘保持中文和 prompt_control_lab 工作流为主。",
+        "tutorial_operation": "操作",
+        "tutorial_result": "得到什么",
+        "tutorial_meaning": "说明什么问题",
+        "tutorial_next_step": "下一步",
+        "tutorial_command": "CLI 等价命令",
+        "execution_mode": "执行模式",
+        "overwrite": "覆盖已有 artifact",
+        "allow_external_outputs": "允许写入 runs 目录之外",
+        "write_boundary": "工作流默认应该写入当前 runs 目录下。外部输出路径会提示风险，并在自动执行模式下被阻止，除非显式允许。",
+        "confirm_write": "确认写入",
+        "run_action": "运行",
+        "create_demo": "创建演示数据",
+        "workflow_preview": "预览",
+        "workflow_result": "工作流结果",
+        "guard_workflow": "守护 Prompt",
+        "analyze_workflow": "运行 analyze",
+        "gate_workflow": "运行 gate",
+        "audit_workflow": "运行 audit-diff",
+        "agent_run_workflow": "生成 agent-run",
+        "pr_summary_workflow": "生成 PR summary",
+        "export_workflow": "导出报告 zip",
+        "out_dir": "输出目录",
+        "data_path": "任务 JSONL",
+        "baseline_predictions": "Baseline 预测文件",
+        "candidate_predictions": "Candidate 预测文件",
+        "metric": "指标",
+        "policy_path": "策略路径",
+        "run_dir": "Run 目录",
+        "repo": "仓库",
+        "before": "Before ref",
+        "after": "After ref",
+        "tests_run": "已记录测试",
+        "audit_dir": "Audit 目录",
+        "agent": "Agent",
+        "agent_run_path": "agent_run.json 路径",
+        "markdown_path": "Markdown 路径",
+        "json_path": "JSON 路径",
+        "zip_path": "Zip 路径",
+        "report": "运行报告",
+        "drift": "模型漂移",
+        "audit": "Agent 改动审计",
+        "history": "历史",
+        "prompt": "提示词",
+        "run_guard": "运行守护",
+        "selected_run": "选择 run",
+        "missing_run": "没有找到 run 目录。",
+        "empty_run": "这个 run 没有识别到 artifact。",
+        "decision": "决策",
+        "risk": "风险",
+        "review": "需要人工复核",
+        "categories": "风险类别",
+        "violations": "策略违规",
+        "token_cost": "估算 token 成本",
+        "diff": "Prompt 差异",
+        "recommendation": "部署建议",
+        "gate": "门禁状态",
+        "candidate_score": "候选分数",
+        "mean_delta": "均值差异",
+        "p_value": "p-value",
+        "model_provenance": "模型来源",
+        "drift_risk": "漂移风险",
+        "audit_review": "需要人工复核",
+        "dangerous_paths": "危险路径",
+        "changed_files": "改动文件",
+        "profile": "场景",
+        "mode": "模式",
+        "token_mode": "Token 模式",
+        "max_tokens": "最大 Token",
+        "guarded_prompt": "守护后的提示词",
+        "save_guard": "保存 guard artifact",
+        "save_guard_dir": "Guard 保存目录",
+        "saved_guard": "已保存 guard artifact",
+        "download_guard_json": "下载 guard_result.json",
+        "download_improved_prompt": "下载 improved_prompt.txt",
+        "risk_chart": "风险类别",
+        "count": "数量",
+        "category": "类别",
+        "none": "无",
+        "score_ci": "分数差异置信区间",
+        "slice_scores": "任务切片分数",
+        "baseline": "基线",
+        "candidate": "候选",
+        "model_timeline": "模型时间线",
+        "no_model": "没有记录模型来源。",
+        "no_audit": "没有找到 audit_result.json。",
+        "public_api": "公共 API",
+        "tests_passed": "测试通过",
+        "file_breakdown": "改动文件类型",
+        "file_kind": "类型",
+        "source_files": "源码",
+        "test_files": "测试",
+        "docs_files": "文档",
+        "config_files": "配置",
+        "path": "路径",
+        "no_history": "没有找到 history_index.json。",
+        "run_timeline": "Run 时间线",
+        "gate_trend": "门禁趋势",
+        "score_trend": "分数趋势",
+        "risk_trend": "风险趋势",
+        "review_trend": "复核趋势",
+        "prompt_identity": "Prompt 身份",
+        "model_changes": "模型 / provider 变化",
+        "audit_details": "审计明细",
+        "secret_findings": "疑似密钥",
+        "dependency_files": "依赖文件",
+        "lockfiles": "锁文件",
+        "workflow_files": "Workflow 文件",
+        "deleted_test_files": "删除的测试文件",
+        "unexpected_files": "意外文件",
+        "test_results": "测试结果",
+        "changed_lines": "改动行数",
+        "file": "文件",
+        "added": "新增",
+        "deleted": "删除",
+        "only_review_required": "只看需要复核的 run",
+        "only_high_risk": "只看高风险 run",
+        "provider_filter": "Provider 过滤",
+        "model_filter": "模型过滤",
+        "risk_categories": "风险类别",
+    }
+)
+
+CHOICE_OPTIONS.update(
+    {
+        "execution_mode": [
+            ("confirm", "confirm", "确认后执行"),
+            ("auto", "auto", "自动执行"),
+            ("command", "command", "只生成命令"),
+        ],
+        "profile": [
+            ("coding", "coding", "编程"),
+            ("general", "general", "通用"),
+            ("research", "research", "研究"),
+        ],
+        "guard_mode": [
+            ("suggest", "suggest", "给出建议"),
+            ("auto", "auto", "自动改写"),
+            ("gate", "gate", "门禁检查"),
+        ],
+        "token_mode": [
+            ("balanced", "balanced", "平衡省 token"),
+            ("aggressive", "aggressive", "激进省 token"),
+        ],
+        "tests_passed": [
+            ("unknown", "unknown", "未知"),
+            ("true", "true", "通过"),
+            ("false", "false", "失败"),
+        ],
+    }
+)
+
+TUTORIAL_SECTIONS["zh"] = [
+    {
+        "id": "guard",
+        "image": "guard",
+        "title": "1. 在 Agent 执行前守护 Prompt",
+        "operation": "打开“Prompt 守护”，粘贴指令，选择场景和策略，然后运行守护。",
+        "result": "`guard_result.json`、改写后的 prompt、风险等级、策略违规和 token 估算。",
+        "meaning": "你可以判断 prompt 是否模糊、危险、范围太宽，或缺少目标文件和测试计划。",
+        "next_step": "把改写后的 prompt 发给 Claude Code、Cursor、Codex，或继续手动调整。",
+        "command": "pcl guard --prompt \"修复这个 bug\" --profile coding --policy examples/guard.policy.yaml --json",
+    },
+    {
+        "id": "workflows",
+        "image": "overview",
+        "title": "2. 一键创建演示数据",
+        "operation": "打开“工作流”，点击“创建演示数据”。",
+        "result": "本地 demo 项目、`runs/demo`、报告、gate 结果和 `history_index.json`。",
+        "meaning": "仪表盘会有真实 artifact 可读，每个 tab 都更容易理解。",
+        "next_step": "切到“运行报告”或“历史”，检查刚生成的数据。",
+        "command": "pcl init --path demo && cd demo && pcl analyze --config promptcontrol.example.yaml --out runs/quick",
+    },
+    {
+        "id": "report",
+        "image": "report",
+        "title": "3. 评测、门禁和报告",
+        "operation": "在工作流或 CLI 里运行 analyze，然后用策略运行 gate。",
+        "result": "`metrics.json`、`stats.json`、`explanation.json`、`gate_result.json` 和报告文件。",
+        "meaning": "你可以判断候选 prompt 是否可靠提升，并且是否通过团队门禁。",
+        "next_step": "保留 prompt、继续改写，或检查失败切片和样本。",
+        "command": "pcl analyze --config promptcontrol.example.yaml --out runs/quick && pcl gate --run runs/quick --policy examples/gate.policy.yaml",
+    },
+    {
+        "id": "drift",
+        "image": "report",
+        "title": "4. 检查模型来源和漂移",
+        "operation": "打开“模型漂移”，或在两个 run 目录之间运行 model-drift。",
+        "result": "`model_drift.json`，包含 provider/model 对比和漂移风险。",
+        "meaning": "如果模型变了，这次比较就不是干净的 prompt-only 比较。",
+        "next_step": "固定模型 id，或在同一模型下重新跑 baseline/candidate。",
+        "command": "pcl model-drift --run runs/current --history runs/previous --out runs/current/model_drift.json",
+    },
+    {
+        "id": "audit",
+        "image": "audit_history",
+        "title": "5. 审计编程 Agent 改了什么",
+        "operation": "Agent 完成后，对两个 git ref 运行 audit-diff。",
+        "result": "`audit_result.json` 和 `audit_summary.md`，包含文件、行数、风险和测试记录。",
+        "meaning": "你可以看到 agent 是否改了危险路径、依赖、workflow 或测试。",
+        "next_step": "合并前复核高风险文件，然后生成 agent-run manifest。",
+        "command": "pcl audit-diff --before HEAD~1 --after HEAD --out runs/audit",
+    },
+    {
+        "id": "history",
+        "image": "audit_history",
+        "title": "6. 建立本地运行历史",
+        "operation": "多次 analyze 或 audit 后，对 runs 目录建立索引。",
+        "result": "`history_index.json`，包含模型、分数、gate、prompt 和风险时间线。",
+        "meaning": "你可以发现分数回退、模型变化和高风险 agent run。",
+        "next_step": "用“历史”过滤器只看高风险或需要复核的 run。",
+        "command": "pcl history index --runs runs/ --out runs/history_index.json",
+    },
+    {
+        "id": "project_defaults",
+        "image": "overview",
+        "title": "7. 使用项目默认配置",
+        "operation": "在仓库根目录保留 `.promptcontrol.yaml`，记录策略、runs、路径和测试命令。",
+        "result": "guard、gate、audit-diff 和 UI 可以读取本地默认值，命令更短。",
+        "meaning": "团队可以共享同一套策略和预期路径，不用反复复制参数。",
+        "next_step": "项目策略变化时，更新 `.promptcontrol.yaml`。",
+        "command": "pcl guard --prompt \"修复这个 bug\" --profile coding",
+    },
+    {
+        "id": "export_pr",
+        "image": "audit_history",
+        "title": "8. 导出并生成审查摘要",
+        "operation": "从工作流生成 PR summary，或导出报告 zip。",
+        "result": "`pr_summary.md/json`，或一个包含 run artifacts 的 zip。",
+        "meaning": "Reviewer 不用逐个打开 JSON，也能快速看到结论和风险。",
+        "next_step": "把 summary 放进 PR，或把 zip 和本次 run 一起归档。",
+        "command": "pcl export-report --run runs/quick --out runs/quick/report.zip",
+    },
+]
 
 
 def main() -> None:
@@ -274,16 +785,26 @@ def main() -> None:
     default_policy = os.environ.get("PCL_UI_POLICY", "")
     policy_raw = st.sidebar.text_input(text["policy"], default_policy)
     policy_path = Path(policy_raw) if policy_raw else None
-    execution_mode = str(
-        st.sidebar.selectbox(text["execution_mode"], ["confirm", "auto", "command"], index=0)
+    project_config = os.environ.get("PCL_UI_CONFIG", "")
+    if project_config:
+        st.sidebar.caption(f"Project config: {project_config}")
+    execution_label = str(
+        st.sidebar.selectbox(
+            text["execution_mode"],
+            _choice_labels("execution_mode", language),
+            index=0,
+        )
     )
+    execution_mode = _choice_value("execution_mode", execution_label, language)
     overwrite = bool(st.sidebar.checkbox(text["overwrite"], value=False))
+    allow_external_outputs = bool(st.sidebar.checkbox(text["allow_external_outputs"], value=False))
     st.title(text["title"])
     st.caption(text["subtitle"])
 
     runs = list_runs(runs_dir)
     detail = _select_run(st, runs, text)
-    views = _ordered_views(str(query.get("view", "workflows")))
+    default_view = str(query.get("view") or os.environ.get("PCL_UI_DEFAULT_VIEW", "workflows"))
+    views = _ordered_views(default_view)
     tabs = st.tabs([text[name] for name in views])
     for tab, name in zip(tabs, views, strict=True):
         with tab:
@@ -298,6 +819,7 @@ def main() -> None:
                 runs_dir,
                 execution_mode,
                 overwrite,
+                allow_external_outputs,
             )
 
 
@@ -312,6 +834,7 @@ def _render_view(
     runs_dir: Path,
     execution_mode: str,
     overwrite: bool,
+    allow_external_outputs: bool,
 ) -> None:
     if name == "workflows":
         _render_workflows_tab(
@@ -323,7 +846,10 @@ def _render_view(
             runs_dir,
             execution_mode,
             overwrite,
+            allow_external_outputs,
         )
+    elif name == "tutorial":
+        _render_tutorial_tab(st, text, language)
     elif name == "guard":
         _render_guard_tab(
             st,
@@ -376,8 +902,38 @@ def _truthy(value: object) -> bool:
     return str(value).lower() in {"1", "true", "yes", "on"}
 
 
+def _choice_labels(group: str, language: str) -> list[str]:
+    """Return localized labels while keeping workflow values stable."""
+
+    index = 2 if language == "zh" else 1
+    return [str(item[index]) for item in CHOICE_OPTIONS[group]]
+
+
+def _choice_value(group: str, label: str, language: str) -> str:
+    """Map a localized UI label back to the stable internal enum value."""
+
+    label_index = 2 if language == "zh" else 1
+    for item in CHOICE_OPTIONS[group]:
+        if label == item[label_index]:
+            return str(item[0])
+    return label
+
+
+def tutorial_sections(language: str) -> list[JsonDict]:
+    """Return tutorial cards for the selected language."""
+
+    sections = TUTORIAL_SECTIONS.get(language) or TUTORIAL_SECTIONS["en"]
+    return [dict(section) for section in sections]
+
+
+def _tutorial_asset_path(image_key: str, language: str) -> Path:
+    filenames = TUTORIAL_IMAGES.get(image_key) or TUTORIAL_IMAGES["overview"]
+    filename = filenames[1] if language == "zh" else filenames[0]
+    return Path(__file__).resolve().parents[3] / "docs" / "assets" / filename
+
+
 def _ordered_views(first: str) -> list[str]:
-    views = ["workflows", "guard", "report", "drift", "audit", "history"]
+    views = ["workflows", "tutorial", "guard", "report", "drift", "audit", "history"]
     if first not in views:
         return views
     return [first, *[view for view in views if view != first]]
@@ -398,6 +954,34 @@ def _select_run(st: Any, runs: list[JsonDict], text: dict[str, str]) -> JsonDict
     return load_run_detail(Path(str(match["path"])))
 
 
+def _render_tutorial_tab(st: Any, text: dict[str, str], language: str) -> None:
+    st.info(text["tutorial_framework_note"])
+    st.markdown(text["tutorial_intro"])
+    overview = _tutorial_asset_path("overview", language)
+    if overview.exists():
+        _render_svg(st, overview)
+
+    for section in tutorial_sections(language):
+        title = str(section.get("title", ""))
+        expanded = section.get("id") in {"guard", "workflows"}
+        with st.expander(title, expanded=expanded):
+            image_key = str(section.get("image") or "overview")
+            image_path = _tutorial_asset_path(image_key, language)
+            if image_path.exists():
+                _render_svg(st, image_path)
+            st.markdown(f"**{text['tutorial_operation']}**: {section.get('operation', '')}")
+            st.markdown(f"**{text['tutorial_result']}**: {section.get('result', '')}")
+            st.markdown(f"**{text['tutorial_meaning']}**: {section.get('meaning', '')}")
+            st.markdown(f"**{text['tutorial_next_step']}**: {section.get('next_step', '')}")
+            st.caption(text["tutorial_command"])
+            st.code(str(section.get("command", "")), language="bash")
+
+
+def _render_svg(st: Any, path: Path) -> None:
+    svg = path.read_text(encoding="utf-8")
+    st.markdown(f'<div style="width: 100%;">{svg}</div>', unsafe_allow_html=True)
+
+
 def _render_workflows_tab(
     st: Any,
     text: dict[str, str],
@@ -407,8 +991,24 @@ def _render_workflows_tab(
     runs_dir: Path,
     execution_mode: str,
     overwrite: bool,
+    allow_external_outputs: bool,
 ) -> None:
     run_path = Path(str(detail.get("path") or runs_dir / "quick"))
+    st.info(text["write_boundary"])
+    demo_confirmed = _confirm_checkbox(st, text, execution_mode, "wf_demo_confirm")
+    if st.button(text["create_demo"], key="wf_create_demo"):
+        _render_workflow_result(
+            st,
+            text,
+            lambda: create_demo_artifacts_workflow(
+                runs_dir=runs_dir,
+                execution_mode=execution_mode,
+                confirmed=demo_confirmed,
+                overwrite=overwrite,
+                safe_root=runs_dir,
+                allow_external_outputs=allow_external_outputs,
+            ),
+        )
     with st.expander(text["guard_workflow"], expanded=True):
         prompt = st.text_area(
             text["prompt"],
@@ -430,6 +1030,8 @@ def _render_workflows_tab(
                     overwrite=overwrite,
                     policy_path=policy_path,
                     language=language,
+                    safe_root=runs_dir,
+                    allow_external_outputs=allow_external_outputs,
                 ),
             )
 
@@ -468,6 +1070,8 @@ def _render_workflows_tab(
                     overwrite=overwrite,
                     policy_path=policy_path,
                     metric=metric,
+                    safe_root=runs_dir,
+                    allow_external_outputs=allow_external_outputs,
                 ),
             )
 
@@ -491,6 +1095,8 @@ def _render_workflows_tab(
                     execution_mode=execution_mode,
                     confirmed=confirmed,
                     overwrite=overwrite,
+                    safe_root=runs_dir,
+                    allow_external_outputs=allow_external_outputs,
                 ),
             )
 
@@ -500,8 +1106,15 @@ def _render_workflows_tab(
         after = st.text_input(text["after"], "HEAD", key="wf_audit_after")
         out_dir = Path(st.text_input(text["out_dir"], str(runs_dir / "audit"), key="wf_audit_out"))
         tests_run = _split_lines(st.text_area(text["tests_run"], "", key="wf_tests_run"))
+        tests_passed_label = str(
+            st.selectbox(
+                text["tests_passed"],
+                _choice_labels("tests_passed", language),
+                key="wf_tests_passed",
+            )
+        )
         tests_passed = _optional_bool_label(
-            st.selectbox(text["tests_passed"], ["unknown", "true", "false"], key="wf_tests_passed")
+            _choice_value("tests_passed", tests_passed_label, language)
         )
         confirmed = _confirm_checkbox(st, text, execution_mode, "wf_audit_confirm")
         if st.button(text["run_action"], key="wf_audit_run"):
@@ -518,6 +1131,8 @@ def _render_workflows_tab(
                     overwrite=overwrite,
                     tests_run=tests_run,
                     tests_passed=tests_passed,
+                    safe_root=runs_dir,
+                    allow_external_outputs=allow_external_outputs,
                 ),
             )
 
@@ -548,6 +1163,8 @@ def _render_workflows_tab(
                     confirmed=confirmed,
                     overwrite=overwrite,
                     policy=str(policy_path) if policy_path is not None else None,
+                    safe_root=runs_dir,
+                    allow_external_outputs=allow_external_outputs,
                 ),
             )
 
@@ -593,6 +1210,8 @@ def _render_workflows_tab(
                     execution_mode=execution_mode,
                     confirmed=confirmed,
                     overwrite=overwrite,
+                    safe_root=runs_dir,
+                    allow_external_outputs=allow_external_outputs,
                 ),
             )
 
@@ -612,6 +1231,8 @@ def _render_workflows_tab(
                     execution_mode=execution_mode,
                     confirmed=confirmed,
                     overwrite=overwrite,
+                    safe_root=runs_dir,
+                    allow_external_outputs=allow_external_outputs,
                 ),
             )
 
@@ -631,9 +1252,18 @@ def _render_guard_tab(
         height=140,
     )
     columns = st.columns(4)
-    profile = columns[0].selectbox(text["profile"], ["coding", "general", "research"])
-    mode = columns[1].selectbox(text["mode"], ["suggest", "auto", "gate"])
-    token_mode = columns[2].selectbox(text["token_mode"], ["balanced", "aggressive"])
+    profile_label = str(
+        columns[0].selectbox(text["profile"], _choice_labels("profile", language))
+    )
+    mode_label = str(
+        columns[1].selectbox(text["mode"], _choice_labels("guard_mode", language))
+    )
+    token_mode_label = str(
+        columns[2].selectbox(text["token_mode"], _choice_labels("token_mode", language))
+    )
+    profile = _choice_value("profile", profile_label, language)
+    mode = _choice_value("guard_mode", mode_label, language)
+    token_mode = _choice_value("token_mode", token_mode_label, language)
     max_tokens_raw = columns[3].number_input(text["max_tokens"], min_value=0, value=0)
     max_tokens = int(max_tokens_raw) if max_tokens_raw else None
     save_guard = bool(st.checkbox(text["save_guard"], value=False))
@@ -677,6 +1307,20 @@ def _render_guard_tab(
         st.subheader(text["diff"])
         st.code(prompt_diff(prompt, str(result.get("improved_prompt", ""))), language="diff")
         st.text_area(text["guarded_prompt"], str(result.get("improved_prompt", "")), height=180)
+        downloads = guard_download_payloads(result)
+        download_cols = st.columns(2)
+        download_cols[0].download_button(
+            text["download_guard_json"],
+            downloads["guard_result.json"],
+            file_name="guard_result.json",
+            mime="application/json",
+        )
+        download_cols[1].download_button(
+            text["download_improved_prompt"],
+            downloads["improved_prompt.txt"],
+            file_name="improved_prompt.txt",
+            mime="text/plain",
+        )
         if save_guard:
             outputs = [
                 save_dir / "guard_result.json",
@@ -798,6 +1442,10 @@ def _render_audit_tab(st: Any, text: dict[str, str], detail: JsonDict) -> None:
         ),
         use_container_width=True,
     )
+    changed_line_table = changed_line_rows(audit)
+    if changed_line_table:
+        st.subheader(text["changed_lines"])
+        st.dataframe(changed_line_table, use_container_width=True)
     dangerous = _strings(audit.get("dangerous_paths"))
     if dangerous:
         st.error(text["dangerous_paths"])
@@ -835,6 +1483,18 @@ def _render_history_tab(st: Any, text: dict[str, str], detail: JsonDict) -> None
         )
         return
     rows = history_rows(detail)
+    filters = st.columns(4)
+    only_review_required = bool(filters[0].checkbox(text["only_review_required"], value=False))
+    only_high_risk = bool(filters[1].checkbox(text["only_high_risk"], value=False))
+    provider_filter = str(filters[2].text_input(text["provider_filter"], ""))
+    model_filter = str(filters[3].text_input(text["model_filter"], ""))
+    rows = filter_history_rows(
+        rows,
+        only_review_required=only_review_required,
+        only_high_risk=only_high_risk,
+        provider=provider_filter,
+        model=model_filter,
+    )
     st.subheader(text["run_timeline"])
     st.dataframe(rows, use_container_width=True)
     st.plotly_chart(
@@ -992,6 +1652,10 @@ def _render_workflow_result(
         else text["workflow_result"]
     )
     st.subheader(title)
+    warnings = result.get("path_warnings")
+    if isinstance(warnings, list) and warnings:
+        for warning in warnings:
+            st.warning(str(warning))
     st.json(result)
 
 

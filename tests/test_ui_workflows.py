@@ -10,6 +10,7 @@ from promptcontrollab.files import JsonDict, read_json
 from promptcontrollab.ui.data import load_run_detail
 from promptcontrollab.ui.workflows import (
     build_agent_run_workflow,
+    create_demo_artifacts_workflow,
     export_report_zip_workflow,
     run_analyze_workflow,
     run_audit_workflow,
@@ -57,6 +58,65 @@ def test_guard_workflow_preview_auto_and_command_modes(tmp_path: Path) -> None:
     assert (out_dir / "guard_result.json").exists()
     assert (out_dir / "improved_prompt.txt").exists()
     assert (out_dir / "guarded_prompt.txt").exists()
+
+
+def test_workflow_path_guard_blocks_auto_outside_runs_root(tmp_path: Path) -> None:
+    runs_dir = tmp_path / "runs"
+    outside = tmp_path / "outside" / "guard"
+
+    preview = run_guard_workflow(
+        prompt="Fix this bug",
+        out_dir=outside,
+        execution_mode="confirm",
+        confirmed=False,
+        overwrite=False,
+        safe_root=runs_dir,
+        allow_external_outputs=False,
+    )
+
+    assert preview["status"] == "preview"
+    assert preview["path_warnings"]
+
+    command = run_guard_workflow(
+        prompt="Fix this bug",
+        out_dir=outside,
+        execution_mode="command",
+        confirmed=False,
+        overwrite=False,
+        safe_root=runs_dir,
+        allow_external_outputs=False,
+    )
+
+    assert command["status"] == "command"
+    assert command["path_warnings"]
+
+    try:
+        run_guard_workflow(
+            prompt="Fix this bug",
+            out_dir=outside,
+            execution_mode="auto",
+            confirmed=False,
+            overwrite=False,
+            safe_root=runs_dir,
+            allow_external_outputs=False,
+        )
+    except ValueError as exc:
+        assert "outside the configured runs directory" in str(exc)
+    else:  # pragma: no cover - defensive
+        raise AssertionError("Expected external output path to be blocked in auto mode.")
+
+    allowed = run_guard_workflow(
+        prompt="Fix this bug",
+        out_dir=outside,
+        execution_mode="auto",
+        confirmed=False,
+        overwrite=False,
+        safe_root=runs_dir,
+        allow_external_outputs=True,
+    )
+
+    assert allowed["status"] == "completed"
+    assert (outside / "guard_result.json").exists()
 
 
 def test_analyze_gate_agent_pr_and_zip_workflows(tmp_path: Path) -> None:
@@ -118,6 +178,9 @@ def test_analyze_gate_agent_pr_and_zip_workflows(tmp_path: Path) -> None:
     assert payload["review_required"] is False
     assert payload["policy_detail"]["policy_file"] == str(gate_policy)
     assert str(payload["policy_detail"]["policy_hash"]).startswith("sha256:")
+    assert payload["policy_detail"]["path"] == str(gate_policy)
+    assert str(payload["policy_detail"]["sha256"]).startswith("sha256:")
+    assert payload["policy_detail"]["exists"] is True
 
     summary = run_pr_summary_workflow(
         audit_path=audit_dir / "audit_result.json",
@@ -194,6 +257,22 @@ def test_pr_summary_workflow_without_artifacts_needs_review(tmp_path: Path) -> N
 
     assert result["status"] == "completed"
     assert read_json(tmp_path / "pr_summary.json")["status"] == "needs_review"
+
+
+def test_create_demo_artifacts_workflow_generates_demo_run(tmp_path: Path) -> None:
+    runs_dir = tmp_path / "runs"
+
+    result = create_demo_artifacts_workflow(
+        runs_dir=runs_dir,
+        execution_mode="auto",
+        confirmed=False,
+        overwrite=False,
+    )
+
+    assert result["status"] == "completed"
+    assert (runs_dir / "demo" / "manifest.json").exists()
+    assert (runs_dir / "demo" / "report.html").exists()
+    assert (runs_dir / "_demo_project" / "promptcontrol.example.yaml").exists()
 
 
 def test_cli_export_report_zip_contains_known_artifacts(tmp_path: Path) -> None:

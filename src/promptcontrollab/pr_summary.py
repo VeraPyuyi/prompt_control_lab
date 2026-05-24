@@ -21,13 +21,17 @@ def build_pr_summary(
     has_artifacts = any(
         path is not None and path.exists() for path in [audit_path, gate_path, agent_run_path]
     )
+    coverage = {"gate": bool(gate), "audit": bool(audit), "agent_run": bool(agent_run)}
     labels: list[str] = []
     reasons: list[str] = []
+    warnings: list[str] = []
     status = "pass"
     if not has_artifacts:
         status = "needs_review"
         labels.append("prompt-control-lab:needs-review")
         reasons.append("No PromptControlLab artifacts were provided.")
+    elif not coverage["audit"]:
+        warnings.append("No audit artifact was provided; diff-level PR risk was not checked.")
     gate_status = gate.get("status")
     if gate_status == "fail":
         status = "fail"
@@ -77,6 +81,8 @@ def build_pr_summary(
         "status": status,
         "labels": labels,
         "reasons": reasons,
+        "coverage": coverage,
+        "warnings": warnings,
         "gate_status": gate_status,
         "human_review_required": bool(audit.get("human_review_required") or agent_review_required),
         "agent_risk_level": agent_risk,
@@ -124,6 +130,11 @@ def render_pr_summary_markdown(payload: JsonDict) -> str:
         f"- Model: `{payload.get('model') or 'unknown'}`",
         f"- Tests passed: `{payload.get('tests_passed')}`",
         "",
+        "### Coverage",
+        f"- Gate: `{_yes_no(_coverage_value(payload, 'gate'))}`",
+        f"- Audit: `{_yes_no(_coverage_value(payload, 'audit'))}`",
+        f"- Agent run: `{_yes_no(_coverage_value(payload, 'agent_run'))}`",
+        "",
         "### Reasons",
     ]
     reasons = payload.get("reasons")
@@ -131,6 +142,9 @@ def render_pr_summary_markdown(payload: JsonDict) -> str:
         lines.extend(f"- {reason}" for reason in reasons)
     else:
         lines.append("- No blocking issue detected.")
+    warnings = payload.get("warnings")
+    if isinstance(warnings, list) and warnings:
+        lines += ["", "### Warnings", *[f"- {warning}" for warning in warnings]]
     dangerous = payload.get("dangerous_paths")
     if isinstance(dangerous, list) and dangerous:
         lines += ["", "### Dangerous paths", *[f"- `{path}`" for path in dangerous]]
@@ -148,3 +162,12 @@ def _read_optional(path: Path | None) -> JsonDict:
 
 def _positive_count(value: object) -> bool:
     return isinstance(value, int | float) and value > 0
+
+
+def _coverage_value(payload: JsonDict, key: str) -> bool:
+    coverage = payload.get("coverage")
+    return bool(coverage.get(key)) if isinstance(coverage, dict) else False
+
+
+def _yes_no(value: bool) -> str:
+    return "yes" if value else "no"

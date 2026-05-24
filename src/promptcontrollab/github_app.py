@@ -83,16 +83,26 @@ def handle_pull_request_payload(
     if isinstance(labels, list) and labels:
         client.add_labels(repo, number, [str(label) for label in labels])
     status = str(summary.get("status", "pass"))
-    if status in {"fail", "needs_review"} and sha:
+    if sha:
         client.create_check_run(
             repo,
             sha,
             name="PromptControlLab Gate",
-            conclusion="failure" if status == "fail" else "neutral",
+            conclusion=_check_conclusion(status),
             title=f"PromptControlLab: {status}",
             summary=body,
         )
     return {"handled": True, "repo": repo, "number": number, "status": status}
+
+
+def _check_conclusion(status: str) -> str:
+    if status == "fail":
+        return "failure"
+    if status == "needs_review":
+        return "neutral"
+    if status == "pass":
+        return "success"
+    return "neutral"
 
 
 def summarize_pull_files(files: list[JsonDict]) -> JsonDict:

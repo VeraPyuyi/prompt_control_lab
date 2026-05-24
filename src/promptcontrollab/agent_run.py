@@ -118,11 +118,19 @@ def _risk_level(gate: JsonDict, audit: JsonDict) -> str | None:
 def _policy_detail(policy: str | None) -> tuple[JsonDict, list[str]]:
     if not policy:
         return {}, []
-    payload: JsonDict = {"id": policy, "policy_file": policy}
+    payload: JsonDict = {
+        "id": policy,
+        "policy_file": policy,
+        "path": policy,
+        "exists": False,
+    }
     warnings: list[str] = []
     path = Path(policy)
     if path.exists():
-        payload["policy_hash"] = _sha256_file(path)
+        sha256 = _sha256_file(path)
+        payload["policy_hash"] = sha256
+        payload["sha256"] = sha256
+        payload["exists"] = True
     else:
         warnings.append(f"Policy file was not found: {policy}")
     return payload, warnings
