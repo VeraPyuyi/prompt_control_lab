@@ -248,6 +248,28 @@ ui.default_view: workflows
 
 命令行参数仍然优先。优先级是：显式 CLI 参数 -> `promptcontrol.example.yaml` 这类命令专用配置 -> `.promptcontrol.yaml` -> 内置默认值。
 
+## 观看演示视频 🎬
+
+仓库里已经包含两条 11 分 40 秒的 AI 配音演示视频。中文和英文视频演示同一套本地流程：prompt 守护、prompt 改写、analyze/gate/report、模型溯源、agent diff 审计、历史视图、插件、CI，以及高级研究诊断命令。
+
+[![prompt_control_lab 中文演示封面](docs/assets/demo/poster.zh.png)](docs/assets/demo/prompt_control_lab_demo.zh.mp4)
+
+- [中文 MP4](docs/assets/demo/prompt_control_lab_demo.zh.mp4)
+- [中文字幕](docs/assets/demo/prompt_control_lab_demo.zh.srt)
+- [中文分镜脚本](docs/demo/storyboard.zh.md)
+
+[![prompt_control_lab English demo poster](docs/assets/demo/poster.en.png)](docs/assets/demo/prompt_control_lab_demo.en.mp4)
+
+- [English MP4](docs/assets/demo/prompt_control_lab_demo.en.mp4)
+- [English subtitles](docs/assets/demo/prompt_control_lab_demo.en.srt)
+- [English storyboard](docs/demo/storyboard.en.md)
+
+视频由 [video_manifest.json](docs/demo/video_manifest.json) 可复现生成：
+
+```bash
+python scripts/build_demo_video.py
+```
+
 ## 打开本地可视化仪表盘 🖥️
 
 UI 是一个本地 Streamlit 仪表盘。它只读取本机磁盘上的 artifacts，不会上传 prompt、代码或报告。

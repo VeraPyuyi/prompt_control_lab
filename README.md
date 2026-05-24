@@ -263,6 +263,30 @@ ui.default_view: workflows
 CLI arguments still win. The precedence is: explicit CLI flags → command-specific config such as
 `promptcontrol.example.yaml` → `.promptcontrol.yaml` → built-in defaults.
 
+## Watch The Demo Videos 🎬
+
+The repository includes two narrated 11:40 demo videos. They walk through the same local workflow
+in English and Chinese: prompt guard, prompt improvement, analyze/gate/report, model provenance,
+agent diff audit, history, plugins, CI, and advanced research diagnostics.
+
+[![prompt_control_lab English demo poster](docs/assets/demo/poster.en.png)](docs/assets/demo/prompt_control_lab_demo.en.mp4)
+
+- [English MP4](docs/assets/demo/prompt_control_lab_demo.en.mp4)
+- [English subtitles](docs/assets/demo/prompt_control_lab_demo.en.srt)
+- [English storyboard](docs/demo/storyboard.en.md)
+
+[![prompt_control_lab Chinese demo poster](docs/assets/demo/poster.zh.png)](docs/assets/demo/prompt_control_lab_demo.zh.mp4)
+
+- [中文 MP4](docs/assets/demo/prompt_control_lab_demo.zh.mp4)
+- [中文字幕](docs/assets/demo/prompt_control_lab_demo.zh.srt)
+- [中文分镜脚本](docs/demo/storyboard.zh.md)
+
+The videos are generated from [video_manifest.json](docs/demo/video_manifest.json) with:
+
+```bash
+python scripts/build_demo_video.py
+```
+
 ## Open The Local UI Dashboard 🖥️
 
 The UI is a local Streamlit dashboard. It reads artifacts from disk and does not upload prompts,

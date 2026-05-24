@@ -1,0 +1,47 @@
+1
+00:00:00,000 --> 00:00:45,000
+PromptControlLab sits before and after an AI coding agent. Before the agent runs, it checks whether the prompt is clear, scoped, policy-compliant, and cost-aware. After the run, it records model identity, reproducible evaluation evidence, gate status, diff audit signals, and local run history. The goal is not to claim that an agent is safe. The goal is to replace one-off impressions with inspectable evidence.
+
+2
+00:00:45,000 --> 00:01:45,000
+Start with a prompt that developers often send directly to an agent: Fix this bug. The guard command turns that vague instruction into a structured preflight result with action, risk level, reasons, policy violations, required review, token estimate, and an improved prompt. The useful decision is whether to send the prompt onward, revise it first, or block it under a local policy.
+
+3
+00:01:45,000 --> 00:02:40,000
+The improve path is the lightweight version of preflight. It rewrites a prompt in plain language, adds the task goal, output format, assumptions, and stability rules, and estimates token cost. When connected to a previous run, it can include diagnostic hints such as regressed slices or broken examples. Use guard for policy decisions and improve for direct rewriting.
+
+4
+00:02:40,000 --> 00:03:40,000
+The local UI exposes the same workflow without requiring the viewer to remember every command. The workflow cards start with guard, continue into a quick report, then show gate, model drift, audit diff, and history. The UI reads artifacts from the working tree and run folders. It is a control surface for inspection, not a hosted dashboard.
+
+5
+00:03:40,000 --> 00:04:45,000
+The analyze command is the shortest path from example data to a report. It creates a reproducible split, evaluates baseline and candidate predictions, computes metrics, runs paired statistics, writes explanations, and produces Markdown and HTML reports. The prompt change is tied to input files, prediction files, split hash, metric, and output artifacts.
+
+6
+00:04:45,000 --> 00:05:45,000
+After analysis, the report gives humans the evidence and the gate gives automation a compact decision. A gate policy can check minimum score, maximum regression, adjusted p-value, diagnostic risk, and model provenance rules. Passing a gate means the configured thresholds passed. It does not prove the prompt is correct, safe, or production-ready.
+
+7
+00:05:45,000 --> 00:06:45,000
+Model provenance matters because prompt experiments are only clean when the model is stable enough to interpret the comparison. Model detect records provider, public model id, source, confidence, and warnings. Model drift compares a current run with history and marks whether the result is prompt-only, uncertain, or confounded by a model or provider change.
+
+8
+00:06:45,000 --> 00:07:40,000
+Once an agent has changed files, audit diff summarizes what changed. It counts source, test, docs, config, workflow, dependency, and generated files. It flags deleted tests, dangerous paths, redacted secret findings, possible public API changes, expected-path mismatches, and test command status. This is review triage.
+
+9
+00:07:40,000 --> 00:08:35,000
+History turns scattered run folders into a local index. It records manifest data, model identity, prompt identity, metrics, gate status, risk categories, and artifact paths. Compare mode shows whether a newer run changed the prompt, model, score, gate result, slice behavior, or risk profile.
+
+10
+00:08:35,000 --> 00:09:35,000
+PromptControlLab can be placed where prompts enter the workflow. Claude Code hooks, Cursor rules and MCP-style tools, Codex skills, shell wrappers, and a GitHub Action template can all call the same local commands. CI can run analysis, gate the result, and attach audit evidence to a pull request.
+
+11
+00:09:35,000 --> 00:10:45,000
+The advanced commands are for prompt optimization research. Soft hard checks whether learned soft vectors project cleanly to real token embeddings. Trajectory summarizes hidden-state drift and stability-like signals. Riccati fits a finite-dimensional surrogate and reports closed-loop stability for that surrogate, not for the full language model. TV soft compares static, time-varying, shuffled, and random control lanes.
+
+12
+00:10:45,000 --> 00:11:40,000
+The full loop is simple: preflight the prompt, improve it when needed, run the agent, analyze the prompt change, record model provenance, gate the result, audit the diff, and compare history. Each step produces files that another person can inspect. The project is local agent preflight, model provenance, and reproducible prompt evaluation.

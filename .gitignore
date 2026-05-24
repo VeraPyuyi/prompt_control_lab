@@ -9,4 +9,7 @@ build/
 *.egg-info/
 runs/
 demo/
-
+!docs/demo/
+!docs/demo/**
+!docs/assets/demo/
+!docs/assets/demo/**
