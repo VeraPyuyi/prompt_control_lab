@@ -1,47 +1,47 @@
 1
 00:00:00,000 --> 00:00:45,000
-PromptControlLab 放在 AI 编码 agent 的前后两侧。agent 执行前，它检查 prompt 是否清楚、范围是否收敛、是否符合本地 policy、token 成本是否可接受。agent 执行后，它记录模型身份、可复现实验证据、gate 状态、diff 审计信号和本地运行历史。目标不是证明 agent 一定安全，而是把一次性的主观感觉换成可检查的证据。
+先看这张工作台。PromptControlLab 放在 AI 编码 agent 的前后两侧。agent 动手前，先做预检：指令清不清楚，范围会不会太大，有没有触碰团队 policy，token 成本是否合理。agent 改完后，再留下证据：模型身份、评测结果、gate 状态、diff 审计和历史记录。它不是安全证明，而是把感觉变成可复核的记录。
 
 2
 00:00:45,000 --> 00:01:45,000
-从开发者最容易直接发给 agent 的一句话开始：修复这个 bug。guard 命令会把这句模糊指令变成结构化 preflight 结果。它输出 action、risk level、原因、policy violation、是否需要复核、token 估算，以及改写后的 prompt。真正要做的决定是直接发送、先修改，还是根据本地 policy 阻断。
+我们从最常见的一句话开始：修复这个 bug。直接交给 agent，范围太宽。运行 guard 以后，工具会给出 action、risk level、policy violation、是否需要复核、token 估算，以及一版更可执行的 prompt。你要判断的是：现在可以发给 agent，还是先补充目标文件、失败现象和测试命令。
 
 3
 00:01:45,000 --> 00:02:40,000
-improve 是更轻量的 preflight 路径。它用直接的语言改写 prompt，补上任务目标、输出格式、假设和稳定性要求，并估算 token 成本。如果连接到已有 run，它还可以结合诊断信息，例如退化的 slice 或失败样本。需要 policy 判断时用 guard；只需要直接改写时用 improve。
+如果你只是想让 prompt 更清楚，就用 improve。它不调用大模型，也不做复杂搜索，只根据规则和已有报告改写指令。它会补上任务目标、输出格式、约束条件和稳定性提示。适合在真正花 token 之前，先把一句模糊的话整理成 agent 更容易执行的版本。
 
 4
 00:02:40,000 --> 00:03:40,000
-本地 UI 把同一套流程放进可视化界面，不要求观众记住每条命令。工作流卡片从 guard 开始，接着是 quick report、gate、model drift、audit diff 和 history。这个 UI 读取当前工作树和 run 目录里的 artifact。它是检查证据的控制台，不是托管 dashboard。
+本地 UI 把这些命令放进一个可视化工作台。左侧选择语言、runs 目录和 policy。中间的工作流卡片可以运行 guard、analyze、gate、audit diff、agent run 和 PR summary。所有文件都留在本地项目里。它不是托管服务，而是给团队 reviewer 用的本地控制台。
 
 5
 00:03:40,000 --> 00:04:45,000
-analyze 是从样本数据到报告的最短路径。它生成可复现的 split，评测 baseline 和 candidate prediction，计算 metrics，做 paired statistics，写出 explanation，并生成 Markdown 和 HTML 报告。关键点是 prompt 变更会绑定输入文件、prediction 文件、split hash、metric 和输出 artifact。
+接下来做一次可复现评测。analyze 会生成 split，读取 baseline 和 candidate prediction，计算 metrics，做 paired statistics，然后写出 explanation、report.md 和 report.html。重点不是只看一个分数，而是把数据路径、split hash、metric、模型信息和输出 artifact 一起记录下来。
 
 6
 00:04:45,000 --> 00:05:45,000
-分析完成后，report 给人看证据，gate 给自动化流程一个紧凑判断。gate policy 可以检查最低分数、最大退化、adjusted p-value、诊断风险和模型来源规则。gate 通过只表示配置的阈值通过了；它不证明 prompt 正确、安全或可以直接上线。
+report 给人看，gate 给自动化流程看。gate policy 可以检查最低分数、最大退化、adjusted p-value、诊断风险，以及模型来源规则。如果 gate 通过，只说明这套阈值通过了；它不等于 prompt 一定正确，也不等于可以不复核。这个边界要说清楚。
 
 7
 00:05:45,000 --> 00:06:45,000
-模型来源很重要，因为只有模型足够稳定，prompt 实验才容易解释。model detect 记录 provider、公开 model id、source、confidence 和 warning。model drift 把当前 run 和历史 run 比较，标记结果是 prompt-only、因为缺少模型身份而不确定，还是已经被模型或 provider 变化污染。
+很多 prompt 问题，其实是模型变了。model detect 会记录 provider、公开 model id、来源和 warning。model drift 会比较当前 run 和历史 run：模型是否一致，provider 是否变化，是否使用 alias，比较是不是干净的 prompt-only comparison。这样排查问题时不用靠猜。
 
 8
 00:06:45,000 --> 00:07:40,000
-agent 改完文件之后，用 audit diff 总结到底发生了什么。它统计 source、test、docs、config、workflow、dependency 和 generated files，标记删除测试、危险路径、脱敏后的 secret finding、可能的 public API change、expected path mismatch，以及测试命令状态。这是 review triage。
+agent 改完代码后，看 audit diff。它会统计 source、test、docs、config、workflow、dependency 和 generated file。还会标记危险路径、删除测试、疑似 secret、public API change、expected path mismatch 和测试结果。这个页面最适合做代码审查前的第一轮 triage。
 
 9
 00:07:40,000 --> 00:08:35,000
-history 把分散的 run 目录变成本地索引。它记录 manifest、模型身份、prompt identity、metrics、gate status、risk categories 和 artifact path。compare 模式会说明新 run 是否改变了 prompt、模型、分数、gate 结果、slice 表现或风险轮廓。
+单次报告解决一次问题，history 解决连续追踪。它把多个 run 目录整理成本地索引，记录 prompt identity、model identity、metrics、gate status、risk categories 和 artifact path。compare 模式会告诉你，新 run 到底是 prompt 变了、模型变了、分数变了，还是风险轮廓变了。
 
 10
 00:08:35,000 --> 00:09:35,000
-PromptControlLab 可以放在 prompt 进入工作流的位置。Claude Code hook、Cursor rule 和 MCP-style tool、Codex skill、shell wrapper，以及 GitHub Action 模板，都可以调用同一组本地命令。适配器稳定读取的字段包括 action、risk level、token report、plain summary、gate status 和 audit summary。
+这个工具也可以接到日常工作流里。Claude Code hook、Cursor rule 和 MCP-style adapter、Codex skill、shell wrapper，以及 GitHub Action 模板，都围绕同一个 guard JSON 输出工作。也就是说，CLI、IDE 和 CI 看到的是同一套 action、risk、token report 和 audit summary。
 
 11
 00:09:35,000 --> 00:10:45,000
-高级命令面向 prompt optimization research。soft hard 检查学到的 soft vector 是否能干净地投影到真实 token embedding。trajectory 总结 hidden-state drift 和类似稳定性的信号。riccati 拟合有限维 surrogate，并报告这个 surrogate 的 closed-loop stability，而不是完整语言模型的稳定性。tv soft 比较 static、time-varying、shuffled 和 random control lane。
+高级研究命令放在后面。soft-hard 看 soft prompt 投影成真实 token 后损失多大。trajectory 看 hidden-state drift 和稳定性信号。riccati 只分析拟合出来的有限维 surrogate，不宣称证明完整语言模型稳定。tv-soft 用来比较 static、time-varying、shuffled 和 random control lane。
 
 12
 00:10:45,000 --> 00:11:40,000
-完整循环很直接：先 preflight prompt，必要时 improve，再运行 agent；之后 analyze prompt 变更，记录 model provenance，执行 gate，审计 diff，并和 history 比较。每一步都会产生别人可以检查的文件。项目定位是本地 agent preflight、model provenance 和 reproducible prompt evaluation。
+最后把流程串起来：先 guard 或 improve prompt，再运行 agent。之后 analyze 评测变化，记录 model provenance，运行 gate，审计 diff，最后放进 history 比较。每一步都会产生别人能打开检查的文件。这就是 prompt_control_lab 的核心：执行前门禁、模型溯源、可复现评测和 agent 审计。

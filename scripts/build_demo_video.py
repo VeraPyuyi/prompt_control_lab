@@ -50,7 +50,22 @@ SLIDE_PAD_SECONDS = 0.55
 
 LANGUAGES = ("en", "zh")
 LANG_LABELS = {"en": "English", "zh": "中文"}
-EDGE_VOICES = {"en": "en-US-JennyNeural", "zh": "zh-CN-XiaoxiaoNeural"}
+EDGE_PROFILES = {
+    "en": {
+        "voice": "en-US-JennyNeural",
+        "rate": "+0%",
+        "pitch": "+0Hz",
+        "pause_ms": 0,
+        "chunked": False,
+    },
+    "zh": {
+        "voice": "zh-CN-YunyangNeural",
+        "rate": "+7%",
+        "pitch": "-2Hz",
+        "pause_ms": 220,
+        "chunked": True,
+    },
+}
 SAPI_VOICES = {
     "en": (
         "Microsoft Zira Desktop",
@@ -509,10 +524,21 @@ def synthesize_edge_tts(text: str, wav_path: Path, language: str, ffmpeg: Path) 
     except ImportError as exc:
         raise BuildError("edge-tts is not installed") from exc
 
+    profile = EDGE_PROFILES[language]
+    chunks = chunk_narration(text, language) if profile["chunked"] else [text]
+    if len(chunks) > 1:
+        synthesize_edge_tts_chunks(chunks, wav_path, language, ffmpeg, edge_tts, profile)
+        return
+
     mp3_path = wav_path.with_suffix(".mp3")
 
     async def run() -> None:
-        communicate = edge_tts.Communicate(text, EDGE_VOICES[language])
+        communicate = edge_tts.Communicate(
+            text,
+            profile["voice"],
+            rate=profile["rate"],
+            pitch=profile["pitch"],
+        )
         await communicate.save(str(mp3_path))
 
     asyncio.run(run())
@@ -530,6 +556,96 @@ def synthesize_edge_tts(text: str, wav_path: Path, language: str, ffmpeg: Path) 
         ],
         "convert neural TTS audio",
     )
+
+
+def chunk_narration(text: str, language: str) -> list[str]:
+    normalized = re.sub(r"\s+", " ", text).strip()
+    if language != "zh" or not normalized:
+        return [normalized] if normalized else []
+    sentence_end = "\u3002\uff01\uff1f\uff1b.!?"
+    pieces = [
+        match.group(0).strip()
+        for match in re.finditer(rf".+?(?:[{sentence_end}]|$)", normalized)
+        if match.group(0).strip()
+    ]
+    chunks: list[str] = []
+    current = ""
+    for piece in pieces:
+        if current and len(current) + len(piece) <= 44:
+            current += piece
+            continue
+        if current:
+            chunks.append(current)
+        current = piece
+    if current:
+        chunks.append(current)
+    return chunks or [normalized]
+
+
+def synthesize_edge_tts_chunks(
+    chunks: list[str],
+    wav_path: Path,
+    language: str,
+    ffmpeg: Path,
+    edge_tts: Any,
+    profile: dict[str, Any],
+) -> None:
+    temp_context = tempfile.TemporaryDirectory(prefix=f"pcl_tts_{language}_")
+    temp_dir = Path(temp_context.name)
+    try:
+        wav_parts: list[Path] = []
+        for index, chunk in enumerate(chunks, start=1):
+            mp3_part = temp_dir / f"part_{index:02d}.mp3"
+            wav_part = temp_dir / f"part_{index:02d}.wav"
+
+            async def run(text_chunk: str = chunk, mp3_output: Path = mp3_part) -> None:
+                communicate = edge_tts.Communicate(
+                    text_chunk,
+                    profile["voice"],
+                    rate=profile["rate"],
+                    pitch=profile["pitch"],
+                )
+                await communicate.save(str(mp3_output))
+
+            asyncio.run(run())
+            run_command(
+                [
+                    str(ffmpeg),
+                    "-y",
+                    "-i",
+                    str(mp3_part),
+                    "-ar",
+                    "44100",
+                    "-ac",
+                    "2",
+                    str(wav_part),
+                ],
+                "convert chunked neural TTS audio",
+            )
+            wav_parts.append(wav_part)
+        concatenate_wavs(wav_parts, wav_path, pause_ms=int(profile["pause_ms"]))
+    finally:
+        temp_context.cleanup()
+
+
+def concatenate_wavs(parts: list[Path], out_path: Path, *, pause_ms: int) -> None:
+    if not parts:
+        synthesize_silence(out_path, MIN_SLIDE_SECONDS)
+        return
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    with wave.open(str(parts[0]), "rb") as first:
+        params = first.getparams()
+    pause_frames = int(params.framerate * (pause_ms / 1000))
+    silence_frame = b"\x00" * params.sampwidth * params.nchannels
+    with wave.open(str(out_path), "wb") as output:
+        output.setparams(params)
+        for index, part in enumerate(parts):
+            if index:
+                output.writeframes(silence_frame * pause_frames)
+            with wave.open(str(part), "rb") as source:
+                if source.getparams()[:3] != params[:3]:
+                    raise BuildError("Chunked TTS wav files have incompatible audio parameters.")
+                output.writeframes(source.readframes(source.getnframes()))
 
 
 def synthesize_sapi(text: str, wav_path: Path, language: str) -> None:
