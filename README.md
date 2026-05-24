@@ -265,7 +265,7 @@ CLI arguments still win. The precedence is: explicit CLI flags → command-speci
 
 ## Watch The Demo Videos 🎬
 
-The repository includes two narrated 11:40 demo videos. They walk through the same local workflow
+The repository includes two narrated 1080p, 11:40 demo videos. They walk through the same local workflow
 in English and Chinese: prompt guard, prompt improvement, analyze/gate/report, model provenance,
 agent diff audit, history, plugins, CI, and advanced research diagnostics.
 

@@ -40,7 +40,8 @@ MANIFEST_PATH = ROOT / "docs" / "demo" / "video_manifest.json"
 ASSET_DIR = ROOT / "docs" / "assets"
 OUTPUT_DIR = ASSET_DIR / "demo"
 
-VIDEO_SIZE = (1280, 720)
+BASE_VIDEO_SIZE = (1280, 720)
+VIDEO_SIZE = (1920, 1080)
 FPS = 12
 TARGET_MB = 25
 MAX_VIDEO_BITRATE_K = 420
@@ -75,6 +76,10 @@ SAPI_VOICES = {
     ),
     "zh": ("Microsoft Huihui Desktop", "Microsoft Huihui"),
 }
+
+
+def scale_px(value: int | float) -> int:
+    return round(float(value) * VIDEO_SIZE[0] / BASE_VIDEO_SIZE[0])
 
 
 class BuildError(RuntimeError):
@@ -362,59 +367,73 @@ def render_slide(video: LanguageVideo, scene: Scene, index: int, out_path: Path)
     canvas = Image.new("RGB", VIDEO_SIZE, "#f7f8fb")
     draw = ImageDraw.Draw(canvas)
     draw.rectangle((0, 0, width, height), fill="#f7f8fb")
-    draw.rectangle((0, 0, width, 86), fill="#102033")
-    draw.rectangle((0, height - 58, width, height), fill="#102033")
+    draw.rectangle((0, 0, width, scale_px(86)), fill="#102033")
+    draw.rectangle((0, height - scale_px(58), width, height), fill="#102033")
 
-    title_font = load_font(40, bold=True)
-    body_font = load_font(24)
-    meta_font = load_font(22)
-    small_font = load_font(18)
+    title_font = load_font(scale_px(40), bold=True)
+    body_font = load_font(scale_px(24))
+    meta_font = load_font(scale_px(22))
+    small_font = load_font(scale_px(18))
 
-    draw.text((48, 25), video.title, fill="#ffffff", font=meta_font)
+    draw.text((scale_px(48), scale_px(25)), video.title, fill="#ffffff", font=meta_font)
     draw.text(
-        (width - 166, 25),
+        (width - scale_px(166), scale_px(25)),
         f"{LANG_LABELS[video.language]}  {index}/{len(video.scenes)}",
         fill="#dce6f2",
         font=small_font,
     )
 
-    left_x = 52
-    content_top = 128
-    text_width_limit = 520
+    left_x = scale_px(52)
+    content_top = scale_px(128)
+    text_width_limit = scale_px(520)
     title_lines = wrap_text(scene.title, title_font, text_width_limit)
     y = content_top
     for line in title_lines[:3]:
         draw.text((left_x, y), line, fill="#102033", font=title_font)
-        y += 50
-    y += 12
+        y += scale_px(50)
+    y += scale_px(12)
     for line in wrap_text(scene.subtitle or scene.narration, body_font, text_width_limit)[:10]:
         draw.text((left_x, y), line, fill="#31465c", font=body_font)
-        y += 32
+        y += scale_px(32)
 
     screenshot = Image.open(scene.image).convert("RGB")
-    screenshot.thumbnail((640, 500), Image.Resampling.LANCZOS)
-    shot_x = width - screenshot.width - 48
-    shot_y = 132 + max(0, (504 - screenshot.height) // 2)
-    shadow = Image.new("RGBA", (screenshot.width + 32, screenshot.height + 32), (0, 0, 0, 0))
+    screenshot.thumbnail((scale_px(640), scale_px(500)), Image.Resampling.LANCZOS)
+    shot_x = width - screenshot.width - scale_px(48)
+    shot_y = scale_px(132) + max(0, (scale_px(504) - screenshot.height) // 2)
+    shadow = Image.new(
+        "RGBA",
+        (screenshot.width + scale_px(32), screenshot.height + scale_px(32)),
+        (0, 0, 0, 0),
+    )
     shadow_draw = ImageDraw.Draw(shadow)
     shadow_draw.rounded_rectangle(
-        (16, 16, screenshot.width + 16, screenshot.height + 16),
-        radius=18,
+        (
+            scale_px(16),
+            scale_px(16),
+            screenshot.width + scale_px(16),
+            screenshot.height + scale_px(16),
+        ),
+        radius=scale_px(18),
         fill=(0, 0, 0, 55),
     )
-    shadow = shadow.filter(ImageFilter.GaussianBlur(10))
+    shadow = shadow.filter(ImageFilter.GaussianBlur(scale_px(10)))
     canvas_rgba = canvas.convert("RGBA")
-    canvas_rgba.alpha_composite(shadow, (shot_x - 16, shot_y - 10))
+    canvas_rgba.alpha_composite(shadow, (shot_x - scale_px(16), shot_y - scale_px(10)))
     canvas = canvas_rgba.convert("RGB")
     draw = ImageDraw.Draw(canvas)
     canvas.paste(screenshot, (shot_x, shot_y))
     draw.rounded_rectangle(
         (shot_x, shot_y, shot_x + screenshot.width, shot_y + screenshot.height),
-        radius=14,
+        radius=scale_px(14),
         outline="#c9d4e3",
-        width=2,
+        width=scale_px(2),
     )
-    draw.text((48, height - 39), "PromptControlLab", fill="#dce6f2", font=small_font)
+    draw.text(
+        (scale_px(48), height - scale_px(39)),
+        "PromptControlLab",
+        fill="#dce6f2",
+        font=small_font,
+    )
     out_path.parent.mkdir(parents=True, exist_ok=True)
     canvas.save(out_path, optimize=True)
 
