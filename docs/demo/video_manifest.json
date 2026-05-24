@@ -1,6 +1,11 @@
 {
   "schema_version": 1,
   "package": "prompt_control_lab_bilingual_demo",
+  "rendering_style": "scripted_operation_replay",
+  "video_size": "3840x2160",
+  "operation_replay": {
+    "description": "Each scene is rendered as multiple UI operation keyframes with cursor, click, highlight, command, and artifact callouts."
+  },
   "languages": ["zh", "en"],
   "target_total_seconds": {
     "zh": 700,
@@ -50,7 +55,7 @@
   },
   "videos": {
     "en": {
-      "title": "PromptControlLab Demo",
+      "title": "prompt_control_lab Demo",
       "subtitle": "Agent preflight, model provenance, and reproducible prompt evaluation.",
       "output_filename": "docs/assets/demo/prompt_control_lab_demo.en.mp4",
       "storyboard": "docs/demo/storyboard.en.md",
@@ -62,7 +67,7 @@
           "duration": 45,
           "asset_key": "overview",
           "image": "docs/assets/tutorial_workflows.en.png",
-          "narration": "PromptControlLab sits before and after an AI coding agent. Before the agent runs, it checks whether the prompt is clear, scoped, policy-compliant, and cost-aware. After the run, it records model identity, reproducible evaluation evidence, gate status, diff audit signals, and local run history. The goal is not to claim that an agent is safe. The goal is to replace one-off impressions with inspectable evidence.",
+          "narration": "prompt_control_lab sits before and after an AI coding agent. Before the agent runs, it checks whether the prompt is clear, scoped, policy-compliant, and cost-aware. After the run, it records model identity, reproducible evaluation evidence, gate status, diff audit signals, and local run history. The goal is not to claim that an agent is safe. The goal is to replace one-off impressions with inspectable evidence.",
           "command_snippets": ["pcl start"],
           "output_filenames": []
         },
@@ -161,7 +166,7 @@
           "duration": 60,
           "asset_key": "workflows",
           "image": "docs/assets/tutorial_workflows.en.png",
-          "narration": "PromptControlLab can be placed where prompts enter the workflow. Claude Code hooks, Cursor rules and MCP-style tools, Codex skills, shell wrappers, and a GitHub Action template can all call the same local commands. CI can run analysis, gate the result, and attach audit evidence to a pull request.",
+          "narration": "prompt_control_lab can be placed where prompts enter the workflow. Claude Code hooks, Cursor rules and MCP-style tools, Codex skills, shell wrappers, and a GitHub Action template can all call the same local commands. CI can run analysis, gate the result, and attach audit evidence to a pull request.",
           "command_snippets": ["pcl install-plugin codex", "pcl install-plugin cursor", "pcl install-plugin claude-code", "pcl install-plugin github-action"],
           "output_filenames": [".github/workflows/prompt-control-lab-gate.yml"]
         },
@@ -190,7 +195,7 @@
       ]
     },
     "zh": {
-      "title": "PromptControlLab 演示",
+      "title": "prompt_control_lab 演示",
       "subtitle": "面向 AI 编码 Agent 的预检、模型来源和可复现评测。",
       "output_filename": "docs/assets/demo/prompt_control_lab_demo.zh.mp4",
       "storyboard": "docs/demo/storyboard.zh.md",
@@ -202,7 +207,7 @@
           "duration": 45,
           "asset_key": "overview",
           "image": "docs/assets/tutorial_workflows.zh.png",
-          "narration": "先看这张工作台。PromptControlLab 放在 AI 编码 agent 的前后两侧。agent 动手前，先做预检：指令清不清楚，范围会不会太大，有没有触碰团队 policy，token 成本是否合理。agent 改完后，再留下证据：模型身份、评测结果、gate 状态、diff 审计和历史记录。它不是安全证明，而是把感觉变成可复核的记录。",
+          "narration": "先看这张工作台。prompt_control_lab 放在 AI 编码 agent 的前后两侧。agent 动手前，先做预检：指令清不清楚，范围会不会太大，有没有触碰团队 policy，token 成本是否合理。agent 改完后，再留下证据：模型身份、评测结果、gate 状态、diff 审计和历史记录。它不是安全证明，而是把感觉变成可复核的记录。",
           "command_snippets": ["pcl start"],
           "output_filenames": []
         },

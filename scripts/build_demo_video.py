@@ -48,6 +48,7 @@ MAX_VIDEO_BITRATE_K = 1600
 AUDIO_BITRATE_K = 48
 MIN_SLIDE_SECONDS = 2.8
 SLIDE_PAD_SECONDS = 0.55
+OPERATION_FRAMES = 5
 
 LANGUAGES = ("en", "zh")
 LANG_LABELS = {"en": "English", "zh": "中文"}
@@ -93,6 +94,9 @@ class Scene:
     title: str
     subtitle: str
     narration: str
+    command_snippets: list[str]
+    output_filenames: list[str]
+    operation_steps: list[dict[str, Any]]
     duration: float | None = None
 
 
@@ -105,7 +109,7 @@ class LanguageVideo:
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description="Build bilingual PromptControlLab demo videos.")
+    parser = argparse.ArgumentParser(description="Build bilingual prompt_control_lab demo videos.")
     parser.add_argument(
         "--manifest",
         type=Path,
@@ -239,6 +243,9 @@ def normalize_scene(raw: dict[str, Any], language: str, assets_dir: Path, index:
     if not narration:
         raise BuildError(f"Scene '{key}' is missing narration/text for {language}.")
     image = resolve_scene_image(raw, language, assets_dir, key)
+    command_snippets = coerce_str_list(raw.get("command_snippets") or raw.get("commands"))
+    output_filenames = coerce_str_list(raw.get("output_filenames") or raw.get("outputs"))
+    operation_steps = coerce_operation_steps(raw.get("operation_steps") or raw.get("operations"))
     duration = coerce_duration(raw.get("duration") or raw.get("seconds"))
     return Scene(
         key=key,
@@ -246,8 +253,31 @@ def normalize_scene(raw: dict[str, Any], language: str, assets_dir: Path, index:
         title=title,
         subtitle=subtitle,
         narration=narration,
+        command_snippets=command_snippets,
+        output_filenames=output_filenames,
+        operation_steps=operation_steps,
         duration=duration,
     )
+
+
+def coerce_str_list(value: Any) -> list[str]:
+    if isinstance(value, list):
+        return [str(item).strip() for item in value if str(item).strip()]
+    if isinstance(value, str) and value.strip():
+        return [value.strip()]
+    return []
+
+
+def coerce_operation_steps(value: Any) -> list[dict[str, Any]]:
+    if not isinstance(value, list):
+        return []
+    steps: list[dict[str, Any]] = []
+    for item in value:
+        if isinstance(item, dict):
+            steps.append(item)
+        elif isinstance(item, str) and item.strip():
+            steps.append({"label": item.strip()})
+    return steps
 
 
 def pick_text(source: dict[str, Any], language: str, names: Iterable[str]) -> str:
@@ -318,11 +348,9 @@ def render_language_video(
     temp_context = tempfile.TemporaryDirectory(prefix=f"pcl_demo_{video.language}_")
     temp_dir = Path(temp_context.name)
     try:
-        rendered: list[tuple[Scene, Path, Path, float]] = []
+        rendered: list[tuple[Scene, list[Path], Path, float]] = []
         for index, scene in enumerate(video.scenes, start=1):
-            slide_path = temp_dir / f"slide_{index:02d}.png"
             audio_path = temp_dir / f"audio_{index:02d}.wav"
-            render_slide(video, scene, index, slide_path)
             synthesize_narration(scene.narration, audio_path, video.language, tts_mode, ffmpeg)
             audio_seconds = wav_duration(audio_path)
             seconds = max(
@@ -330,9 +358,11 @@ def render_language_video(
                 audio_seconds + SLIDE_PAD_SECONDS,
                 MIN_SLIDE_SECONDS,
             )
-            rendered.append((scene, slide_path, audio_path, seconds))
+            frame_dir = temp_dir / f"frames_{index:02d}"
+            frame_paths = render_scene_frames(video, scene, index, frame_dir)
+            rendered.append((scene, frame_paths, audio_path, seconds))
             if index == 1:
-                shutil.copyfile(slide_path, poster_path)
+                shutil.copyfile(frame_paths[0], poster_path)
         write_srt(rendered, srt_path)
         encode_video(rendered, mp4_path, ffmpeg)
         size_mb = mp4_path.stat().st_size / (1024 * 1024)
@@ -355,7 +385,141 @@ def output_stem(language: str, out_dir: Path) -> Path:
     return out_dir / f"prompt_control_lab_demo.{language}"
 
 
-def render_slide(video: LanguageVideo, scene: Scene, index: int, out_path: Path) -> None:
+def render_scene_frames(
+    video: LanguageVideo,
+    scene: Scene,
+    index: int,
+    out_dir: Path,
+) -> list[Path]:
+    steps = scene.operation_steps or default_operation_steps(scene, video.language)
+    if len(steps) < OPERATION_FRAMES:
+        steps = [*steps, *default_operation_steps(scene, video.language)][0:OPERATION_FRAMES]
+    else:
+        steps = steps[:OPERATION_FRAMES]
+
+    out_dir.mkdir(parents=True, exist_ok=True)
+    frame_paths: list[Path] = []
+    for frame_index, step in enumerate(steps):
+        frame_path = out_dir / f"frame_{frame_index:02d}.png"
+        render_slide(video, scene, index, frame_index, len(steps), step, frame_path)
+        frame_paths.append(frame_path)
+    return frame_paths
+
+
+def default_operation_steps(scene: Scene, language: str) -> list[dict[str, Any]]:
+    labels = {
+        "en": [
+            "Open the local workflow",
+            "Type or select the prompt",
+            "Click the action button",
+            "Inspect the result",
+            "Save the artifact",
+        ],
+        "zh": [
+            "打开本地工作流",
+            "输入或选择 prompt",
+            "点击运行按钮",
+            "查看检测结果",
+            "保存可复核文件",
+        ],
+    }[language]
+    if "guard" in scene.key or "improve" in scene.key:
+        labels = {
+            "en": [
+                "Open Guard Prompt",
+                "Paste the coding-agent prompt",
+                "Run policy preflight",
+                "Read risk and violations",
+                "Copy or save the improved prompt",
+            ],
+            "zh": [
+                "打开 Guard Prompt",
+                "粘贴编程 Agent 指令",
+                "运行策略预检",
+                "查看风险和违规项",
+                "复制或保存改写后的 prompt",
+            ],
+        }[language]
+    elif "analyze" in scene.key or "gate" in scene.key or "report" in scene.key:
+        labels = {
+            "en": [
+                "Create demo artifacts",
+                "Run analyze",
+                "Run the gate policy",
+                "Open the report",
+                "Check score, CI, and p-value",
+            ],
+            "zh": [
+                "创建演示数据",
+                "运行 analyze",
+                "运行 gate policy",
+                "打开报告页",
+                "检查分数、区间和 p-value",
+            ],
+        }[language]
+    elif "model" in scene.key:
+        labels = {
+            "en": [
+                "Open Model Drift",
+                "Select the current run",
+                "Compare provider and model",
+                "Read alias or unknown warnings",
+                "Decide if comparison is clean",
+            ],
+            "zh": [
+                "打开模型漂移页",
+                "选择当前 run",
+                "比较 provider 和 model",
+                "查看 alias 或未知模型警告",
+                "判断是否是干净比较",
+            ],
+        }[language]
+    elif "audit" in scene.key:
+        labels = {
+            "en": [
+                "Run audit-diff",
+                "Review touched files",
+                "Open changed-lines table",
+                "Inspect dangerous findings",
+                "Decide if review is required",
+            ],
+            "zh": [
+                "运行 audit-diff",
+                "查看改动文件",
+                "打开 changed-lines 表",
+                "检查危险发现",
+                "判断是否需要人工复核",
+            ],
+        }[language]
+    elif "history" in scene.key:
+        labels = {
+            "en": [
+                "Build history index",
+                "Open History",
+                "Filter risky runs",
+                "Check model and gate trends",
+                "Compare the next run",
+            ],
+            "zh": [
+                "构建历史索引",
+                "打开 History 页",
+                "过滤高风险 run",
+                "查看模型和 gate 趋势",
+                "对比下一次运行",
+            ],
+        }[language]
+    return [{"label": label} for label in labels]
+
+
+def render_slide(
+    video: LanguageVideo,
+    scene: Scene,
+    index: int,
+    frame_index: int,
+    frame_count: int,
+    step: dict[str, Any],
+    out_path: Path,
+) -> None:
     try:
         from PIL import Image, ImageDraw, ImageFilter
     except ImportError as exc:
@@ -370,10 +534,11 @@ def render_slide(video: LanguageVideo, scene: Scene, index: int, out_path: Path)
     draw.rectangle((0, 0, width, scale_px(86)), fill="#102033")
     draw.rectangle((0, height - scale_px(58), width, height), fill="#102033")
 
-    title_font = load_font(scale_px(40), bold=True)
-    body_font = load_font(scale_px(24))
+    title_font = load_font(scale_px(34), bold=True)
+    body_font = load_font(scale_px(21))
     meta_font = load_font(scale_px(22))
     small_font = load_font(scale_px(18))
+    mono_font = load_mono_font(scale_px(16))
 
     draw.text((scale_px(48), scale_px(25)), video.title, fill="#ffffff", font=meta_font)
     draw.text(
@@ -383,23 +548,67 @@ def render_slide(video: LanguageVideo, scene: Scene, index: int, out_path: Path)
         font=small_font,
     )
 
-    left_x = scale_px(52)
+    left_x = scale_px(42)
     content_top = scale_px(128)
-    text_width_limit = scale_px(520)
+    left_panel_w = scale_px(292)
+    text_width_limit = left_panel_w
     title_lines = wrap_text(scene.title, title_font, text_width_limit)
     y = content_top
     for line in title_lines[:3]:
         draw.text((left_x, y), line, fill="#102033", font=title_font)
-        y += scale_px(50)
-    y += scale_px(12)
-    for line in wrap_text(scene.subtitle or scene.narration, body_font, text_width_limit)[:10]:
+        y += scale_px(43)
+    y += scale_px(8)
+
+    step_label = str(step.get("label") or "").strip()
+    if step_label:
+        draw.rounded_rectangle(
+            (
+                left_x,
+                y,
+                left_x + left_panel_w,
+                y + scale_px(74),
+            ),
+            radius=scale_px(16),
+            fill="#e8f5ff",
+            outline="#38a6e8",
+            width=scale_px(2),
+        )
+        step_y = y + scale_px(11)
+        for line in wrap_text(
+            f"{frame_index + 1}. {step_label}",
+            body_font,
+            left_panel_w - scale_px(30),
+        )[:2]:
+            draw.text((left_x + scale_px(16), step_y), line, fill="#075985", font=body_font)
+            step_y += scale_px(27)
+        y += scale_px(94)
+
+    summary = compact_scene_summary(scene, video.language)
+    for line in wrap_text(summary, body_font, text_width_limit)[:4]:
         draw.text((left_x, y), line, fill="#31465c", font=body_font)
-        y += scale_px(32)
+        y += scale_px(29)
+    y += scale_px(16)
+
+    command = command_for_frame(scene, frame_index)
+    if command:
+        command_font = load_font(scale_px(16)) if contains_cjk(command) else mono_font
+        y = draw_command_card(draw, left_x, y, left_panel_w, command, command_font)
+
+    output = output_for_frame(scene, frame_index)
+    if output:
+        y += scale_px(12)
+        draw_artifact_pill(draw, left_x, y, left_panel_w, output, small_font)
+
+    draw_progress_dots(draw, left_x, height - scale_px(106), frame_count, frame_index)
 
     screenshot = Image.open(scene.image).convert("RGB")
-    screenshot.thumbnail((scale_px(640), scale_px(500)), Image.Resampling.LANCZOS)
+    screenshot = resize_to_fit(
+        screenshot,
+        width - scale_px(380) - scale_px(108),
+        height - scale_px(238),
+    )
     shot_x = width - screenshot.width - scale_px(48)
-    shot_y = scale_px(132) + max(0, (scale_px(504) - screenshot.height) // 2)
+    shot_y = scale_px(126) + max(0, (height - scale_px(210) - screenshot.height) // 2)
     shadow = Image.new(
         "RGBA",
         (screenshot.width + scale_px(32), screenshot.height + scale_px(32)),
@@ -428,14 +637,225 @@ def render_slide(video: LanguageVideo, scene: Scene, index: int, out_path: Path)
         outline="#c9d4e3",
         width=scale_px(2),
     )
+    draw_operation_overlay(
+        draw,
+        shot_x,
+        shot_y,
+        screenshot.width,
+        screenshot.height,
+        frame_index,
+        scene.key,
+    )
     draw.text(
         (scale_px(48), height - scale_px(39)),
-        "PromptControlLab",
+        "prompt_control_lab",
         fill="#dce6f2",
         font=small_font,
     )
     out_path.parent.mkdir(parents=True, exist_ok=True)
     canvas.save(out_path, optimize=True)
+
+
+def resize_to_fit(image: Any, max_width: int, max_height: int) -> Any:
+    try:
+        from PIL import Image
+    except ImportError as exc:
+        raise BuildError(
+            "Missing dependency: pillow. Install with: python -m pip install pillow"
+        ) from exc
+    scale = min(max_width / image.width, max_height / image.height)
+    width = max(1, round(image.width * scale))
+    height = max(1, round(image.height * scale))
+    return image.resize((width, height), Image.Resampling.LANCZOS)
+
+
+def compact_scene_summary(scene: Scene, language: str) -> str:
+    summaries = {
+        "en": {
+            "why": "Goal: check prompt risk before the agent spends tokens or edits files.",
+            "guard": "Action: paste the prompt, run policy preflight, then inspect risk and fixes.",
+            "improve": "Action: rewrite a vague prompt into a clearer, cheaper, more stable one.",
+            "ui": "Action: use the local dashboard to run the same workflow from the browser.",
+            "analyze": "Action: build splits, metrics, statistics, explanations, and reports.",
+            "gate": "Action: turn the report into pass, needs review, or fail.",
+            "model": "Action: check whether the model record makes the comparison clean.",
+            "audit": "Action: inspect what files the agent changed after it ran.",
+            "history": "Action: compare runs over time and filter risky changes.",
+            "plugins": "Action: connect guard to IDEs, CLI wrappers, and CI.",
+            "research": "Action: open advanced diagnostics only when you need research detail.",
+            "review": "Action: keep a reviewable trail from prompt to diff audit.",
+        },
+        "zh": {
+            "why": "目标: 在 agent 花 token 或改文件之前, 先检查 prompt 风险。",
+            "guard": "操作: 粘贴 prompt, 运行策略预检, 再查看风险和改写建议。",
+            "improve": "操作: 把模糊 prompt 改写成更清楚、更省 token 的版本。",
+            "ui": "操作: 用本地仪表盘在浏览器里完成同一套流程。",
+            "analyze": "操作: 生成切分、指标、统计、解释和报告。",
+            "gate": "操作: 把报告转成通过、需复核或失败的门禁结论。",
+            "model": "操作: 检查模型记录, 判断比较是否干净。",
+            "audit": "操作: agent 运行后, 审计它到底改了哪些文件。",
+            "history": "操作: 按时间比较 run, 并过滤高风险变化。",
+            "plugins": "操作: 把 guard 接进 IDE、CLI wrapper 和 CI。",
+            "research": "操作: 需要研究细节时, 再打开高级诊断命令。",
+            "review": "操作: 从 prompt 到 diff audit, 都留下可复核证据。",
+        },
+    }
+    key = scene.key.lower()
+    for marker, summary in summaries[language].items():
+        if marker in key:
+            return summary
+    return scene.subtitle or summaries[language]["review"]
+
+
+def command_for_frame(scene: Scene, frame_index: int) -> str:
+    if not scene.command_snippets:
+        return ""
+    if len(scene.command_snippets) == 1:
+        return scene.command_snippets[0]
+    index = min(frame_index, len(scene.command_snippets) - 1)
+    return scene.command_snippets[index]
+
+
+def output_for_frame(scene: Scene, frame_index: int) -> str:
+    if not scene.output_filenames or frame_index < 3:
+        return ""
+    index = min(max(frame_index - 3, 0), len(scene.output_filenames) - 1)
+    return scene.output_filenames[index]
+
+
+def draw_command_card(draw: Any, x: int, y: int, width: int, command: str, font: Any) -> int:
+    card_h = scale_px(112)
+    draw.rounded_rectangle(
+        (x, y, x + width, y + card_h),
+        radius=scale_px(14),
+        fill="#0f172a",
+        outline="#1e293b",
+        width=scale_px(1),
+    )
+    draw.text((x + scale_px(14), y + scale_px(12)), "$", fill="#38bdf8", font=font)
+    text_x = x + scale_px(38)
+    text_y = y + scale_px(12)
+    for line in wrap_text(command, font, width - scale_px(56))[:4]:
+        draw.text((text_x, text_y), line, fill="#e2e8f0", font=font)
+        text_y += scale_px(22)
+    return y + card_h
+
+
+def draw_artifact_pill(draw: Any, x: int, y: int, width: int, text: str, font: Any) -> None:
+    draw.rounded_rectangle(
+        (x, y, x + width, y + scale_px(42)),
+        radius=scale_px(16),
+        fill="#ecfdf3",
+        outline="#22c55e",
+        width=scale_px(1),
+    )
+    draw.text(
+        (x + scale_px(14), y + scale_px(11)),
+        f"artifact: {text}",
+        fill="#166534",
+        font=font,
+    )
+
+
+def draw_progress_dots(draw: Any, x: int, y: int, count: int, active: int) -> None:
+    for index in range(count):
+        dot_x = x + index * scale_px(28)
+        fill = "#38bdf8" if index <= active else "#cbd5e1"
+        draw.ellipse((dot_x, y, dot_x + scale_px(13), y + scale_px(13)), fill=fill)
+
+
+def draw_operation_overlay(
+    draw: Any,
+    shot_x: int,
+    shot_y: int,
+    shot_w: int,
+    shot_h: int,
+    frame_index: int,
+    scene_key: str,
+) -> None:
+    regions = operation_regions(scene_key)
+    rx, ry, rw, rh = regions[min(frame_index, len(regions) - 1)]
+    x1 = shot_x + int(rx * shot_w)
+    y1 = shot_y + int(ry * shot_h)
+    x2 = x1 + int(rw * shot_w)
+    y2 = y1 + int(rh * shot_h)
+    draw.rounded_rectangle(
+        (x1, y1, x2, y2),
+        radius=scale_px(12),
+        outline="#f97316",
+        width=scale_px(5),
+    )
+    label = f"{frame_index + 1}"
+    draw.ellipse(
+        (x1 - scale_px(18), y1 - scale_px(18), x1 + scale_px(26), y1 + scale_px(26)),
+        fill="#f97316",
+    )
+    draw.text(
+        (x1 - scale_px(3), y1 - scale_px(12)),
+        label,
+        fill="#ffffff",
+        font=load_font(scale_px(18), bold=True),
+    )
+    cursor_x = min(x2 - scale_px(16), x1 + int(0.78 * (x2 - x1)))
+    cursor_y = min(y2 - scale_px(12), y1 + int(0.60 * (y2 - y1)))
+    draw_cursor(draw, cursor_x, cursor_y)
+    if frame_index in (2, 4):
+        ring = scale_px(30)
+        draw.ellipse(
+            (cursor_x - ring, cursor_y - ring, cursor_x + ring, cursor_y + ring),
+            outline="#0ea5e9",
+            width=scale_px(4),
+        )
+
+
+def operation_regions(scene_key: str) -> list[tuple[float, float, float, float]]:
+    key = scene_key.lower()
+    if "model" in key:
+        return [
+            (0.03, 0.10, 0.24, 0.20),
+            (0.23, 0.20, 0.52, 0.16),
+            (0.22, 0.32, 0.70, 0.18),
+            (0.22, 0.34, 0.70, 0.18),
+            (0.22, 0.34, 0.70, 0.18),
+        ]
+    if "history" in key:
+        return [
+            (0.03, 0.10, 0.24, 0.20),
+            (0.20, 0.22, 0.70, 0.18),
+            (0.22, 0.40, 0.68, 0.18),
+            (0.22, 0.55, 0.68, 0.20),
+            (0.15, 0.74, 0.72, 0.15),
+        ]
+    if "audit" in key:
+        return [
+            (0.03, 0.10, 0.24, 0.20),
+            (0.22, 0.20, 0.65, 0.16),
+            (0.22, 0.38, 0.66, 0.18),
+            (0.22, 0.52, 0.66, 0.20),
+            (0.18, 0.72, 0.70, 0.18),
+        ]
+    return [
+        (0.03, 0.10, 0.24, 0.20),
+        (0.25, 0.22, 0.52, 0.22),
+        (0.70, 0.24, 0.20, 0.12),
+        (0.24, 0.45, 0.62, 0.30),
+        (0.18, 0.72, 0.68, 0.16),
+    ]
+
+
+def draw_cursor(draw: Any, x: int, y: int) -> None:
+    points = [
+        (x, y),
+        (x + scale_px(18), y + scale_px(52)),
+        (x + scale_px(30), y + scale_px(30)),
+        (x + scale_px(55), y + scale_px(28)),
+    ]
+    draw.polygon(points, fill="#ffffff", outline="#0f172a")
+    draw.line(
+        (x + scale_px(22), y + scale_px(32), x + scale_px(40), y + scale_px(62)),
+        fill="#0f172a",
+        width=scale_px(4),
+    )
 
 
 def load_font(size: int, *, bold: bool = False) -> Any:
@@ -457,6 +877,75 @@ def load_font(size: int, *, bold: bool = False) -> Any:
             continue
     return ImageFont.load_default()
 
+
+def load_mono_font(size: int) -> Any:
+    try:
+        from PIL import ImageFont
+    except ImportError as exc:
+        raise BuildError(
+            "Missing dependency: pillow. Install with: python -m pip install pillow"
+        ) from exc
+    names = [
+        "C:/Windows/Fonts/consola.ttf",
+        "C:/Windows/Fonts/cour.ttf",
+        "DejaVuSansMono.ttf",
+    ]
+    for name in names:
+        try:
+            return ImageFont.truetype(name, size=size)
+        except OSError:
+            continue
+    return load_font(size)
+
+
+def quoted_concat_path(path: Path) -> str:
+    return path.as_posix().replace("'", "'\\''")
+
+
+def write_frame_concat(frame_paths: list[Path], seconds: float, out_path: Path) -> None:
+    if not frame_paths:
+        raise BuildError("Cannot encode a scene without rendered operation frames.")
+    per_frame = max(0.12, seconds / len(frame_paths))
+    lines: list[str] = []
+    for frame_path in frame_paths:
+        lines.append(f"file '{quoted_concat_path(frame_path)}'")
+        lines.append(f"duration {per_frame:.4f}")
+    lines.append(f"file '{quoted_concat_path(frame_paths[-1])}'")
+    out_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+
+
+def scene_filter() -> str:
+    return (
+        f"scale={VIDEO_SIZE[0]}:{VIDEO_SIZE[1]}:force_original_aspect_ratio=decrease,"
+        f"pad={VIDEO_SIZE[0]}:{VIDEO_SIZE[1]}:(ow-iw)/2:(oh-ih)/2,format=yuv420p"
+    )
+
+
+def validate_video_dimensions(path: Path, ffmpeg: Path) -> None:
+    ffprobe = ffmpeg.with_name("ffprobe.exe" if ffmpeg.name.endswith(".exe") else "ffprobe")
+    if not ffprobe.exists():
+        return
+    result = subprocess.run(
+        [
+            str(ffprobe),
+            "-v",
+            "error",
+            "-select_streams",
+            "v:0",
+            "-show_entries",
+            "stream=width,height",
+            "-of",
+            "csv=p=0:s=x",
+            str(path),
+        ],
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    if result.returncode == 0 and result.stdout.strip() != f"{VIDEO_SIZE[0]}x{VIDEO_SIZE[1]}":
+        raise BuildError(
+            f"{path} is {result.stdout.strip()}, expected {VIDEO_SIZE[0]}x{VIDEO_SIZE[1]}."
+        )
 
 def wrap_text(text: str, font: Any, max_width: int) -> list[str]:
     try:
@@ -737,10 +1226,18 @@ def wav_duration(path: Path) -> float:
         return handle.getnframes() / float(handle.getframerate())
 
 
-def write_srt(rendered: list[tuple[Scene, Path, Path, float]], srt_path: Path) -> None:
+def srt_time(seconds: float) -> str:
+    millis = round(seconds * 1000)
+    hours, remainder = divmod(millis, 3_600_000)
+    minutes, remainder = divmod(remainder, 60_000)
+    secs, millis = divmod(remainder, 1000)
+    return f"{hours:02d}:{minutes:02d}:{secs:02d},{millis:03d}"
+
+
+def write_srt(rendered: list[tuple[Scene, list[Path], Path, float]], srt_path: Path) -> None:
     lines: list[str] = []
     start = 0.0
-    for index, (scene, _slide, _audio, seconds) in enumerate(rendered, start=1):
+    for index, (scene, _frames, _audio, seconds) in enumerate(rendered, start=1):
         end = start + seconds
         lines.extend(
             [
@@ -754,42 +1251,37 @@ def write_srt(rendered: list[tuple[Scene, Path, Path, float]], srt_path: Path) -
     srt_path.write_text("\n".join(lines), encoding="utf-8")
 
 
-def srt_time(seconds: float) -> str:
-    millis = round(seconds * 1000)
-    hours, remainder = divmod(millis, 3_600_000)
-    minutes, remainder = divmod(remainder, 60_000)
-    secs, millis = divmod(remainder, 1000)
-    return f"{hours:02d}:{minutes:02d}:{secs:02d},{millis:03d}"
-
-
 def encode_video(
-    rendered: list[tuple[Scene, Path, Path, float]],
+    rendered: list[tuple[Scene, list[Path], Path, float]],
     mp4_path: Path,
     ffmpeg: Path,
 ) -> None:
     with tempfile.TemporaryDirectory(prefix="pcl_ffmpeg_concat_") as temp_name:
         temp_dir = Path(temp_name)
         part_paths: list[Path] = []
-        for index, (_scene, slide_path, audio_path, seconds) in enumerate(rendered, start=1):
+        for index, (_scene, frame_paths, audio_path, seconds) in enumerate(rendered, start=1):
             part_path = temp_dir / f"part_{index:02d}.mp4"
+            frames_concat = temp_dir / f"frames_{index:02d}.txt"
+            write_frame_concat(frame_paths, seconds, frames_concat)
             bitrate = bitrate_for_duration(total_duration(rendered))
             run_command(
                 [
                     str(ffmpeg),
                     "-y",
-                    "-loop",
-                    "1",
-                    "-framerate",
-                    str(FPS),
-                    "-t",
-                    f"{seconds:.3f}",
+                    "-f",
+                    "concat",
+                    "-safe",
+                    "0",
                     "-i",
-                    str(slide_path),
+                    str(frames_concat),
                     "-i",
                     str(audio_path),
+                    "-t",
+                    f"{seconds:.3f}",
                     "-vf",
-                    f"scale={VIDEO_SIZE[0]}:{VIDEO_SIZE[1]}:force_original_aspect_ratio=decrease,"
-                    f"pad={VIDEO_SIZE[0]}:{VIDEO_SIZE[1]}:(ow-iw)/2:(oh-ih)/2,format=yuv420p",
+                    scene_filter(),
+                    "-r",
+                    str(FPS),
                     "-c:v",
                     "libx264",
                     "-preset",
@@ -836,10 +1328,11 @@ def encode_video(
             ],
             "concatenate video segments",
         )
+        validate_video_dimensions(mp4_path, ffmpeg)
 
 
-def total_duration(rendered: list[tuple[Scene, Path, Path, float]]) -> float:
-    return sum(seconds for _scene, _slide, _audio, seconds in rendered)
+def total_duration(rendered: list[tuple[Scene, list[Path], Path, float]]) -> float:
+    return sum(seconds for _scene, _frames, _audio, seconds in rendered)
 
 
 def bitrate_for_duration(seconds: float) -> int:
@@ -877,8 +1370,8 @@ def run_command(command: list[str], action: str) -> None:
 
 def default_title(language: str) -> str:
     if language == "zh":
-        return "PromptControlLab 双语演示"
-    return "PromptControlLab Demo"
+        return "prompt_control_lab 双语演示"
+    return "prompt_control_lab Demo"
 
 
 if __name__ == "__main__":

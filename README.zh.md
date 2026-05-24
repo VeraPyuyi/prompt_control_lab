@@ -250,7 +250,7 @@ ui.default_view: workflows
 
 ## 观看演示视频 🎬
 
-仓库里已经包含两条 4K、11 分 40 秒的 AI 配音演示视频。中文和英文视频演示同一套本地流程：prompt 守护、prompt 改写、analyze/gate/report、模型溯源、agent diff 审计、历史视图、插件、CI，以及高级研究诊断命令。
+仓库里已经包含两条 4K 实操型 AI 配音演示视频。视频使用脚本化 UI 操作回放：放大的仪表盘截图、鼠标移动、点击高亮、命令卡片、结果提示和字幕。中文和英文视频演示同一套本地流程：prompt 守护、prompt 改写、analyze/gate/report、模型溯源、agent diff 审计、历史视图、插件、CI，以及高级研究诊断命令。
 
 [![prompt_control_lab 中文演示封面](docs/assets/demo/poster.zh.png)](docs/assets/demo/prompt_control_lab_demo.zh.mp4)
 
@@ -264,7 +264,7 @@ ui.default_view: workflows
 - [English subtitles](docs/assets/demo/prompt_control_lab_demo.en.srt)
 - [English storyboard](docs/demo/storyboard.en.md)
 
-视频由 [video_manifest.json](docs/demo/video_manifest.json) 可复现生成：
+视频由 [video_manifest.json](docs/demo/video_manifest.json) 和真实 UI 截图可复现生成：
 
 ```bash
 python scripts/build_demo_video.py

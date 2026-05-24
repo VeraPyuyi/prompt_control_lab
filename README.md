@@ -265,9 +265,11 @@ CLI arguments still win. The precedence is: explicit CLI flags → command-speci
 
 ## Watch The Demo Videos 🎬
 
-The repository includes two narrated 4K, 11:40 demo videos. They walk through the same local workflow
-in English and Chinese: prompt guard, prompt improvement, analyze/gate/report, model provenance,
-agent diff audit, history, plugins, CI, and advanced research diagnostics.
+The repository includes two narrated 4K, hands-on demo videos. They use scripted UI operation
+replay: enlarged dashboard screenshots, cursor movement, click highlights, typed command cards,
+result callouts, and subtitles. English and Chinese versions walk through the same local workflow:
+prompt guard, prompt improvement, analyze/gate/report, model provenance, agent diff audit, history,
+plugins, CI, and advanced research diagnostics.
 
 [![prompt_control_lab English demo poster](docs/assets/demo/poster.en.png)](docs/assets/demo/prompt_control_lab_demo.en.mp4)
 
@@ -281,7 +283,8 @@ agent diff audit, history, plugins, CI, and advanced research diagnostics.
 - [中文字幕](docs/assets/demo/prompt_control_lab_demo.zh.srt)
 - [中文分镜脚本](docs/demo/storyboard.zh.md)
 
-The videos are generated from [video_manifest.json](docs/demo/video_manifest.json) with:
+The videos are generated reproducibly from [video_manifest.json](docs/demo/video_manifest.json)
+and real UI screenshots with:
 
 ```bash
 python scripts/build_demo_video.py
@@ -493,7 +496,7 @@ examples/github-action/prompt-control-lab-gate.yml
 ```
 
 Copy it into `.github/workflows/` when you want PRs to run `pcl gate`, optionally audit the PR
-diff with `pcl audit-diff`, and post a short PromptControlLab result comment.
+diff with `pcl audit-diff`, and post a short prompt_control_lab result comment.
 
 For a reusable local summary artifact:
 

@@ -1,8 +1,8 @@
-# PromptControlLab Demo Storyboard (English)
+# prompt_control_lab Demo Storyboard (English)
 
-Working title: PromptControlLab: Preflight, Provenance, and Reproducible Evaluation for AI Coding Agents
+Working title: prompt_control_lab: Preflight, Provenance, and Reproducible Evaluation for AI Coding Agents
 
-Target length: 11:40. Voice: calm technical walkthrough. Audience: developers who use Claude Code, Cursor, Codex, shell wrappers, or CI to run AI coding agents.
+Target length: 10-12 minutes. Voice: calm technical walkthrough. Visual style: hands-on 4K UI operation replay with enlarged screenshots, cursor movement, click highlights, command cards, and result callouts. Audience: developers who use Claude Code, Cursor, Codex, shell wrappers, or CI to run AI coding agents.
 
 Positioning guardrails:
 
@@ -18,7 +18,7 @@ Visual: `docs/assets/tutorial_workflows.en.png`
 
 Narration:
 
-PromptControlLab sits before and after an AI coding agent. Before the agent runs, it checks whether the prompt is clear, scoped, policy-compliant, and cost-aware. After the run, it records model identity, reproducible evaluation evidence, gate status, diff audit signals, and local run history. The goal is not to claim that an agent is safe. The goal is to replace one-off impressions with inspectable evidence.
+prompt_control_lab sits before and after an AI coding agent. Before the agent runs, it checks whether the prompt is clear, scoped, policy-compliant, and cost-aware. After the run, it records model identity, reproducible evaluation evidence, gate status, diff audit signals, and local run history. The goal is not to claim that an agent is safe. The goal is to replace one-off impressions with inspectable evidence.
 
 Commands:
 
@@ -26,7 +26,7 @@ Commands:
 pcl start
 ```
 
-On-screen decision: "Use PromptControlLab when a prompt is expensive, broad, risky, or should leave a reproducible trail."
+On-screen decision: "Use prompt_control_lab when a prompt is expensive, broad, risky, or should leave a reproducible trail."
 
 ## Scene 02 - Guard A Coding-Agent Prompt
 
@@ -187,7 +187,7 @@ Visual: `docs/assets/tutorial_workflows.en.png`
 
 Narration:
 
-PromptControlLab can be placed where prompts enter the workflow. Claude Code hooks, Cursor rules and MCP-style tools, Codex skills, shell wrappers, and a GitHub Action template can all call the same local commands. The stable fields are designed for adapters: action, risk level, token report, plain summary, gate status, and audit summary. CI can run analysis, gate the result, and attach audit evidence to a pull request.
+prompt_control_lab can be placed where prompts enter the workflow. Claude Code hooks, Cursor rules and MCP-style tools, Codex skills, shell wrappers, and a GitHub Action template can all call the same local commands. The stable fields are designed for adapters: action, risk level, token report, plain summary, gate status, and audit summary. CI can run analysis, gate the result, and attach audit evidence to a pull request.
 
 Commands:
 
