@@ -20,12 +20,24 @@ RUN_ARTIFACTS = [
     "agent_run.json",
 ]
 
+RUN_LEVEL_ARTIFACTS = [
+    "manifest.json",
+    "stats.json",
+    "gate_result.json",
+    "explanation.json",
+    "model_drift.json",
+    "audit_result.json",
+    "agent_run.json",
+]
+
 
 def list_runs(runs_dir: Path) -> list[JsonDict]:
     """List run directories under ``runs_dir``."""
 
     if not runs_dir.exists():
         return []
+    if _has_run_level_artifact(runs_dir):
+        return [{"name": runs_dir.name, "path": str(runs_dir)}]
     runs: list[JsonDict] = []
     for child in sorted(runs_dir.iterdir(), key=lambda path: path.name):
         if child.is_dir() and _has_any_artifact(child):
@@ -272,6 +284,10 @@ def _read_optional(path: Path) -> JsonDict:
 
 def _has_any_artifact(path: Path) -> bool:
     return any((path / name).exists() for name in RUN_ARTIFACTS)
+
+
+def _has_run_level_artifact(path: Path) -> bool:
+    return any((path / name).exists() for name in RUN_LEVEL_ARTIFACTS)
 
 
 def _by_slice(value: object) -> dict[str, float]:

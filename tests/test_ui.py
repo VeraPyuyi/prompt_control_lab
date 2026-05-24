@@ -1,5 +1,4 @@
-from __future__ import annotations
-
+import base64
 import json
 import subprocess
 import sys
@@ -418,6 +417,17 @@ def test_ui_list_runs_prefers_child_runs_when_root_has_history_index(tmp_path: P
     assert [row["name"] for row in rows] == ["audit", "quick"]
 
 
+def test_ui_list_runs_keeps_current_run_when_it_has_manifest(tmp_path: Path) -> None:
+    run = tmp_path / "runs" / "quick"
+    _write_json(run / "manifest.json", {"mode": "quick"})
+    _write_json(run / "baseline" / "metrics.json", {"mean_score": 0.5})
+    _write_json(run / "candidate" / "metrics.json", {"mean_score": 0.75})
+
+    rows = list_runs(run)
+
+    assert rows == [{"name": "quick", "path": str(run)}]
+
+
 def test_ui_has_history_view_order_and_text() -> None:
     from promptcontrollab.ui import app
 
@@ -469,9 +479,50 @@ def test_ui_tutorial_sections_are_complete_and_localized() -> None:
         assert section["result"]
         assert section["meaning"]
         assert section["next_step"]
+        assert section["screenshot"]
+        assert section["steps"]
         assert section["command"].startswith("pcl ")
     assert not _contains_replacement_character(app.TEXT["zh"])
     assert not _contains_replacement_character(sections)
+    assert "Deploy" not in str(app.TEXT["zh"])
+    assert "三点菜单" not in str(app.TEXT["zh"])
+
+
+def test_ui_tutorial_gallery_exposes_visible_images() -> None:
+    from promptcontrollab.ui import app
+
+    gallery = app.tutorial_gallery_items("zh")
+
+    assert [item["image"] for item in gallery] == [
+        "workflows",
+        "guard",
+        "report",
+        "model_drift",
+        "audit",
+        "history",
+    ]
+    assert all(item["title"] for item in gallery)
+
+
+def test_tutorial_screenshot_assets_exist() -> None:
+    assets = [
+        "tutorial_workflows.en.png",
+        "tutorial_workflows.zh.png",
+        "tutorial_guard.en.png",
+        "tutorial_guard.zh.png",
+        "tutorial_report.en.png",
+        "tutorial_report.zh.png",
+        "tutorial_model_drift.en.png",
+        "tutorial_model_drift.zh.png",
+        "tutorial_audit.en.png",
+        "tutorial_audit.zh.png",
+        "tutorial_history.en.png",
+        "tutorial_history.zh.png",
+    ]
+    for name in assets:
+        path = Path("docs") / "assets" / name
+        assert path.exists(), name
+        assert path.stat().st_size > 10_000, name
 
 
 def test_tutorial_svg_assets_exist_and_use_prompt_control_lab() -> None:
@@ -510,8 +561,67 @@ def test_tutorial_svg_renderer_reads_utf8_svg(tmp_path: Path) -> None:
 
     app._render_svg(FakeStreamlit(), svg)
 
+    body = str(calls[0]["body"])
+    encoded = body.split("base64,", 1)[1].split('"', 1)[0]
+
     assert calls[0]["unsafe"] is True
-    assert "中文 prompt_control_lab" in str(calls[0]["body"])
+    assert "中文 prompt_control_lab" in base64.b64decode(encoded).decode("utf-8")
+
+
+def test_tutorial_svg_renderer_uses_data_uri_not_raw_svg(tmp_path: Path) -> None:
+    from promptcontrollab.ui import app
+
+    svg = tmp_path / "tutorial.zh.svg"
+    svg.write_text(
+        '<svg viewBox="0 0 100 40"><text>中文 prompt_control_lab</text></svg>',
+        encoding="utf-8",
+    )
+    calls: list[dict[str, object]] = []
+
+    class FakeStreamlit:
+        def markdown(self, body: str, *, unsafe_allow_html: bool = False) -> None:
+            calls.append({"body": body, "unsafe": unsafe_allow_html})
+
+    app._render_svg(FakeStreamlit(), svg)
+
+    body = str(calls[0]["body"])
+    assert body.startswith('<img src="data:image/svg+xml;base64,')
+    assert "<svg" not in body
+
+
+def test_tutorial_png_renderer_uses_data_uri(tmp_path: Path) -> None:
+    from promptcontrollab.ui import app
+
+    png = tmp_path / "tutorial.zh.png"
+    png.write_bytes(b"\x89PNG\r\n\x1a\nfake")
+    calls: list[dict[str, object]] = []
+
+    class FakeStreamlit:
+        def markdown(self, body: str, *, unsafe_allow_html: bool = False) -> None:
+            calls.append({"body": body, "unsafe": unsafe_allow_html})
+
+    app._render_image(FakeStreamlit(), png)
+
+    body = str(calls[0]["body"])
+    assert calls[0]["unsafe"] is True
+    assert body.startswith('<img src="data:image/png;base64,')
+
+
+def test_ui_hides_streamlit_native_chrome() -> None:
+    from promptcontrollab.ui import app
+
+    calls: list[dict[str, object]] = []
+
+    class FakeStreamlit:
+        def markdown(self, body: str, *, unsafe_allow_html: bool = False) -> None:
+            calls.append({"body": body, "unsafe": unsafe_allow_html})
+
+    app._hide_streamlit_chrome(FakeStreamlit())
+
+    body = str(calls[0]["body"])
+    assert calls[0]["unsafe"] is True
+    assert "#MainMenu" in body
+    assert '[data-testid="stToolbar"]' in body
 
 
 def _contains_replacement_character(value: object) -> bool:

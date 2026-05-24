@@ -281,12 +281,12 @@ pcl analyze --config promptcontrol.example.yaml --out runs/quick
 pcl ui --runs runs/ --policy examples/guard.policy.yaml --port 8501
 ```
 
-The local dashboard has seven tabs. The **Tutorial** tab teaches the full flow with diagrams and
-step-by-step explanations; the **Workflows** tab can run local actions from the browser:
+The local dashboard has seven tabs. The **Tutorial** tab now teaches the workflow with screenshots
+from the current UI plus step-by-step instructions; the **Workflows** tab can run local actions
+from the browser:
 guard a prompt, run analyze, run gate, audit a git diff, build `agent_run.json`, generate a PR
 summary, or export a report zip. Execution mode defaults to `confirm`; advanced users can choose
-`auto` or `command`. Streamlit's native deploy/menu controls are hidden so the local app stays
-focused on prompt_control_lab.
+`auto` or `command`.
 
 CLI equivalent for the zip export:
 
@@ -296,8 +296,8 @@ pcl export-report --run runs/quick --out runs/quick/report.zip
 
 - **Workflows:** trigger allowlisted local workflows while previewing outputs before files are
   written.
-- **Tutorial:** learn each feature as “operation -> artifact -> meaning -> next step”, with
-  bilingual diagrams.
+- **Tutorial:** learn each feature as “screenshot -> steps -> artifact -> meaning -> next step”,
+  with synchronized English and Chinese UI screenshots.
 - **Guard Prompt:** try `pcl guard` interactively and inspect risk, policy violations, token cost,
   and prompt diff.
 - **Run Report:** read recommendation, gate status, score delta, confidence interval, p-value,
@@ -308,11 +308,13 @@ pcl export-report --run runs/quick --out runs/quick/report.zip
 - **History:** inspect `history_index.json` timelines, gate trends, score trends, model changes,
   prompt identity, and risk category changes.
 
-![prompt_control_lab UI guard playground](docs/assets/ui_guard.en.png)
+![prompt_control_lab UI workflows tutorial screenshot](docs/assets/tutorial_workflows.en.png)
 
-![prompt_control_lab UI run report](docs/assets/ui_report.en.png)
+![prompt_control_lab UI guard tutorial screenshot](docs/assets/tutorial_guard.en.png)
 
-![prompt_control_lab UI history](docs/assets/ui_history.en.png)
+![prompt_control_lab UI run report tutorial screenshot](docs/assets/tutorial_report.en.png)
+
+![prompt_control_lab UI audit tutorial screenshot](docs/assets/tutorial_audit.en.png)
 
 ## Install IDE / CLI Plugins And Skills 🧩
 

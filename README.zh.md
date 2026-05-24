@@ -265,7 +265,7 @@ pcl analyze --config promptcontrol.example.yaml --out runs/quick
 pcl ui --runs runs/ --policy examples/guard.policy.yaml --port 8501
 ```
 
-本地 UI 现在包含七个 tab。**教程** tab 会用图文一步一步说明完整流程；**工作流** tab 可以在浏览器里触发本地动作：守护 prompt、运行 analyze、运行 gate、审计 git diff、生成 `agent_run.json`、生成 PR summary，以及导出报告 zip。默认执行模式是 `confirm`，会先预览将要写入的文件；高级用户可以切换到 `auto` 或 `command`。Streamlit 原生的 Deploy 和三点菜单会被隐藏，让本地应用保持以 `prompt_control_lab` 为主。
+本地 UI 现在包含七个 tab。**教程** tab 会用当前页面截图一步一步说明完整流程；**工作流** tab 可以在浏览器里触发本地动作：守护 prompt、运行 analyze、运行 gate、审计 git diff、生成 `agent_run.json`、生成 PR summary，以及导出报告 zip。默认执行模式是 `confirm`，会先预览将要写入的文件；高级用户可以切换到 `auto` 或 `command`。
 
 导出 zip 的 CLI 等价命令：
 
@@ -274,18 +274,20 @@ pcl export-report --run runs/quick --out runs/quick/report.zip
 ```
 
 - **工作流：** 触发 allowlisted 本地工作流，并在写入文件前预览输出。
-- **教程：** 按“操作 -> 得到什么 -> 说明什么问题 -> 下一步”学习每个功能，并配有中英文流程图。
+- **教程：** 按“页面截图 -> 操作步骤 -> 得到什么 -> 说明什么问题 -> 下一步”学习每个功能，并配有中英文同步的当前 UI 截图。
 - **守护 Prompt：** 交互式运行 `pcl guard`，查看风险、策略违规、token 成本和 prompt diff。
 - **运行报告：** 查看部署建议、gate 状态、分数变化、置信区间、p-value、slice 分数和模型来源。
 - **模型漂移：** 查看 provider/model 记录、alias 风险、warning 和 drift artifact。
 - **Agent 改动审计：** 查看 `audit_result.json`、文件类型分布、危险路径、测试和人工复核要求。
 - **历史：** 查看 `history_index.json` 时间线、门禁趋势、分数趋势、模型变化、prompt 身份和风险类别变化。
 
-![prompt_control_lab UI 守护 Prompt](docs/assets/ui_guard.zh.png)
+![prompt_control_lab UI 工作流教程截图](docs/assets/tutorial_workflows.zh.png)
 
-![prompt_control_lab UI 运行报告](docs/assets/ui_report.zh.png)
+![prompt_control_lab UI 守护 Prompt 教程截图](docs/assets/tutorial_guard.zh.png)
 
-![prompt_control_lab UI 历史](docs/assets/ui_history.zh.png)
+![prompt_control_lab UI 运行报告教程截图](docs/assets/tutorial_report.zh.png)
+
+![prompt_control_lab UI 审计教程截图](docs/assets/tutorial_audit.zh.png)
 
 ## 安装 IDE / CLI 插件和 Skills 🧩
 

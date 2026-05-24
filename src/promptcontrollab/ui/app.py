@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import base64
 import importlib
 import os
 from collections.abc import Callable
@@ -58,15 +59,13 @@ TEXT = {
             "Follow the cards below from top to bottom. Each card shows what to do, "
             "what artifact you get, what the result means, and what to do next."
         ),
-        "tutorial_framework_note": (
-            "The native Streamlit deploy/menu controls are hidden in this app so the local "
-            "dashboard stays focused on prompt_control_lab workflows."
-        ),
+        "tutorial_framework_note": "",
         "tutorial_operation": "Operation",
         "tutorial_result": "What you get",
         "tutorial_meaning": "What it means",
         "tutorial_next_step": "Next step",
         "tutorial_command": "CLI equivalent",
+        "tutorial_steps": "Steps",
         "execution_mode": "Execution mode",
         "overwrite": "Overwrite existing artifacts",
         "allow_external_outputs": "Allow writing outside runs directory",
@@ -197,15 +196,13 @@ TEXT = {
             "建议从上到下阅读。每个卡片都会说明：怎么操作、会得到什么文件、"
             "这个结果说明什么问题，以及下一步该怎么做。"
         ),
-        "tutorial_framework_note": (
-            "Streamlit 自带的 Deploy 和三点菜单属于框架原生控件，本应用会隐藏这些入口，"
-            "让本地仪表盘保持中文和 prompt_control_lab 工作流为主。"
-        ),
+        "tutorial_framework_note": "",
         "tutorial_operation": "操作",
         "tutorial_result": "得到什么",
         "tutorial_meaning": "说明什么问题",
         "tutorial_next_step": "下一步",
         "tutorial_command": "CLI 等价命令",
+        "tutorial_steps": "操作步骤",
         "execution_mode": "执行模式",
         "overwrite": "覆盖已有 artifact",
         "allow_external_outputs": "允许写入 runs 目录之外",
@@ -358,6 +355,129 @@ TUTORIAL_IMAGES = {
     "guard": ("tutorial_guard.svg", "tutorial_guard.zh.svg"),
     "report": ("tutorial_report.svg", "tutorial_report.zh.svg"),
     "audit_history": ("tutorial_audit_history.svg", "tutorial_audit_history.zh.svg"),
+}
+
+TUTORIAL_SCREENSHOTS = {
+    "workflows": ("tutorial_workflows.en.png", "tutorial_workflows.zh.png"),
+    "guard": ("tutorial_guard.en.png", "tutorial_guard.zh.png"),
+    "report": ("tutorial_report.en.png", "tutorial_report.zh.png"),
+    "model_drift": ("tutorial_model_drift.en.png", "tutorial_model_drift.zh.png"),
+    "audit": ("tutorial_audit.en.png", "tutorial_audit.zh.png"),
+    "history": ("tutorial_history.en.png", "tutorial_history.zh.png"),
+}
+
+TUTORIAL_SECTION_SCREENSHOTS = {
+    "guard": "guard",
+    "workflows": "workflows",
+    "report": "report",
+    "drift": "model_drift",
+    "audit": "audit",
+    "history": "history",
+    "project_defaults": "workflows",
+    "export_pr": "workflows",
+}
+
+TUTORIAL_STEPS = {
+    "en": {
+        "guard": [
+            "Open the Guard Prompt tab.",
+            "Paste the prompt the agent would run.",
+            "Choose the coding profile and your guard policy.",
+            "Click Run guard, then read the decision, risk categories, and improved prompt.",
+        ],
+        "workflows": [
+            "Open the Workflows tab.",
+            "Keep Execution mode on confirm for the first run.",
+            "Click Create demo artifacts and confirm the files that will be written.",
+            "Use the generated run in Run Report, Audit, and History.",
+        ],
+        "report": [
+            "Select a run in the sidebar.",
+            "Open Run Report.",
+            "Read the recommendation, gate status, score delta, confidence interval, and model provenance.",
+            "Use fixed or broken examples to decide what to inspect next.",
+        ],
+        "drift": [
+            "Open Model Drift after selecting a run.",
+            "Check baseline and candidate provider/model values.",
+            "If drift is unknown, run model-drift between two run directories.",
+            "Treat model mismatch as a comparison-validity warning.",
+        ],
+        "audit": [
+            "Run audit-diff after an agent changes the repository.",
+            "Open Agent Diff Audit and inspect touched files, changed lines, and dangerous paths.",
+            "Check dependency, workflow, secret-like, deleted-test, and unexpected-file sections.",
+            "Require human review before merging high-risk changes.",
+        ],
+        "history": [
+            "Run history index over the runs directory.",
+            "Open History and filter by review-required, high-risk, provider, or model.",
+            "Read score, gate, risk, and model trends together.",
+            "Use the table to open the run that needs attention.",
+        ],
+        "project_defaults": [
+            "Create or edit .promptcontrol.yaml at the repository root.",
+            "Set guard_policy, gate_policy, runs_dir, expected_paths, and test_commands.",
+            "Restart or refresh the UI so sidebar defaults reflect the project file.",
+            "Override any default from the CLI or UI when a run needs a one-off value.",
+        ],
+        "export_pr": [
+            "Open Workflows and select PR summary or export report zip.",
+            "Review the output path before confirming the write.",
+            "Attach pr_summary.md to a pull request, or archive the report zip with the run.",
+            "Keep the JSON artifact for later automation.",
+        ],
+    },
+    "zh": {
+        "guard": [
+            "打开“Prompt 守护”页。",
+            "粘贴准备交给 Agent 执行的 prompt。",
+            "选择“编程”场景和团队 guard policy。",
+            "点击“运行守护”，查看决策、风险类别和改写后的 prompt。",
+        ],
+        "workflows": [
+            "打开“工作流”页。",
+            "第一次使用时保持“确认后执行”模式。",
+            "点击“创建演示数据”，先检查将写入的文件，再确认执行。",
+            "用生成的 run 去查看“运行报告”“审计”和“历史”。",
+        ],
+        "report": [
+            "在侧边栏选择一个 run。",
+            "打开“运行报告”页。",
+            "查看部署建议、gate 状态、分数差、置信区间和模型来源。",
+            "根据修复样本和失败样本决定下一步检查哪里。",
+        ],
+        "drift": [
+            "选择 run 后打开“模型漂移”页。",
+            "检查 baseline 和 candidate 的 provider/model 是否一致。",
+            "如果没有 drift artifact，按页面提示运行 model-drift。",
+            "如果模型不一致，把它当成 prompt-only 比较有效性的风险。",
+        ],
+        "audit": [
+            "Agent 改完代码后运行 audit-diff。",
+            "打开“Agent 改动审计”，查看改动文件、行数和危险路径。",
+            "继续检查依赖、workflow、疑似密钥、删除测试和意外文件。",
+            "高风险改动合并前需要人工复核。",
+        ],
+        "history": [
+            "对 runs 目录运行 history index。",
+            "打开“历史”，按需要复核、高风险、provider 或 model 过滤。",
+            "把分数、gate、风险和模型趋势放在一起看。",
+            "从表格中找到需要进一步检查的 run。",
+        ],
+        "project_defaults": [
+            "在仓库根目录创建或编辑 .promptcontrol.yaml。",
+            "写入 guard_policy、gate_policy、runs_dir、expected_paths 和 test_commands。",
+            "刷新 UI，让侧边栏默认值跟随项目配置。",
+            "需要临时覆盖时，再用 CLI 或 UI 显式传入新值。",
+        ],
+        "export_pr": [
+            "打开“工作流”，选择生成 PR summary 或导出 report zip。",
+            "确认写入路径，再执行导出。",
+            "把 pr_summary.md 放进 PR，或把 report zip 和 run 一起归档。",
+            "保留 JSON artifact，方便后续自动化。",
+        ],
+    },
 }
 
 TUTORIAL_SECTIONS = {
@@ -537,7 +657,7 @@ TEXT["zh"].update(
         "workflows": "工作流",
         "tutorial": "教程",
         "tutorial_intro": "建议从上到下阅读。每个卡片都会说明：怎么操作、会得到什么文件、结果说明什么问题，以及下一步怎么做。",
-        "tutorial_framework_note": "Streamlit 自带的 Deploy 和三点菜单属于框架原生控件，本应用会隐藏这些入口，让本地仪表盘保持中文和 prompt_control_lab 工作流为主。",
+        "tutorial_framework_note": "",
         "tutorial_operation": "操作",
         "tutorial_result": "得到什么",
         "tutorial_meaning": "说明什么问题",
@@ -778,6 +898,7 @@ def main() -> None:
 
     st = _streamlit()
     st.set_page_config(page_title="prompt_control_lab", layout="wide")
+    _hide_streamlit_chrome(st)
     query = _query_params(st)
     language = _sidebar_language(st, query)
     text = TEXT[language]
@@ -870,6 +991,21 @@ def _render_view(
         _render_history_tab(st, text, detail)
 
 
+def _hide_streamlit_chrome(st: Any) -> None:
+    st.markdown(
+        """
+<style>
+#MainMenu {visibility: hidden;}
+header {visibility: hidden;}
+footer {visibility: hidden;}
+[data-testid="stToolbar"] {display: none !important;}
+[data-testid="stDecoration"] {display: none !important;}
+</style>
+""",
+        unsafe_allow_html=True,
+    )
+
+
 def _sidebar_language(st: Any, query: JsonDict) -> str:
     default = str(query.get("lang") or os.environ.get("PCL_UI_LANGUAGE", "en"))
     selected = st.sidebar.selectbox(
@@ -923,11 +1059,47 @@ def tutorial_sections(language: str) -> list[JsonDict]:
     """Return tutorial cards for the selected language."""
 
     sections = TUTORIAL_SECTIONS.get(language) or TUTORIAL_SECTIONS["en"]
-    return [dict(section) for section in sections]
+    steps = TUTORIAL_STEPS.get(language) or TUTORIAL_STEPS["en"]
+    enriched: list[JsonDict] = []
+    for section in sections:
+        item: JsonDict = dict(section)
+        section_id = str(item.get("id") or "")
+        item["screenshot"] = TUTORIAL_SECTION_SCREENSHOTS.get(section_id, "workflows")
+        item["steps"] = list(steps.get(section_id, []))
+        enriched.append(item)
+    return enriched
+
+
+def tutorial_gallery_items(language: str) -> list[JsonDict]:
+    """Return always-visible tutorial image cards for the selected language."""
+
+    if language == "zh":
+        return [
+            {"title": "工作流：一键生成和导出", "image": "workflows"},
+            {"title": "守护：执行前检查风险", "image": "guard"},
+            {"title": "报告：用证据做决策", "image": "report"},
+            {"title": "模型漂移：确认比较是否干净", "image": "model_drift"},
+            {"title": "审计：看清 Agent 改动", "image": "audit"},
+            {"title": "历史：追踪 run 趋势", "image": "history"},
+        ]
+    return [
+        {"title": "Workflows: run and export locally", "image": "workflows"},
+        {"title": "Guard: check risk first", "image": "guard"},
+        {"title": "Report: decide with evidence", "image": "report"},
+        {"title": "Model drift: validate comparisons", "image": "model_drift"},
+        {"title": "Audit: inspect agent changes", "image": "audit"},
+        {"title": "History: track run trends", "image": "history"},
+    ]
 
 
 def _tutorial_asset_path(image_key: str, language: str) -> Path:
     filenames = TUTORIAL_IMAGES.get(image_key) or TUTORIAL_IMAGES["overview"]
+    filename = filenames[1] if language == "zh" else filenames[0]
+    return Path(__file__).resolve().parents[3] / "docs" / "assets" / filename
+
+
+def _tutorial_screenshot_path(image_key: str, language: str) -> Path:
+    filenames = TUTORIAL_SCREENSHOTS.get(image_key) or TUTORIAL_SCREENSHOTS["workflows"]
     filename = filenames[1] if language == "zh" else filenames[0]
     return Path(__file__).resolve().parents[3] / "docs" / "assets" / filename
 
@@ -955,20 +1127,25 @@ def _select_run(st: Any, runs: list[JsonDict], text: dict[str, str]) -> JsonDict
 
 
 def _render_tutorial_tab(st: Any, text: dict[str, str], language: str) -> None:
-    st.info(text["tutorial_framework_note"])
     st.markdown(text["tutorial_intro"])
     overview = _tutorial_asset_path("overview", language)
     if overview.exists():
-        _render_svg(st, overview)
+        _render_image(st, overview)
+    _render_tutorial_gallery(st, language)
 
     for section in tutorial_sections(language):
         title = str(section.get("title", ""))
         expanded = section.get("id") in {"guard", "workflows"}
         with st.expander(title, expanded=expanded):
-            image_key = str(section.get("image") or "overview")
-            image_path = _tutorial_asset_path(image_key, language)
+            screenshot_key = str(section.get("screenshot") or "workflows")
+            image_path = _tutorial_screenshot_path(screenshot_key, language)
             if image_path.exists():
-                _render_svg(st, image_path)
+                _render_image(st, image_path)
+            steps = section.get("steps") or []
+            if isinstance(steps, list) and steps:
+                st.markdown(f"**{text['tutorial_steps']}**")
+                for index, step in enumerate(steps, start=1):
+                    st.markdown(f"{index}. {step}")
             st.markdown(f"**{text['tutorial_operation']}**: {section.get('operation', '')}")
             st.markdown(f"**{text['tutorial_result']}**: {section.get('result', '')}")
             st.markdown(f"**{text['tutorial_meaning']}**: {section.get('meaning', '')}")
@@ -977,9 +1154,31 @@ def _render_tutorial_tab(st: Any, text: dict[str, str], language: str) -> None:
             st.code(str(section.get("command", "")), language="bash")
 
 
+def _render_tutorial_gallery(st: Any, language: str) -> None:
+    columns = st.columns(2)
+    for index, item in enumerate(tutorial_gallery_items(language)):
+        with columns[index % 2]:
+            st.markdown(f"**{item['title']}**")
+            path = _tutorial_screenshot_path(str(item["image"]), language)
+            if path.exists():
+                _render_image(st, path)
+
+
 def _render_svg(st: Any, path: Path) -> None:
-    svg = path.read_text(encoding="utf-8")
-    st.markdown(f'<div style="width: 100%;">{svg}</div>', unsafe_allow_html=True)
+    _render_image(st, path)
+
+
+def _render_image(st: Any, path: Path) -> None:
+    mime_type = "image/png" if path.suffix.lower() == ".png" else "image/svg+xml"
+    encoded = base64.b64encode(path.read_bytes()).decode("ascii")
+    st.markdown(
+        (
+            f'<img src="data:{mime_type};base64,{encoded}" '
+            'style="width: 100%; max-width: 1100px; border-radius: 8px;" '
+            f'alt="{path.stem}">'
+        ),
+        unsafe_allow_html=True,
+    )
 
 
 def _render_workflows_tab(
