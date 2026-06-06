@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import shlex
+import shutil
 import subprocess
 from pathlib import Path
 
@@ -58,6 +59,8 @@ def run_audit_diff(
     tests_passed: bool | None = None,
     test_timeout: int = 120,
     allow_shell_test_command: bool = False,
+    sarif_path: Path | None = None,
+    secret_scanner: str = "builtin",
 ) -> JsonDict:
     """Audit changed files between two git refs and write audit artifacts."""
 
@@ -84,7 +87,8 @@ def run_audit_diff(
     workflow_files_changed = [path for path in changed_files if _is_workflow_file(path)]
     deleted_test_files = [path for path in _deleted_files(name_status) if _is_test_file(path)]
     generated_files_changed = [path for path in changed_files if _is_generated_file(path)]
-    secret_findings = _secret_findings(diff_text)
+    secret_findings = _collect_secret_findings(diff_text, scanner=secret_scanner, repo=repo)
+    secret_scanner_scope = _secret_scanner_scope(secret_scanner)
     payload: JsonDict = {
         "before": before,
         "after": after,
@@ -102,6 +106,8 @@ def run_audit_diff(
         "workflow_files_changed": workflow_files_changed,
         "deleted_test_files": deleted_test_files,
         "secret_findings": secret_findings,
+        "secret_scanner": secret_scanner,
+        "secret_scanner_scope": secret_scanner_scope,
         "generated_files_changed": generated_files_changed,
         "public_api_changed": public_api_changed,
         "tests_run": recorded_tests,
@@ -121,11 +127,18 @@ def run_audit_diff(
             or deleted_test_files
             or secret_findings
         ),
-        "warnings": _warnings(expected, final_tests_passed, allow_shell_test_command),
+        "warnings": [
+            *_warnings(expected, final_tests_passed, allow_shell_test_command),
+            *_secret_scanner_warnings(secret_scanner),
+        ],
     }
     ensure_dir(out_dir)
     write_json(out_dir / "audit_result.json", payload)
     (out_dir / "audit_summary.md").write_text(_render_summary(payload), encoding="utf-8")
+    if sarif_path is not None:
+        payload["sarif_path"] = str(sarif_path)
+        write_json(sarif_path, _render_sarif(payload))
+        write_json(out_dir / "audit_result.json", payload)
     return payload
 
 
@@ -453,6 +466,235 @@ def _secret_findings(diff_text: str) -> list[JsonDict]:
         elif not line.startswith("-"):
             new_line += 1
     return findings
+
+
+def _collect_secret_findings(diff_text: str, *, scanner: str, repo: Path) -> list[JsonDict]:
+    if scanner == "builtin":
+        return _secret_findings(diff_text)
+    executable = shutil.which(scanner)
+    if executable is None:
+        msg = (
+            f"Secret scanner `{scanner}` was not found on PATH. "
+            "Install it or use `--secret-scanner builtin`."
+        )
+        raise ValueError(msg)
+    return _external_secret_findings(scanner=scanner, executable=executable, repo=repo)
+
+
+def _secret_scanner_scope(scanner: str) -> str:
+    if scanner == "builtin":
+        return "added_diff_lines"
+    return "workspace"
+
+
+def _secret_scanner_warnings(scanner: str) -> list[str]:
+    if scanner == "builtin":
+        return []
+    return [
+        (
+            f"External secret scanner `{scanner}` scanned the current workspace, "
+            "not only added diff lines between before/after refs."
+        )
+    ]
+
+
+def _external_secret_findings(*, scanner: str, executable: str, repo: Path) -> list[JsonDict]:
+    if scanner == "gitleaks":
+        command = [
+            executable,
+            "detect",
+            "--source",
+            str(repo),
+            "--no-git",
+            "--report-format",
+            "json",
+        ]
+    elif scanner == "trufflehog":
+        command = [executable, "filesystem", str(repo), "--json"]
+    else:
+        msg = f"Unsupported secret scanner: {scanner}"
+        raise ValueError(msg)
+    completed = subprocess.run(
+        command,
+        cwd=repo,
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        errors="replace",
+    )
+    if completed.returncode not in {0, 1}:
+        details = (completed.stderr or completed.stdout or "").strip()
+        msg = f"Secret scanner `{scanner}` failed"
+        if details:
+            msg += f": {details}"
+        raise ValueError(msg)
+    return _parse_external_secret_output(scanner, completed.stdout)
+
+
+def _parse_external_secret_output(scanner: str, output: str) -> list[JsonDict]:
+    import json
+
+    findings: list[JsonDict] = []
+    if not output.strip():
+        return findings
+    if scanner == "gitleaks":
+        try:
+            records = json.loads(output)
+        except json.JSONDecodeError as exc:
+            msg = "Could not parse gitleaks JSON output"
+            raise ValueError(msg) from exc
+        if isinstance(records, list):
+            for record in records:
+                if isinstance(record, dict):
+                    findings.append(
+                        {
+                            "path": str(record.get("File", "")),
+                            "line": record.get("StartLine"),
+                            "kind": str(record.get("RuleID", "gitleaks")),
+                            "redacted": "***",
+                            "scanner": "gitleaks",
+                        }
+                    )
+        return findings
+    for line in output.splitlines():
+        try:
+            record = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        source = record.get("SourceMetadata") if isinstance(record, dict) else {}
+        path = ""
+        line_no: object = None
+        if isinstance(source, dict):
+            data = source.get("Data")
+            if isinstance(data, dict):
+                filesystem = data.get("Filesystem")
+                if isinstance(filesystem, dict):
+                    path = str(filesystem.get("file", ""))
+                    line_no = filesystem.get("line")
+        findings.append(
+            {
+                "path": path,
+                "line": line_no,
+                "kind": str(record.get("DetectorName", "trufflehog")),
+                "redacted": "***",
+                "scanner": "trufflehog",
+            }
+        )
+    return findings
+
+
+def _render_sarif(payload: JsonDict) -> JsonDict:
+    results: list[JsonDict] = []
+    for finding in payload.get("secret_findings", []):
+        if isinstance(finding, dict):
+            results.append(
+                _sarif_result(
+                    rule_id="prompt-control-lab.secret",
+                    message=f"Secret-like added line detected: {finding.get('kind', 'secret')}",
+                    path=str(finding.get("path") or "unknown"),
+                    line=_int_or_one(finding.get("line")),
+                )
+            )
+    for path in payload.get("dangerous_paths", []):
+        results.append(
+            _sarif_result(
+                rule_id="prompt-control-lab.dangerous_path",
+                message=(
+                    "Changed path touches a security, auth, billing, migration, "
+                    "or secret area."
+                ),
+                path=str(path),
+            )
+        )
+    for path in payload.get("workflow_files_changed", []):
+        results.append(
+            _sarif_result(
+                rule_id="prompt-control-lab.workflow_change",
+                message="GitHub workflow changed; review CI and automation permissions.",
+                path=str(path),
+            )
+        )
+    for path in payload.get("dependency_files_changed", []):
+        results.append(
+            _sarif_result(
+                rule_id="prompt-control-lab.dependency_change",
+                message="Dependency manifest changed; review supply-chain impact.",
+                path=str(path),
+            )
+        )
+    for path in payload.get("deleted_test_files", []):
+        results.append(
+            _sarif_result(
+                rule_id="prompt-control-lab.deleted_test",
+                message="A test file was deleted; confirm coverage did not regress.",
+                path=str(path),
+            )
+        )
+    if payload.get("public_api_changed"):
+        for path in payload.get("changed_files", []):
+            if _is_source_file(str(path)):
+                results.append(
+                    _sarif_result(
+                        rule_id="prompt-control-lab.public_api_change",
+                        message="Public API-like definition changed; review compatibility.",
+                        path=str(path),
+                    )
+                )
+                break
+    return {
+        "$schema": "https://json.schemastore.org/sarif-2.1.0.json",
+        "version": "2.1.0",
+        "runs": [
+            {
+                "tool": {
+                    "driver": {
+                        "name": "prompt_control_lab",
+                        "informationUri": "https://github.com/VeraPyuyi/prompt_control_lab",
+                        "rules": _sarif_rules(),
+                    }
+                },
+                "results": results,
+            }
+        ],
+    }
+
+
+def _sarif_rules() -> list[JsonDict]:
+    rules = [
+        ("prompt-control-lab.secret", "Secret-like added line"),
+        ("prompt-control-lab.dangerous_path", "Dangerous path changed"),
+        ("prompt-control-lab.workflow_change", "Workflow changed"),
+        ("prompt-control-lab.dependency_change", "Dependency changed"),
+        ("prompt-control-lab.deleted_test", "Test file deleted"),
+        ("prompt-control-lab.public_api_change", "Public API changed"),
+    ]
+    return [{"id": rule_id, "shortDescription": {"text": title}} for rule_id, title in rules]
+
+
+def _sarif_result(
+    *,
+    rule_id: str,
+    message: str,
+    path: str,
+    line: int = 1,
+) -> JsonDict:
+    return {
+        "ruleId": rule_id,
+        "level": "warning",
+        "message": {"text": message},
+        "locations": [
+            {
+                "physicalLocation": {
+                    "artifactLocation": {"uri": path.replace("\\", "/")},
+                    "region": {"startLine": line},
+                }
+            }
+        ],
+    }
+
+
+def _int_or_one(value: object) -> int:
+    return value if isinstance(value, int) and value > 0 else 1
 
 
 def _redact_secret_line(line: str) -> str:

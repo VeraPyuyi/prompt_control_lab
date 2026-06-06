@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from hashlib import sha256
 from pathlib import Path
 from typing import cast
 
@@ -21,6 +22,13 @@ class ModelIdentity:
     created: int | None = None
     owned_by: str | None = None
     verified: bool | None = None
+    request_id: str | None = None
+    request_sha256: str | None = None
+    response_sha256: str | None = None
+    provider_log_reference: str | None = None
+    signed_receipt: str | None = None
+    provenance_level: str = "level_0_declared_by_user"
+    provenance_evidence: list[JsonDict] = field(default_factory=list)
     warnings: list[str] = field(default_factory=list)
 
     def to_json(self) -> JsonDict:
@@ -33,6 +41,13 @@ class ModelIdentity:
             "created": self.created,
             "owned_by": self.owned_by,
             "verified": self.verified,
+            "request_id": self.request_id,
+            "request_sha256": self.request_sha256,
+            "response_sha256": self.response_sha256,
+            "provider_log_reference": self.provider_log_reference,
+            "signed_receipt": self.signed_receipt,
+            "provenance_level": self.provenance_level,
+            "provenance_evidence": self.provenance_evidence,
             "warnings": self.warnings,
         }
 
@@ -45,6 +60,12 @@ def detect_model_identity(
     predictions_path: Path | None = None,
     api_version: str | None = None,
     verify: bool = False,
+    request_id: str | None = None,
+    request_path: Path | None = None,
+    request_sha256: str | None = None,
+    response_sha256: str | None = None,
+    provider_log_reference: str | None = None,
+    signed_receipt: str | None = None,
 ) -> ModelIdentity:
     """Detect public model identity from explicit input, response JSON, or predictions JSONL."""
 
@@ -69,9 +90,19 @@ def detect_model_identity(
     else:
         identity = unknown_identity(provider=provider, api_version=api_version)
 
+    identity = _with_request_evidence(
+        identity,
+        request_id=request_id,
+        request_sha256=request_sha256 or _hash_file_optional(request_path),
+        response_sha256=response_sha256
+        or (_hash_file_optional(response_path) if response_path is not None else None),
+        provider_log_reference=provider_log_reference,
+        signed_receipt=signed_receipt,
+    )
+
     if verify:
-        return verify_identity(identity)
-    return identity
+        identity = verify_identity(identity)
+    return _with_provenance(identity)
 
 
 def unknown_identity(
@@ -86,6 +117,8 @@ def unknown_identity(
         confidence="low",
         api_version=api_version,
         verified=False,
+        provenance_level="level_0_declared_by_user",
+        provenance_evidence=[{"type": "missing_model", "source": "missing"}],
         warnings=["No model id was found. Reproducibility is weaker without model provenance."],
     )
 
@@ -103,6 +136,8 @@ def from_declared_model(
         source=source,
         confidence="high",
         api_version=api_version,
+        provenance_level="level_0_declared_by_user",
+        provenance_evidence=[{"type": "declared_model", "source": source}],
         warnings=_alias_warnings(model_id),
     )
 
@@ -119,11 +154,26 @@ def from_response_file(
         return unknown_identity(provider=provider, api_version=api_version)
     source, model_id = found
     detected_api_version = api_version or _find_api_version(payload)
-    return from_declared_model(
+    identity = from_declared_model(
         model_id=model_id,
         provider=provider or _find_provider(payload) or infer_provider(model_id),
         api_version=detected_api_version,
         source=f"response.{source}",
+    )
+    return ModelIdentity(
+        provider=identity.provider,
+        model_id=identity.model_id,
+        source=identity.source,
+        confidence=identity.confidence,
+        api_version=identity.api_version,
+        created=identity.created,
+        owned_by=identity.owned_by,
+        verified=identity.verified,
+        provenance_level="level_1_observed_in_response",
+        provenance_evidence=[
+            {"type": "observed_model_field", "source": identity.source},
+        ],
+        warnings=identity.warnings,
     )
 
 
@@ -164,6 +214,10 @@ def from_predictions_file(
             confidence="low",
             api_version=api_version or _one_or_none(api_versions),
             verified=False,
+            provenance_level="level_1_observed_in_response",
+            provenance_evidence=[
+                {"type": "observed_prediction_model", "source": "predictions.model"}
+            ],
             warnings=warnings,
         )
 
@@ -176,6 +230,8 @@ def from_predictions_file(
         source="predictions.model",
         confidence="medium",
         api_version=detected_api_version,
+        provenance_level="level_1_observed_in_response",
+        provenance_evidence=[{"type": "observed_prediction_model", "source": "predictions.model"}],
         warnings=[*_alias_warnings(model_id), *warnings],
     )
 
@@ -310,6 +366,16 @@ def _verify_openai(identity: ModelIdentity) -> ModelIdentity:
         created=payload.get("created") if isinstance(payload.get("created"), int) else None,
         owned_by=payload.get("owned_by") if isinstance(payload.get("owned_by"), str) else None,
         verified=True,
+        request_id=identity.request_id,
+        request_sha256=identity.request_sha256,
+        response_sha256=identity.response_sha256,
+        provider_log_reference=identity.provider_log_reference,
+        signed_receipt=identity.signed_receipt,
+        provenance_level="level_2_provider_metadata_verified",
+        provenance_evidence=[
+            *identity.provenance_evidence,
+            {"type": "provider_metadata", "source": "openai.models.retrieve"},
+        ],
         warnings=[
             *identity.warnings,
             "Verification confirms the public model object, not the hidden internal weight build.",
@@ -362,8 +428,90 @@ def _with_warning(identity: ModelIdentity, warning: str, *, verified: bool) -> M
         created=identity.created,
         owned_by=identity.owned_by,
         verified=verified,
+        request_id=identity.request_id,
+        request_sha256=identity.request_sha256,
+        response_sha256=identity.response_sha256,
+        provider_log_reference=identity.provider_log_reference,
+        signed_receipt=identity.signed_receipt,
+        provenance_level=identity.provenance_level,
+        provenance_evidence=identity.provenance_evidence,
         warnings=[*identity.warnings, warning],
     )
+
+
+def _with_request_evidence(
+    identity: ModelIdentity,
+    *,
+    request_id: str | None,
+    request_sha256: str | None,
+    response_sha256: str | None,
+    provider_log_reference: str | None,
+    signed_receipt: str | None,
+) -> ModelIdentity:
+    return ModelIdentity(
+        provider=identity.provider,
+        model_id=identity.model_id,
+        source=identity.source,
+        confidence=identity.confidence,
+        api_version=identity.api_version,
+        created=identity.created,
+        owned_by=identity.owned_by,
+        verified=identity.verified,
+        request_id=request_id,
+        request_sha256=request_sha256,
+        response_sha256=response_sha256,
+        provider_log_reference=provider_log_reference,
+        signed_receipt=signed_receipt,
+        provenance_level=identity.provenance_level,
+        provenance_evidence=identity.provenance_evidence,
+        warnings=identity.warnings,
+    )
+
+
+def _with_provenance(identity: ModelIdentity) -> ModelIdentity:
+    evidence = list(identity.provenance_evidence)
+    if identity.request_id:
+        evidence.append({"type": "request_id", "value": identity.request_id})
+    if identity.request_sha256:
+        evidence.append({"type": "request_sha256", "value": identity.request_sha256})
+    if identity.response_sha256:
+        evidence.append({"type": "response_sha256", "value": identity.response_sha256})
+    level = identity.provenance_level
+    if identity.verified is True:
+        level = "level_2_provider_metadata_verified"
+    if identity.provider_log_reference:
+        evidence.append(
+            {"type": "provider_log_reference", "value": identity.provider_log_reference}
+        )
+        level = "level_3_provider_log_reference_recorded"
+    if identity.signed_receipt:
+        evidence.append({"type": "signed_receipt_reference", "value": identity.signed_receipt})
+        level = "level_4_signed_receipt_recorded"
+    return ModelIdentity(
+        provider=identity.provider,
+        model_id=identity.model_id,
+        source=identity.source,
+        confidence=identity.confidence,
+        api_version=identity.api_version,
+        created=identity.created,
+        owned_by=identity.owned_by,
+        verified=identity.verified,
+        request_id=identity.request_id,
+        request_sha256=identity.request_sha256,
+        response_sha256=identity.response_sha256,
+        provider_log_reference=identity.provider_log_reference,
+        signed_receipt=identity.signed_receipt,
+        provenance_level=level,
+        provenance_evidence=evidence,
+        warnings=identity.warnings,
+    )
+
+
+def _hash_file_optional(path: Path | None) -> str | None:
+    if path is None:
+        return None
+    digest = sha256(path.read_bytes()).hexdigest()
+    return f"sha256:{digest}"
 
 
 def _alias_warnings(model_id: str) -> list[str]:

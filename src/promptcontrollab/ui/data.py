@@ -177,6 +177,10 @@ def audit_detail_sections(audit: JsonDict) -> dict[str, list[JsonDict]]:
 
     return {
         "secret_findings": _dict_rows(audit.get("secret_findings")),
+        "secret_scanner": [{"value": str(audit.get("secret_scanner", "builtin"))}],
+        "sarif_path": [{"path": str(audit.get("sarif_path", ""))}]
+        if audit.get("sarif_path")
+        else [],
         "dependency_files_changed": _path_rows(audit.get("dependency_files_changed")),
         "lockfiles_changed": _path_rows(audit.get("lockfiles_changed")),
         "workflow_files_changed": _path_rows(audit.get("workflow_files_changed")),

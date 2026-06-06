@@ -204,6 +204,20 @@ def build_parser() -> argparse.ArgumentParser:
     model_parser.add_argument("--model", default=None, help="Declared model id, such as gpt-5.2.")
     model_parser.add_argument("--provider", default=None, help="Provider hint, such as openai.")
     model_parser.add_argument("--api-version", default=None, help="Optional API version string.")
+    model_parser.add_argument("--request-id", default=None, help="Provider request id, if known.")
+    model_parser.add_argument("--request-json", type=Path, default=None, help="Request JSON file.")
+    model_parser.add_argument("--request-sha256", default=None, help="Precomputed request hash.")
+    model_parser.add_argument("--response-sha256", default=None, help="Precomputed response hash.")
+    model_parser.add_argument(
+        "--provider-log-reference",
+        default=None,
+        help="Provider-side log or usage record reference.",
+    )
+    model_parser.add_argument(
+        "--signed-receipt",
+        default=None,
+        help="Provider signed receipt id or digest, if available.",
+    )
     model_parser.add_argument(
         "--verify",
         action="store_true",
@@ -266,6 +280,21 @@ def build_parser() -> argparse.ArgumentParser:
         choices=["true", "false"],
         default=None,
         help="Whether externally run tests passed.",
+    )
+    audit_parser.add_argument(
+        "--sarif",
+        type=Path,
+        default=None,
+        help="Optional SARIF output path.",
+    )
+    audit_parser.add_argument(
+        "--secret-scanner",
+        choices=["builtin", "gitleaks", "trufflehog"],
+        default="builtin",
+        help=(
+            "Secret scanner to use. builtin scans added diff lines; "
+            "gitleaks/trufflehog scan the current workspace."
+        ),
     )
     audit_parser.set_defaults(func=_cmd_audit_diff)
 
@@ -694,6 +723,12 @@ def _cmd_model_detect(args: argparse.Namespace) -> None:
         predictions_path=args.predictions,
         api_version=args.api_version,
         verify=args.verify,
+        request_id=args.request_id,
+        request_path=args.request_json,
+        request_sha256=args.request_sha256,
+        response_sha256=args.response_sha256,
+        provider_log_reference=args.provider_log_reference,
+        signed_receipt=args.signed_receipt,
     )
     payload = identity.to_json()
     print(json.dumps(payload, indent=2, ensure_ascii=False, sort_keys=True))
@@ -721,6 +756,8 @@ def _cmd_audit_diff(args: argparse.Namespace) -> None:
         tests_passed=_optional_bool(args.tests_passed),
         test_timeout=args.test_timeout,
         allow_shell_test_command=args.allow_shell_test_command,
+        sarif_path=args.sarif,
+        secret_scanner=args.secret_scanner,
     )
     print(f"Wrote audit artifacts to {args.out}")
     print(f"Human review required: {payload['human_review_required']}")

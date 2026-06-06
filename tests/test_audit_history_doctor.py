@@ -8,6 +8,7 @@ from pathlib import Path
 import pytest
 
 from promptcontrollab import doctor
+from promptcontrollab.audit_diff import _parse_external_secret_output
 from promptcontrollab.cli import main
 
 
@@ -311,6 +312,110 @@ def test_cli_audit_diff_reports_industrial_review_signals(tmp_path: Path) -> Non
     assert payload["secret_findings"][0]["path"] == "src/app.py"
     assert "sk-test-1234567890abcdef" not in json.dumps(payload["secret_findings"])
     assert payload["human_review_required"] is True
+
+
+def test_cli_audit_diff_writes_sarif(tmp_path: Path) -> None:
+    repo = _make_git_repo(tmp_path)
+    _write(repo / "src" / "app.py", "def existing() -> str:\n    return 'ok'\n")
+    _git(repo, "add", ".")
+    _git(repo, "commit", "-m", "initial")
+
+    _write(
+        repo / "src" / "app.py",
+        "def existing() -> str:\n    return 'changed'\nAPI_KEY = 'sk-test-1234567890abcdef'\n",
+    )
+    _git(repo, "add", ".")
+    _git(repo, "commit", "-m", "secret")
+
+    out = repo / "runs" / "audit"
+    sarif = out / "pcl.sarif"
+    assert (
+        main(
+            [
+                "audit-diff",
+                "--repo",
+                str(repo),
+                "--before",
+                "HEAD~1",
+                "--after",
+                "HEAD",
+                "--out",
+                str(out),
+                "--sarif",
+                str(sarif),
+            ]
+        )
+        == 0
+    )
+
+    payload = json.loads((out / "audit_result.json").read_text(encoding="utf-8"))
+    sarif_payload = json.loads(sarif.read_text(encoding="utf-8"))
+    assert payload["sarif_path"] == str(sarif)
+    assert payload["secret_scanner_scope"] == "added_diff_lines"
+    assert sarif_payload["version"] == "2.1.0"
+    assert sarif_payload["runs"][0]["results"]
+    assert "sk-test-1234567890abcdef" not in sarif.read_text(encoding="utf-8")
+
+
+def test_cli_audit_diff_missing_external_secret_scanner_is_clear(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    repo = _make_git_repo(tmp_path)
+    _write(repo / "src" / "app.py", "def existing() -> str:\n    return 'ok'\n")
+    _git(repo, "add", ".")
+    _git(repo, "commit", "-m", "initial")
+    _write(repo / "src" / "app.py", "def existing() -> str:\n    return 'changed'\n")
+    _git(repo, "add", ".")
+    _git(repo, "commit", "-m", "change")
+    monkeypatch.setattr("promptcontrollab.audit_diff.shutil.which", lambda _name: None)
+
+    assert (
+        main(
+            [
+                "audit-diff",
+                "--repo",
+                str(repo),
+                "--before",
+                "HEAD~1",
+                "--after",
+                "HEAD",
+                "--out",
+                str(repo / "runs" / "audit"),
+                "--secret-scanner",
+                "gitleaks",
+            ]
+        )
+        == 2
+    )
+
+    assert "Secret scanner `gitleaks` was not found" in capsys.readouterr().err
+
+
+def test_external_secret_parser_fully_redacts_gitleaks_secret() -> None:
+    output = json.dumps(
+        [
+            {
+                "File": "src/app.py",
+                "StartLine": 3,
+                "RuleID": "generic-api-key",
+                "Secret": "sk-test-1234567890abcdef",
+            }
+        ]
+    )
+
+    findings = _parse_external_secret_output("gitleaks", output)
+
+    assert findings == [
+        {
+            "path": "src/app.py",
+            "line": 3,
+            "kind": "generic-api-key",
+            "redacted": "***",
+            "scanner": "gitleaks",
+        }
+    ]
 
 
 def test_cli_history_index_and_compare(tmp_path: Path) -> None:

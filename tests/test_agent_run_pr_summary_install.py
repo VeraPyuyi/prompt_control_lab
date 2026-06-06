@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from importlib import resources
 from pathlib import Path
 from typing import Any, cast
 
@@ -495,6 +496,13 @@ def test_install_plugin_all_uses_target_as_root(tmp_path: Path) -> None:
     assert (target / "cursor" / "prompt_control_lab.mdc").exists()
     assert (target / "claude-code" / "prompt_guard.py").exists()
     assert (target / "github-action" / "prompt-control-lab-gate.yml").exists()
+
+
+def test_template_data_is_available_as_package_resource() -> None:
+    root = resources.files("promptcontrollab.template_data")
+
+    assert (root / "codex_skill" / "SKILL.md").is_file()
+    assert (root / "github_action" / "prompt-control-lab-gate.yml").is_file()
 
 
 class _FakeGithubClient:

@@ -23,9 +23,12 @@ prompt_control_lab 的核心思路是：每次运行都应该留下可复查的�
 
 ## `pcl model-detect` 输出
 
-记录 `provider`、`model_id`、`source`、`confidence`、可选的公开模型元数据，以及 warning。
+记录 `provider`、`model_id`、`source`、`confidence`、可选的公开模型元数据、`request_id`、
+`request_sha256`、`response_sha256`、`provider_log_reference`、`signed_receipt`、
+`provenance_level`、`provenance_evidence`，以及 warning。
 
 说明什么问题：这次运行是否留下了公开 model id 记录。它不能证明服务商隐藏的内部权重版本。
+签名收据字段只记录引用；当前工具不会验证 provider 签名。
 
 ## `model_drift.json`
 
@@ -39,6 +42,10 @@ prompt_control_lab 的核心思路是：每次运行都应该留下可复查的�
 dependency / lockfile / workflow 改动、删除的测试、generated 文件、脱敏后的 secret finding、危险路径、
 可能的 public API 改动、测试命令、测试状态、每条命令的 `test_results`（stdout/stderr 摘要和超时状态）、
 预期路径检查，以及是否需要人工复核。
+
+内置 secret scanner 会记录 `secret_scanner_scope: added_diff_lines`，表示只检查新增 diff 行。
+可选的 `gitleaks` / `trufflehog` 会记录 `secret_scanner_scope: workspace`，因为它们扫描当前工作区，
+可能报告不属于 `before` / `after` diff 的既有发现。
 
 说明什么问题：AI 编程 agent 执行后到底改了什么。如果没有提供 `--expected-path`，`unnecessary_file_edits` 会是 `null`，因为工具不会假装知道原始任务意图。
 

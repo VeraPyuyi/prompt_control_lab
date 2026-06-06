@@ -1,46 +1,51 @@
-# Agent Guard 真实试点 Case Study
+# Agent Guard 本地试点 Case Study
 
-这份文档记录 `pcl guard` 的 Codex 本地成对试点。
+这份文档记录 `pcl guard` 的第一版本地成对试点。
 
 ## 当前状态
 
-仓库目前还没有 20 条 `raw prompt` vs `pcl guard` 的成对任务记录。`D:\Vibe Research Projects`
-下面确实有真实 agent 历史 transcript，但它们不是同一批 coding 任务分别用 raw prompt 和 guarded
-prompt 各跑一次，因此不能直接用来计算成功率提升。
-
-所以 README 现在不能发布“成功率提升”数字。
-
-## 数据文件
-
-试点数据会保存在：
+仓库现在已经包含 20 条 **preflight** 成对记录，保存在：
 
 ```text
 docs/case_studies/agent_guard_pilot.csv
 ```
 
-每一行表示一个 Codex 本地 coding 任务，并且同一任务运行两次：
+每一行都包含一个原始 coding prompt，以及通过下面命令得到的 guarded prompt：
 
-- 原始 prompt 直接交给 agent
-- 使用 `pcl guard --profile coding --token-mode balanced` 得到 guarded prompt 后再交给 agent
+```bash
+pcl guard --profile coding --policy examples/guard.policy.yaml --token-mode balanced
+```
+
+这还不是 raw-agent vs guarded-agent 的真实成功率 benchmark。因为本批次没有让同一个 agent
+对同一任务分别执行 raw prompt 和 guarded prompt，所以 `*_success`、`*_tests_passed`、
+`*_touched_files` 和人工纠偏字段都标记为 `not_run`。
+
+这批数据能说明的是：`pcl guard` 如何改写 prompt、估算 token、标注风险类别和策略违规。
+
+## 数据文件
 
 公开 CSV 只保存摘要和指标，不公开完整私密 prompt。
+
+```text
+docs/case_studies/agent_guard_pilot.csv
+```
 
 ## 指标口径
 
 | 指标 | 定义 |
 |---|---|
-| `raw_success` / `guarded_success` | 任务完成且相关验证通过时为 `true` |
-| `raw_tests_passed` / `guarded_tests_passed` | 预期测试或验收检查通过时为 `true` |
-| `*_touched_files` | 本次运行修改的文件数量 |
-| `*_unnecessary_file_edits` | 不属于任务、测试、文档或格式要求的误改文件数 |
-| `*_human_corrections` | 人类为了限定范围、要求补测或撤回跑偏改动而追加的纠偏轮次 |
-| `*_prompt_tokens` | 不依赖外部 tokenizer 的 prompt token 估算，不等同于模型计费 token |
+| `raw_success` / `guarded_success` | 本批 preflight 试点中为 `not_run`，留给未来真实 agent 双跑 |
+| `raw_tests_passed` / `guarded_tests_passed` | 本批 preflight 试点中为 `not_run` |
+| `*_touched_files` | 只有真实 agent 修改仓库后才记录 |
+| `*_unnecessary_file_edits` | 只有真实 agent 双跑后才记录 |
+| `*_human_corrections` | 只有真实 agent 双跑后才记录 |
+| `*_prompt_tokens` | 不依赖外部 tokenizer 的估算 prompt token，不等于模型计费 token |
+| `notes` | guard action、风险等级、风险类别和策略违规数量 |
 
 ## 发布规则
 
-只有当 CSV 至少包含 20 条成对任务记录，并且 README 汇总表可以从 CSV 重新计算出来时，
-才在 README 发布真实结果表。在此之前，README 只说明试点正在进行。
+README 可以发布 preflight pilot 表，因为它可以从 20 条 CSV 重新计算。
+但在同一批任务完成 raw prompt 和 guarded prompt 的真实 agent 双跑前，README 不能发布“任务成功率提升”数字。
 
-发布结果表时必须保留这句限制：
-
-> 这是一个小样本 Codex 本地试点，不是通用 benchmark。它只说明 guard 在这批任务上的表现。
+> 这是一个小样本本地 preflight 试点，不是通用 benchmark。它说明 `pcl guard`
+> 在这批任务上如何改写和分类 prompt，不证明 agent 任务成功率一定提升。

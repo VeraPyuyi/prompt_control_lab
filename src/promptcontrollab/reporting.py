@@ -216,6 +216,7 @@ def _model_identity_lines(manifest: JsonDict) -> list[str]:
         lines.append(f"- Model: `{_model_label(model)}`")
         lines.append(f"- Model source: `{model.get('source', 'unknown')}`")
         lines.append(f"- Model verified: `{model.get('verified', False)}`")
+        lines.append(f"- Provenance level: `{model.get('provenance_level', 'unknown')}`")
 
     baseline = manifest.get("baseline_model")
     candidate = manifest.get("candidate_model")
@@ -224,6 +225,12 @@ def _model_identity_lines(manifest: JsonDict) -> list[str]:
         candidate_dict = candidate if isinstance(candidate, dict) else {}
         lines.append(f"- Baseline model: `{_model_label(baseline_dict)}`")
         lines.append(f"- Candidate model: `{_model_label(candidate_dict)}`")
+        lines.append(
+            f"- Baseline provenance level: `{baseline_dict.get('provenance_level', 'unknown')}`"
+        )
+        lines.append(
+            f"- Candidate provenance level: `{candidate_dict.get('provenance_level', 'unknown')}`"
+        )
 
     warnings = manifest.get("model_warnings", [])
     if isinstance(warnings, list):

@@ -26,10 +26,18 @@ What it explains: which exact examples passed or failed.
 ## `pcl model-detect` output
 
 Stores `provider`, `model_id`, `source`, `confidence`, optional public metadata such as
-`created` and `owned_by`, and warnings.
+`created` and `owned_by`, request evidence such as `request_id`, `request_sha256`,
+`response_sha256`, optional `provider_log_reference`, optional `signed_receipt`,
+`provenance_level`, `provenance_evidence`, and warnings.
 
 What it explains: whether the artifacts record the public model id used for a run. It does not
 prove a provider's hidden internal weight build.
+
+Provenance levels are explicit: user-declared model id, observed response/prediction model id,
+provider metadata verification, provider-log reference recorded, and signed-receipt reference
+recorded. The signed-receipt field records a reference only; this tool does not verify provider
+signatures. Most public APIs do not expose a signed model receipt, so this is audit evidence
+rather than hidden-weight proof.
 
 ## `model_drift.json`
 
@@ -46,6 +54,11 @@ files, redacted secret findings, dangerous paths, possible public API changes, t
 test status, per-command `test_results` with stdout/stderr snippets and timeout state,
 expected-path checks, and whether human review is required.
 
+The built-in secret scanner records `secret_scanner_scope: added_diff_lines`. Optional external
+scanners such as `gitleaks` and `trufflehog` record `secret_scanner_scope: workspace`, because
+they scan the current workspace and may report pre-existing findings outside the requested
+`before`/`after` diff.
+
 What it explains: what an AI coding agent changed after it ran. If `--expected-path` is not
 provided, `unnecessary_file_edits` is `null` because the tool does not pretend to know the
 original task intent.
@@ -56,6 +69,14 @@ Stores a readable summary of `audit_result.json`.
 
 What it explains: which files changed, which risk signals were found, and what a reviewer should
 look at first.
+
+## `pcl.sarif`
+
+Optionally written by `pcl audit-diff --sarif runs/audit/pcl.sarif`.
+
+What it explains: the same high-signal audit findings in a GitHub Code Scanning compatible shape:
+secret-like added lines, dangerous paths, workflow changes, dependency changes, deleted tests, and
+public API-like changes.
 
 ## `history_index.json`
 

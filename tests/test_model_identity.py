@@ -26,6 +26,7 @@ def test_detect_model_identity_from_openai_response(tmp_path: Path) -> None:
     assert identity.model_id == "gpt-5.2"
     assert identity.source == "response.model"
     assert identity.confidence == "high"
+    assert identity.provenance_level == "level_1_observed_in_response"
 
 
 def test_detect_model_identity_from_anthropic_nested_response(tmp_path: Path) -> None:
@@ -56,6 +57,38 @@ def test_model_detect_cli_writes_json_from_response(
     saved = json.loads(out.read_text(encoding="utf-8"))
     assert payload["model_id"] == "gpt-4o"
     assert saved["provider"] == "openai"
+    assert saved["provenance_level"] == "level_1_observed_in_response"
+    assert saved["response_sha256"].startswith("sha256:")
+
+
+def test_model_detect_cli_records_provider_log_and_signed_receipt(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    response = tmp_path / "response.json"
+    response.write_text(json.dumps({"model": "gpt-5.2"}), encoding="utf-8")
+
+    assert (
+        main(
+            [
+                "model-detect",
+                "--response",
+                str(response),
+                "--provider-log-reference",
+                "usage-log:req_123",
+                "--signed-receipt",
+                "receipt-sha256:abc",
+            ]
+        )
+        == 0
+    )
+
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["provenance_level"] == "level_4_signed_receipt_recorded"
+    evidence_types = {item["type"] for item in payload["provenance_evidence"]}
+    assert {"provider_log_reference", "signed_receipt_reference", "response_sha256"}.issubset(
+        evidence_types
+    )
 
 
 def test_eval_manifest_records_model_from_predictions(tmp_path: Path) -> None:

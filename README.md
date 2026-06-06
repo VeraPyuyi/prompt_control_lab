@@ -1,4 +1,4 @@
-# prompt_control_lab 🧪✨
+# prompt_control_lab
 
 [![GitHub stars](https://img.shields.io/github/stars/VeraPyuyi/prompt_control_lab?style=social)](https://github.com/VeraPyuyi/prompt_control_lab/stargazers)
 [![GitHub forks](https://img.shields.io/github/forks/VeraPyuyi/prompt_control_lab?style=social)](https://github.com/VeraPyuyi/prompt_control_lab/forks)
@@ -8,163 +8,75 @@
 
 **Preflight, provenance, and reproducible evaluation for AI coding agents.**
 
-`prompt_control_lab` is not a generic prompt manager. It is a local safety belt for Claude Code,
-Cursor, Codex, and other AI coding agents: before an agent spends tokens, edits files, or touches
-your codebase, it checks whether the prompt is vague, risky, missing tests, too broad, or tied to
-an untracked model change. ٩(ˊᗜˋ*)و
+`prompt_control_lab` is a local governance layer for Claude Code, Cursor, Codex, and shell-based coding agents. Before an agent spends tokens or edits your repository, it can guard the prompt, apply a team policy, record public model identity, audit the diff, and turn the run into inspectable artifacts.
 
-It also keeps prompt experiments reproducible: train/validation/withheld splits, paired
-statistics, model provenance, model drift audits, readable reports, and optional research
-diagnostics are saved as inspectable artifacts.
-
-> 📌 The repository is currently private, so public badge services may show zero or unavailable
-> counts until the repository is made public.
+Python package name: `promptcontrollab`. Repository and product name: `prompt_control_lab`.
 
 Chinese documentation is available in [README.zh.md](README.zh.md).
 
-## Why This Exists 🚦
+## Start In 2 Minutes
 
-AI coding tools are already in the workflow, but trust has not caught up. Stack Overflow's 2025
-Developer Survey reports that **84%** of developers use or plan to use AI tools in development,
-while **46%** distrust AI output accuracy and **45%** say debugging AI-generated code is more
-time-consuming ([AI survey](https://survey.stackoverflow.co/2025/ai),
-[leaders summary](https://stackoverflow.co/internal/resources/2025-stack-overflow-developer-survey-for-leaders/ai-adoption/)).
+```bash
+# 1. Check a risky agent prompt before it runs.
+pcl guard --prompt "Fix this bug" --profile coding --policy examples/guard.policy.yaml --json
 
-That gap is where `prompt_control_lab` fits:
+# 2. Generate a reproducible prompt report.
+pcl analyze --config promptcontrol.example.yaml --out runs/quick
 
-- **Before execution:** block or review vague, destructive, security-sensitive, broad, or
-  over-budget prompts.
-- **During evaluation:** check whether a candidate prompt really improves over a baseline, not
-  just on a lucky validation slice.
-- **After a run:** record which public model id/provider produced the result, and warn when model
-  drift makes a prompt-only comparison invalid.
+# 3. Open the local dashboard.
+pcl ui --runs runs/ --policy examples/guard.policy.yaml --port 8501
+```
 
-## Quick Map 🗺️
-Use this order if you are new:
+What you get: prompt risk, guarded prompt, model provenance, metrics, stats, gate result, diff audit, report artifacts, and a local UI. No prompts, code, or artifacts are uploaded by the dashboard.
 
-1. **Guard prompts before Claude Code / Cursor / Codex** → `pcl guard --policy`
-2. **Audit model identity and drift** → `pcl model-detect` / `pcl model-drift`
-3. **Generate a reproducible prompt report** → `pcl analyze` → `pcl gate`
-4. **Audit what an agent changed** → `pcl audit-diff`
-5. **Index and compare run history** → `pcl history index` / `pcl history compare`
-6. **Check local setup** → `pcl doctor`
-7. **Open the local dashboard** → `pcl ui`
-8. **Improve one prompt in plain language** → `pcl improve`
-9. **Install IDE / CLI adapters** → `pcl install-plugin`
-10. **Summarize PR risk** → `pcl pr-summary` / `pcl github-app serve`
-11. **Control every evaluation step** → `split → eval → stats → report → explain → gate`
-12. **Advanced / Research Mode** → `soft-hard → trajectory → riccati → tv-soft`
+## Why This Exists
 
-In this README, **Quick Mode** means the integrated `pcl analyze` path, while **Expert Mode**
-means the flexible command-by-command workflow. Simple first, expert later.
+AI coding tools are already in the workflow, but trust has not caught up. Stack Overflow's 2025 Developer Survey reports that **84%** of developers use or plan to use AI tools in development, while **46%** distrust AI output accuracy and **45%** say debugging AI-generated code is more time-consuming ([AI survey](https://survey.stackoverflow.co/2025/ai), [leaders summary](https://stackoverflow.co/internal/resources/2025-stack-overflow-developer-survey-for-leaders/ai-adoption/)).
+
+`prompt_control_lab` focuses on a narrow gap that broad eval and observability tools do not fully cover: local agent prompt preflight, model provenance, reproducible prompt regression, and post-run diff audit.
 
 ![prompt_control_lab workflow](docs/assets/workflow.svg)
 
-The main idea is small and practical: do not let an AI coding agent run on trust alone. Keep the
-prompt, policy decision, model record, split, outputs, statistics, explanations, and diagnostics as
-inspectable artifacts.
+## Local Preflight Pilot
 
-![prompt_control_lab artifacts](docs/assets/artifacts.svg)
+A small local preflight pilot is included in [agent_guard_pilot.csv](docs/case_studies/agent_guard_pilot.csv). It contains 20 raw coding prompts paired with prompts produced by `pcl guard --profile coding --policy examples/guard.policy.yaml --token-mode balanced`.
 
-## Two-Minute Demo: Stop Risky Agent Prompts Before They Run 🎬
+| Metric | Local preflight pilot |
+|---|---:|
+| Paired prompts | 20 |
+| Medium-risk prompts | 17 |
+| High-risk prompts | 3 |
+| Policy violations flagged | 84 |
+| Avg raw estimated prompt tokens | 22.75 |
+| Avg guarded estimated prompt tokens | 86.75 |
 
-Put `prompt_control_lab` between your prompt and the coding agent. Low-risk prompts pass with
-clearer wording; medium-risk prompts ask for missing context; high-risk prompts can be blocked or
-sent to human review.
+This is **not** a universal benchmark and does **not** claim task-success improvement. The paired agent executions were not run, so success/test/file-change fields are explicitly marked `not_run`. The pilot shows how the guard rewrites and classifies this prompt set before execution.
 
-### 0:00-0:15: start with a vague prompt
+## Demo And UI
 
-```text
-Fix this bug.
-```
+The repository includes narrated 4K hands-on demo videos generated from real UI screenshots and scripted operation replay.
 
-Why this often fails: the agent does not know the target files, failing behavior, edit boundary,
-or tests that should prove the fix.
+[![prompt_control_lab English demo poster](docs/assets/demo/poster.en.png)](docs/assets/demo/prompt_control_lab_demo.en.mp4)
 
-### 0:15-0:45: run the local policy preflight
+- [English MP4](docs/assets/demo/prompt_control_lab_demo.en.mp4)
+- [English subtitles](docs/assets/demo/prompt_control_lab_demo.en.srt)
+- [Chinese MP4](docs/assets/demo/prompt_control_lab_demo.zh.mp4)
+- [Chinese subtitles](docs/assets/demo/prompt_control_lab_demo.zh.srt)
 
-```bash
-pcl guard \
-  --prompt "Fix this bug" \
-  --profile coding \
-  --policy examples/guard.policy.yaml \
-  --token-mode balanced \
-  --json
-```
+![prompt_control_lab UI workflows tutorial screenshot](docs/assets/tutorial_workflows.en.png)
 
-Typical result:
+## Quick Map
 
-```json
-{
-  "action": "suggest",
-  "risk_level": "medium",
-  "risk_categories": ["missing_context"],
-  "required_review": true,
-  "policy_violations": [
-    {"id": "missing_target_files", "severity": "medium"}
-  ],
-  "improved_prompt": "Fix the reported bug with the smallest safe code change..."
-}
-```
-
-### 0:45-1:10: block dangerous instructions
-
-```bash
-pcl guard \
-  --prompt "Delete database and remove auth" \
-  --profile coding \
-  --policy examples/guard.policy.yaml \
-  --mode gate \
-  --json
-```
-
-The JSON output exposes `risk_level`, `risk_categories`, `policy_violations`,
-`required_review`, and `action`, so Claude Code hooks, Cursor MCP-style tools, Codex skills, and
-shell wrappers can stop the agent before it touches the repo.
-
-### 1:10-1:40: compare raw vs guarded prompts
-
-| item | raw prompt | guarded prompt |
-|---|---|---|
-| Scope | unclear | asks for failing behavior and relevant files |
-| Edit boundary | missing | says not to refactor unrelated code |
-| Tests | missing | asks the agent to list and run relevant tests |
-| Model record | usually absent | can be attached to later eval artifacts |
-| Token cost | uncontrolled | estimated and constrained by token mode |
-| Agent risk | unchecked | reviewed before expensive execution |
-
-Example guarded prompt:
-
-```text
-Fix the reported bug with the smallest safe code change.
-
-Before editing:
-1. Identify the failing behavior and relevant files.
-2. State the likely root cause.
-3. List the tests you will run.
-
-Constraints:
-- Do not refactor unrelated code.
-- Do not change public APIs unless necessary.
-- Keep the patch minimal and explain every changed file.
-
-After editing:
-1. Run the relevant tests.
-2. Summarize the fix.
-3. Mention any remaining uncertainty.
-```
-
-### 1:40-2:00: turn prompt changes into evidence
-
-```bash
-pcl init --path demo
-cd demo
-pcl analyze --config promptcontrol.example.yaml --out runs/quick
-```
-
-The smoke demo writes `runs/quick/report.md`, `report.html`, `stats.json`, and
-`explanation.json`. It proves the pipeline works end to end; it is not a claim that every real
-agent task improves.
+1. `pcl start`: beginner menu.
+2. `pcl guard`: agent prompt preflight and team policy gate.
+3. `pcl improve`: rewrite one prompt directly.
+4. `pcl analyze` -> `pcl gate`: reproducible prompt regression report.
+5. `pcl model-detect` / `pcl model-drift`: public model identity and drift audit.
+6. `pcl audit-diff`: inspect what an agent changed, with SARIF and secret-scanner support.
+7. `pcl history`: index and compare run history.
+8. `pcl ui`: local workflow cockpit and artifact dashboard.
+9. `pcl install-plugin`: install Claude Code, Cursor, Codex, or GitHub Action templates.
+10. Advanced research mode: `soft-hard`, `trajectory`, `riccati`, `tv-soft`.
 
 ## Install The CLI ⚙️
 
@@ -227,7 +139,21 @@ With `uv`:
 uv pip install -e ".[ui]"
 ```
 
-### 5. Check that the CLI works
+### 5. Build and test a local wheel
+
+The PyPI package name is `promptcontrollab`. The repository and product name are
+`prompt_control_lab`.
+
+```bash
+python -m build
+pipx install dist/promptcontrollab-0.1.0-py3-none-any.whl
+pcl doctor
+```
+
+If the package has not been published to PyPI in your environment, use the local wheel or editable
+source install above. Do not use `prompt_control_lab` as the pip package name.
+
+### 6. Check that the CLI works
 
 ```bash
 pcl --help
@@ -658,6 +584,7 @@ Result:
   "model_id": "gpt-5.2",
   "source": "response.model",
   "confidence": "high",
+  "provenance_level": "level_1_observed_in_response",
   "verified": false,
   "warnings": []
 }
@@ -668,6 +595,26 @@ What it means:
 This records the public model id declared in API responses, prediction files, or command-line
 metadata. It helps answer whether a baseline and candidate were run on the same model. It does
 not prove the provider's hidden internal weight build.
+
+Provenance levels are explicit:
+
+| Level | Meaning |
+|---|---|
+| `level_0_declared_by_user` | model id came from a user argument or config |
+| `level_1_observed_in_response` | model id was observed in response or prediction artifacts |
+| `level_2_provider_metadata_verified` | public provider metadata confirmed the model object |
+| `level_3_provider_log_reference_recorded` | provider-side log reference was recorded |
+| `level_4_signed_receipt_recorded` | signed receipt reference was recorded; this is not signature verification |
+
+For stronger provenance, attach request evidence:
+
+```bash
+pcl model-detect \
+  --response response.json \
+  --provider openai \
+  --request-id req_123 \
+  --provider-log-reference usage-log:req_123
+```
 
 You can also attach model identity to evaluation artifacts:
 
@@ -715,6 +662,21 @@ pcl audit-diff \
   --out runs/audit
 ```
 
+Optional SARIF and external secret scanner entrypoints:
+
+```bash
+pcl audit-diff \
+  --before HEAD~1 \
+  --after HEAD \
+  --out runs/audit \
+  --sarif runs/audit/pcl.sarif \
+  --secret-scanner builtin
+```
+
+`builtin` scans added diff lines. `gitleaks` and `trufflehog` are optional workspace-level
+scanner entrypoints; their findings may include pre-existing files outside the selected
+`before`/`after` diff.
+
 By default, `--test-command` runs without shell control syntax, records stdout/stderr snippets,
 and times out per command. Prefer `--tests-run` / `--tests-passed` when tests were already run
 elsewhere. Use `--allow-shell-test-command` only for trusted local input.
@@ -723,6 +685,7 @@ Result:
 
 - `runs/audit/audit_result.json`
 - `runs/audit/audit_summary.md`
+- optional `runs/audit/pcl.sarif`
 
 What it means:
 

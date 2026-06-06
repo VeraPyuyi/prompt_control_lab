@@ -1,27 +1,27 @@
-# Agent Guard Pilot Case Study
+# Agent Guard Local Pilot Case Study
 
-This file tracks the planned paired Codex local pilot for `pcl guard`.
+This file records the first local paired pilot for `pcl guard`.
 
 ## Current status
 
-The repository does not yet contain 20 paired `raw prompt` vs `pcl guard` task records. The
-available historical transcripts under `D:\Vibe Research Projects` are real agent logs, but they
-do not contain the same coding tasks run once with a raw prompt and once with a guarded prompt.
+The repository now contains 20 paired **preflight** records in
+`docs/case_studies/agent_guard_pilot.csv`. Each row uses a raw coding prompt and the guarded
+prompt produced by:
 
-Because of that, the README must not publish success-rate improvement numbers yet.
+```bash
+pcl guard --profile coding --policy examples/guard.policy.yaml --token-mode balanced
+```
+
+This is not yet a raw-agent vs guarded-agent success-rate benchmark. The `*_success`,
+`*_tests_passed`, `*_touched_files`, and correction fields are marked `not_run` because the paired
+agent executions were not performed. The pilot measures prompt preflight behavior, token estimates,
+and the shape of the guarded prompt.
 
 ## Data file
-
-The pilot dataset will live in:
 
 ```text
 docs/case_studies/agent_guard_pilot.csv
 ```
-
-Each row is one local Codex coding task run twice:
-
-- raw prompt sent directly to the agent
-- guarded prompt produced by `pcl guard --profile coding --token-mode balanced`
 
 The public CSV stores summaries and metrics, not private full prompts.
 
@@ -29,18 +29,19 @@ The public CSV stores summaries and metrics, not private full prompts.
 
 | Metric | Definition |
 |---|---|
-| `raw_success` / `guarded_success` | `true` when the task was completed and the relevant verification passed |
-| `raw_tests_passed` / `guarded_tests_passed` | `true` when the expected test or acceptance check passed |
-| `*_touched_files` | number of files changed during the run |
-| `*_unnecessary_file_edits` | changed files outside the task, test, doc, or formatting scope |
-| `*_human_corrections` | human turns needed to narrow scope, request missing tests, or undo off-target work |
+| `raw_success` / `guarded_success` | `not_run` in this preflight pilot; reserved for future paired agent execution |
+| `raw_tests_passed` / `guarded_tests_passed` | `not_run` in this preflight pilot |
+| `*_touched_files` | `not_run` until an actual agent modifies the repository |
+| `*_unnecessary_file_edits` | `not_run` until paired agent executions are available |
+| `*_human_corrections` | `not_run` until paired agent executions are available |
 | `*_prompt_tokens` | dependency-free prompt-token estimate, not model billing tokens |
+| `notes` | guard action, risk level, risk categories, and policy-violation count |
 
 ## Publication rule
 
-Publish a README result table only after at least 20 paired rows exist and the summary can be
-recomputed from the CSV. Until then, the README should say that the pilot is in progress.
+The README may publish the preflight pilot table because it can be recomputed from 20 CSV rows.
+It must not publish task-success improvement numbers until the same tasks are executed once with
+raw prompts and once with guarded prompts.
 
-When the table is published, include this limitation:
-
-> This is a small local Codex pilot, not a universal benchmark. It shows how the guard behaved on this task set.
+> This is a small local preflight pilot, not a universal benchmark. It shows how `pcl guard`
+> rewrote and classified this task set; it does not prove agent task-success improvement.

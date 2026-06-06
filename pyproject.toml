@@ -52,6 +52,7 @@ bot = [
   "PyJWT[crypto]>=2.8"
 ]
 dev = [
+  "build>=1.2",
   "hatchling>=1.24",
   "mypy>=1.10",
   "numpy>=1.24",
