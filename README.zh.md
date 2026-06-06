@@ -37,7 +37,7 @@ AI 编程工具已经进入开发工作流，但信任还没有完全跟上。St
 
 ![prompt_control_lab 工作流](docs/assets/workflow.zh.svg)
 
-## 本地 Preflight 试点
+## 本地 Case Study
 
 仓库包含一个小样本本地 preflight 试点：[agent_guard_pilot.csv](docs/case_studies/agent_guard_pilot.csv)。它记录 20 条原始 coding prompt，以及通过 `pcl guard --profile coding --policy examples/guard.policy.yaml --token-mode balanced` 得到的 guarded prompt。
 
@@ -51,6 +51,19 @@ AI 编程工具已经进入开发工作流，但信任还没有完全跟上。St
 | guarded prompt 平均估算 token | 86.75 |
 
 这不是通用 benchmark，也不声称任务成功率提升。本批次没有执行 raw-agent vs guarded-agent 双跑，所以成功率、测试、文件改动字段都明确标记为 `not_run`。它说明的是：guard 在执行前如何改写和分类这批 prompt。
+
+仓库还包含一个真实成对试点：[agent_guard_paired_pilot.csv](docs/case_studies/agent_guard_paired_pilot.csv)。它让本地 Codex 对每个任务运行两次：一次使用 raw prompt，一次使用 guarded prompt，并且两侧都从同一个干净 fixture repo 开始。
+
+| 指标 | Raw agent | Guarded agent |
+|---|---:|---:|
+| 完成任务 | 6/6 | 6/6 |
+| 测试通过 | 6/6 | 6/6 |
+| 平均触碰文件数 | 1.17 | 1.17 |
+| 非预期文件改动总数 | 1 | 1 |
+| 平均估算 prompt token | 5.17 | 83.17 |
+| 平均耗时秒数 | 149.02 | 114.36 |
+
+解读：在这组小型 fixture 任务里，guarded prompt **没有提升成功率**，因为 raw Codex 已经完成全部 6 个任务；guarded prompt 在本次样本中平均更快，但 prompt token 用量更多。完整说明见 [agent_guard_paired_pilot.zh.md](docs/case_studies/agent_guard_paired_pilot.zh.md)。
 
 ## 安装
 
@@ -154,6 +167,7 @@ pcl install-plugin github-action
 - [创新点和贡献](docs/innovation.zh.md)
 - [决策指南](docs/decision_guide.zh.md)
 - [Agent guard 试点 case study](docs/case_studies/agent_guard_pilot.zh.md)
+- [真实成对 agent 试点 case study](docs/case_studies/agent_guard_paired_pilot.zh.md)
 
 ## License
 

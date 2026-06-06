@@ -1,7 +1,8 @@
 import csv
+import json
 from pathlib import Path
 
-EXPECTED_AGENT_GUARD_FIELDS = [
+BASE_AGENT_GUARD_FIELDS = [
     "task_id",
     "agent",
     "task_type",
@@ -19,16 +20,23 @@ EXPECTED_AGENT_GUARD_FIELDS = [
     "guarded_human_corrections",
     "raw_prompt_tokens",
     "guarded_prompt_tokens",
+]
+
+PREFLIGHT_FIELDS = [*BASE_AGENT_GUARD_FIELDS, "notes"]
+PAIRED_FIELDS = [
+    *BASE_AGENT_GUARD_FIELDS,
+    "raw_duration_seconds",
+    "guarded_duration_seconds",
     "notes",
 ]
 
 
-def test_agent_guard_pilot_schema_and_no_unsupported_readme_claims() -> None:
+def test_agent_guard_preflight_pilot_schema_and_claims() -> None:
     csv_path = Path("docs/case_studies/agent_guard_pilot.csv")
     reader = csv.DictReader(csv_path.read_text(encoding="utf-8").splitlines())
     rows = list(reader)
 
-    assert reader.fieldnames == EXPECTED_AGENT_GUARD_FIELDS
+    assert reader.fieldnames == PREFLIGHT_FIELDS
     assert len(rows) >= 20
     assert all(row["raw_success"] == "not_run" for row in rows)
     assert all(row["guarded_success"] == "not_run" for row in rows)
@@ -38,9 +46,35 @@ def test_agent_guard_pilot_schema_and_no_unsupported_readme_claims() -> None:
 
     readme = Path("README.md").read_text(encoding="utf-8")
     readme_zh = Path("README.zh.md").read_text(encoding="utf-8")
-    assert "task success rate | TBD" not in readme
-    assert "任务成功率 | TBD" not in readme_zh
-    assert "Completed tasks |" not in readme
-    assert "完成任务数 |" not in readme_zh
     assert "small local preflight pilot" in readme
     assert "小样本本地 preflight 试点" in readme_zh
+    assert "does **not** claim task-success improvement" in readme
+    assert "不声称任务成功率提升" in readme_zh
+
+
+def test_agent_guard_paired_pilot_schema_and_readme_numbers() -> None:
+    csv_path = Path("docs/case_studies/agent_guard_paired_pilot.csv")
+    summary_path = Path("docs/case_studies/agent_guard_paired_pilot.summary.json")
+    reader = csv.DictReader(csv_path.read_text(encoding="utf-8").splitlines())
+    rows = list(reader)
+    summary = json.loads(summary_path.read_text(encoding="utf-8"))
+
+    assert reader.fieldnames == PAIRED_FIELDS
+    assert len(rows) == 6
+    assert summary["sample_size"] == len(rows)
+    assert summary["raw_success"] == sum(row["raw_success"] == "true" for row in rows)
+    assert summary["guarded_success"] == sum(row["guarded_success"] == "true" for row in rows)
+    assert summary["raw_tests_passed"] == sum(row["raw_tests_passed"] == "true" for row in rows)
+    assert summary["guarded_tests_passed"] == sum(
+        row["guarded_tests_passed"] == "true" for row in rows
+    )
+    assert all("real Codex paired pilot" in row["notes"] for row in rows)
+
+    readme = Path("README.md").read_text(encoding="utf-8")
+    readme_zh = Path("README.zh.md").read_text(encoding="utf-8")
+    assert "Completed tasks | 6/6 | 6/6" in readme
+    assert "Tests passed | 6/6 | 6/6" in readme
+    assert "guarded prompts did **not** improve success rate" in readme
+    assert "完成任务 | 6/6 | 6/6" in readme_zh
+    assert "测试通过 | 6/6 | 6/6" in readme_zh
+    assert "没有提升成功率" in readme_zh

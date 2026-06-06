@@ -37,7 +37,7 @@ AI coding tools are already in the workflow, but trust has not caught up. Stack 
 
 ![prompt_control_lab workflow](docs/assets/workflow.svg)
 
-## Local Preflight Pilot
+## Local Case Studies
 
 A small local preflight pilot is included in [agent_guard_pilot.csv](docs/case_studies/agent_guard_pilot.csv). It contains 20 raw coding prompts paired with prompts produced by `pcl guard --profile coding --policy examples/guard.policy.yaml --token-mode balanced`.
 
@@ -51,6 +51,19 @@ A small local preflight pilot is included in [agent_guard_pilot.csv](docs/case_s
 | Avg guarded estimated prompt tokens | 86.75 |
 
 This is **not** a universal benchmark and does **not** claim task-success improvement. The paired agent executions were not run, so success/test/file-change fields are explicitly marked `not_run`. The pilot shows how the guard rewrites and classifies this prompt set before execution.
+
+A second, real paired pilot is included in [agent_guard_paired_pilot.csv](docs/case_studies/agent_guard_paired_pilot.csv). It runs local Codex twice per task from the same fresh fixture repo: once with the raw prompt and once with the guarded prompt.
+
+| Metric | Raw agent | Guarded agent |
+|---|---:|---:|
+| Completed tasks | 6/6 | 6/6 |
+| Tests passed | 6/6 | 6/6 |
+| Average touched files | 1.17 | 1.17 |
+| Total unexpected file edits | 1 | 1 |
+| Average estimated prompt tokens | 5.17 | 83.17 |
+| Average duration seconds | 149.02 | 114.36 |
+
+Interpretation: in this small fixture set, guarded prompts did **not** improve success rate because raw Codex already solved all six tasks. They did run faster on average in this sample, but used more prompt tokens. See the full notes in [agent_guard_paired_pilot.en.md](docs/case_studies/agent_guard_paired_pilot.en.md).
 
 ## Demo And UI
 
@@ -856,6 +869,7 @@ practical engineering value is the guard/policy/model-audit workflow around real
 - [Tutorial](docs/tutorial.en.md)
 - [Artifacts](docs/artifacts.en.md)
 - [Agent guard pilot case study](docs/case_studies/agent_guard_pilot.en.md)
+- [Real paired agent pilot case study](docs/case_studies/agent_guard_paired_pilot.en.md)
 - [Innovation and Contribution](docs/innovation.en.md)
 - [Decision Guide](docs/decision_guide.en.md)
 - [Plugin adapters](plugins/)

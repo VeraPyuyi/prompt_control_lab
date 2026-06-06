@@ -1,0 +1,572 @@
+"""Run a small real raw-agent vs guarded-agent paired Codex pilot.
+
+This script intentionally uses isolated temporary repositories. It never asks Codex to edit the
+PromptControlLab repository itself.
+"""
+
+from __future__ import annotations
+
+import argparse
+import csv
+import json
+import os
+import shutil
+import subprocess
+import sys
+import time
+from dataclasses import dataclass
+from pathlib import Path
+from typing import Any
+
+REPO_ROOT = Path(__file__).resolve().parents[1]
+SRC_ROOT = REPO_ROOT / "src"
+if str(SRC_ROOT) not in sys.path:
+    sys.path.insert(0, str(SRC_ROOT))
+
+JsonDict = dict[str, Any]
+
+
+@dataclass(frozen=True)
+class PilotTask:
+    task_id: str
+    task_type: str
+    raw_prompt: str
+    files: dict[str, str]
+    expected_paths: tuple[str, ...]
+    test_command: str = "python -m pytest -q"
+
+
+TASKS: tuple[PilotTask, ...] = (
+    PilotTask(
+        task_id="paired-001",
+        task_type="math-bugfix",
+        raw_prompt="Fix the failing test.",
+        expected_paths=("src/pilot_app/math_utils.py",),
+        files={
+            "src/pilot_app/__init__.py": "",
+            "src/pilot_app/math_utils.py": "def add(a: int, b: int) -> int:\n    return a - b\n",
+            "tests/test_math_utils.py": (
+                "from pilot_app.math_utils import add\n\n\n"
+                "def test_adds_two_numbers() -> None:\n"
+                "    assert add(2, 3) == 5\n"
+            ),
+        },
+    ),
+    PilotTask(
+        task_id="paired-002",
+        task_type="string-bugfix",
+        raw_prompt="Make the failing slug test pass.",
+        expected_paths=("src/pilot_app/text_utils.py",),
+        files={
+            "src/pilot_app/__init__.py": "",
+            "src/pilot_app/text_utils.py": (
+                "def slugify(text: str) -> str:\n"
+                "    return text.strip().replace(' ', '-')\n"
+            ),
+            "tests/test_text_utils.py": (
+                "from pilot_app.text_utils import slugify\n\n\n"
+                "def test_slugify_lowercases_and_collapses_spaces() -> None:\n"
+                "    assert slugify(' Hello   World ') == 'hello-world'\n"
+            ),
+        },
+    ),
+    PilotTask(
+        task_id="paired-003",
+        task_type="parser-bugfix",
+        raw_prompt="Fix boolean parsing.",
+        expected_paths=("src/pilot_app/parser.py",),
+        files={
+            "src/pilot_app/__init__.py": "",
+            "src/pilot_app/parser.py": (
+                "def parse_bool(value: str) -> bool:\n"
+                "    return value.strip().lower() == 'true'\n"
+            ),
+            "tests/test_parser.py": (
+                "from pilot_app.parser import parse_bool\n\n\n"
+                "def test_parse_yes_as_true() -> None:\n"
+                "    assert parse_bool(' yes ') is True\n\n\n"
+                "def test_parse_no_as_false() -> None:\n"
+                "    assert parse_bool('no') is False\n"
+            ),
+        },
+    ),
+    PilotTask(
+        task_id="paired-004",
+        task_type="validation-bugfix",
+        raw_prompt="Fix the email redaction bug.",
+        expected_paths=("src/pilot_app/privacy.py",),
+        files={
+            "src/pilot_app/__init__.py": "",
+            "src/pilot_app/privacy.py": (
+                "def redact_email(email: str) -> str:\n"
+                "    return email\n"
+            ),
+            "tests/test_privacy.py": (
+                "from pilot_app.privacy import redact_email\n\n\n"
+                "def test_redact_email_keeps_domain() -> None:\n"
+                "    assert redact_email('alice@example.com') == 'a***@example.com'\n"
+            ),
+        },
+    ),
+    PilotTask(
+        task_id="paired-005",
+        task_type="config-bugfix",
+        raw_prompt="Fix the config default.",
+        expected_paths=("src/pilot_app/config.py",),
+        files={
+            "src/pilot_app/__init__.py": "",
+            "src/pilot_app/config.py": (
+                "def default_port(config: dict[str, int]) -> int:\n"
+                "    return config['port']\n"
+            ),
+            "tests/test_config.py": (
+                "from pilot_app.config import default_port\n\n\n"
+                "def test_default_port_when_missing() -> None:\n"
+                "    assert default_port({}) == 8080\n"
+            ),
+        },
+    ),
+    PilotTask(
+        task_id="paired-006",
+        task_type="format-bugfix",
+        raw_prompt="Fix the formatter.",
+        expected_paths=("src/pilot_app/formatting.py",),
+        files={
+            "src/pilot_app/__init__.py": "",
+            "src/pilot_app/formatting.py": (
+                "def initials(name: str) -> str:\n"
+                "    return ''.join(part[0] for part in name.split())\n"
+            ),
+            "tests/test_formatting.py": (
+                "from pilot_app.formatting import initials\n\n\n"
+                "def test_initials_are_uppercase() -> None:\n"
+                "    assert initials('ada lovelace') == 'AL'\n"
+            ),
+        },
+    ),
+)
+
+
+CSV_FIELDS = [
+    "task_id",
+    "agent",
+    "task_type",
+    "raw_prompt_summary",
+    "guarded_prompt_summary",
+    "raw_success",
+    "guarded_success",
+    "raw_touched_files",
+    "guarded_touched_files",
+    "raw_unnecessary_file_edits",
+    "guarded_unnecessary_file_edits",
+    "raw_tests_passed",
+    "guarded_tests_passed",
+    "raw_human_corrections",
+    "guarded_human_corrections",
+    "raw_prompt_tokens",
+    "guarded_prompt_tokens",
+    "raw_duration_seconds",
+    "guarded_duration_seconds",
+    "notes",
+]
+
+
+def main() -> int:
+    from promptcontrollab.prompt_context import empty_prompt_context
+    from promptcontrollab.prompt_guard import guard_prompt
+
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--out", type=Path, default=REPO_ROOT / "runs" / "paired-pilot")
+    parser.add_argument(
+        "--csv",
+        type=Path,
+        default=REPO_ROOT / "docs" / "case_studies" / "agent_guard_paired_pilot.csv",
+    )
+    parser.add_argument("--limit", type=int, default=len(TASKS))
+    parser.add_argument("--timeout", type=int, default=420)
+    parser.add_argument("--proxy", default=_default_proxy())
+    parser.add_argument("--policy", type=Path, default=REPO_ROOT / "examples" / "guard.policy.yaml")
+    parser.add_argument("--codex-model", default=None)
+    args = parser.parse_args()
+
+    selected_tasks = TASKS[: max(0, min(args.limit, len(TASKS)))]
+    args.out.mkdir(parents=True, exist_ok=True)
+    args.csv.parent.mkdir(parents=True, exist_ok=True)
+
+    rows: list[JsonDict] = []
+    details: list[JsonDict] = []
+    for task in selected_tasks:
+        print(f"[pilot] {task.task_id} raw", flush=True)
+        raw = _run_side(
+            task,
+            side="raw",
+            prompt=task.raw_prompt,
+            root=args.out,
+            timeout=args.timeout,
+            proxy=args.proxy,
+            codex_model=args.codex_model,
+        )
+        guarded_result = guard_prompt(
+            task.raw_prompt,
+            context=empty_prompt_context(),
+            mode="suggest",
+            profile="coding",
+            token_mode="balanced",
+            max_tokens=None,
+            language="en",
+            policy_path=args.policy,
+        ).to_json()
+        guarded_prompt = str(guarded_result["improved_prompt"])
+        print(f"[pilot] {task.task_id} guarded", flush=True)
+        guarded = _run_side(
+            task,
+            side="guarded",
+            prompt=guarded_prompt,
+            root=args.out,
+            timeout=args.timeout,
+            proxy=args.proxy,
+            codex_model=args.codex_model,
+        )
+        row = _row(task, raw=raw, guarded=guarded, guarded_prompt=guarded_prompt)
+        rows.append(row)
+        details.append(
+            {
+                "task": {
+                    "task_id": task.task_id,
+                    "task_type": task.task_type,
+                    "raw_prompt": task.raw_prompt,
+                    "expected_paths": list(task.expected_paths),
+                },
+                "guard": guarded_result,
+                "raw": raw,
+                "guarded": guarded,
+            }
+        )
+        _write_csv(args.csv, rows)
+        _write_json(args.out / "agent_guard_paired_pilot_details.json", details)
+        _write_json(args.out / "agent_guard_paired_pilot_summary.json", _summary(rows, details))
+
+    _write_csv(args.csv, rows)
+    _write_json(args.csv.with_suffix(".summary.json"), _summary(rows, details))
+    print(f"[pilot] wrote {args.csv}")
+    return 0
+
+
+def _run_side(
+    task: PilotTask,
+    *,
+    side: str,
+    prompt: str,
+    root: Path,
+    timeout: int,
+    proxy: str | None,
+    codex_model: str | None,
+) -> JsonDict:
+    worktree = root / "workspaces" / f"{task.task_id}-{side}"
+    if worktree.exists():
+        shutil.rmtree(worktree)
+    _create_repo(task, worktree)
+    logs = root / "logs" / task.task_id / side
+    logs.mkdir(parents=True, exist_ok=True)
+    last_message = logs / "last_message.txt"
+    stdout_path = logs / "stdout.txt"
+    stderr_path = logs / "stderr.txt"
+    command = [
+        "codex",
+        "--dangerously-bypass-approvals-and-sandbox",
+    ]
+    if codex_model:
+        command.extend(["--model", codex_model])
+    command.extend(
+        [
+            "exec",
+            "--cd",
+            str(worktree),
+            "--ephemeral",
+            "--ignore-rules",
+            "--ignore-user-config",
+            "--output-last-message",
+            str(last_message),
+            "-",
+        ]
+    )
+    env = os.environ.copy()
+    if proxy:
+        env["HTTP_PROXY"] = proxy
+        env["HTTPS_PROXY"] = proxy
+    started = time.monotonic()
+    try:
+        completed = subprocess.run(
+            command,
+            input=prompt,
+            cwd=worktree,
+            env=env,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+            capture_output=True,
+            timeout=timeout,
+            check=False,
+        )
+        timed_out = False
+    except subprocess.TimeoutExpired as exc:
+        completed = subprocess.CompletedProcess(
+            command,
+            returncode=124,
+            stdout=exc.stdout or "",
+            stderr=exc.stderr or "",
+        )
+        timed_out = True
+    duration = round(time.monotonic() - started, 2)
+    stdout_path.write_text(str(completed.stdout or ""), encoding="utf-8")
+    stderr_path.write_text(str(completed.stderr or ""), encoding="utf-8")
+    test_result = _run_test(worktree, task.test_command)
+    touched_files = _touched_files(worktree)
+    unexpected = [
+        path
+        for path in touched_files
+        if not any(
+            path == expected or path.startswith(f"{expected}/") for expected in task.expected_paths
+        )
+    ]
+    changed_lines = _changed_lines(worktree, touched_files)
+    success = bool(test_result["passed"])
+    return {
+        "side": side,
+        "worktree": str(worktree),
+        "prompt": prompt,
+        "codex_returncode": completed.returncode,
+        "codex_timed_out": timed_out,
+        "duration_seconds": duration,
+        "tests_passed": test_result["passed"],
+        "test_command": task.test_command,
+        "test_stdout": test_result["stdout"][-4000:],
+        "test_stderr": test_result["stderr"][-4000:],
+        "success": success,
+        "touched_files": touched_files,
+        "touched_file_count": len(touched_files),
+        "unexpected_files": unexpected,
+        "unnecessary_file_edits": len(unexpected),
+        "changed_lines": changed_lines,
+        "human_corrections": 0,
+        "last_message_path": str(last_message),
+        "stdout_path": str(stdout_path),
+        "stderr_path": str(stderr_path),
+    }
+
+
+def _create_repo(task: PilotTask, path: Path) -> None:
+    path.mkdir(parents=True, exist_ok=True)
+    (path / "pytest.ini").write_text("[pytest]\npythonpath = src\n", encoding="utf-8", newline="\n")
+    for relative, content in task.files.items():
+        target = path / relative
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text(content, encoding="utf-8", newline="\n")
+    _git(path, "init", "-q")
+    _git(path, "config", "user.email", "pilot@example.local")
+    _git(path, "config", "user.name", "PromptControlLab Pilot")
+    _git(path, "add", ".")
+    _git(path, "commit", "-q", "-m", "initial")
+
+
+def _run_test(repo: Path, command: str) -> JsonDict:
+    completed = subprocess.run(
+        command.split(),
+        cwd=repo,
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        errors="replace",
+        check=False,
+        timeout=60,
+    )
+    return {
+        "passed": completed.returncode == 0,
+        "returncode": completed.returncode,
+        "stdout": completed.stdout,
+        "stderr": completed.stderr,
+    }
+
+
+def _touched_files(repo: Path) -> list[str]:
+    output = _git(repo, "status", "--porcelain")
+    files: list[str] = []
+    for line in output.splitlines():
+        if not line.strip():
+            continue
+        path = line[3:].replace("\\", "/")
+        if _ignore_touched(path):
+            continue
+        files.append(path)
+    return sorted(set(files))
+
+
+def _changed_lines(repo: Path, touched_files: list[str]) -> list[JsonDict]:
+    tracked = _git(repo, "diff", "--numstat", "HEAD")
+    rows: list[JsonDict] = []
+    seen: set[str] = set()
+    for line in tracked.splitlines():
+        parts = line.split("\t")
+        if len(parts) != 3:
+            continue
+        added, deleted, path = parts
+        normalized = path.replace("\\", "/")
+        seen.add(normalized)
+        rows.append(
+            {
+                "file": normalized,
+                "added": _safe_int(added),
+                "deleted": _safe_int(deleted),
+            }
+        )
+    for path in touched_files:
+        if path in seen:
+            continue
+        target = repo / path
+        if target.exists() and target.is_file():
+            try:
+                added = len(target.read_text(encoding="utf-8", errors="ignore").splitlines())
+            except OSError:
+                added = 0
+        else:
+            added = 0
+        rows.append({"file": path, "added": added, "deleted": 0})
+    return sorted(rows, key=lambda item: str(item["file"]))
+
+
+def _row(
+    task: PilotTask,
+    *,
+    raw: JsonDict,
+    guarded: JsonDict,
+    guarded_prompt: str,
+) -> JsonDict:
+    from promptcontrollab.prompt_improver import estimate_tokens
+
+    notes = (
+        "real Codex paired pilot; "
+        f"raw_code={raw['codex_returncode']}; guarded_code={guarded['codex_returncode']}; "
+        f"raw_timeout={raw['codex_timed_out']}; guarded_timeout={guarded['codex_timed_out']}"
+    )
+    return {
+        "task_id": task.task_id,
+        "agent": "codex-local-exec",
+        "task_type": task.task_type,
+        "raw_prompt_summary": task.raw_prompt,
+        "guarded_prompt_summary": _compact(guarded_prompt),
+        "raw_success": str(bool(raw["success"])).lower(),
+        "guarded_success": str(bool(guarded["success"])).lower(),
+        "raw_touched_files": raw["touched_file_count"],
+        "guarded_touched_files": guarded["touched_file_count"],
+        "raw_unnecessary_file_edits": raw["unnecessary_file_edits"],
+        "guarded_unnecessary_file_edits": guarded["unnecessary_file_edits"],
+        "raw_tests_passed": str(bool(raw["tests_passed"])).lower(),
+        "guarded_tests_passed": str(bool(guarded["tests_passed"])).lower(),
+        "raw_human_corrections": raw["human_corrections"],
+        "guarded_human_corrections": guarded["human_corrections"],
+        "raw_prompt_tokens": estimate_tokens(task.raw_prompt),
+        "guarded_prompt_tokens": estimate_tokens(guarded_prompt),
+        "raw_duration_seconds": raw["duration_seconds"],
+        "guarded_duration_seconds": guarded["duration_seconds"],
+        "notes": notes,
+    }
+
+
+def _summary(rows: list[JsonDict], details: list[JsonDict]) -> JsonDict:
+    total = len(rows)
+    raw_success = sum(row["raw_success"] == "true" for row in rows)
+    guarded_success = sum(row["guarded_success"] == "true" for row in rows)
+    raw_tests = sum(row["raw_tests_passed"] == "true" for row in rows)
+    guarded_tests = sum(row["guarded_tests_passed"] == "true" for row in rows)
+    return {
+        "sample_size": total,
+        "agent": "codex-local-exec",
+        "raw_success": raw_success,
+        "guarded_success": guarded_success,
+        "raw_tests_passed": raw_tests,
+        "guarded_tests_passed": guarded_tests,
+        "raw_avg_touched_files": _avg(row["raw_touched_files"] for row in rows),
+        "guarded_avg_touched_files": _avg(row["guarded_touched_files"] for row in rows),
+        "raw_total_unnecessary_file_edits": sum(
+            int(row["raw_unnecessary_file_edits"]) for row in rows
+        ),
+        "guarded_total_unnecessary_file_edits": sum(
+            int(row["guarded_unnecessary_file_edits"]) for row in rows
+        ),
+        "raw_avg_prompt_tokens": _avg(row["raw_prompt_tokens"] for row in rows),
+        "guarded_avg_prompt_tokens": _avg(row["guarded_prompt_tokens"] for row in rows),
+        "raw_avg_duration_seconds": _avg(row["raw_duration_seconds"] for row in rows),
+        "guarded_avg_duration_seconds": _avg(row["guarded_duration_seconds"] for row in rows),
+        "task_ids": [row["task_id"] for row in rows],
+        "limitations": [
+            "Small local fixture pilot, not a universal benchmark.",
+            "No human correction turns were provided after failed runs.",
+            "Tasks are isolated Python pytest bugfixes, not full production PRs.",
+        ],
+        "detail_count": len(details),
+    }
+
+
+def _write_csv(path: Path, rows: list[JsonDict]) -> None:
+    with path.open("w", newline="", encoding="utf-8") as handle:
+        writer = csv.DictWriter(handle, fieldnames=CSV_FIELDS)
+        writer.writeheader()
+        writer.writerows(rows)
+
+
+def _write_json(path: Path, payload: JsonDict | list[JsonDict]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(payload, indent=2, ensure_ascii=False), encoding="utf-8")
+
+
+def _git(repo: Path, *args: str) -> str:
+    completed = subprocess.run(
+        ["git", *args],
+        cwd=repo,
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        errors="replace",
+        check=True,
+    )
+    return completed.stdout
+
+
+def _ignore_touched(path: str) -> bool:
+    lowered = path.lower()
+    return (
+        "__pycache__/" in lowered
+        or lowered.endswith(".pyc")
+        or lowered in {"events.jsonl", "last.txt"}
+    )
+
+
+def _compact(text: str, limit: int = 180) -> str:
+    cleaned = " ".join(text.split())
+    return cleaned[:limit]
+
+
+def _safe_int(value: str) -> int:
+    try:
+        return int(value)
+    except ValueError:
+        return 0
+
+
+def _avg(values: object) -> float:
+    items = [float(value) for value in values]
+    if not items:
+        return 0.0
+    return round(sum(items) / len(items), 2)
+
+
+def _default_proxy() -> str | None:
+    for key in ("HTTPS_PROXY", "HTTP_PROXY", "https_proxy", "http_proxy"):
+        value = os.getenv(key)
+        if value:
+            return value
+    return "http://127.0.0.1:7897"
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

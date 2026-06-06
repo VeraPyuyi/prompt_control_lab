@@ -1,0 +1,30 @@
+{
+  "sample_size": 6,
+  "agent": "codex-local-exec",
+  "raw_success": 6,
+  "guarded_success": 6,
+  "raw_tests_passed": 6,
+  "guarded_tests_passed": 6,
+  "raw_avg_touched_files": 1.17,
+  "guarded_avg_touched_files": 1.17,
+  "raw_total_unnecessary_file_edits": 1,
+  "guarded_total_unnecessary_file_edits": 1,
+  "raw_avg_prompt_tokens": 5.17,
+  "guarded_avg_prompt_tokens": 83.17,
+  "raw_avg_duration_seconds": 149.02,
+  "guarded_avg_duration_seconds": 114.36,
+  "task_ids": [
+    "paired-001",
+    "paired-002",
+    "paired-003",
+    "paired-004",
+    "paired-005",
+    "paired-006"
+  ],
+  "limitations": [
+    "Small local fixture pilot, not a universal benchmark.",
+    "No human correction turns were provided after failed runs.",
+    "Tasks are isolated Python pytest bugfixes, not full production PRs."
+  ],
+  "detail_count": 6
+}
