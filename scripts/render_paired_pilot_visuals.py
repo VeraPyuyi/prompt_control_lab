@@ -19,7 +19,7 @@ OUT_ZH = ROOT / "docs" / "assets" / "agent_guard_paired_pilot.zh.svg"
 JsonDict = dict[str, Any]
 
 WIDTH = 1280
-HEIGHT = 820
+HEIGHT = 940
 RAW = "#2563eb"
 GUARDED = "#16a34a"
 INK = "#0f172a"
@@ -41,8 +41,9 @@ def main() -> int:
 
 def _render(rows: list[JsonDict], summary: JsonDict, *, language: str) -> str:
     text = _labels(language)
+    subtitle = text["subtitle"].format(n=summary["sample_size"])
     parts = [
-        _svg_header(text["title"], text["subtitle"]),
+        _svg_header(text["title"], subtitle),
         _cards(summary, text),
         _bars(summary, text),
         _duration_chart(rows, text),
@@ -124,7 +125,7 @@ def _bars(summary: JsonDict, text: dict[str, str]) -> str:
     x = 64
     y = 302
     w = 520
-    h = 244
+    h = 306
     metrics = [
         (text["avg_duration"], float(summary["raw_avg_duration_seconds"]), float(summary["guarded_avg_duration_seconds"]), "s"),
         (text["avg_tokens"], float(summary["raw_avg_prompt_tokens"]), float(summary["guarded_avg_prompt_tokens"]), ""),
@@ -161,11 +162,12 @@ def _duration_chart(rows: list[JsonDict], text: dict[str, str]) -> str:
     x = 624
     y = 302
     w = 592
-    h = 244
+    h = 306
     chart_x = x + 100
     chart_y = y + 58
     chart_w = 402
-    row_gap = 27
+    row_gap = min(27, max(16, int((h - 96) / max(1, len(rows) - 1))))
+    label_size = 12 if len(rows) <= 8 else 10
     max_duration = max(
         max(float(row["raw_duration_seconds"]), float(row["guarded_duration_seconds"]))
         for row in rows
@@ -184,7 +186,7 @@ def _duration_chart(rows: list[JsonDict], text: dict[str, str]) -> str:
         raw_x = chart_x + round(chart_w * raw / max_duration)
         guarded_x = chart_x + round(chart_w * guarded / max_duration)
         out.append(
-            f'  <text x="{x + 22}" y="{yy + 4}" font-family="{_font()}" font-size="12" font-weight="700" fill="{MUTED}">{_e(row["task_id"])}</text>'
+            f'  <text x="{x + 22}" y="{yy + 4}" font-family="{_font()}" font-size="{label_size}" font-weight="700" fill="{MUTED}">{_e(row["task_id"])}</text>'
         )
         out.append(
             f'  <line x1="{min(raw_x, guarded_x)}" y1="{yy}" x2="{max(raw_x, guarded_x)}" y2="{yy}" stroke="#cbd5e1" stroke-width="4" stroke-linecap="round"/>'
@@ -199,7 +201,7 @@ def _duration_chart(rows: list[JsonDict], text: dict[str, str]) -> str:
 
 def _callout(text: dict[str, str]) -> str:
     x = 64
-    y = 584
+    y = 648
     w = 1152
     h = 124
     return f"""  <rect x="{x}" y="{y}" width="{w}" height="{h}" rx="18" fill="#fff7ed" stroke="#fed7aa"/>
@@ -209,7 +211,7 @@ def _callout(text: dict[str, str]) -> str:
 
 
 def _legend(text: dict[str, str]) -> str:
-    y = 746
+    y = 850
     return f"""  <circle cx="66" cy="{y}" r="7" fill="{RAW}"/>
   <text x="80" y="{y + 5}" font-family="{_font()}" font-size="14" fill="{MUTED}">{_e(text["raw"])}</text>
   <circle cx="170" cy="{y}" r="7" fill="{GUARDED}"/>
@@ -221,7 +223,7 @@ def _labels(language: str) -> dict[str, str]:
     if language == "zh":
         return {
             "title": "真实成对试点：Raw Agent vs Guarded Agent",
-            "subtitle": "6 个隔离 Python pytest bugfix；每个任务从相同初始仓库分别运行 raw 和 guarded prompt。",
+            "subtitle": "{n} 个隔离 Python pytest 修复任务；包含单文件和多文件场景，分别运行 raw 和 guarded prompt。",
             "success": "完成任务",
             "success_note": "两侧成功率相同",
             "tests": "测试通过",
@@ -239,15 +241,15 @@ def _labels(language: str) -> dict[str, str]:
             "summary_bars": "汇总指标对比",
             "task_runtime": "逐任务耗时对比",
             "interpret_title": "如何解读",
-            "interpret_1": "这组小样本里 guarded prompt 没有提升成功率，因为 raw Codex 已经 6/6 完成。",
-            "interpret_2": "guarded 平均耗时更短，但 prompt token 更多；这说明需要更大、更真实的任务集继续验证。",
+            "interpret_1": "两侧都完成全部任务，所以这仍不说明成功率提升。",
+            "interpret_2": "guarded token 仍更多，但触碰文件更少、非预期改动为 0，本次平均耗时更短。",
             "raw": "Raw agent",
             "guarded": "Guarded agent",
             "footnote": "小样本 fixture pilot，不是通用 benchmark。",
         }
     return {
         "title": "Real Paired Pilot: Raw Agent vs Guarded Agent",
-        "subtitle": "6 isolated Python pytest bugfixes; each task ran from the same fresh repo with raw and guarded prompts.",
+        "subtitle": "{n} isolated Python pytest fixes with single-file and multi-file tasks; raw and guarded prompts ran from fresh repos.",
         "success": "Completed tasks",
         "success_note": "same success rate",
         "tests": "Tests passed",
@@ -265,8 +267,8 @@ def _labels(language: str) -> dict[str, str]:
         "summary_bars": "Summary Metrics",
         "task_runtime": "Per-Task Runtime",
         "interpret_title": "How to read this",
-        "interpret_1": "Guarded prompts did not improve success rate in this small sample because raw Codex already solved 6/6 tasks.",
-        "interpret_2": "Guarded prompts were faster on average but used more prompt tokens; larger real PR tasks are needed next.",
+        "interpret_1": "Both sides solved every task, so this still does not show a success-rate lift.",
+        "interpret_2": "Guarded runs used more prompt tokens, but touched fewer files, had 0 unexpected edits, and ran faster here.",
         "raw": "Raw agent",
         "guarded": "Guarded agent",
         "footnote": "Small fixture pilot, not a universal benchmark.",

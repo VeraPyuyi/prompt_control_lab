@@ -1,96 +1,126 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="820" viewBox="0 0 1280 820" role="img" aria-label="真实成对试点：Raw Agent vs Guarded Agent">
-  <rect width="1280" height="820" fill="#ffffff"/>
-  <rect x="32" y="28" width="1216" height="764" rx="26" fill="#f8fafc" stroke="#dbe3ef"/>
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="940" viewBox="0 0 1280 940" role="img" aria-label="真实成对试点：Raw Agent vs Guarded Agent">
+  <rect width="1280" height="940" fill="#ffffff"/>
+  <rect x="32" y="28" width="1216" height="884" rx="26" fill="#f8fafc" stroke="#dbe3ef"/>
   <text x="64" y="78" font-family="Inter, Segoe UI, Arial, Microsoft YaHei, sans-serif" font-size="32" font-weight="800" fill="#0f172a">真实成对试点：Raw Agent vs Guarded Agent</text>
-  <text x="64" y="112" font-family="Inter, Segoe UI, Arial, Microsoft YaHei, sans-serif" font-size="16" fill="#64748b">6 个隔离 Python pytest bugfix；每个任务从相同初始仓库分别运行 raw 和 guarded prompt。</text>
+  <text x="64" y="112" font-family="Inter, Segoe UI, Arial, Microsoft YaHei, sans-serif" font-size="16" fill="#64748b">12 个隔离 Python pytest 修复任务；包含单文件和多文件场景，分别运行 raw 和 guarded prompt。</text>
   <rect x="64" y="142" width="276" height="132" rx="16" fill="#ffffff" stroke="#dbe3ef"/>
   <rect x="64" y="142" width="6" height="132" rx="3" fill="#16a34a"/>
   <text x="86" y="176" font-family="Inter, Segoe UI, Arial, Microsoft YaHei, sans-serif" font-size="15" font-weight="700" fill="#64748b">完成任务</text>
-  <text x="86" y="212" font-family="Inter, Segoe UI, Arial, Microsoft YaHei, sans-serif" font-size="24" font-weight="800" fill="#0f172a">6/6 = 6/6</text>
+  <text x="86" y="212" font-family="Inter, Segoe UI, Arial, Microsoft YaHei, sans-serif" font-size="24" font-weight="800" fill="#0f172a">12/12 = 12/12</text>
   <text x="86" y="236" font-family="Inter, Segoe UI, Arial, Microsoft YaHei, sans-serif" font-size="13" font-weight="700" fill="#16a34a">相同</text>
   <text x="86" y="258" font-family="Inter, Segoe UI, Arial, Microsoft YaHei, sans-serif" font-size="12" fill="#64748b">两侧成功率相同</text>
   <rect x="358" y="142" width="276" height="132" rx="16" fill="#ffffff" stroke="#dbe3ef"/>
   <rect x="358" y="142" width="6" height="132" rx="3" fill="#16a34a"/>
   <text x="380" y="176" font-family="Inter, Segoe UI, Arial, Microsoft YaHei, sans-serif" font-size="15" font-weight="700" fill="#64748b">测试通过</text>
-  <text x="380" y="212" font-family="Inter, Segoe UI, Arial, Microsoft YaHei, sans-serif" font-size="24" font-weight="800" fill="#0f172a">6/6 = 6/6</text>
+  <text x="380" y="212" font-family="Inter, Segoe UI, Arial, Microsoft YaHei, sans-serif" font-size="24" font-weight="800" fill="#0f172a">12/12 = 12/12</text>
   <text x="380" y="236" font-family="Inter, Segoe UI, Arial, Microsoft YaHei, sans-serif" font-size="13" font-weight="700" fill="#16a34a">相同</text>
   <text x="380" y="258" font-family="Inter, Segoe UI, Arial, Microsoft YaHei, sans-serif" font-size="12" fill="#64748b">pytest 验收结果</text>
   <rect x="652" y="142" width="276" height="132" rx="16" fill="#ffffff" stroke="#dbe3ef"/>
   <rect x="652" y="142" width="6" height="132" rx="3" fill="#2563eb"/>
   <text x="674" y="176" font-family="Inter, Segoe UI, Arial, Microsoft YaHei, sans-serif" font-size="15" font-weight="700" fill="#64748b">平均耗时</text>
-  <text x="674" y="212" font-family="Inter, Segoe UI, Arial, Microsoft YaHei, sans-serif" font-size="24" font-weight="800" fill="#0f172a">149.02 -&gt; 114.36</text>
-  <text x="674" y="236" font-family="Inter, Segoe UI, Arial, Microsoft YaHei, sans-serif" font-size="13" font-weight="700" fill="#2563eb">变化 -34.66s</text>
+  <text x="674" y="212" font-family="Inter, Segoe UI, Arial, Microsoft YaHei, sans-serif" font-size="24" font-weight="800" fill="#0f172a">173.74 -&gt; 119.97</text>
+  <text x="674" y="236" font-family="Inter, Segoe UI, Arial, Microsoft YaHei, sans-serif" font-size="13" font-weight="700" fill="#2563eb">变化 -53.77s</text>
   <text x="674" y="258" font-family="Inter, Segoe UI, Arial, Microsoft YaHei, sans-serif" font-size="12" fill="#64748b">guarded 本次更快</text>
   <rect x="946" y="142" width="276" height="132" rx="16" fill="#ffffff" stroke="#dbe3ef"/>
   <rect x="946" y="142" width="6" height="132" rx="3" fill="#f59e0b"/>
   <text x="968" y="176" font-family="Inter, Segoe UI, Arial, Microsoft YaHei, sans-serif" font-size="15" font-weight="700" fill="#64748b">Prompt Token</text>
-  <text x="968" y="212" font-family="Inter, Segoe UI, Arial, Microsoft YaHei, sans-serif" font-size="24" font-weight="800" fill="#0f172a">5.17 -&gt; 83.17</text>
-  <text x="968" y="236" font-family="Inter, Segoe UI, Arial, Microsoft YaHei, sans-serif" font-size="13" font-weight="700" fill="#f59e0b">变化 +78</text>
+  <text x="968" y="212" font-family="Inter, Segoe UI, Arial, Microsoft YaHei, sans-serif" font-size="24" font-weight="800" fill="#0f172a">8.08 -&gt; 51.08</text>
+  <text x="968" y="236" font-family="Inter, Segoe UI, Arial, Microsoft YaHei, sans-serif" font-size="13" font-weight="700" fill="#f59e0b">变化 +43</text>
   <text x="968" y="258" font-family="Inter, Segoe UI, Arial, Microsoft YaHei, sans-serif" font-size="12" fill="#64748b">guarded 更长</text>
-  <rect x="64" y="302" width="520" height="244" rx="18" fill="#ffffff" stroke="#dbe3ef"/>
+  <rect x="64" y="302" width="520" height="306" rx="18" fill="#ffffff" stroke="#dbe3ef"/>
   <text x="86" y="336" font-family="Inter, Segoe UI, Arial, Microsoft YaHei, sans-serif" font-size="20" font-weight="800" fill="#0f172a">汇总指标对比</text>
   <text x="86" y="383" font-family="Inter, Segoe UI, Arial, Microsoft YaHei, sans-serif" font-size="13" font-weight="700" fill="#64748b">平均耗时</text>
   <rect x="232" y="370" width="258" height="12" rx="6" fill="#2563eb"/>
-  <rect x="232" y="388" width="198" height="12" rx="6" fill="#16a34a"/>
-  <text x="504" y="381" font-family="Inter, Segoe UI, Arial, Microsoft YaHei, sans-serif" font-size="12" fill="#0f172a">149.02s</text>
-  <text x="504" y="399" font-family="Inter, Segoe UI, Arial, Microsoft YaHei, sans-serif" font-size="12" fill="#0f172a">114.36s</text>
+  <rect x="232" y="388" width="178" height="12" rx="6" fill="#16a34a"/>
+  <text x="504" y="381" font-family="Inter, Segoe UI, Arial, Microsoft YaHei, sans-serif" font-size="12" fill="#0f172a">173.74s</text>
+  <text x="504" y="399" font-family="Inter, Segoe UI, Arial, Microsoft YaHei, sans-serif" font-size="12" fill="#0f172a">119.97s</text>
   <text x="86" y="425" font-family="Inter, Segoe UI, Arial, Microsoft YaHei, sans-serif" font-size="13" font-weight="700" fill="#64748b">平均 token</text>
-  <rect x="232" y="412" width="9" height="12" rx="6" fill="#2563eb"/>
-  <rect x="232" y="430" width="144" height="12" rx="6" fill="#16a34a"/>
-  <text x="504" y="423" font-family="Inter, Segoe UI, Arial, Microsoft YaHei, sans-serif" font-size="12" fill="#0f172a">5.17</text>
-  <text x="504" y="441" font-family="Inter, Segoe UI, Arial, Microsoft YaHei, sans-serif" font-size="12" fill="#0f172a">83.17</text>
+  <rect x="232" y="412" width="12" height="12" rx="6" fill="#2563eb"/>
+  <rect x="232" y="430" width="76" height="12" rx="6" fill="#16a34a"/>
+  <text x="504" y="423" font-family="Inter, Segoe UI, Arial, Microsoft YaHei, sans-serif" font-size="12" fill="#0f172a">8.08</text>
+  <text x="504" y="441" font-family="Inter, Segoe UI, Arial, Microsoft YaHei, sans-serif" font-size="12" fill="#0f172a">51.08</text>
   <text x="86" y="467" font-family="Inter, Segoe UI, Arial, Microsoft YaHei, sans-serif" font-size="13" font-weight="700" fill="#64748b">平均触碰文件</text>
   <rect x="232" y="454" width="2" height="12" rx="6" fill="#2563eb"/>
   <rect x="232" y="472" width="2" height="12" rx="6" fill="#16a34a"/>
-  <text x="504" y="465" font-family="Inter, Segoe UI, Arial, Microsoft YaHei, sans-serif" font-size="12" fill="#0f172a">1.17</text>
-  <text x="504" y="483" font-family="Inter, Segoe UI, Arial, Microsoft YaHei, sans-serif" font-size="12" fill="#0f172a">1.17</text>
+  <text x="504" y="465" font-family="Inter, Segoe UI, Arial, Microsoft YaHei, sans-serif" font-size="12" fill="#0f172a">1.25</text>
+  <text x="504" y="483" font-family="Inter, Segoe UI, Arial, Microsoft YaHei, sans-serif" font-size="12" fill="#0f172a">1</text>
   <text x="86" y="509" font-family="Inter, Segoe UI, Arial, Microsoft YaHei, sans-serif" font-size="13" font-weight="700" fill="#64748b">非预期改动总数</text>
-  <rect x="232" y="496" width="2" height="12" rx="6" fill="#2563eb"/>
+  <rect x="232" y="496" width="4" height="12" rx="6" fill="#2563eb"/>
   <rect x="232" y="514" width="2" height="12" rx="6" fill="#16a34a"/>
-  <text x="504" y="507" font-family="Inter, Segoe UI, Arial, Microsoft YaHei, sans-serif" font-size="12" fill="#0f172a">1</text>
-  <text x="504" y="525" font-family="Inter, Segoe UI, Arial, Microsoft YaHei, sans-serif" font-size="12" fill="#0f172a">1</text>
-  <rect x="624" y="302" width="592" height="244" rx="18" fill="#ffffff" stroke="#dbe3ef"/>
+  <text x="504" y="507" font-family="Inter, Segoe UI, Arial, Microsoft YaHei, sans-serif" font-size="12" fill="#0f172a">3</text>
+  <text x="504" y="525" font-family="Inter, Segoe UI, Arial, Microsoft YaHei, sans-serif" font-size="12" fill="#0f172a">0</text>
+  <rect x="624" y="302" width="592" height="306" rx="18" fill="#ffffff" stroke="#dbe3ef"/>
   <text x="646" y="336" font-family="Inter, Segoe UI, Arial, Microsoft YaHei, sans-serif" font-size="20" font-weight="800" fill="#0f172a">逐任务耗时对比</text>
   <line x1="724" y1="342" x2="1126" y2="342" stroke="#dbe3ef"/>
   <text x="724" y="334" font-family="Inter, Segoe UI, Arial, Microsoft YaHei, sans-serif" font-size="11" fill="#64748b">0s</text>
-  <text x="1082" y="334" font-family="Inter, Segoe UI, Arial, Microsoft YaHei, sans-serif" font-size="11" fill="#64748b">288s</text>
-  <text x="646" y="364" font-family="Inter, Segoe UI, Arial, Microsoft YaHei, sans-serif" font-size="12" font-weight="700" fill="#64748b">paired-001</text>
-  <line x1="842" y1="360" x2="904" y2="360" stroke="#cbd5e1" stroke-width="4" stroke-linecap="round"/>
-  <circle cx="904" cy="360" r="6" fill="#2563eb"/>
-  <circle cx="842" cy="360" r="6" fill="#16a34a"/>
-  <text x="1142" y="364" font-family="Inter, Segoe UI, Arial, Microsoft YaHei, sans-serif" font-size="11" fill="#64748b">129.48 / 84.95s</text>
-  <text x="646" y="391" font-family="Inter, Segoe UI, Arial, Microsoft YaHei, sans-serif" font-size="12" font-weight="700" fill="#64748b">paired-002</text>
-  <line x1="867" y1="387" x2="968" y2="387" stroke="#cbd5e1" stroke-width="4" stroke-linecap="round"/>
-  <circle cx="867" cy="387" r="6" fill="#2563eb"/>
-  <circle cx="968" cy="387" r="6" fill="#16a34a"/>
-  <text x="1142" y="391" font-family="Inter, Segoe UI, Arial, Microsoft YaHei, sans-serif" font-size="11" fill="#64748b">102.66 / 175.25s</text>
-  <text x="646" y="418" font-family="Inter, Segoe UI, Arial, Microsoft YaHei, sans-serif" font-size="12" font-weight="700" fill="#64748b">paired-003</text>
-  <line x1="885" y1="414" x2="943" y2="414" stroke="#cbd5e1" stroke-width="4" stroke-linecap="round"/>
-  <circle cx="943" cy="414" r="6" fill="#2563eb"/>
-  <circle cx="885" cy="414" r="6" fill="#16a34a"/>
-  <text x="1142" y="418" font-family="Inter, Segoe UI, Arial, Microsoft YaHei, sans-serif" font-size="11" fill="#64748b">156.92 / 115.3s</text>
-  <text x="646" y="445" font-family="Inter, Segoe UI, Arial, Microsoft YaHei, sans-serif" font-size="12" font-weight="700" fill="#64748b">paired-004</text>
-  <line x1="895" y1="441" x2="909" y2="441" stroke="#cbd5e1" stroke-width="4" stroke-linecap="round"/>
-  <circle cx="895" cy="441" r="6" fill="#2563eb"/>
-  <circle cx="909" cy="441" r="6" fill="#16a34a"/>
-  <text x="1142" y="445" font-family="Inter, Segoe UI, Arial, Microsoft YaHei, sans-serif" font-size="11" fill="#64748b">123.05 / 132.58s</text>
-  <text x="646" y="472" font-family="Inter, Segoe UI, Arial, Microsoft YaHei, sans-serif" font-size="12" font-weight="700" fill="#64748b">paired-005</text>
-  <line x1="847" y1="468" x2="854" y2="468" stroke="#cbd5e1" stroke-width="4" stroke-linecap="round"/>
-  <circle cx="854" cy="468" r="6" fill="#2563eb"/>
-  <circle cx="847" cy="468" r="6" fill="#16a34a"/>
-  <text x="1142" y="472" font-family="Inter, Segoe UI, Arial, Microsoft YaHei, sans-serif" font-size="11" fill="#64748b">93.52 / 88.47s</text>
-  <text x="646" y="499" font-family="Inter, Segoe UI, Arial, Microsoft YaHei, sans-serif" font-size="12" font-weight="700" fill="#64748b">paired-006</text>
-  <line x1="849" y1="495" x2="1126" y2="495" stroke="#cbd5e1" stroke-width="4" stroke-linecap="round"/>
-  <circle cx="1126" cy="495" r="6" fill="#2563eb"/>
-  <circle cx="849" cy="495" r="6" fill="#16a34a"/>
-  <text x="1142" y="499" font-family="Inter, Segoe UI, Arial, Microsoft YaHei, sans-serif" font-size="11" fill="#64748b">288.5 / 89.59s</text>
-  <rect x="64" y="584" width="1152" height="124" rx="18" fill="#fff7ed" stroke="#fed7aa"/>
-  <text x="88" y="620" font-family="Inter, Segoe UI, Arial, Microsoft YaHei, sans-serif" font-size="19" font-weight="800" fill="#9a3412">如何解读</text>
-  <text x="88" y="652" font-family="Inter, Segoe UI, Arial, Microsoft YaHei, sans-serif" font-size="15" fill="#7c2d12">这组小样本里 guarded prompt 没有提升成功率，因为 raw Codex 已经 6/6 完成。</text>
-  <text x="88" y="678" font-family="Inter, Segoe UI, Arial, Microsoft YaHei, sans-serif" font-size="15" fill="#7c2d12">guarded 平均耗时更短，但 prompt token 更多；这说明需要更大、更真实的任务集继续验证。</text>
-  <circle cx="66" cy="746" r="7" fill="#2563eb"/>
-  <text x="80" y="751" font-family="Inter, Segoe UI, Arial, Microsoft YaHei, sans-serif" font-size="14" fill="#64748b">Raw agent</text>
-  <circle cx="170" cy="746" r="7" fill="#16a34a"/>
-  <text x="184" y="751" font-family="Inter, Segoe UI, Arial, Microsoft YaHei, sans-serif" font-size="14" fill="#64748b">Guarded agent</text>
-  <text x="940" y="751" font-family="Inter, Segoe UI, Arial, Microsoft YaHei, sans-serif" font-size="13" fill="#64748b">小样本 fixture pilot，不是通用 benchmark。</text>
+  <text x="1082" y="334" font-family="Inter, Segoe UI, Arial, Microsoft YaHei, sans-serif" font-size="11" fill="#64748b">420s</text>
+  <text x="646" y="364" font-family="Inter, Segoe UI, Arial, Microsoft YaHei, sans-serif" font-size="10" font-weight="700" fill="#64748b">paired-001</text>
+  <line x1="825" y1="360" x2="881" y2="360" stroke="#cbd5e1" stroke-width="4" stroke-linecap="round"/>
+  <circle cx="881" cy="360" r="6" fill="#2563eb"/>
+  <circle cx="825" cy="360" r="6" fill="#16a34a"/>
+  <text x="1142" y="364" font-family="Inter, Segoe UI, Arial, Microsoft YaHei, sans-serif" font-size="11" fill="#64748b">164.3 / 105.69s</text>
+  <text x="646" y="383" font-family="Inter, Segoe UI, Arial, Microsoft YaHei, sans-serif" font-size="10" font-weight="700" fill="#64748b">paired-002</text>
+  <line x1="846" y1="379" x2="1126" y2="379" stroke="#cbd5e1" stroke-width="4" stroke-linecap="round"/>
+  <circle cx="1126" cy="379" r="6" fill="#2563eb"/>
+  <circle cx="846" cy="379" r="6" fill="#16a34a"/>
+  <text x="1142" y="383" font-family="Inter, Segoe UI, Arial, Microsoft YaHei, sans-serif" font-size="11" fill="#64748b">420.06 / 127.16s</text>
+  <text x="646" y="402" font-family="Inter, Segoe UI, Arial, Microsoft YaHei, sans-serif" font-size="10" font-weight="700" fill="#64748b">paired-003</text>
+  <line x1="825" y1="398" x2="858" y2="398" stroke="#cbd5e1" stroke-width="4" stroke-linecap="round"/>
+  <circle cx="825" cy="398" r="6" fill="#2563eb"/>
+  <circle cx="858" cy="398" r="6" fill="#16a34a"/>
+  <text x="1142" y="402" font-family="Inter, Segoe UI, Arial, Microsoft YaHei, sans-serif" font-size="11" fill="#64748b">105.78 / 140.12s</text>
+  <text x="646" y="421" font-family="Inter, Segoe UI, Arial, Microsoft YaHei, sans-serif" font-size="10" font-weight="700" fill="#64748b">paired-004</text>
+  <line x1="784" y1="417" x2="806" y2="417" stroke="#cbd5e1" stroke-width="4" stroke-linecap="round"/>
+  <circle cx="784" cy="417" r="6" fill="#2563eb"/>
+  <circle cx="806" cy="417" r="6" fill="#16a34a"/>
+  <text x="1142" y="421" font-family="Inter, Segoe UI, Arial, Microsoft YaHei, sans-serif" font-size="11" fill="#64748b">62.28 / 85.83s</text>
+  <text x="646" y="440" font-family="Inter, Segoe UI, Arial, Microsoft YaHei, sans-serif" font-size="10" font-weight="700" fill="#64748b">paired-005</text>
+  <line x1="801" y1="436" x2="1126" y2="436" stroke="#cbd5e1" stroke-width="4" stroke-linecap="round"/>
+  <circle cx="1126" cy="436" r="6" fill="#2563eb"/>
+  <circle cx="801" cy="436" r="6" fill="#16a34a"/>
+  <text x="1142" y="440" font-family="Inter, Segoe UI, Arial, Microsoft YaHei, sans-serif" font-size="11" fill="#64748b">420.09 / 80.41s</text>
+  <text x="646" y="459" font-family="Inter, Segoe UI, Arial, Microsoft YaHei, sans-serif" font-size="10" font-weight="700" fill="#64748b">paired-006</text>
+  <line x1="831" y1="455" x2="865" y2="455" stroke="#cbd5e1" stroke-width="4" stroke-linecap="round"/>
+  <circle cx="865" cy="455" r="6" fill="#2563eb"/>
+  <circle cx="831" cy="455" r="6" fill="#16a34a"/>
+  <text x="1142" y="459" font-family="Inter, Segoe UI, Arial, Microsoft YaHei, sans-serif" font-size="11" fill="#64748b">147.23 / 111.52s</text>
+  <text x="646" y="478" font-family="Inter, Segoe UI, Arial, Microsoft YaHei, sans-serif" font-size="10" font-weight="700" fill="#64748b">paired-007</text>
+  <line x1="822" y1="474" x2="851" y2="474" stroke="#cbd5e1" stroke-width="4" stroke-linecap="round"/>
+  <circle cx="822" cy="474" r="6" fill="#2563eb"/>
+  <circle cx="851" cy="474" r="6" fill="#16a34a"/>
+  <text x="1142" y="478" font-family="Inter, Segoe UI, Arial, Microsoft YaHei, sans-serif" font-size="11" fill="#64748b">101.91 / 133.08s</text>
+  <text x="646" y="497" font-family="Inter, Segoe UI, Arial, Microsoft YaHei, sans-serif" font-size="10" font-weight="700" fill="#64748b">paired-008</text>
+  <line x1="835" y1="493" x2="863" y2="493" stroke="#cbd5e1" stroke-width="4" stroke-linecap="round"/>
+  <circle cx="835" cy="493" r="6" fill="#2563eb"/>
+  <circle cx="863" cy="493" r="6" fill="#16a34a"/>
+  <text x="1142" y="497" font-family="Inter, Segoe UI, Arial, Microsoft YaHei, sans-serif" font-size="11" fill="#64748b">116.39 / 145.42s</text>
+  <text x="646" y="516" font-family="Inter, Segoe UI, Arial, Microsoft YaHei, sans-serif" font-size="10" font-weight="700" fill="#64748b">paired-009</text>
+  <line x1="813" y1="512" x2="845" y2="512" stroke="#cbd5e1" stroke-width="4" stroke-linecap="round"/>
+  <circle cx="845" cy="512" r="6" fill="#2563eb"/>
+  <circle cx="813" cy="512" r="6" fill="#16a34a"/>
+  <text x="1142" y="516" font-family="Inter, Segoe UI, Arial, Microsoft YaHei, sans-serif" font-size="11" fill="#64748b">126.38 / 93.14s</text>
+  <text x="646" y="535" font-family="Inter, Segoe UI, Arial, Microsoft YaHei, sans-serif" font-size="10" font-weight="700" fill="#64748b">paired-010</text>
+  <line x1="839" y1="531" x2="903" y2="531" stroke="#cbd5e1" stroke-width="4" stroke-linecap="round"/>
+  <circle cx="839" cy="531" r="6" fill="#2563eb"/>
+  <circle cx="903" cy="531" r="6" fill="#16a34a"/>
+  <text x="1142" y="535" font-family="Inter, Segoe UI, Arial, Microsoft YaHei, sans-serif" font-size="11" fill="#64748b">120.42 / 187.12s</text>
+  <text x="646" y="554" font-family="Inter, Segoe UI, Arial, Microsoft YaHei, sans-serif" font-size="10" font-weight="700" fill="#64748b">paired-011</text>
+  <line x1="858" y1="550" x2="884" y2="550" stroke="#cbd5e1" stroke-width="4" stroke-linecap="round"/>
+  <circle cx="884" cy="550" r="6" fill="#2563eb"/>
+  <circle cx="858" cy="550" r="6" fill="#16a34a"/>
+  <text x="1142" y="554" font-family="Inter, Segoe UI, Arial, Microsoft YaHei, sans-serif" font-size="11" fill="#64748b">167.56 / 139.75s</text>
+  <text x="646" y="573" font-family="Inter, Segoe UI, Arial, Microsoft YaHei, sans-serif" font-size="10" font-weight="700" fill="#64748b">paired-012</text>
+  <line x1="811" y1="569" x2="851" y2="569" stroke="#cbd5e1" stroke-width="4" stroke-linecap="round"/>
+  <circle cx="851" cy="569" r="6" fill="#2563eb"/>
+  <circle cx="811" cy="569" r="6" fill="#16a34a"/>
+  <text x="1142" y="573" font-family="Inter, Segoe UI, Arial, Microsoft YaHei, sans-serif" font-size="11" fill="#64748b">132.5 / 90.42s</text>
+  <rect x="64" y="648" width="1152" height="124" rx="18" fill="#fff7ed" stroke="#fed7aa"/>
+  <text x="88" y="684" font-family="Inter, Segoe UI, Arial, Microsoft YaHei, sans-serif" font-size="19" font-weight="800" fill="#9a3412">如何解读</text>
+  <text x="88" y="716" font-family="Inter, Segoe UI, Arial, Microsoft YaHei, sans-serif" font-size="15" fill="#7c2d12">两侧都完成全部任务，所以这仍不说明成功率提升。</text>
+  <text x="88" y="742" font-family="Inter, Segoe UI, Arial, Microsoft YaHei, sans-serif" font-size="15" fill="#7c2d12">guarded token 仍更多，但触碰文件更少、非预期改动为 0，本次平均耗时更短。</text>
+  <circle cx="66" cy="850" r="7" fill="#2563eb"/>
+  <text x="80" y="855" font-family="Inter, Segoe UI, Arial, Microsoft YaHei, sans-serif" font-size="14" fill="#64748b">Raw agent</text>
+  <circle cx="170" cy="850" r="7" fill="#16a34a"/>
+  <text x="184" y="855" font-family="Inter, Segoe UI, Arial, Microsoft YaHei, sans-serif" font-size="14" fill="#64748b">Guarded agent</text>
+  <text x="940" y="855" font-family="Inter, Segoe UI, Arial, Microsoft YaHei, sans-serif" font-size="13" fill="#64748b">小样本 fixture pilot，不是通用 benchmark。</text>
 </svg>

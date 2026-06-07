@@ -43,6 +43,14 @@ def test_agent_guard_preflight_pilot_schema_and_claims() -> None:
     assert all(row["raw_prompt_tokens"] for row in rows)
     assert all(row["guarded_prompt_tokens"] for row in rows)
     assert all("preflight-only" in row["notes"] for row in rows)
+    raw_avg_tokens = round(
+        sum(int(row["raw_prompt_tokens"]) for row in rows) / len(rows),
+        2,
+    )
+    guarded_avg_tokens = round(
+        sum(int(row["guarded_prompt_tokens"]) for row in rows) / len(rows),
+        2,
+    )
 
     readme = Path("README.md").read_text(encoding="utf-8")
     readme_zh = Path("README.zh.md").read_text(encoding="utf-8")
@@ -50,6 +58,8 @@ def test_agent_guard_preflight_pilot_schema_and_claims() -> None:
     assert "小样本本地 preflight 试点" in readme_zh
     assert "does **not** claim task-success improvement" in readme
     assert "不声称任务成功率提升" in readme_zh
+    assert f"Avg raw estimated prompt tokens | {raw_avg_tokens}" in readme
+    assert f"Avg guarded estimated prompt tokens | {guarded_avg_tokens}" in readme
 
 
 def test_agent_guard_paired_pilot_schema_and_readme_numbers() -> None:
@@ -60,7 +70,7 @@ def test_agent_guard_paired_pilot_schema_and_readme_numbers() -> None:
     summary = json.loads(summary_path.read_text(encoding="utf-8"))
 
     assert reader.fieldnames == PAIRED_FIELDS
-    assert len(rows) == 6
+    assert len(rows) >= 12
     assert summary["sample_size"] == len(rows)
     assert summary["raw_success"] == sum(row["raw_success"] == "true" for row in rows)
     assert summary["guarded_success"] == sum(row["guarded_success"] == "true" for row in rows)
@@ -72,12 +82,16 @@ def test_agent_guard_paired_pilot_schema_and_readme_numbers() -> None:
 
     readme = Path("README.md").read_text(encoding="utf-8")
     readme_zh = Path("README.zh.md").read_text(encoding="utf-8")
-    assert "Completed tasks | 6/6 | 6/6" in readme
-    assert "Tests passed | 6/6 | 6/6" in readme
-    assert "guarded prompts did **not** improve success rate" in readme
+    raw_success = f"{summary['raw_success']}/{summary['sample_size']}"
+    guarded_success = f"{summary['guarded_success']}/{summary['sample_size']}"
+    raw_tests = f"{summary['raw_tests_passed']}/{summary['sample_size']}"
+    guarded_tests = f"{summary['guarded_tests_passed']}/{summary['sample_size']}"
+    assert f"Completed tasks | {raw_success} | {guarded_success}" in readme
+    assert f"Tests passed | {raw_tests} | {guarded_tests}" in readme
+    assert "guarded prompts still did **not** improve success rate" in readme
     assert "docs/assets/agent_guard_paired_pilot.svg" in readme
-    assert "完成任务 | 6/6 | 6/6" in readme_zh
-    assert "测试通过 | 6/6 | 6/6" in readme_zh
+    assert f"完成任务 | {raw_success} | {guarded_success}" in readme_zh
+    assert f"测试通过 | {raw_tests} | {guarded_tests}" in readme_zh
     assert "没有提升成功率" in readme_zh
     assert "docs/assets/agent_guard_paired_pilot.zh.svg" in readme_zh
 

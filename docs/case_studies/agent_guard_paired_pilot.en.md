@@ -10,8 +10,8 @@ same starting conditions.
 ## Protocol
 
 - Agent: `codex-local-exec`
-- Sample size: 6 paired tasks
-- Task type: isolated Python `pytest` bug fixes
+- Sample size: 12 paired tasks
+- Task type: isolated Python `pytest` fixes, including single-file and multi-file tasks
 - Each task runs twice:
   - raw prompt
   - prompt rewritten by `pcl guard --profile coding --policy examples/guard.policy.yaml`
@@ -23,28 +23,30 @@ same starting conditions.
 
 | Metric | Raw agent | Guarded agent |
 |---|---:|---:|
-| Completed tasks | 6/6 | 6/6 |
-| Tests passed | 6/6 | 6/6 |
-| Average touched files | 1.17 | 1.17 |
-| Total unexpected file edits | 1 | 1 |
+| Completed tasks | 12/12 | 12/12 |
+| Tests passed | 12/12 | 12/12 |
+| Average touched files | 1.25 | 1.0 |
+| Total unexpected file edits | 3 | 0 |
 | Human correction turns | 0 | 0 |
-| Average estimated prompt tokens | 5.17 | 83.17 |
-| Average duration seconds | 149.02 | 114.36 |
+| Average estimated prompt tokens | 8.08 | 51.08 |
+| Average duration seconds | 173.74 | 119.97 |
 
 ![Real paired Codex guard pilot visualization](../assets/agent_guard_paired_pilot.svg)
 
 ## Interpretation
 
-The guarded prompts did **not** improve success rate in this small fixture set because raw Codex
-already solved all six tasks. The guarded prompts did, in this run, complete faster on average,
-but they also used many more prompt tokens.
+The guarded prompts did **not** improve success rate in this fixture set because raw Codex also
+solved all 12 tasks. The useful signal is elsewhere: after compacting the guard output, guarded
+prompts still used more prompt tokens than raw prompts, but far fewer than the previous long guard
+template. In this run they touched fewer files, produced zero unexpected file edits, and completed
+faster on average.
 
 The right conclusion is modest:
 
 - guard output can be executed by a real coding agent;
 - the paired harness can compare raw and guarded runs from identical starting states;
 - this sample does not prove general task-success improvement;
-- larger and more realistic tasks are needed before making stronger claims.
+- the next stronger study should use larger real repository tasks and PR-level review outcomes.
 
 Data:
 

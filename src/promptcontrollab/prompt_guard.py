@@ -15,7 +15,7 @@ from promptcontrollab.guard_policy import (
     unique_categories,
 )
 from promptcontrollab.prompt_context import PromptContext
-from promptcontrollab.prompt_improver import PromptImprovement, improve_prompt
+from promptcontrollab.prompt_improver import PromptImprovement, estimate_tokens, improve_prompt
 
 
 @dataclass(frozen=True)
@@ -74,7 +74,8 @@ def guard_prompt(
         msg = "Guard profile must be `general`, `coding`, or `research`"
         raise ValueError(msg)
 
-    profile_prompt = _add_profile_hint(prompt.strip(), profile)
+    stripped_prompt = prompt.strip()
+    profile_prompt = _add_profile_hint(stripped_prompt, profile)
     improvement = improve_prompt(
         profile_prompt,
         context=context,
@@ -84,7 +85,20 @@ def guard_prompt(
         token_mode=token_mode,
         max_tokens=max_tokens,
     )
+    improved_prompt = _compact_guarded_prompt(
+        stripped_prompt,
+        fallback=improvement.improved_prompt,
+        profile=profile,
+        token_mode=token_mode,
+        language=language,
+    )
     token_report = improvement.token_report.to_json()
+    token_report["original_estimated_tokens"] = estimate_tokens(stripped_prompt)
+    token_report["improved_estimated_tokens"] = estimate_tokens(improved_prompt)
+    token_report["within_budget"] = (
+        None if max_tokens is None else token_report["improved_estimated_tokens"] <= max_tokens
+    )
+    token_report["compression_applied"] = True
     within_budget = token_report["within_budget"]
     policy = load_guard_policy(policy_path)
     effective_profile = policy.profile or profile if policy is not None else profile
@@ -116,8 +130,8 @@ def guard_prompt(
         risk_level=risk_level,
         profile=effective_profile,
         mode=mode,
-        original_prompt=prompt.strip(),
-        improved_prompt=improvement.improved_prompt,
+        original_prompt=stripped_prompt,
+        improved_prompt=improved_prompt,
         plain_summary=plain_summary,
         reasons=reasons,
         token_report=token_report,
@@ -139,6 +153,112 @@ def _add_profile_hint(prompt: str, profile: str) -> str:
             return f"{prompt}\n请关注假设、证据、baseline 和可复现产物。"
         return f"{prompt}\nFocus on assumptions, evidence, baselines, and reproducible artifacts."
     return prompt
+
+
+def _compact_guarded_prompt(
+    prompt: str,
+    *,
+    fallback: str,
+    profile: str,
+    token_mode: str,
+    language: str,
+) -> str:
+    """Return a short agent-ready prompt for guard output.
+
+    The full prompt improver intentionally expands vague prompts. For preflight guard usage,
+    especially inside IDE hooks, the default needs to stay concise so the guard does not
+    erase its own token-cost benefit.
+    """
+
+    resolved_language = _detect_language(prompt) if language == "auto" else language
+    if profile == "coding":
+        return _compact_coding_prompt(
+            prompt,
+            language=resolved_language,
+            aggressive=token_mode == "aggressive",
+        )
+    if profile == "research" and token_mode == "aggressive":
+        return _compact_research_prompt(prompt, language=resolved_language)
+    return fallback
+
+
+def _compact_coding_prompt(prompt: str, *, language: str, aggressive: bool) -> str:
+    normalized = prompt.rstrip(".! \n")
+    if language == "zh":
+        task = "\u4efb\u52a1"
+        do = "\u6267\u884c"
+        report = "\u6c47\u62a5"
+        stop = "\u505c\u6b62"
+        if aggressive:
+            return "\n".join(
+                [
+                    f"{task}: {normalized}",
+                    (
+                        f"{do}: \u5148\u8bfb\u76f8\u5173\u6587\u4ef6\uff0c"
+                        "\u53ea\u6539\u5fc5\u8981\u4ee3\u7801\uff0c"
+                        "\u8dd1\u6216\u8bf4\u660e\u6d4b\u8bd5\u3002"
+                    ),
+                    (
+                        f"{stop}: \u9047\u5230\u5220\u5e93\u3001\u6743\u9650\u3001"
+                        "\u5bc6\u94a5\u6216\u751f\u4ea7\u64cd\u4f5c\u5148\u505c\u4e0b\u3002"
+                    ),
+                ]
+            )
+        return "\n".join(
+            [
+                f"{task}: {normalized}",
+                (
+                    f"{do}: \u5148\u8bfb\u76f8\u5173\u6587\u4ef6\uff1b"
+                    "\u53ea\u505a\u5fc5\u8981\u4fee\u6539\uff1b"
+                    "\u4fdd\u6301 public API \u7a33\u5b9a\u3002"
+                ),
+                (
+                    f"{report}: \u5217\u51fa\u5f71\u54cd\u6587\u4ef6\u3001"
+                    "\u6d4b\u8bd5\u547d\u4ee4\u548c\u7ed3\u679c\u3002"
+                ),
+                (
+                    f"{stop}: \u5220\u9664\u3001\u6743\u9650\u3001\u5bc6\u94a5\u3001"
+                    "\u8fc1\u79fb\u6216\u751f\u4ea7\u64cd\u4f5c\u9700\u5148\u8bf4\u660e\u98ce\u9669\u3002"
+                ),
+            ]
+        )
+    if aggressive:
+        return "\n".join(
+            [
+                f"Task: {normalized}.",
+                "Do: inspect relevant files, change only needed code, run or state tests.",
+                "Stop before destructive, auth, secret, migration, or production changes.",
+            ]
+        )
+    return "\n".join(
+        [
+            f"Task: {normalized}.",
+            "Do: inspect relevant files; change only needed code; keep public API stable.",
+            "Report: touched files, test command, and result.",
+            "Stop before destructive, auth, secret, migration, or production changes.",
+        ]
+    )
+
+
+def _compact_research_prompt(prompt: str, *, language: str) -> str:
+    normalized = prompt.rstrip(".! \n")
+    if language == "zh":
+        return "\n".join(
+            [
+                f"\u4efb\u52a1: {normalized}",
+                (
+                    "\u8bf7\u5199\u660e\u5047\u8bbe\u3001\u8bc1\u636e\u3001baseline "
+                    "\u548c\u53ef\u590d\u73b0\u4ea7\u7269\uff1b"
+                    "\u4e0d\u786e\u5b9a\u5c31\u6807\u6ce8\u3002"
+                ),
+            ]
+        )
+    return "\n".join(
+        [
+            f"Task: {normalized}.",
+            "State assumptions, evidence, baselines, and reproducible artifacts; mark uncertainty.",
+        ]
+    )
 
 
 def _goal_for_profile(profile: str) -> str:

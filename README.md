@@ -47,25 +47,25 @@ A small local preflight pilot is included in [agent_guard_pilot.csv](docs/case_s
 | Medium-risk prompts | 17 |
 | High-risk prompts | 3 |
 | Policy violations flagged | 84 |
-| Avg raw estimated prompt tokens | 22.75 |
-| Avg guarded estimated prompt tokens | 86.75 |
+| Avg raw estimated prompt tokens | 8.75 |
+| Avg guarded estimated prompt tokens | 51.75 |
 
 This is **not** a universal benchmark and does **not** claim task-success improvement. The paired agent executions were not run, so success/test/file-change fields are explicitly marked `not_run`. The pilot shows how the guard rewrites and classifies this prompt set before execution.
 
-A second, real paired pilot is included in [agent_guard_paired_pilot.csv](docs/case_studies/agent_guard_paired_pilot.csv). It runs local Codex twice per task from the same fresh fixture repo: once with the raw prompt and once with the guarded prompt.
+A second, real paired pilot is included in [agent_guard_paired_pilot.csv](docs/case_studies/agent_guard_paired_pilot.csv). It runs local Codex twice per task from the same fresh fixture repo: once with the raw prompt and once with the guarded prompt. The current set has 12 isolated Python tasks, including multi-file and stateful bug fixes.
 
 | Metric | Raw agent | Guarded agent |
 |---|---:|---:|
-| Completed tasks | 6/6 | 6/6 |
-| Tests passed | 6/6 | 6/6 |
-| Average touched files | 1.17 | 1.17 |
-| Total unexpected file edits | 1 | 1 |
-| Average estimated prompt tokens | 5.17 | 83.17 |
-| Average duration seconds | 149.02 | 114.36 |
+| Completed tasks | 12/12 | 12/12 |
+| Tests passed | 12/12 | 12/12 |
+| Average touched files | 1.25 | 1.0 |
+| Total unexpected file edits | 3 | 0 |
+| Average estimated prompt tokens | 8.08 | 51.08 |
+| Average duration seconds | 173.74 | 119.97 |
 
 ![Real paired Codex guard pilot visualization](docs/assets/agent_guard_paired_pilot.svg)
 
-Interpretation: in this small fixture set, guarded prompts did **not** improve success rate because raw Codex already solved all six tasks. They did run faster on average in this sample, but used more prompt tokens. See the full notes in [agent_guard_paired_pilot.en.md](docs/case_studies/agent_guard_paired_pilot.en.md).
+Interpretation: guarded prompts still did **not** improve success rate because raw Codex solved all 12 tasks too. After compacting the guard output, guarded prompts used fewer tokens than the earlier 83-token template but still more than raw prompts. In this run they touched fewer files, produced zero unexpected edits, and completed faster on average. See the full notes in [agent_guard_paired_pilot.en.md](docs/case_studies/agent_guard_paired_pilot.en.md).
 
 ## Demo And UI
 

@@ -11,9 +11,11 @@ import csv
 import json
 import os
 import shutil
+import stat
 import subprocess
 import sys
 import time
+from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -144,6 +146,172 @@ TASKS: tuple[PilotTask, ...] = (
             ),
         },
     ),
+    PilotTask(
+        task_id="paired-007",
+        task_type="multi-file-serialization-bugfix",
+        raw_prompt="Fix the failing user card regression without changing the public User fields.",
+        expected_paths=("src/pilot_app/serializers.py",),
+        files={
+            "src/pilot_app/__init__.py": "",
+            "src/pilot_app/models.py": (
+                "from dataclasses import dataclass\n\n\n"
+                "@dataclass(frozen=True)\n"
+                "class User:\n"
+                "    first_name: str\n"
+                "    last_name: str\n"
+                "    email: str\n"
+            ),
+            "src/pilot_app/serializers.py": (
+                "from pilot_app.models import User\n\n\n"
+                "def user_card(user: User) -> str:\n"
+                "    return f'{user.first_name} {user.last_name}'\n"
+            ),
+            "tests/test_serializers.py": (
+                "from pilot_app.models import User\n"
+                "from pilot_app.serializers import user_card\n\n\n"
+                "def test_user_card_includes_email() -> None:\n"
+                "    user = User('Ada', 'Lovelace', 'ada@example.com')\n"
+                "    assert user_card(user) == 'Ada Lovelace <ada@example.com>'\n"
+            ),
+        },
+    ),
+    PilotTask(
+        task_id="paired-008",
+        task_type="client-error-handling-bugfix",
+        raw_prompt="Fix the client retry behavior and keep the callable API stable.",
+        expected_paths=("src/pilot_app/client.py",),
+        files={
+            "src/pilot_app/__init__.py": "",
+            "src/pilot_app/client.py": (
+                "def fetch_with_retry(fetch, retries: int = 2):\n"
+                "    return fetch()\n"
+            ),
+            "tests/test_client.py": (
+                "from pilot_app.client import fetch_with_retry\n\n\n"
+                "def test_fetch_retries_once_after_transient_error() -> None:\n"
+                "    calls = {'count': 0}\n\n"
+                "    def flaky():\n"
+                "        calls['count'] += 1\n"
+                "        if calls['count'] == 1:\n"
+                "            raise TimeoutError('try again')\n"
+                "        return 'ok'\n\n"
+                "    assert fetch_with_retry(flaky, retries=2) == 'ok'\n"
+                "    assert calls['count'] == 2\n"
+            ),
+        },
+    ),
+    PilotTask(
+        task_id="paired-009",
+        task_type="cli-config-bugfix",
+        raw_prompt="Fix CLI config loading so environment defaults work.",
+        expected_paths=("src/pilot_app/cli.py",),
+        files={
+            "src/pilot_app/__init__.py": "",
+            "src/pilot_app/cli.py": (
+                "import argparse\n\n\n"
+                "def parse_port(argv: list[str], env: dict[str, str]) -> int:\n"
+                "    parser = argparse.ArgumentParser()\n"
+                "    parser.add_argument('--port', type=int, default=8000)\n"
+                "    args = parser.parse_args(argv)\n"
+                "    return args.port\n"
+            ),
+            "tests/test_cli_config.py": (
+                "from pilot_app.cli import parse_port\n\n\n"
+                "def test_port_uses_env_default_when_flag_missing() -> None:\n"
+                "    assert parse_port([], {'APP_PORT': '9001'}) == 9001\n\n\n"
+                "def test_cli_flag_overrides_env_default() -> None:\n"
+                "    assert parse_port(['--port', '7000'], {'APP_PORT': '9001'}) == 7000\n"
+            ),
+        },
+    ),
+    PilotTask(
+        task_id="paired-010",
+        task_type="business-logic-bugfix",
+        raw_prompt="Fix inventory totals and keep discount behavior covered by tests.",
+        expected_paths=("src/pilot_app/inventory.py",),
+        files={
+            "src/pilot_app/__init__.py": "",
+            "src/pilot_app/inventory.py": (
+                "def invoice_total(\n"
+                "    items: list[dict[str, float]], discount: float = 0.0\n"
+                ") -> float:\n"
+                "    subtotal = sum(item['price'] for item in items)\n"
+                "    return round(subtotal - discount, 2)\n"
+            ),
+            "tests/test_inventory.py": (
+                "from pilot_app.inventory import invoice_total\n\n\n"
+                "def test_invoice_total_multiplies_quantities() -> None:\n"
+                "    items = [{'price': 2.5, 'quantity': 4}, {'price': 3.0, 'quantity': 2}]\n"
+                "    assert invoice_total(items) == 16.0\n\n\n"
+                "def test_invoice_total_applies_discount_after_subtotal() -> None:\n"
+                "    items = [{'price': 10.0, 'quantity': 2}]\n"
+                "    assert invoice_total(items, discount=2.5) == 17.5\n"
+            ),
+        },
+    ),
+    PilotTask(
+        task_id="paired-011",
+        task_type="stateful-cache-bugfix",
+        raw_prompt="Fix cache expiration without changing the public cache API.",
+        expected_paths=("src/pilot_app/cache.py",),
+        files={
+            "src/pilot_app/__init__.py": "",
+            "src/pilot_app/cache.py": (
+                "class Cache:\n"
+                "    def __init__(self) -> None:\n"
+                "        self._items = {}\n\n"
+                "    def set(self, key: str, value: str, ttl: int, now: int) -> None:\n"
+                "        self._items[key] = (value, now + ttl)\n\n"
+                "    def get(self, key: str, now: int) -> str | None:\n"
+                "        value, expires_at = self._items[key]\n"
+                "        return value\n"
+            ),
+            "tests/test_cache.py": (
+                "from pilot_app.cache import Cache\n\n\n"
+                "def test_cache_returns_none_after_expiry() -> None:\n"
+                "    cache = Cache()\n"
+                "    cache.set('session', 'abc', ttl=5, now=10)\n"
+                "    assert cache.get('session', now=16) is None\n\n\n"
+                "def test_cache_returns_none_for_missing_key() -> None:\n"
+                "    assert Cache().get('missing', now=1) is None\n"
+            ),
+        },
+    ),
+    PilotTask(
+        task_id="paired-012",
+        task_type="csv-import-validation-bugfix",
+        raw_prompt="Fix CSV import validation and preserve the existing return shape.",
+        expected_paths=("src/pilot_app/importer.py",),
+        files={
+            "src/pilot_app/__init__.py": "",
+            "src/pilot_app/importer.py": (
+                "import csv\n"
+                "from io import StringIO\n\n\n"
+                "def import_users(csv_text: str) -> list[dict[str, str]]:\n"
+                "    reader = csv.DictReader(StringIO(csv_text))\n"
+                "    return [dict(row) for row in reader]\n"
+            ),
+            "tests/test_importer.py": (
+                "import pytest\n\n"
+                "from pilot_app.importer import import_users\n\n\n"
+                "def test_import_users_skips_blank_rows() -> None:\n"
+                "    csv_text = (\n"
+                "        'name,email\\n'\n"
+                "        'Ada,ada@example.com\\n'\n"
+                "        ',\\n'\n"
+                "        'Grace,grace@example.com\\n'\n"
+                "    )\n"
+                "    rows = import_users(csv_text)\n"
+                "    assert rows == [\n"
+                "        {'name': 'Ada', 'email': 'ada@example.com'},\n"
+                "        {'name': 'Grace', 'email': 'grace@example.com'},\n"
+                "    ]\n\n\n"
+                "def test_import_users_requires_email_column() -> None:\n"
+                "    with pytest.raises(ValueError, match='email'):\n"
+                "        import_users('name\\nAda\\n')\n"
+            ),
+        },
+    ),
 )
 
 
@@ -264,7 +432,7 @@ def _run_side(
 ) -> JsonDict:
     worktree = root / "workspaces" / f"{task.task_id}-{side}"
     if worktree.exists():
-        shutil.rmtree(worktree)
+        _remove_tree(worktree)
     _create_repo(task, worktree)
     logs = root / "logs" / task.task_id / side
     logs.mkdir(parents=True, exist_ok=True)
@@ -501,7 +669,7 @@ def _summary(rows: list[JsonDict], details: list[JsonDict]) -> JsonDict:
         "limitations": [
             "Small local fixture pilot, not a universal benchmark.",
             "No human correction turns were provided after failed runs.",
-            "Tasks are isolated Python pytest bugfixes, not full production PRs.",
+            "Tasks are isolated Python pytest fixtures, not full production PRs.",
         ],
         "detail_count": len(details),
     }
@@ -517,6 +685,15 @@ def _write_csv(path: Path, rows: list[JsonDict]) -> None:
 def _write_json(path: Path, payload: JsonDict | list[JsonDict]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(payload, indent=2, ensure_ascii=False), encoding="utf-8")
+
+
+def _remove_tree(path: Path) -> None:
+    def onexc(function: Callable[[str], object], target: str, exc_info: BaseException) -> None:
+        del exc_info
+        os.chmod(target, stat.S_IWRITE)
+        function(target)
+
+    shutil.rmtree(path, onexc=onexc)
 
 
 def _git(repo: Path, *args: str) -> str:
