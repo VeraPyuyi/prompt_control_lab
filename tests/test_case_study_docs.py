@@ -75,6 +75,20 @@ def test_agent_guard_paired_pilot_schema_and_readme_numbers() -> None:
     assert "Completed tasks | 6/6 | 6/6" in readme
     assert "Tests passed | 6/6 | 6/6" in readme
     assert "guarded prompts did **not** improve success rate" in readme
+    assert "docs/assets/agent_guard_paired_pilot.svg" in readme
     assert "完成任务 | 6/6 | 6/6" in readme_zh
     assert "测试通过 | 6/6 | 6/6" in readme_zh
     assert "没有提升成功率" in readme_zh
+    assert "docs/assets/agent_guard_paired_pilot.zh.svg" in readme_zh
+
+
+def test_agent_guard_paired_pilot_visual_assets_exist() -> None:
+    en_svg = Path("docs/assets/agent_guard_paired_pilot.svg")
+    zh_svg = Path("docs/assets/agent_guard_paired_pilot.zh.svg")
+
+    assert en_svg.exists()
+    assert zh_svg.exists()
+    assert "Real Paired Pilot" in en_svg.read_text(encoding="utf-8")
+    assert "真实成对试点" in zh_svg.read_text(encoding="utf-8")
+    assert "promptcontrollab" not in en_svg.read_text(encoding="utf-8")
+    assert "promptcontrollab" not in zh_svg.read_text(encoding="utf-8")

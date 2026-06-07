@@ -63,6 +63,8 @@ AI 编程工具已经进入开发工作流，但信任还没有完全跟上。St
 | 平均估算 prompt token | 5.17 | 83.17 |
 | 平均耗时秒数 | 149.02 | 114.36 |
 
+![真实成对 Codex guard 试点可视化](docs/assets/agent_guard_paired_pilot.zh.svg)
+
 解读：在这组小型 fixture 任务里，guarded prompt **没有提升成功率**，因为 raw Codex 已经完成全部 6 个任务；guarded prompt 在本次样本中平均更快，但 prompt token 用量更多。完整说明见 [agent_guard_paired_pilot.zh.md](docs/case_studies/agent_guard_paired_pilot.zh.md)。
 
 ## 安装

@@ -31,6 +31,8 @@ same starting conditions.
 | Average estimated prompt tokens | 5.17 | 83.17 |
 | Average duration seconds | 149.02 | 114.36 |
 
+![Real paired Codex guard pilot visualization](../assets/agent_guard_paired_pilot.svg)
+
 ## Interpretation
 
 The guarded prompts did **not** improve success rate in this small fixture set because raw Codex
@@ -48,4 +50,3 @@ Data:
 
 - [`agent_guard_paired_pilot.csv`](agent_guard_paired_pilot.csv)
 - [`agent_guard_paired_pilot.summary.json`](agent_guard_paired_pilot.summary.json)
-

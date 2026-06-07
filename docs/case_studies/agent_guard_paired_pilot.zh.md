@@ -31,6 +31,8 @@
 | 平均估算 prompt token | 5.17 | 83.17 |
 | 平均耗时秒数 | 149.02 | 114.36 |
 
+![真实成对 Codex guard 试点可视化](../assets/agent_guard_paired_pilot.zh.svg)
+
 ## 如何解读
 
 在这组小型 fixture 任务中，guarded prompt **没有提升成功率**，因为 raw Codex 已经完成了全部
@@ -47,4 +49,3 @@
 
 - [`agent_guard_paired_pilot.csv`](agent_guard_paired_pilot.csv)
 - [`agent_guard_paired_pilot.summary.json`](agent_guard_paired_pilot.summary.json)
-

@@ -63,6 +63,8 @@ A second, real paired pilot is included in [agent_guard_paired_pilot.csv](docs/c
 | Average estimated prompt tokens | 5.17 | 83.17 |
 | Average duration seconds | 149.02 | 114.36 |
 
+![Real paired Codex guard pilot visualization](docs/assets/agent_guard_paired_pilot.svg)
+
 Interpretation: in this small fixture set, guarded prompts did **not** improve success rate because raw Codex already solved all six tasks. They did run faster on average in this sample, but used more prompt tokens. See the full notes in [agent_guard_paired_pilot.en.md](docs/case_studies/agent_guard_paired_pilot.en.md).
 
 ## Demo And UI
