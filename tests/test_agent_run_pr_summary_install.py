@@ -502,6 +502,9 @@ def test_template_data_is_available_as_package_resource() -> None:
     root = resources.files("promptcontrollab.template_data")
 
     assert (root / "codex_skill" / "SKILL.md").is_file()
+    assert (root / "cursor_rule" / "prompt_control_lab.mdc").is_file()
+    assert (root / "claude_code" / "prompt_guard.py").is_file()
+    assert (root / "claude_code" / "settings.snippet.json").is_file()
     assert (root / "github_action" / "prompt-control-lab-gate.yml").is_file()
 
 

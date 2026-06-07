@@ -30,6 +30,47 @@ PAIRED_FIELDS = [
     "notes",
 ]
 
+def test_core_chinese_docs_do_not_contain_mojibake() -> None:
+    for path in [
+        Path("README.zh.md"),
+        Path("docs/case_studies/agent_guard_pilot.zh.md"),
+        Path("docs/case_studies/agent_guard_paired_pilot.zh.md"),
+    ]:
+        text = path.read_text(encoding="utf-8")
+        assert "\ufffd" not in text
+    readme_zh = Path("README.zh.md").read_text(encoding="utf-8")
+    assert "AI 编程 Agent 的执行前检查" in readme_zh
+    assert "本地 Case Study" in readme_zh
+    assert "模型追溯边界" in readme_zh
+
+
+def test_readmes_link_production_and_release_readiness_docs() -> None:
+    readme = Path("README.md").read_text(encoding="utf-8")
+    readme_zh = Path("README.zh.md").read_text(encoding="utf-8")
+
+    assert "docs/production_pilot.en.md" in readme
+    assert "docs/release_install.en.md" in readme
+    assert "docs/production_pilot.zh.md" in readme_zh
+    assert "docs/release_install.zh.md" in readme_zh
+
+
+def test_production_and_release_docs_state_boundaries() -> None:
+    production_en = Path("docs/production_pilot.en.md").read_text(encoding="utf-8")
+    production_zh = Path("docs/production_pilot.zh.md").read_text(encoding="utf-8")
+    release_en = Path("docs/release_install.en.md").read_text(encoding="utf-8")
+    release_zh = Path("docs/release_install.zh.md").read_text(encoding="utf-8")
+
+    assert "Do not publish private prompts or source code" in production_en
+    assert "raw-agent vs guarded-agent" in production_en
+    assert "不要公开私有 prompt 或源码" in production_zh
+    assert "raw-agent vs guarded-agent" in production_zh
+    assert "python -m build" in release_en
+    assert "pipx install dist/" in release_en
+    assert "python -m build --wheel --no-isolation" in release_en
+    assert "Python 包名是 `promptcontrollab`" in release_zh
+    assert "pcl install-plugin all" in release_zh
+    assert "python -m build --wheel --no-isolation" in release_zh
+
 
 def test_agent_guard_preflight_pilot_schema_and_claims() -> None:
     csv_path = Path("docs/case_studies/agent_guard_pilot.csv")

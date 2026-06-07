@@ -872,6 +872,8 @@ practical engineering value is the guard/policy/model-audit workflow around real
 - [Artifacts](docs/artifacts.en.md)
 - [Agent guard pilot case study](docs/case_studies/agent_guard_pilot.en.md)
 - [Real paired agent pilot case study](docs/case_studies/agent_guard_paired_pilot.en.md)
+- [Production pilot protocol](docs/production_pilot.en.md)
+- [Release and install readiness](docs/release_install.en.md)
 - [Innovation and Contribution](docs/innovation.en.md)
 - [Decision Guide](docs/decision_guide.en.md)
 - [Plugin adapters](plugins/)

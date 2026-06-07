@@ -170,6 +170,8 @@ pcl install-plugin github-action
 - [决策指南](docs/decision_guide.zh.md)
 - [Agent guard 试点 case study](docs/case_studies/agent_guard_pilot.zh.md)
 - [真实成对 agent 试点 case study](docs/case_studies/agent_guard_paired_pilot.zh.md)
+- [生产级试点协议](docs/production_pilot.zh.md)
+- [发布和安装验证清单](docs/release_install.zh.md)
 
 ## License
 
