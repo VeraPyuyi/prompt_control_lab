@@ -6,9 +6,14 @@
 [![License](https://img.shields.io/github/license/VeraPyuyi/prompt_control_lab)](LICENSE)
 [![Python](https://img.shields.io/badge/python-3.10%2B-blue)](pyproject.toml)
 
-**AI 编程 Agent 的执行前检查、模型溯源和可复现评测工具。**
+**面向 prompt 优化的控制论诊断与可复现评测工具。**
 
-`prompt_control_lab` 是 Claude Code、Cursor、Codex 和 shell 型 coding agent 的本地治理层。Agent 花 token 或改仓库之前，它可以先检查 prompt、应用团队策略、记录公开模型身份、审计 diff，并把运行过程保存成可复核 artifact。
+`prompt_control_lab` 是 Prompt-Engineering-Optimal-Control 项目的开源工具包。
+它的研究内核是把 prompt 优化实验变成可复现的切分、成对统计、soft-to-hard 部署诊断、
+hidden-state trajectory 探针、Riccati surrogate 检查和 time-varying soft-control 对比。
+
+它也保留面向 AI 编程 Agent 的工程应用层：prompt 策略门禁、公开模型溯源、diff 审计、
+PR summary、插件模板和本地 UI。但这些是论文研究流程的应用外壳，不是项目的主身份。
 
 Python 包名是 `promptcontrollab`。仓库和项目品牌名是 `prompt_control_lab`。
 
@@ -17,25 +22,67 @@ English documentation is available in [README.md](README.md).
 ## 2 分钟上手
 
 ```bash
-# 1. 在 agent 执行前检查高风险 prompt。
-pcl guard --prompt "Fix this bug" --profile coding --policy examples/guard.policy.yaml --json
+# 0. 安装本段教程需要的 research / UI extras。
+pip install -e ".[research,ui]"
 
-# 2. 生成可复现 prompt 报告。
+# 1. 运行一套论文风格的研究诊断 demo。
+pcl research-demo --out runs/research-demo
+
+# 2. 从 demo inputs 重新生成统一诊断报告。
+pcl diagnose --run runs/research-demo
+
+# 3. 创建一个可复现 prompt 评测 demo。
+pcl init --path demo
+cd demo
+
+# 4. 运行 tri-split 评测、统计和报告流程。
 pcl analyze --config promptcontrol.example.yaml --out runs/quick
 
-# 3. 打开本地仪表盘。
+# 5. 打开本地 UI 查看报告和研究诊断。
 pcl ui --runs runs/ --policy examples/guard.policy.yaml --port 8501
 ```
 
-你会得到：prompt 风险、guarded prompt、模型溯源、metrics、stats、gate 结果、diff 审计、报告 artifact 和本地 UI。仪表盘不会上传 prompt、代码或 artifact。
+你会得到：split hash、train/validation/withheld 隔离记录、predictions、metrics、成对统计、
+explanation、gate 结果、报告 artifact 和本地 UI。仪表盘不会上传 prompt、代码或 artifact。
 
 ## 为什么需要它
 
-AI 编程工具已经进入开发工作流，但信任还没有完全跟上。Stack Overflow 2025 Developer Survey 显示，**84%** 的开发者正在使用或计划使用 AI 工具，但 **46%** 不信任 AI 输出准确性，**45%** 认为 debug AI 生成代码更耗时（[AI survey](https://survey.stackoverflow.co/2025/ai)，[leaders summary](https://stackoverflow.co/internal/resources/2025-stack-overflow-developer-survey-for-leaders/ai-adoption/)）。
+很多 prompt 优化实验最后只剩一个输出分数。这样会盖住更关键的问题：
 
-`prompt_control_lab` 聚焦一个很窄但实用的缺口：本地 agent prompt preflight、模型溯源、可复现 prompt regression，以及 agent 执行后的 diff 审计。
+- train / validation / withheld 是否干净隔离？
+- candidate prompt 的提升是否真的可靠，还是只是在一个 split 上碰巧更好？
+- soft prompt 的收益能否转成 hard token 部署？
+- hidden-state trajectory 是更稳定，还是更漂移？
+- time-varying prompt 的收益来自时序结构，还是来自更多参数容量？
+- 拟合出的 Riccati surrogate 是否自洽稳定？这个结论的边界在哪里？
+
+`prompt_control_lab` 的目标是把这些问题变成可执行、可复现、可审计的工具流程。
 
 ![prompt_control_lab 工作流](docs/assets/workflow.zh.svg)
+
+## 研究内核
+
+下面这些是项目最初来自论文框架的核心能力：
+
+| 论文概念 | 命令 / artifact | 能说明什么问题 |
+|---|---|---|
+| 三段切分 withheld protocol | `pcl split`、`pcl analyze`、`splits.json` | 评测是否避免了 train / validation / withheld 泄漏。 |
+| 成对统计比较 | `pcl stats`、`stats.json` | prompt 改动是否在 bootstrap CI、permutation p-value 和 Holm correction 下仍然可靠。 |
+| soft-to-hard 部署 gap | `pcl soft-hard`、`diagnostics/soft_hard.json` | soft prompt 的收益转成 hard token 后损失多大。 |
+| hidden-state trajectory 诊断 | `pcl trajectory`、`diagnostics/trajectory.json` | 内部轨迹是否出现 drift、decay 或 turnpike-like signal。 |
+| Riccati surrogate 诊断 | `pcl riccati`、`diagnostics/riccati.json` | 拟合出的有限维 surrogate 是否自洽稳定。 |
+| time-varying soft-control lane | `pcl tv-soft`、`diagnostics/tv_soft.json` | time-varying 收益更像来自时序结构，还是参数容量。 |
+
+如果想先体验整套论文诊断流程，不需要自己准备模型 artifact，可以运行
+`pcl research-demo --out runs/research-demo`。如果已经有自己的 soft prompt、hidden states、
+surrogate matrices 或 method predictions，可以用 `pcl diagnose` 统一生成诊断报告。
+
+完整对应关系见 [论文功能映射](docs/research_from_paper.zh.md)。
+
+## 工程应用层
+
+Agent guard、模型溯源、diff audit、GitHub Action、插件和 UI 是围绕研究内核做出的工程应用。
+它们让 Claude Code、Cursor、Codex 等 coding agent 的使用过程也能留下同样的证据链。
 
 ## 本地 Case Study
 
@@ -112,16 +159,16 @@ pcl doctor
 
 | 场景 | 命令 | 说明 |
 |---|---|---|
-| 新手菜单 | `pcl start` | 选择 improve、guard 或 analyze。 |
-| 执行前门禁 | `pcl guard` | 检查模糊、危险、过宽、缺测试或超预算 prompt。 |
-| 直接优化 prompt | `pcl improve` | 输入一句 prompt，得到更清晰的版本。 |
-| 可复现评测 | `pcl analyze` -> `pcl gate` | 生成 split、metrics、stats、explanation、report 和 gate。 |
-| 模型溯源 | `pcl model-detect` / `pcl model-drift` | 记录公开模型 id、可信等级、漂移 warning。 |
-| Agent diff 审计 | `pcl audit-diff` | 检查改动文件、危险路径、secret、依赖、workflow、SARIF。 |
-| 历史视图 | `pcl history` | 索引和比较多次 run。 |
-| 本地仪表盘 | `pcl ui` | 交互式 guard、report、drift、audit、history、tutorial。 |
-| 插件模板 | `pcl install-plugin` | 安装 Claude Code、Cursor、Codex、GitHub Action 模板。 |
-| 研究诊断 | `soft-hard` / `trajectory` / `riccati` / `tv-soft` | 论文相关的高级诊断。 |
+| 论文 demo | `pcl research-demo` | 生成 synthetic inputs，并一键跑完研究诊断。 |
+| 统一诊断 | `pcl diagnose` | 把 soft-hard、trajectory、Riccati、tv-soft 合成一份诊断报告。 |
+| 三段切分评测 | `pcl split` / `pcl analyze` | 固化 train / validation / withheld 协议并生成报告。 |
+| 成对统计 | `pcl stats` | 输出 bootstrap CI、permutation p-value 和 Holm correction。 |
+| soft-to-hard 风险 | `pcl soft-hard` | 检查 soft prompt 转 hard token 后的 projection gap。 |
+| 内部轨迹诊断 | `pcl trajectory` | 分析 hidden-state drift、decay slope 和 turnpike-like signal。 |
+| Riccati 诊断 | `pcl riccati` | 检查有限维 surrogate 的 Riccati / DARE 稳定性。 |
+| time-varying control | `pcl tv-soft` | 比较 static、time-varying、shuffled、random control lane。 |
+| 报告和解释 | `pcl report` / `pcl explain` / `pcl gate` | 把 artifact 转成可读结论和策略判断。 |
+| Agent 应用层 | `pcl guard` / `pcl audit-diff` | 把研究证据链应用到 coding agent 的执行前后。 |
 
 ## 模型追溯边界
 
@@ -152,11 +199,13 @@ pcl install-plugin github-action
 
 ## 生态定位
 
-`prompt_control_lab` 不应该被理解成另一个宽泛 LLM dashboard。它的定位是：
+`prompt_control_lab` 不应该被理解成另一个宽泛 LLM dashboard 或 prompt manager。它的核心定位是：
 
-**agent prompt preflight + model provenance + reproducible prompt regression + agent diff audit。**
+**控制论 prompt 诊断 + 可复现 prompt optimization 证据。**
 
-它与 promptfoo、DeepEval、LangSmith、Langfuse 互补：那些工具更偏 eval、red-team、observability 或 prompt management；`prompt_control_lab` 更偏本地 coding agent 执行前门禁和运行证据。
+它与 promptfoo、DeepEval、LangSmith、Langfuse 互补：那些工具更偏 eval、red-team、observability 或 prompt management；`prompt_control_lab` 更偏论文所述的 prompt optimization 诊断，包括 tri-split 协议、成对统计、soft-hard gap、hidden-state trajectory、Riccati surrogate 和 time-varying soft-control。
+
+Agent guard、model provenance、diff audit 和插件仍然有价值，但它们是围绕研究诊断做出的工程应用层，不是项目重心。
 
 ![prompt_control_lab 生态定位](docs/assets/ecosystem.zh.svg)
 
@@ -166,6 +215,7 @@ pcl install-plugin github-action
 - [面向用户](docs/users.zh.md)
 - [一步一步教程](docs/tutorial.zh.md)
 - [Artifact 说明](docs/artifacts.zh.md)
+- [论文功能映射](docs/research_from_paper.zh.md)
 - [创新点和贡献](docs/innovation.zh.md)
 - [决策指南](docs/decision_guide.zh.md)
 - [Agent guard 试点 case study](docs/case_studies/agent_guard_pilot.zh.md)

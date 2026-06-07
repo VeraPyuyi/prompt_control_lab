@@ -6,9 +6,16 @@
 [![License](https://img.shields.io/github/license/VeraPyuyi/prompt_control_lab)](LICENSE)
 [![Python](https://img.shields.io/badge/python-3.10%2B-blue)](pyproject.toml)
 
-**Preflight, provenance, and reproducible evaluation for AI coding agents.**
+**Control-theoretic diagnostics and reproducible evaluation for prompt optimization.**
 
-`prompt_control_lab` is a local governance layer for Claude Code, Cursor, Codex, and shell-based coding agents. Before an agent spends tokens or edits your repository, it can guard the prompt, apply a team policy, record public model identity, audit the diff, and turn the run into inspectable artifacts.
+`prompt_control_lab` is the open-source toolkit for the Prompt-Engineering-Optimal-Control project.
+Its research core turns prompt optimization experiments into reproducible splits, paired statistics,
+soft-to-hard deployment diagnostics, hidden-state trajectory probes, Riccati surrogate checks, and
+time-varying soft-control comparisons.
+
+It also includes an applied engineering layer for AI coding agents: prompt policy guardrails, public
+model provenance, diff audit, PR summaries, plugin templates, and a local UI. Those features are
+downstream applications of the research workflow, not the main identity of the project.
 
 Python package name: `promptcontrollab`. Repository and product name: `prompt_control_lab`.
 
@@ -17,25 +24,71 @@ Chinese documentation is available in [README.zh.md](README.zh.md).
 ## Start In 2 Minutes
 
 ```bash
-# 1. Check a risky agent prompt before it runs.
-pcl guard --prompt "Fix this bug" --profile coding --policy examples/guard.policy.yaml --json
+# 0. Install the walkthrough extras.
+pip install -e ".[research,ui]"
 
-# 2. Generate a reproducible prompt report.
+# 1. Run a paper-style research diagnostics demo.
+pcl research-demo --out runs/research-demo
+
+# 2. Re-run the unified diagnostics report from demo inputs.
+pcl diagnose --run runs/research-demo
+
+# 3. Create a reproducible prompt-evaluation demo project.
+pcl init --path demo
+cd demo
+
+# 4. Run the tri-split evaluation/statistics/report pipeline.
 pcl analyze --config promptcontrol.example.yaml --out runs/quick
 
-# 3. Open the local dashboard.
+# 5. Open the local dashboard for reports and research diagnostics.
 pcl ui --runs runs/ --policy examples/guard.policy.yaml --port 8501
 ```
 
-What you get: prompt risk, guarded prompt, model provenance, metrics, stats, gate result, diff audit, report artifacts, and a local UI. No prompts, code, or artifacts are uploaded by the dashboard.
+What you get: split hash, train/validation/withheld hygiene, predictions, metrics, paired statistics,
+explanation, gate result, report artifacts, and a local UI. No prompts, code, or artifacts are
+uploaded by the dashboard.
 
 ## Why This Exists
 
-AI coding tools are already in the workflow, but trust has not caught up. Stack Overflow's 2025 Developer Survey reports that **84%** of developers use or plan to use AI tools in development, while **46%** distrust AI output accuracy and **45%** say debugging AI-generated code is more time-consuming ([AI survey](https://survey.stackoverflow.co/2025/ai), [leaders summary](https://stackoverflow.co/internal/resources/2025-stack-overflow-developer-survey-for-leaders/ai-adoption/)).
+Most prompt optimization reports still collapse the experiment to one output score. That hides
+important questions:
 
-`prompt_control_lab` focuses on a narrow gap that broad eval and observability tools do not fully cover: local agent prompt preflight, model provenance, reproducible prompt regression, and post-run diff audit.
+- Was train/validation/withheld separation clean?
+- Is the candidate prompt better under paired uncertainty, or just lucky on one split?
+- Does a learned soft prompt survive hard-token projection?
+- Did the hidden-state trajectory become more stable or more drifting?
+- Does a time-varying prompt help because of temporal structure or just extra capacity?
+- Is a fitted Riccati surrogate internally stable, and what are the limits of that claim?
+
+`prompt_control_lab` exists to make those questions concrete, reproducible, and inspectable.
 
 ![prompt_control_lab workflow](docs/assets/workflow.svg)
+
+## Research Core
+
+These are the paper-derived capabilities that drive the project:
+
+| Paper concept | CLI / artifact | What it explains |
+|---|---|---|
+| Tri-split withheld protocol | `pcl split`, `pcl analyze`, `splits.json` | Whether prompt evaluation avoided train/validation/withheld leakage. |
+| Paired statistical comparison | `pcl stats`, `stats.json` | Whether a prompt change is reliable under bootstrap CI, permutation p-value, and Holm correction. |
+| Soft-to-hard deployment gap | `pcl soft-hard`, `diagnostics/soft_hard.json` | Whether soft prompt gains survive nearest-token hard projection. |
+| Hidden-state trajectory diagnostic | `pcl trajectory`, `diagnostics/trajectory.json` | Whether internal trajectories show drift, decay, or turnpike-like signals. |
+| Riccati surrogate diagnostic | `pcl riccati`, `diagnostics/riccati.json` | Whether a fitted finite-dimensional surrogate is self-consistent and stable. |
+| Time-varying soft-control lane | `pcl tv-soft`, `diagnostics/tv_soft.json` | Whether time-varying gains look like temporal structure rather than parameter capacity. |
+
+To experience the whole research stack without preparing model artifacts first, run
+`pcl research-demo --out runs/research-demo`. To apply the same unified diagnostic report to your
+own soft prompts, hidden states, matrices, and method predictions, use `pcl diagnose`.
+
+See [Research From The Paper](docs/research_from_paper.en.md) for the direct mapping from paper
+ideas to commands, inputs, outputs, and interpretation boundaries.
+
+## Applied Engineering Layer
+
+The agent guard, model provenance, diff audit, GitHub Action, plugins, and UI are practical
+applications built around the research core. They help teams use the same evidence trail when a
+prompt is handed to Claude Code, Cursor, Codex, or another coding agent.
 
 ## Local Case Studies
 
@@ -82,16 +135,16 @@ The repository includes narrated 4K hands-on demo videos generated from real UI 
 
 ## Quick Map
 
-1. `pcl start`: beginner menu.
-2. `pcl guard`: agent prompt preflight and team policy gate.
-3. `pcl improve`: rewrite one prompt directly.
-4. `pcl analyze` -> `pcl gate`: reproducible prompt regression report.
-5. `pcl model-detect` / `pcl model-drift`: public model identity and drift audit.
-6. `pcl audit-diff`: inspect what an agent changed, with SARIF and secret-scanner support.
-7. `pcl history`: index and compare run history.
-8. `pcl ui`: local workflow cockpit and artifact dashboard.
-9. `pcl install-plugin`: install Claude Code, Cursor, Codex, or GitHub Action templates.
-10. Advanced research mode: `soft-hard`, `trajectory`, `riccati`, `tv-soft`.
+1. `pcl research-demo`: generate synthetic paper-style inputs and run all research diagnostics.
+2. `pcl diagnose`: run soft-hard, trajectory, Riccati, and tv-soft as one diagnostic workflow.
+3. `pcl split` / `pcl analyze`: tri-split prompt evaluation and report generation.
+4. `pcl stats`: paired bootstrap CI, permutation p-value, and Holm correction.
+5. `pcl soft-hard`: soft-to-hard projection gap and deployment risk.
+6. `pcl trajectory`: hidden-state drift, decay slope, and turnpike-like signal.
+7. `pcl riccati`: fitted finite-dimensional Riccati/DARE surrogate diagnostics.
+8. `pcl tv-soft`: static/time-varying/shuffled/random soft-control comparison.
+9. `pcl report` / `pcl explain` / `pcl gate`: turn artifacts into readable decisions.
+10. `pcl guard` / `pcl audit-diff`: applied AI coding agent preflight and post-run audit.
 
 ## Install The CLI ⚙️
 
@@ -831,19 +884,20 @@ temporal structure or just extra capacity.
 
 ## Ecosystem Positioning 🌱
 
-`prompt_control_lab` should not be read as another broad LLM dashboard. Its narrow, practical lane
-is **agent prompt preflight + model provenance + reproducible prompt regression**.
+`prompt_control_lab` should not be read as another broad LLM dashboard or prompt manager. Its core
+lane is **control-theoretic prompt diagnostics + reproducible prompt optimization evidence**.
 
 Adjacent tools cover important neighboring layers:
 
 - promptfoo and DeepEval focus on LLM evaluation, tests, red-team checks, and metrics.
 - Langfuse, LangSmith, and Phoenix focus on traces, observability, experiments, and app-level evaluation.
 - DSPy, TextGrad, and OpenPrompt focus on prompt/program optimization or prompt-learning workflows.
-- `prompt_control_lab` adds a lightweight local gate before AI coding agents execute, then records
-  prompt-only comparison validity, model provenance, statistical evidence, and research diagnostics.
+- `prompt_control_lab` adds paper-derived diagnostics around prompt optimization: tri-split
+  protocol hygiene, paired statistical evidence, soft-hard deployment gap, hidden-state trajectory
+  probes, Riccati surrogates, and time-varying soft-control comparisons.
 
-The research modules connect to the control-theoretic framing behind the project, but the most
-practical engineering value is the guard/policy/model-audit workflow around real coding agents.
+The guard/policy/model-audit workflow remains useful, but it is an applied engineering layer around
+the research diagnostics rather than the center of gravity.
 
 ![prompt_control_lab ecosystem position](docs/assets/ecosystem.svg)
 
@@ -853,16 +907,17 @@ practical engineering value is the guard/policy/model-audit workflow around real
 
 ## Who It Is For 👥
 
-- Developers using Claude Code, Cursor, Codex, or shell-based coding agents who want a local
-  preflight before prompts reach the agent.
-- Engineering teams that need configurable prompt policy gates for risky, broad, destructive,
-  security-sensitive, or untested coding requests.
-- LLM teams that need prompt regression reports, model provenance, model drift warnings, and
-  prompt-only comparison checks.
 - Researchers and reproducibility-focused teams comparing prompt methods with train/val/withheld
   splits and paired statistics.
-- Advanced users studying soft-hard deployment risk, hidden-state trajectories, Riccati surrogates,
+- Prompt optimization and soft-prompt researchers studying soft-hard deployment risk,
+  hidden-state trajectories, Riccati surrogates,
   and time-varying soft-control behavior.
+- LLM teams that need prompt regression reports, model provenance, model drift warnings, and
+  prompt-only comparison checks.
+- Developers using Claude Code, Cursor, Codex, or shell-based coding agents who want to apply the
+  same evidence trail to local agent runs.
+- Engineering teams that need configurable prompt policy gates for risky, broad, destructive,
+  security-sensitive, or untested coding requests.
 
 ## Documentation 📚
 
@@ -870,6 +925,7 @@ practical engineering value is the guard/policy/model-audit workflow around real
 - [Users](docs/users.en.md)
 - [Tutorial](docs/tutorial.en.md)
 - [Artifacts](docs/artifacts.en.md)
+- [Research From The Paper](docs/research_from_paper.en.md)
 - [Agent guard pilot case study](docs/case_studies/agent_guard_pilot.en.md)
 - [Real paired agent pilot case study](docs/case_studies/agent_guard_paired_pilot.en.md)
 - [Production pilot protocol](docs/production_pilot.en.md)

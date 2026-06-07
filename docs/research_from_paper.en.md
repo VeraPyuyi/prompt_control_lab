@@ -1,0 +1,144 @@
+# Research From The Paper
+
+`prompt_control_lab` is organized around the Prompt-Engineering-Optimal-Control
+framing. The applied agent features are useful, but the research core is the
+paper-derived diagnostic stack below.
+
+## Concept-To-Command Map
+
+| Paper concept | Command | Main output | Interpretation boundary |
+|---|---|---|---|
+| one-command research workflow | `pcl research-demo`, `pcl diagnose` | `research_diagnostics.json`, `research_diagnostics.md` | Runs synthetic fixtures or user-provided artifacts; demo outputs are not benchmark results. |
+| tri-split withheld protocol | `pcl split`, `pcl analyze` | `splits.json`, `manifest.json` | Checks protocol hygiene; it does not make a small task pool representative. |
+| paired statistical comparison | `pcl stats` | `stats.json` | Reports mean delta, bootstrap CI, permutation p-value, and Holm-adjusted p-value. |
+| soft-to-hard projection gap | `pcl soft-hard` | `diagnostics/soft_hard.json` | Measures nearest-token projection risk; it is not a proof of optimal hard prompting. |
+| hidden-state trajectory | `pcl trajectory` | `diagnostics/trajectory.json` | Reports drift, log-decay slope, fit quality, and turnpike-like signal. |
+| Riccati surrogate | `pcl riccati` | `diagnostics/riccati.json` | Checks a fitted finite-dimensional surrogate, not the full language model. |
+| time-varying soft-control lane | `pcl tv-soft` | `diagnostics/tv_soft.json` | Compares static, time-varying, shuffled, and random control lanes. |
+
+## 1. One-Command Research Workflow
+
+If you want to experience the paper-derived diagnostics before preparing your
+own artifacts, start here:
+
+```bash
+pcl research-demo --out runs/research-demo
+pcl diagnose --run runs/research-demo
+```
+
+This writes synthetic soft prompt vectors, vocabulary embeddings, hidden-state
+trajectories, Riccati matrices, and method predictions under `runs/research-demo/inputs`.
+It then writes `research_diagnostics.json` and `research_diagnostics.md`. The demo is
+for learning the workflow, not for claiming benchmark performance.
+
+## 2. Tri-Split Withheld Protocol
+
+The paper emphasizes clean separation between optimization data, selection data,
+and withheld evaluation. The toolkit makes that protocol explicit:
+
+```bash
+pcl split --data examples/tasks.jsonl --out runs/candidate --seed 0
+pcl analyze --config promptcontrol.example.yaml --out runs/quick
+```
+
+Use the split hash and leakage report to verify that train, validation, and
+withheld ids do not overlap. This protects the evaluation story from validation
+overfitting and accidental test leakage.
+
+## 3. Paired Statistics
+
+Prompt changes should not be judged by one average score alone:
+
+```bash
+pcl stats \
+  --baseline runs/baseline/predictions.jsonl \
+  --candidate runs/candidate/predictions.jsonl \
+  --out runs/candidate/stats.json
+```
+
+The output records paired mean delta, bootstrap confidence interval, permutation
+p-value, and Holm-adjusted p-value. If the interval crosses zero, the evidence is
+weaker even when the candidate mean is higher.
+
+## 4. Soft-To-Hard Deployment Gap
+
+Soft prompts can look good during optimization but fail when projected to hard
+tokens. The soft-to-hard diagnostic quantifies that gap:
+
+```bash
+pcl soft-hard \
+  --soft soft_prompt.npz \
+  --vocab vocab_embeddings.npz \
+  --out runs/candidate/diagnostics
+```
+
+This reports projection distances and risk signals. It should be interpreted as
+a deployment-risk diagnostic, not as a hard-prompt optimizer.
+
+## 5. Hidden-State Trajectory Diagnostics
+
+The trajectory command imports hidden states and estimates drift and decay:
+
+```bash
+pcl trajectory --states hidden_states.npz --out runs/candidate/diagnostics
+```
+
+The output includes mean step drift, log-decay slope, fit quality, and a
+turnpike-like signal. A negative decay slope with reasonable fit can suggest
+stability-like behavior on that trace; heterogeneous traces may weaken the
+signature.
+
+## 6. Riccati Surrogate Diagnostics
+
+The Riccati command checks a fitted or supplied finite-dimensional surrogate:
+
+```bash
+pcl riccati --matrices surrogate_mats.npz --out runs/candidate/diagnostics
+```
+
+or:
+
+```bash
+pcl riccati --trajectory hidden_states.npz --out runs/candidate/diagnostics
+```
+
+The result reports closed-loop spectral radius and whether the surrogate looks
+stable under the fitted diagnostic. This is intentionally limited: it does not
+prove that the operational language model satisfies the surrogate assumptions.
+
+## 7. Time-Varying Soft-Control Lane
+
+The time-varying lane compares method groups:
+
+```bash
+pcl tv-soft --predictions method_predictions.jsonl --out runs/candidate/diagnostics
+```
+
+Use this to compare static, time-varying, shuffled time-varying, and random
+controls. The key question is whether gains are consistent with temporal
+structure or merely with extra parameter capacity.
+
+## 8. Unified Diagnose Command
+
+For user-provided artifacts, run the same diagnostic stack directly:
+
+```bash
+pcl diagnose \
+  --soft soft_prompt.npz \
+  --vocab vocab_embeddings.npz \
+  --states hidden_states.npz \
+  --matrices surrogate_mats.npz \
+  --tv-predictions method_predictions.jsonl \
+  --out runs/candidate/diagnostics
+```
+
+You can provide only the artifacts you have. `--soft` requires `--vocab`; Riccati
+uses `--matrices` when available and otherwise can fit a surrogate from
+`--states`.
+
+## Applied Engineering Layer
+
+`pcl guard`, `pcl audit-diff`, `pcl model-detect`, GitHub Action templates, and
+the local UI are downstream applications. They help coding-agent users keep the
+same evidence trail, but the project should be understood first as a research
+diagnostic toolkit for prompt optimization.

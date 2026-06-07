@@ -39,6 +39,7 @@ from promptcontrollab.prompt_diff import render_prompt_diff
 from promptcontrollab.prompt_guard import guard_prompt
 from promptcontrollab.prompt_improver import improve_prompt
 from promptcontrollab.reporting import generate_report
+from promptcontrollab.research_workflow import run_research_diagnostics, write_research_demo
 from promptcontrollab.riccati import analyze_riccati
 from promptcontrollab.soft_hard import analyze_soft_hard
 from promptcontrollab.splitting import load_tasks, make_split, write_split
@@ -380,6 +381,50 @@ def build_parser() -> argparse.ArgumentParser:
     export_parser.add_argument("--run", type=Path, required=True, help="Run directory.")
     export_parser.add_argument("--out", type=Path, required=True, help="Zip output path.")
     export_parser.set_defaults(func=_cmd_export_report)
+
+    research_demo_parser = subcommands.add_parser(
+        "research-demo",
+        help="Create a synthetic paper-style demo and run all research diagnostics.",
+    )
+    research_demo_parser.add_argument("--out", type=Path, required=True, help="Demo run directory.")
+    research_demo_parser.add_argument("--seed", type=int, default=0, help="Synthetic fixture seed.")
+    research_demo_parser.set_defaults(func=_cmd_research_demo)
+
+    diagnose_parser = subcommands.add_parser(
+        "diagnose",
+        help="Run paper-derived soft-hard, trajectory, Riccati, and tv-soft diagnostics.",
+    )
+    diagnose_parser.add_argument("--run", type=Path, default=None, help="Run dir with inputs/.")
+    diagnose_parser.add_argument(
+        "--out",
+        type=Path,
+        default=None,
+        help="Diagnostics output directory. Defaults to <run>/diagnostics.",
+    )
+    diagnose_parser.add_argument("--soft", type=Path, default=None, help=".npz with array `soft`.")
+    diagnose_parser.add_argument(
+        "--vocab",
+        type=Path,
+        default=None,
+        help=".npz with array `embeddings`.",
+    )
+    diagnose_parser.add_argument(
+        "--states",
+        type=Path,
+        default=None,
+        help=".npz with array `states`.",
+    )
+    diagnose_parser.add_argument("--matrices", type=Path, default=None, help=".npz with A/B/Q/R.")
+    diagnose_parser.add_argument(
+        "--tv-predictions",
+        type=Path,
+        default=None,
+        help="Scored predictions JSONL for tv-soft summary.",
+    )
+    diagnose_parser.add_argument("--baseline-method", default="static")
+    diagnose_parser.add_argument("--tail", type=int, default=1)
+    diagnose_parser.add_argument("--iterations", type=int, default=200)
+    diagnose_parser.set_defaults(func=_cmd_diagnose)
 
     analyze_parser = subcommands.add_parser(
         "analyze",
@@ -868,6 +913,35 @@ def _cmd_ui(args: argparse.Namespace) -> None:
 def _cmd_export_report(args: argparse.Namespace) -> None:
     payload = export_report_zip(run_dir=args.run, zip_path=args.out)
     print(json.dumps(payload, indent=2, ensure_ascii=False, sort_keys=True))
+
+
+def _cmd_research_demo(args: argparse.Namespace) -> None:
+    payload = write_research_demo(out_dir=args.out, seed=args.seed)
+    diagnostics = payload.get("diagnostics", {})
+    diagnostic_names = sorted(diagnostics) if isinstance(diagnostics, dict) else []
+    print(f"Wrote research demo to {args.out}")
+    print(f"Diagnostics: {', '.join(diagnostic_names)}")
+    print(f"Report: {args.out / 'research_diagnostics.md'}")
+
+
+def _cmd_diagnose(args: argparse.Namespace) -> None:
+    summary_dir = args.run if args.run is not None else args.out
+    payload = run_research_diagnostics(
+        run_dir=args.run,
+        mode="diagnose",
+        soft_path=args.soft,
+        vocab_path=args.vocab,
+        states_path=args.states,
+        matrices_path=args.matrices,
+        tv_predictions_path=args.tv_predictions,
+        diagnostics_dir=args.out,
+        summary_dir=summary_dir,
+        baseline_method=args.baseline_method,
+        tail=args.tail,
+        iterations=args.iterations,
+    )
+    print(f"Wrote research diagnostics to {payload['diagnostics_dir']}")
+    print(f"Report: {Path(str(payload['summary_dir'])) / 'research_diagnostics.md'}")
 
 
 def _cmd_analyze(args: argparse.Namespace) -> None:

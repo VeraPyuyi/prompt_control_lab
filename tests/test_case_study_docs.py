@@ -39,7 +39,8 @@ def test_core_chinese_docs_do_not_contain_mojibake() -> None:
         text = path.read_text(encoding="utf-8")
         assert "\ufffd" not in text
     readme_zh = Path("README.zh.md").read_text(encoding="utf-8")
-    assert "AI 编程 Agent 的执行前检查" in readme_zh
+    assert "面向 prompt 优化的控制论诊断与可复现评测工具。" in readme_zh
+    assert "研究内核" in readme_zh
     assert "本地 Case Study" in readme_zh
     assert "模型追溯边界" in readme_zh
 
