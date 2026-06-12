@@ -11,6 +11,7 @@ import pytest
 from promptcontrollab.cli import main
 from promptcontrollab.report_model import ReportModel
 from promptcontrollab.ui import charts
+from promptcontrollab.ui.components import dashboard_css, stat_card_html
 from promptcontrollab.ui.data import (
     audit_detail_sections,
     changed_line_rows,
@@ -20,6 +21,8 @@ from promptcontrollab.ui.data import (
     history_rows,
     list_runs,
     load_run_detail,
+    research_diagnostic_rows,
+    research_status_counts,
 )
 
 
@@ -228,6 +231,48 @@ def test_report_model_lists_diagnostic_artifacts(tmp_path: Path) -> None:
     detail = load_run_detail(run)
 
     assert "diagnostics/trajectory.json" in detail["artifacts"]
+    assert detail["diagnostics"]["trajectory"]["drift"] == 0.1
+
+
+def test_research_diagnostic_rows_summarize_paper_artifacts(tmp_path: Path) -> None:
+    run = tmp_path / "runs" / "research-demo"
+    _write_json(run / "diagnostics" / "soft_hard.json", {"risk": "medium"})
+    _write_json(
+        run / "diagnostics" / "trajectory.json",
+        {"turnpike_like_signal": True, "log_decay_slope": -0.42},
+    )
+    _write_json(
+        run / "diagnostics" / "riccati.json",
+        {"stable_surrogate": True, "closed_loop_spectral_radius": 0.73},
+    )
+    _write_json(
+        run / "diagnostics" / "tv_soft.json",
+        {"delta_vs_baseline": {"time_varying": 0.2}},
+    )
+
+    detail = load_run_detail(run)
+    rows = research_diagnostic_rows(detail)
+
+    assert [row["diagnostic"] for row in rows] == [
+        "soft-hard gap",
+        "trajectory",
+        "Riccati surrogate",
+        "tv-soft lane",
+    ]
+    assert all(row["status"] == "available" for row in rows)
+    assert research_status_counts(detail) == {"available": 4}
+
+
+def test_research_diagnostic_chart_and_design_tokens() -> None:
+    rows = [
+        {"diagnostic": "trajectory", "status": "available", "signal": "turnpike-like"},
+        {"diagnostic": "Riccati surrogate", "status": "missing", "signal": "not run"},
+    ]
+
+    figure = charts.research_diagnostic_bar(rows, title="Research coverage")
+    assert figure.layout.title.text == "Research coverage"
+    assert "--pcl-bg" in dashboard_css()
+    assert "pcl-stat-card" in stat_card_html("Trajectory", "available", "turnpike-like")
 
 
 def test_report_model_exposes_primary_comparison_fields(tmp_path: Path) -> None:
@@ -431,12 +476,15 @@ def test_ui_list_runs_keeps_current_run_when_it_has_manifest(tmp_path: Path) -> 
 def test_ui_has_history_view_order_and_text() -> None:
     from promptcontrollab.ui import app
 
+    assert "research" in app.TEXT["en"]
+    assert "research" in app.TEXT["zh"]
     assert "history" in app.TEXT["en"]
     assert "history" in app.TEXT["zh"]
     assert "tutorial" in app.TEXT["en"]
     assert "tutorial" in app.TEXT["zh"]
     assert "workflows" in app.TEXT["en"]
     assert "workflows" in app.TEXT["zh"]
+    assert app._ordered_views("research")[0] == "research"
     assert app._ordered_views("workflows")[0] == "workflows"
     assert app._ordered_views("history")[0] == "history"
     assert app._ordered_views("tutorial")[0] == "tutorial"

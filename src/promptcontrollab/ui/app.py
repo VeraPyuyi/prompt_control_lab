@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import base64
+import html
 import importlib
 import os
 from collections.abc import Callable
@@ -17,11 +18,20 @@ from promptcontrollab.ui.charts import (
     file_breakdown_bar,
     history_category_timeline,
     history_numeric_trend,
+    research_diagnostic_bar,
     risk_category_bar,
     score_delta_ci,
     slice_score_heatmap,
 )
-from promptcontrollab.ui.components import badge, empty_state, metric_cards, prompt_diff
+from promptcontrollab.ui.components import (
+    badge,
+    dashboard_css,
+    empty_state,
+    metric_cards,
+    paper_card_html,
+    prompt_diff,
+    stat_card_html,
+)
 from promptcontrollab.ui.data import (
     audit_detail_sections,
     changed_line_rows,
@@ -32,6 +42,8 @@ from promptcontrollab.ui.data import (
     list_runs,
     load_run_detail,
     model_rows,
+    research_diagnostic_rows,
+    research_status_counts,
     slice_rows,
 )
 from promptcontrollab.ui.workflows import (
@@ -50,6 +62,30 @@ TEXT = {
     "en": {
         "title": "prompt_control_lab dashboard",
         "subtitle": "Local preflight, provenance, and audit views. No artifacts are uploaded.",
+        "research": "Research Overview",
+        "research_title": "Control diagnostics for prompt optimization",
+        "research_subtitle": (
+            "A paper-first view of tri-split evaluation, paired statistics, "
+            "soft-hard gap, trajectory, Riccati surrogate, and time-varying soft-control."
+        ),
+        "research_empty": "No research diagnostics found for this run.",
+        "research_demo_command": "pcl research-demo --out runs/research-demo",
+        "research_pipeline": "Research workflow",
+        "research_diagnostics": "Paper-derived diagnostics",
+        "research_coverage": "Diagnostic coverage",
+        "paper_protocol": "Protocol hygiene",
+        "diagnostic_coverage": "Diagnostics ready",
+        "artifact_evidence": "Evidence artifacts",
+        "research_boundary": (
+            "These diagnostics make prompt experiments easier to inspect. They are not "
+            "a proof of full language-model stability or universal prompt improvement."
+        ),
+        "tri_split": "Tri-split",
+        "paired_stats": "Paired stats",
+        "soft_hard": "Soft-hard",
+        "trajectory_diag": "Trajectory",
+        "riccati_diag": "Riccati",
+        "tv_soft_diag": "TV-soft",
         "runs": "Runs directory",
         "policy": "Guard policy",
         "guard": "Guard Prompt",
@@ -186,7 +222,31 @@ TEXT = {
     },
     "zh": {
         "title": "prompt_control_lab 本地仪表盘",
-        "subtitle": "本地执行前检查、模型溯源和 agent 审计视图。不会上传 prompt、代码或 artifact。",
+        "subtitle": "面向 prompt 优化的研究诊断、可复现评测和本地 agent 审计视图。不会上传 prompt、代码或 artifact。",
+        "research": "研究总览",
+        "research_title": "Prompt 优化的控制论诊断工作台",
+        "research_subtitle": (
+            "以论文功能为主线查看 tri-split、成对统计、soft-hard gap、trajectory、"
+            "Riccati surrogate 和 time-varying soft-control。"
+        ),
+        "research_empty": "当前 run 还没有研究诊断 artifact。",
+        "research_demo_command": "pcl research-demo --out runs/research-demo",
+        "research_pipeline": "研究流程",
+        "research_diagnostics": "论文诊断模块",
+        "research_coverage": "诊断覆盖情况",
+        "paper_protocol": "协议洁净度",
+        "diagnostic_coverage": "已完成诊断",
+        "artifact_evidence": "证据 artifact",
+        "research_boundary": (
+            "这些诊断让 prompt 实验更容易被检查和复现，但它们不是完整语言模型稳定性"
+            "或通用 prompt 提升的数学证明。"
+        ),
+        "tri_split": "三段切分",
+        "paired_stats": "成对统计",
+        "soft_hard": "软转硬",
+        "trajectory_diag": "轨迹诊断",
+        "riccati_diag": "Riccati",
+        "tv_soft_diag": "TV-soft",
         "runs": "Runs 目录",
         "policy": "Guard 策略",
         "guard": "Prompt 守护",
@@ -899,6 +959,7 @@ def main() -> None:
     st = _streamlit()
     st.set_page_config(page_title="prompt_control_lab", layout="wide")
     _hide_streamlit_chrome(st)
+    st.markdown(dashboard_css(), unsafe_allow_html=True)
     query = _query_params(st)
     language = _sidebar_language(st, query)
     text = TEXT[language]
@@ -919,12 +980,19 @@ def main() -> None:
     execution_mode = _choice_value("execution_mode", execution_label, language)
     overwrite = bool(st.sidebar.checkbox(text["overwrite"], value=False))
     allow_external_outputs = bool(st.sidebar.checkbox(text["allow_external_outputs"], value=False))
-    st.title(text["title"])
-    st.caption(text["subtitle"])
+    st.markdown(
+        (
+            '<section class="pcl-hero">'
+            f"<h1>{html.escape(text['title'])}</h1>"
+            f"<p>{html.escape(text['subtitle'])}</p>"
+            "</section>"
+        ),
+        unsafe_allow_html=True,
+    )
 
     runs = list_runs(runs_dir)
     detail = _select_run(st, runs, text)
-    default_view = str(query.get("view") or os.environ.get("PCL_UI_DEFAULT_VIEW", "workflows"))
+    default_view = str(query.get("view") or os.environ.get("PCL_UI_DEFAULT_VIEW", "research"))
     views = _ordered_views(default_view)
     tabs = st.tabs([text[name] for name in views])
     for tab, name in zip(tabs, views, strict=True):
@@ -957,7 +1025,9 @@ def _render_view(
     overwrite: bool,
     allow_external_outputs: bool,
 ) -> None:
-    if name == "workflows":
+    if name == "research":
+        _render_research_overview_tab(st, text, detail)
+    elif name == "workflows":
         _render_workflows_tab(
             st,
             text,
@@ -1105,7 +1175,7 @@ def _tutorial_screenshot_path(image_key: str, language: str) -> Path:
 
 
 def _ordered_views(first: str) -> list[str]:
-    views = ["workflows", "tutorial", "guard", "report", "drift", "audit", "history"]
+    views = ["research", "workflows", "tutorial", "guard", "report", "drift", "audit", "history"]
     if first not in views:
         return views
     return [first, *[view for view in views if view != first]]
@@ -1124,6 +1194,79 @@ def _select_run(st: Any, runs: list[JsonDict], text: dict[str, str]) -> JsonDict
     selected = st.sidebar.selectbox(text["selected_run"], names)
     match = next(item for item in runs if item["name"] == selected)
     return load_run_detail(Path(str(match["path"])))
+
+
+def _render_research_overview_tab(st: Any, text: dict[str, str], detail: JsonDict) -> None:
+    st.markdown(f'<div class="pcl-section-title">{html.escape(text["research_title"])}</div>', unsafe_allow_html=True)
+    st.caption(text["research_subtitle"])
+
+    diagnostics = detail.get("diagnostics")
+    has_diagnostics = isinstance(diagnostics, dict) and bool(diagnostics)
+    if not detail.get("has_artifacts") and not has_diagnostics:
+        empty_state(st, text["research_empty"], text["research_demo_command"])
+        return
+
+    rows = research_diagnostic_rows(detail)
+    counts = research_status_counts(detail)
+    available = counts.get("available", 0)
+    artifacts = detail.get("artifacts")
+    artifact_count = len(artifacts) if isinstance(artifacts, list) else 0
+    protocol_ready = "yes" if detail.get("splits") or detail.get("manifest") else "partial"
+    stats_ready = "yes" if detail.get("first_comparison") or detail.get("stats") else "missing"
+
+    st.markdown(
+        '<div class="pcl-grid">'
+        + stat_card_html(text["paper_protocol"], protocol_ready, text["tri_split"])
+        + stat_card_html(text["diagnostic_coverage"], f"{available}/4", text["research_diagnostics"])
+        + stat_card_html(text["artifact_evidence"], artifact_count, "JSON / HTML / Markdown")
+        + stat_card_html(text["paired_stats"], stats_ready, "bootstrap CI / p-value")
+        + "</div>",
+        unsafe_allow_html=True,
+    )
+    _render_research_pipeline(st, text)
+
+    st.markdown(f'<div class="pcl-section-title">{html.escape(text["research_diagnostics"])}</div>', unsafe_allow_html=True)
+    st.plotly_chart(
+        research_diagnostic_bar(rows, title=text["research_coverage"]),
+        use_container_width=True,
+    )
+    st.dataframe(rows, use_container_width=True)
+
+    st.markdown(
+        '<div class="pcl-grid">'
+        + paper_card_html(text["soft_hard"], "soft prompt -> hard token projection risk")
+        + paper_card_html(text["trajectory_diag"], "hidden-state drift, decay, and turnpike-like signal")
+        + paper_card_html(text["riccati_diag"], "finite-dimensional surrogate stability check")
+        + paper_card_html(text["tv_soft_diag"], "static / time-varying / shuffled / random comparison")
+        + "</div>",
+        unsafe_allow_html=True,
+    )
+    st.info(text["research_boundary"])
+
+
+def _render_research_pipeline(st: Any, text: dict[str, str]) -> None:
+    steps = [
+        (text["tri_split"], "train / validation / withheld"),
+        (text["paired_stats"], "paired CI + permutation test"),
+        (text["soft_hard"], "projection gap"),
+        (text["trajectory_diag"], "state trajectory"),
+        (text["riccati_diag"], "surrogate stability"),
+        (text["tv_soft_diag"], "control lane"),
+    ]
+    html_steps = "".join(
+        (
+            '<div class="pcl-pipeline-step">'
+            f"<strong>{html.escape(title)}</strong>"
+            f"<span>{html.escape(caption)}</span>"
+            "</div>"
+        )
+        for title, caption in steps
+    )
+    st.markdown(
+        f'<div class="pcl-section-title">{html.escape(text["research_pipeline"])}</div>'
+        f'<div class="pcl-pipeline">{html_steps}</div>',
+        unsafe_allow_html=True,
+    )
 
 
 def _render_tutorial_tab(st: Any, text: dict[str, str], language: str) -> None:

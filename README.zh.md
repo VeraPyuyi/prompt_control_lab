@@ -132,6 +132,9 @@ pip install -e ".[ui]"
 pcl ui --runs runs/ --policy examples/guard.policy.yaml --port 8501
 ```
 
+本地 UI 现在默认打开 **研究总览**：先展示 tri-split、成对统计、soft-hard、trajectory、
+Riccati 和 tv-soft 等论文诊断，再把 agent guard、audit、history 等工程应用放在后续标签页。
+
 本地构建 wheel 后，可以用 `pipx` 安装：
 
 ```bash

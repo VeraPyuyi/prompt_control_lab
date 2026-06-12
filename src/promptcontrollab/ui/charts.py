@@ -113,6 +113,35 @@ def file_breakdown_bar(
     return px.bar(rows, x=kind_label, y=count_label, title=title)
 
 
+def research_diagnostic_bar(
+    rows: list[JsonDict],
+    *,
+    title: str = "Research diagnostic coverage",
+    diagnostic_label: str = "diagnostic",
+    status_label: str = "status",
+) -> Any:
+    """Build a paper-diagnostic coverage chart."""
+
+    px = _plotly_express()
+    chart_rows = [
+        {
+            diagnostic_label: str(row.get("diagnostic") or "unknown"),
+            status_label: str(row.get("status") or "unknown"),
+            "count": 1,
+        }
+        for row in rows
+    ]
+    if not chart_rows:
+        chart_rows = [{diagnostic_label: "none", status_label: "missing", "count": 0}]
+    return px.bar(
+        chart_rows,
+        x=diagnostic_label,
+        y="count",
+        color=status_label,
+        title=title,
+    )
+
+
 def history_numeric_trend(
     rows: list[JsonDict],
     *,

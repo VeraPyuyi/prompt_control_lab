@@ -18,6 +18,7 @@ RUN_ARTIFACTS = [
     "history_index.json",
     "history_compare.json",
     "agent_run.json",
+    "research_diagnostics.json",
 ]
 
 RUN_LEVEL_ARTIFACTS = [
@@ -28,6 +29,7 @@ RUN_LEVEL_ARTIFACTS = [
     "model_drift.json",
     "audit_result.json",
     "agent_run.json",
+    "research_diagnostics.json",
 ]
 
 
@@ -70,6 +72,7 @@ def load_run_detail(run_dir: Path) -> JsonDict:
         "history_index": model.history_index,
         "history_compare": model.history_compare,
         "agent_run": model.agent_run,
+        "diagnostics": model.diagnostics,
         "baseline_metrics": model.baseline_metrics,
         "candidate_metrics": model.candidate_metrics,
         "metrics": model.metrics,
@@ -112,6 +115,65 @@ def first_comparison(stats: JsonDict) -> JsonDict:
     return {}
 
 
+def research_diagnostic_rows(detail: JsonDict) -> list[JsonDict]:
+    """Return normalized rows for the paper-derived research overview."""
+
+    diagnostics = detail.get("diagnostics")
+    diagnostics_dict = diagnostics if isinstance(diagnostics, dict) else {}
+    specs = [
+        (
+            "soft_hard",
+            "soft-hard gap",
+            "Soft prompt deployability",
+            _soft_hard_signal,
+        ),
+        (
+            "trajectory",
+            "trajectory",
+            "Hidden-state stability",
+            _trajectory_signal,
+        ),
+        (
+            "riccati",
+            "Riccati surrogate",
+            "Finite-dimensional control probe",
+            _riccati_signal,
+        ),
+        (
+            "tv_soft",
+            "tv-soft lane",
+            "Time-varying control structure",
+            _tv_soft_signal,
+        ),
+    ]
+    rows: list[JsonDict] = []
+    for key, label, meaning, signal_fn in specs:
+        payload = diagnostics_dict.get(key)
+        payload_dict = payload if isinstance(payload, dict) else {}
+        available = bool(payload_dict)
+        rows.append(
+            {
+                "key": key,
+                "diagnostic": label,
+                "status": "available" if available else "missing",
+                "meaning": meaning,
+                "signal": signal_fn(payload_dict) if available else "not run",
+                "artifact": f"diagnostics/{key}.json",
+            }
+        )
+    return rows
+
+
+def research_status_counts(detail: JsonDict) -> dict[str, int]:
+    """Return available/missing diagnostic counts for the research overview."""
+
+    counts: dict[str, int] = {}
+    for row in research_diagnostic_rows(detail):
+        status = str(row.get("status") or "unknown")
+        counts[status] = counts.get(status, 0) + 1
+    return counts
+
+
 def history_rows(detail: JsonDict) -> list[JsonDict]:
     """Return normalized history rows for tables and trend charts."""
 
@@ -144,6 +206,33 @@ def history_rows(detail: JsonDict) -> list[JsonDict]:
             }
         )
     return rows
+
+
+def _soft_hard_signal(payload: JsonDict) -> str:
+    risk = payload.get("risk", "unknown")
+    distance = payload.get("mean_projection_distance")
+    return f"risk={risk}; mean distance={distance}"
+
+
+def _trajectory_signal(payload: JsonDict) -> str:
+    signal = payload.get("turnpike_like_signal")
+    slope = payload.get("log_decay_slope")
+    return f"turnpike={signal}; slope={slope}"
+
+
+def _riccati_signal(payload: JsonDict) -> str:
+    stable = payload.get("stable_surrogate")
+    radius = payload.get("closed_loop_spectral_radius")
+    return f"stable={stable}; rho={radius}"
+
+
+def _tv_soft_signal(payload: JsonDict) -> str:
+    deltas = payload.get("delta_vs_baseline")
+    if isinstance(deltas, dict) and deltas:
+        best_key = max(deltas, key=lambda key: float(deltas.get(key) or 0.0))
+        return f"best delta={best_key}:{deltas.get(best_key)}"
+    means = payload.get("method_means")
+    return f"method means={len(means) if isinstance(means, dict) else 0}"
 
 
 def filter_history_rows(

@@ -302,8 +302,9 @@ pcl analyze --config promptcontrol.example.yaml --out runs/quick
 pcl ui --runs runs/ --policy examples/guard.policy.yaml --port 8501
 ```
 
-The local dashboard has seven tabs. The **Tutorial** tab now teaches the workflow with screenshots
-from the current UI plus step-by-step instructions; the **Workflows** tab can run local actions
+The local dashboard now opens with a **Research Overview** tab inspired by compact design-system
+dashboards: paper diagnostics first, engineering agent views second. The **Tutorial** tab teaches
+the workflow with screenshots from the current UI plus step-by-step instructions; the **Workflows** tab can run local actions
 from the browser:
 guard a prompt, run analyze, run gate, audit a git diff, build `agent_run.json`, generate a PR
 summary, or export a report zip. Execution mode defaults to `confirm`; advanced users can choose
