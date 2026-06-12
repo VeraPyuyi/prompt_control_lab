@@ -263,14 +263,30 @@ def test_research_diagnostic_rows_summarize_paper_artifacts(tmp_path: Path) -> N
     assert research_status_counts(detail) == {"available": 4}
 
 
-def test_research_diagnostic_chart_and_design_tokens() -> None:
+def test_research_diagnostic_chart_and_design_tokens(monkeypatch: pytest.MonkeyPatch) -> None:
     rows = [
         {"diagnostic": "trajectory", "status": "available", "signal": "turnpike-like"},
         {"diagnostic": "Riccati surrogate", "status": "missing", "signal": "not run"},
     ]
+    captured: dict[str, object] = {}
+
+    def fake_bar(
+        chart_rows: list[dict[str, object]],
+        *,
+        x: str,
+        y: str,
+        color: str,
+        title: str,
+    ) -> SimpleNamespace:
+        captured.update({"rows": chart_rows, "x": x, "y": y, "color": color, "title": title})
+        return SimpleNamespace(layout=SimpleNamespace(title=SimpleNamespace(text=title)))
+
+    monkeypatch.setattr(charts, "_plotly_express", lambda: SimpleNamespace(bar=fake_bar))
 
     figure = charts.research_diagnostic_bar(rows, title="Research coverage")
+
     assert figure.layout.title.text == "Research coverage"
+    assert captured["color"] == "status"
     assert "--pcl-bg" in dashboard_css()
     assert "pcl-stat-card" in stat_card_html("Trajectory", "available", "turnpike-like")
 
