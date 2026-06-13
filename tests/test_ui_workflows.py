@@ -14,6 +14,7 @@ from promptcontrollab.ui.workflows import (
     export_report_zip_workflow,
     run_analyze_workflow,
     run_audit_workflow,
+    run_evidence_card_workflow,
     run_gate_workflow,
     run_guard_workflow,
     run_pr_summary_workflow,
@@ -140,6 +141,8 @@ def test_analyze_gate_agent_pr_and_zip_workflows(tmp_path: Path) -> None:
     assert analyze["status"] == "completed"
     detail = load_run_detail(run_dir)
     assert detail["candidate_score"] == 1.0
+    assert (run_dir / "evidence_card.json").exists()
+    assert (run_dir / "evidence_card.md").exists()
     assert (run_dir / "report.html").exists()
 
     gate = run_gate_workflow(
@@ -211,6 +214,8 @@ def test_analyze_gate_agent_pr_and_zip_workflows(tmp_path: Path) -> None:
     assert "manifest.json" in names
     assert "report.html" in names
     assert "agent_run.json" in names
+    assert "evidence_card.json" in names
+    assert "evidence_card.md" in names
     assert "src.py" not in names
 
 
@@ -259,6 +264,49 @@ def test_pr_summary_workflow_without_artifacts_needs_review(tmp_path: Path) -> N
     assert read_json(tmp_path / "pr_summary.json")["status"] == "needs_review"
 
 
+def test_evidence_card_workflow_preview_command_and_auto_modes(tmp_path: Path) -> None:
+    run_dir = tmp_path / "runs" / "quick"
+    _write_json(run_dir / "stats.json", {"comparisons": [{"mean_delta": 0.2}]})
+
+    preview = run_evidence_card_workflow(
+        run_dir=run_dir,
+        markdown_path=None,
+        json_path=None,
+        execution_mode="confirm",
+        confirmed=False,
+        overwrite=False,
+        safe_root=tmp_path / "runs",
+    )
+    assert preview["status"] == "preview"
+    assert "pcl evidence-card" in preview["command"]
+    assert not (run_dir / "evidence_card.json").exists()
+
+    command = run_evidence_card_workflow(
+        run_dir=run_dir,
+        markdown_path=None,
+        json_path=None,
+        execution_mode="command",
+        confirmed=False,
+        overwrite=False,
+        safe_root=tmp_path / "runs",
+    )
+    assert command["status"] == "command"
+    assert "evidence_card.md" in command["command"]
+
+    result = run_evidence_card_workflow(
+        run_dir=run_dir,
+        markdown_path=None,
+        json_path=None,
+        execution_mode="auto",
+        confirmed=False,
+        overwrite=False,
+        safe_root=tmp_path / "runs",
+    )
+    assert result["status"] == "completed"
+    assert (run_dir / "evidence_card.json").exists()
+    assert (run_dir / "evidence_card.md").exists()
+
+
 def test_create_demo_artifacts_workflow_generates_demo_run(tmp_path: Path) -> None:
     runs_dir = tmp_path / "runs"
 
@@ -271,6 +319,7 @@ def test_create_demo_artifacts_workflow_generates_demo_run(tmp_path: Path) -> No
 
     assert result["status"] == "completed"
     assert (runs_dir / "demo" / "manifest.json").exists()
+    assert (runs_dir / "demo" / "evidence_card.json").exists()
     assert (runs_dir / "demo" / "report.html").exists()
     assert (runs_dir / "_demo_project" / "promptcontrol.example.yaml").exists()
 
@@ -278,6 +327,8 @@ def test_create_demo_artifacts_workflow_generates_demo_run(tmp_path: Path) -> No
 def test_cli_export_report_zip_contains_known_artifacts(tmp_path: Path) -> None:
     run_dir = tmp_path / "runs" / "quick"
     _write_json(run_dir / "manifest.json", {"mode": "quick"})
+    _write_json(run_dir / "evidence_card.json", {"recommendation": "needs_review"})
+    _write(run_dir / "evidence_card.md", "# evidence\n")
     _write(run_dir / "report.md", "# report\n")
     _write_json(run_dir / "diagnostics" / "trajectory.json", {"drift": 0.2})
     _write(run_dir / "src.py", "print('not an artifact')\n")
@@ -287,7 +338,13 @@ def test_cli_export_report_zip_contains_known_artifacts(tmp_path: Path) -> None:
 
     with zipfile.ZipFile(zip_path) as archive:
         names = set(archive.namelist())
-    assert names == {"diagnostics/trajectory.json", "manifest.json", "report.md"}
+    assert names == {
+        "diagnostics/trajectory.json",
+        "evidence_card.json",
+        "evidence_card.md",
+        "manifest.json",
+        "report.md",
+    }
 
 
 def _example_eval_files(tmp_path: Path) -> tuple[Path, Path, Path]:

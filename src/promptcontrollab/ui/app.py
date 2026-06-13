@@ -53,6 +53,7 @@ from promptcontrollab.ui.workflows import (
     export_report_zip_workflow,
     run_analyze_workflow,
     run_audit_workflow,
+    run_evidence_card_workflow,
     run_gate_workflow,
     run_guard_workflow,
     run_pr_summary_workflow,
@@ -125,6 +126,7 @@ TEXT = {
         "guard_workflow": "Guard prompt",
         "analyze_workflow": "Run analyze",
         "gate_workflow": "Run gate",
+        "evidence_card_workflow": "Build evidence card",
         "audit_workflow": "Run audit-diff",
         "agent_run_workflow": "Build agent-run",
         "pr_summary_workflow": "Generate PR summary",
@@ -295,6 +297,7 @@ TEXT = {
         "guard_workflow": "守护 Prompt",
         "analyze_workflow": "运行 analyze",
         "gate_workflow": "运行 gate",
+        "evidence_card_workflow": "生成证据卡",
         "audit_workflow": "运行 audit-diff",
         "agent_run_workflow": "生成 agent-run",
         "pr_summary_workflow": "生成 PR summary",
@@ -1481,6 +1484,41 @@ def _render_workflows_tab(
                 lambda: run_gate_workflow(
                     run_dir=selected_run_dir,
                     policy_path=gate_policy,
+                    execution_mode=execution_mode,
+                    confirmed=confirmed,
+                    overwrite=overwrite,
+                    safe_root=runs_dir,
+                    allow_external_outputs=allow_external_outputs,
+                ),
+            )
+
+    with st.expander(text["evidence_card_workflow"]):
+        selected_run_dir = Path(
+            st.text_input(text["run_dir"], str(run_path), key="wf_evidence_run")
+        )
+        markdown_path = _optional_path(
+            st.text_input(
+                text["markdown_path"],
+                str(selected_run_dir / "evidence_card.md"),
+                key="wf_evidence_md",
+            )
+        )
+        json_path = _optional_path(
+            st.text_input(
+                text["json_path"],
+                str(selected_run_dir / "evidence_card.json"),
+                key="wf_evidence_json",
+            )
+        )
+        confirmed = _confirm_checkbox(st, text, execution_mode, "wf_evidence_confirm")
+        if st.button(text["run_action"], key="wf_evidence_run_button"):
+            _render_workflow_result(
+                st,
+                text,
+                lambda: run_evidence_card_workflow(
+                    run_dir=selected_run_dir,
+                    markdown_path=markdown_path,
+                    json_path=json_path,
                     execution_mode=execution_mode,
                     confirmed=confirmed,
                     overwrite=overwrite,

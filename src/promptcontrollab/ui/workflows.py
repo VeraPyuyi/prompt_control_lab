@@ -9,6 +9,7 @@ from pathlib import Path
 from promptcontrollab.agent_run import build_agent_run_manifest
 from promptcontrollab.artifact_export import export_report_zip
 from promptcontrollab.audit_diff import run_audit_diff
+from promptcontrollab.evidence_card import write_evidence_card
 from promptcontrollab.files import JsonDict, ensure_dir, write_json
 from promptcontrollab.gate import run_gate
 from promptcontrollab.history import index_history
@@ -134,6 +135,8 @@ def run_analyze_workflow(
         out_dir / "candidate" / "metrics.json",
         out_dir / "stats.json",
         out_dir / "explanation.json",
+        out_dir / "evidence_card.json",
+        out_dir / "evidence_card.md",
         out_dir / "report.md",
         out_dir / "report.html",
     ]
@@ -222,6 +225,56 @@ def run_gate_workflow(
         name="gate",
         command=command,
         outputs=[output],
+        execution_mode=execution_mode,
+        confirmed=confirmed,
+        overwrite=overwrite,
+        safe_root=safe_root,
+        allow_external_outputs=allow_external_outputs,
+        runner=runner,
+    )
+
+
+def run_evidence_card_workflow(
+    *,
+    run_dir: Path,
+    markdown_path: Path | None,
+    json_path: Path | None,
+    execution_mode: str,
+    confirmed: bool,
+    overwrite: bool,
+    safe_root: Path | None = None,
+    allow_external_outputs: bool = False,
+) -> JsonDict:
+    """Run or preview prompt optimization evidence-card generation."""
+
+    resolved_markdown = markdown_path or (run_dir / "evidence_card.md")
+    resolved_json = json_path or (run_dir / "evidence_card.json")
+    command = _command(
+        [
+            "pcl",
+            "evidence-card",
+            "--run",
+            str(run_dir),
+            "--out",
+            str(resolved_markdown),
+            "--json-out",
+            str(resolved_json),
+        ]
+    )
+
+    def runner() -> JsonDict:
+        return {
+            "evidence_card": write_evidence_card(
+                run_dir,
+                markdown_path=resolved_markdown,
+                json_path=resolved_json,
+            )
+        }
+
+    return _handle_execution(
+        name="evidence-card",
+        command=command,
+        outputs=[resolved_json, resolved_markdown],
         execution_mode=execution_mode,
         confirmed=confirmed,
         overwrite=overwrite,
@@ -451,6 +504,8 @@ def create_demo_artifacts_workflow(
     outputs = [
         project_dir / "promptcontrol.example.yaml",
         out_dir / "manifest.json",
+        out_dir / "evidence_card.json",
+        out_dir / "evidence_card.md",
         out_dir / "report.md",
         out_dir / "report.html",
         runs_dir / "history_index.json",
