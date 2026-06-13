@@ -103,8 +103,8 @@ research diagnostics layer on top:
 # Fast all-tools demo with bundled Promptfoo/Langfuse/LangSmith-style exports.
 pcl ecosystem-demo --examples examples/external --out runs/ecosystem-demo
 
-# Then open runs/ecosystem-demo/README.md, research_diagnostics.md,
-# and each bridge_summary.md.
+# Then open ecosystem_scorecard.md first, followed by research_diagnostics.md
+# and each tool-specific bridge_summary.md.
 
 promptfoo eval --output results.json
 

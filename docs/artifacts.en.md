@@ -274,6 +274,16 @@ prompt-only comparison validity, paper-evidence gap diagnostics, missing evidenc
 commands, review items, and next actions. This is the recommended first file to open when
 explaining why PCL complements Promptfoo, Langfuse, or LangSmith instead of replacing them.
 
+## `ecosystem_scorecard.json` / `ecosystem_scorecard.md`
+
+Written by `pcl ecosystem-demo`.
+
+What it explains: the cross-tool positioning for the bundled Promptfoo, Langfuse, and LangSmith
+bridge demo. It shows each external tool's strongest lane, what PCL adds as a research evidence
+layer, the current validity/evidence tier, missing paper diagnostics, and the `pcl gap-status`
+command to run after closing those gaps. This is the recommended first file to open when showing
+why PCL complements existing eval, observability, and security-testing tools.
+
 ## `research_gap_plan.json` / `research_gap_plan.md`
 
 Written by `pcl diagnose` when missing paper-derived diagnostics have actionable follow-up

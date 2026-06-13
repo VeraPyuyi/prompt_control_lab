@@ -434,12 +434,29 @@ def test_ui_recognizes_ecosystem_demo_root_and_summarizes_tools(tmp_path: Path) 
             ],
         },
     )
+    _write_json(
+        demo / "ecosystem_scorecard.json",
+        {
+            "kind": "ecosystem_scorecard",
+            "rows": [
+                {
+                    "tool": "promptfoo",
+                    "external_strength": "LLM evals",
+                    "pcl_adds": "research evidence layer",
+                }
+            ],
+        },
+    )
+    (demo / "ecosystem_scorecard.md").write_text("# scorecard\n", encoding="utf-8")
 
     assert list_runs(root) == [{"name": "ecosystem-demo", "path": str(demo)}]
     detail = load_run_detail(demo)
     rows = ecosystem_demo_rows(detail)
 
     assert "ecosystem_demo.json" in detail["artifacts"]
+    assert "ecosystem_scorecard.json" in detail["artifacts"]
+    assert "ecosystem_scorecard.md" in detail["artifacts"]
+    assert detail["ecosystem_scorecard"]["kind"] == "ecosystem_scorecard"
     assert [row["tool"] for row in rows] == ["promptfoo", "langfuse", "langsmith"]
     assert rows[0]["open_first"] == "promptfoo/bridge_summary.md"
 

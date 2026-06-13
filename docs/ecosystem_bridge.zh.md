@@ -61,15 +61,17 @@ pcl ecosystem-demo --examples examples/external --out runs/ecosystem-demo
 ```
 
 这个命令会写出 `runs/ecosystem-demo/README.md`、`ecosystem_demo.json`、
-`research_diagnostics.md`、`research_diagnostics.json`，并为每个外部工具生成一套
+`ecosystem_scorecard.md`、`ecosystem_scorecard.json`、`research_diagnostics.md`、
+`research_diagnostics.json`，并为每个外部工具生成一套
 evidence bundle：
 
 - `runs/ecosystem-demo/promptfoo/`
 - `runs/ecosystem-demo/langfuse/`
 - `runs/ecosystem-demo/langsmith/`
 
-建议先打开每个目录里的 `bridge_summary.md`。它会说明外部工具提供了什么、
-PCL 补充了什么证据，以及当前还缺哪些证据。
+如果要向团队解释定位，建议先打开根目录里的 `ecosystem_scorecard.md`。它会按工具列出：
+外部工具擅长什么、PCL 补了什么、还缺哪些论文诊断。然后再打开每个目录里的
+`bridge_summary.md` 看工具级 provenance。
 也可以用 `pcl ui --runs runs/ecosystem-demo` 打开根目录；Research Overview
 会按外部工具逐行展示每套 evidence bundle。
 

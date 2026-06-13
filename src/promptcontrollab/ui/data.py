@@ -28,6 +28,7 @@ RUN_ARTIFACTS = [
     "evidence_from_result.json",
     "bridge_summary.json",
     "ecosystem_demo.json",
+    "ecosystem_scorecard.json",
 ]
 
 RUN_LEVEL_ARTIFACTS = [
@@ -47,6 +48,7 @@ RUN_LEVEL_ARTIFACTS = [
     "evidence_from_result.json",
     "bridge_summary.json",
     "ecosystem_demo.json",
+    "ecosystem_scorecard.json",
 ]
 
 
@@ -99,6 +101,7 @@ def load_run_detail(run_dir: Path) -> JsonDict:
         "external_evidence": model.external_evidence,
         "bridge_summary": model.bridge_summary,
         "ecosystem_demo": model.ecosystem_demo,
+        "ecosystem_scorecard": model.ecosystem_scorecard,
         "diagnostics": model.diagnostics,
         "baseline_metrics": model.baseline_metrics,
         "candidate_metrics": model.candidate_metrics,
