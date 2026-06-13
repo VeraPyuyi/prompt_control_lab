@@ -7,6 +7,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, cast
 
+from promptcontrollab.claim_check import run_claim_check
 from promptcontrollab.evaluation import run_import_eval
 from promptcontrollab.evidence_card import write_evidence_card
 from promptcontrollab.files import JsonDict, ensure_dir, read_json, write_json, write_jsonl
@@ -414,6 +415,11 @@ def run_research_diagnostics(
         encoding="utf-8",
     )
     write_evidence_card(paths.summary_dir)
+    run_claim_check(
+        paths.summary_dir,
+        claim="full-research",
+        out_path=paths.summary_dir / "claim_check.json",
+    )
     return payload
 
 

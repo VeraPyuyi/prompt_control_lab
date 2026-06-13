@@ -24,6 +24,7 @@ def generate_report(run_dir: Path, *, title: str) -> tuple[Path, Path]:
         comparison_validity=model.comparison_validity,
         diagnostics=model.diagnostics,
         evidence_card=model.evidence_card,
+        claim_check=model.claim_check,
         first_comparison=model.first_comparison,
     )
     md_path = run_dir / "report.md"
@@ -45,6 +46,7 @@ def render_markdown(
     comparison_validity: JsonDict,
     diagnostics: dict[str, JsonDict],
     evidence_card: JsonDict | None = None,
+    claim_check: JsonDict | None = None,
     first_comparison: JsonDict | None = None,
 ) -> str:
     """Render a compact diagnostic report."""
@@ -53,6 +55,8 @@ def render_markdown(
     lines += _deployment_recommendation_lines(explanation, gate)
     if evidence_card:
         lines += _evidence_card_lines(evidence_card)
+    if claim_check:
+        lines += _claim_check_lines(claim_check)
     if manifest:
         lines += [
             "## Run",
@@ -296,6 +300,24 @@ def _evidence_card_lines(payload: JsonDict) -> list[str]:
         "optimization claim across protocol hygiene, paired statistics, comparison validity, "
         "deployment risk, trajectory diagnostics, Riccati surrogate checks, and time-varying "
         "control evidence.",
+        "",
+    ]
+
+
+def _claim_check_lines(payload: JsonDict) -> list[str]:
+    return [
+        "## Prompt Optimization Claim Check",
+        "",
+        f"- Requested claim: `{payload.get('requested_claim', '')}`",
+        f"- Status: `{payload.get('status', 'needs_review')}`",
+        f"- Evidence tier: `{payload.get('evidence_tier', 'unknown')}`",
+        f"- Reason: {payload.get('reason', '')}",
+        f"- Safe claim: {payload.get('safe_claim', '')}",
+        f"- Next tier missing: `{payload.get('next_tier_missing', [])}`",
+        "",
+        "This section states what the current evidence tier can safely support. It is "
+        "intended to prevent a paired eval result from being overstated as a full "
+        "paper-derived prompt-control diagnostic claim.",
         "",
     ]
 

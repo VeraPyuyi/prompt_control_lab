@@ -179,6 +179,8 @@ def test_cli_quick_analyze_explain_and_report(tmp_path: Path) -> None:
         "explanation.json",
         "evidence_card.json",
         "evidence_card.md",
+        "claim_check.json",
+        "claim_check.md",
         "report.md",
         "report.html",
     ]
@@ -194,6 +196,7 @@ def test_cli_quick_analyze_explain_and_report(tmp_path: Path) -> None:
     report = (run / "report.md").read_text(encoding="utf-8")
     assert "Deployment Recommendation" in report
     assert "Prompt Optimization Evidence Card" in report
+    assert "Prompt Optimization Claim Check" in report
     assert "Recommendation:" in report
     assert "Quick Mode Explanation" in report
     assert "What this means" in report
@@ -318,6 +321,8 @@ def test_cli_compare_runs_generates_stats_validity_and_report(tmp_path: Path) ->
         "comparison_validity.md",
         "evidence_card.json",
         "evidence_card.md",
+        "claim_check.json",
+        "claim_check.md",
         "report.md",
         "report.html",
     ]:
@@ -329,6 +334,9 @@ def test_cli_compare_runs_generates_stats_validity_and_report(tmp_path: Path) ->
     evidence = json.loads((out / "evidence_card.json").read_text(encoding="utf-8"))
     assert evidence["kind"] == "prompt_optimization_evidence_card"
     assert evidence["sections"]["comparison_validity"]["status"] == "clean"
+    claim_check = json.loads((out / "claim_check.json").read_text(encoding="utf-8"))
+    assert claim_check["requested_claim"] == "paired"
+    assert claim_check["status"] == "pass"
     manifest = json.loads((out / "manifest.json").read_text(encoding="utf-8"))
     assert manifest["mode"] == "run_comparison"
     assert manifest["baseline_run"] == str(baseline)

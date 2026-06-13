@@ -139,7 +139,8 @@ soft-hard, trajectory, Riccati, or time-varying diagnostic stack.
 ## `claim_check.json` / `claim_check.md`
 
 Written by `pcl claim-check --run runs/candidate --claim paired --out
-runs/candidate/claim_check.json`.
+runs/candidate/claim_check.json`. It is also written automatically by `pcl analyze`,
+`pcl compare-runs`, `pcl research-demo`, `pcl diagnose`, and `pcl evidence-from`.
 
 What it explains: whether the recorded evidence tier supports a requested claim scope. Supported
 claim scopes are `paired`, `partial-research`, and `full-research`. A run can pass `paired` while

@@ -225,6 +225,8 @@ def _copy_headline_artifacts(*, comparison_dir: Path, out_dir: Path) -> list[Pat
     names = [
         "evidence_card.json",
         "evidence_card.md",
+        "claim_check.json",
+        "claim_check.md",
         "report.md",
         "report.html",
         "stats.json",
@@ -251,6 +253,7 @@ def _write_bridge_summary(
     comparison_dir: Path,
 ) -> JsonDict:
     evidence_card = _read_optional_json(comparison_dir / "evidence_card.json")
+    claim_check = _read_optional_json(comparison_dir / "claim_check.json")
     validity = _read_optional_json(comparison_dir / "comparison_validity.json")
     stats = _read_optional_json(comparison_dir / "stats.json")
     comparison = _first_comparison(stats)
@@ -273,12 +276,16 @@ def _write_bridge_summary(
             "holm_adjusted_p_value",
             "prompt_only_comparison_validity",
             "evidence_card",
+            "claim_scope_check",
             "local_archivable_report",
         ],
         "recommendation": evidence_card.get("recommendation", "needs_review"),
         "evidence_tier": evidence_card.get("evidence_tier", "unknown"),
         "claim_scope": evidence_card.get("claim_scope", ""),
         "claim_language": evidence_card.get("claim_language", ""),
+        "claim_check_status": claim_check.get("status", "missing"),
+        "claim_check_requested_claim": claim_check.get("requested_claim", "paired"),
+        "claim_check_safe_claim": claim_check.get("safe_claim", ""),
         "next_tier_missing": evidence_card.get("next_tier_missing", []),
         "summary": evidence_card.get("summary", ""),
         "validity": validity.get("validity", "unknown"),

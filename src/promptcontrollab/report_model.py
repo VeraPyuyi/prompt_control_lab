@@ -29,6 +29,7 @@ class ReportModel:
     agent_run: JsonDict
     research_diagnostics: JsonDict
     evidence_card: JsonDict
+    claim_check: JsonDict
     diagnostics: dict[str, JsonDict]
     artifacts: list[str]
     candidate_score: float | None
@@ -63,6 +64,7 @@ class ReportModel:
             agent_run=_read_optional(run_dir / "agent_run.json"),
             research_diagnostics=_read_optional(run_dir / "research_diagnostics.json"),
             evidence_card=_read_optional(run_dir / "evidence_card.json"),
+            claim_check=_read_optional(run_dir / "claim_check.json"),
             diagnostics=diagnostics,
             artifacts=artifacts,
             candidate_score=_first_score(candidate_metrics, root_metrics),
@@ -133,6 +135,8 @@ def _existing_artifacts(run_dir: Path, diagnostics: dict[str, JsonDict]) -> list
         "research_diagnostics.md",
         "evidence_card.json",
         "evidence_card.md",
+        "claim_check.json",
+        "claim_check.md",
         "inputs/hidden_states.npz",
         "inputs/hidden_states.npz.metadata.json",
         "report.md",

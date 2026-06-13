@@ -5,6 +5,7 @@ from __future__ import annotations
 import shutil
 from pathlib import Path
 
+from promptcontrollab.claim_check import run_claim_check
 from promptcontrollab.evidence_card import write_evidence_card
 from promptcontrollab.files import JsonDict, ensure_dir, read_json, write_json
 from promptcontrollab.model_identity import compare_model_identities
@@ -99,6 +100,7 @@ def compare_runs(
         manifest["candidate_prompt"] = candidate_prompt
     write_json(out_dir / "manifest.json", manifest)
     evidence_card = write_evidence_card(out_dir)
+    claim_check = run_claim_check(out_dir, claim="paired", out_path=out_dir / "claim_check.json")
     md_path, html_path = generate_report(out_dir, title=title)
 
     payload: JsonDict = {
@@ -109,6 +111,7 @@ def compare_runs(
         "stats_path": str(out_dir / "stats.json"),
         "comparison_validity_path": str(out_dir / "comparison_validity.json"),
         "evidence_card_path": str(out_dir / "evidence_card.json"),
+        "claim_check_path": str(out_dir / "claim_check.json"),
         "report_md": str(md_path),
         "report_html": str(html_path),
         "stats": stats,
@@ -116,6 +119,11 @@ def compare_runs(
         "evidence_card": {
             "recommendation": evidence_card.get("recommendation"),
             "summary": evidence_card.get("summary"),
+        },
+        "claim_check": {
+            "requested_claim": claim_check.get("requested_claim"),
+            "status": claim_check.get("status"),
+            "safe_claim": claim_check.get("safe_claim"),
         },
     }
     write_json(out_dir / "compare_runs_result.json", payload)

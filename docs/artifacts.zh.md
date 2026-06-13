@@ -106,6 +106,8 @@ LangSmith 导入的比较结果可能足以支持“成对比较”层面的结�
 ## `claim_check.json` / `claim_check.md`
 
 由 `pcl claim-check --run runs/candidate --claim paired --out runs/candidate/claim_check.json` 写出。
+`pcl analyze`、`pcl compare-runs`、`pcl research-demo`、`pcl diagnose` 和
+`pcl evidence-from` 也会自动写出这个 artifact。
 
 说明什么问题：当前 evidence tier 是否足以支持用户要求的 claim scope。支持的 scope 包括
 `paired`、`partial-research` 和 `full-research`。一个 run 可能通过 `paired` 检查，但因为缺少

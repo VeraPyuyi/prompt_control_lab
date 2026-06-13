@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from promptcontrollab.claim_check import run_claim_check
 from promptcontrollab.config import get_config_path, get_config_str, read_simple_yaml
 from promptcontrollab.evaluation import run_import_eval
 from promptcontrollab.evidence_card import write_evidence_card
@@ -148,6 +149,7 @@ def run_quick_analysis(
     if policy_path is not None:
         run_gate(out_dir, policy_path=policy_path)
     write_evidence_card(out_dir)
+    run_claim_check(out_dir, claim="paired", out_path=out_dir / "claim_check.json")
     generate_report(out_dir, title=title)
 
 

@@ -24,6 +24,8 @@ After importing an external baseline/candidate export, PCL writes:
   prompt identity, model identity, split hash, metric identity, statistical
   evidence, and slice regressions.
 - `evidence_card.md/json`: a compact reviewer-facing evidence card.
+- `claim_check.md/json`: a direct answer to which claim scope the current
+  evidence tier supports.
 - `bridge_summary.md/json`: a concise explanation of what the external tool
   supplied, what PCL added, and what evidence is still missing.
 - `report.html`: a local report that can be archived with the run.
@@ -108,5 +110,5 @@ claims. That is a feature, not a bug: PCL should make missing evidence visible
 instead of turning a small smoke test into a benchmark claim.
 
 Start with `bridge_summary.md` when explaining the ecosystem relationship to a
-teammate, then open `evidence_card.md` when reviewing the actual prompt
-optimization evidence.
+teammate, open `claim_check.md` when deciding what you can safely say, then open
+`evidence_card.md` when reviewing the actual prompt optimization evidence.

@@ -47,6 +47,10 @@ def test_research_demo_generates_paper_diagnostics(tmp_path: Path) -> None:
     assert evidence["kind"] == "prompt_optimization_evidence_card"
     assert evidence["sections"]["hidden_state_diagnostics"]["input_source"] == "synthetic_demo"
     assert (run_dir / "evidence_card.md").exists()
+    claim_check = read_json(run_dir / "claim_check.json")
+    assert claim_check["requested_claim"] == "full-research"
+    assert claim_check["status"] == "pass"
+    assert (run_dir / "claim_check.md").exists()
 
 
 def test_research_demo_generates_complete_evidence_chain(tmp_path: Path) -> None:
@@ -77,6 +81,9 @@ def test_research_demo_generates_complete_evidence_chain(tmp_path: Path) -> None
     assert evidence["sections"]["statistical_evidence"]["status"] == "pass"
     assert evidence["sections"]["comparison_validity"]["status"] == "clean"
     assert evidence["recommendation"] == "supported"
+    claim_check = read_json(run_dir / "claim_check.json")
+    assert claim_check["evidence_tier"] == "tier_4_full_research_diagnostics"
+    assert claim_check["status"] == "pass"
     baseline_manifest = read_json(run_dir / "baseline" / "manifest.json")
     candidate_manifest = read_json(run_dir / "candidate" / "manifest.json")
     assert len(baseline_manifest["prompt"]["prompt_hash"]) == len("sha256:") + 64
@@ -100,6 +107,7 @@ def test_diagnose_reuses_research_demo_inputs(tmp_path: Path) -> None:
     assert (run_dir / "diagnostics" / "soft_hard.json").exists()
     assert (run_dir / "diagnostics" / "tv_soft.json").exists()
     assert (run_dir / "evidence_card.json").exists()
+    assert (run_dir / "claim_check.json").exists()
 
 
 def test_diagnose_requires_enough_inputs(tmp_path: Path) -> None:

@@ -197,9 +197,12 @@ def test_evidence_from_promptfoo_generates_comparison_bundle(tmp_path: Path) -> 
         "comparison/stats.json",
         "comparison/comparison_validity.json",
         "comparison/evidence_card.json",
+        "comparison/claim_check.json",
         "comparison/report.html",
         "bridge_summary.json",
         "bridge_summary.md",
+        "claim_check.json",
+        "claim_check.md",
         "evidence_card.md",
         "report.html",
         "evidence_from_result.json",
@@ -211,6 +214,9 @@ def test_evidence_from_promptfoo_generates_comparison_bundle(tmp_path: Path) -> 
     assert validity["validity"] == "clean"
     evidence = read_json(out_dir / "evidence_card.json")
     assert evidence["sections"]["comparison_validity"]["status"] == "clean"
+    claim_check = read_json(out_dir / "claim_check.json")
+    assert claim_check["requested_claim"] == "paired"
+    assert claim_check["status"] == "pass"
     result = read_json(out_dir / "evidence_from_result.json")
     assert result["kind"] == "external_evidence"
     assert result["tool"] == "promptfoo"
@@ -220,8 +226,11 @@ def test_evidence_from_promptfoo_generates_comparison_bundle(tmp_path: Path) -> 
     assert bridge["kind"] == "external_bridge_summary"
     assert bridge["detected_tools"] == ["promptfoo"]
     assert "paired_bootstrap_confidence_interval" in bridge["pcl_added_evidence"]
+    assert "claim_scope_check" in bridge["pcl_added_evidence"]
     assert bridge["validity"] == "clean"
     assert bridge["evidence_tier"] == "tier_2_paired_comparison"
+    assert bridge["claim_check_status"] == "pass"
+    assert bridge["claim_check_requested_claim"] == "paired"
     assert "paired comparison claim only" in bridge["claim_language"]
     assert "hidden_state_diagnostics" in bridge["next_tier_missing"]
     assert bridge["paired_n"] == 20
