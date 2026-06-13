@@ -75,6 +75,14 @@ evidence bundle：
 也可以用 `pcl ui --runs runs/ecosystem-demo` 打开根目录；Research Overview
 会按外部工具逐行展示每套 evidence bundle。
 
+如果后续修改了某个 bridge bundle，或者重新跑了诊断，可以不用重建整个 demo，直接刷新跨工具定位表：
+
+```bash
+pcl ecosystem-scorecard --run runs/ecosystem-demo
+```
+
+如果想把定位表另存给 reviewer，可以加 `--out <文件或目录>`。
+
 demo 会自动按论文证据地图审计整套 bundle。如果之后手动改过 bundle，可以重新运行：
 
 ```bash

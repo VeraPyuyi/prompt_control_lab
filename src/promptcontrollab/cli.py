@@ -25,7 +25,7 @@ from promptcontrollab.config import (
     load_project_config,
 )
 from promptcontrollab.doctor import format_doctor, run_doctor
-from promptcontrollab.ecosystem_demo import run_ecosystem_demo
+from promptcontrollab.ecosystem_demo import run_ecosystem_demo, write_ecosystem_scorecard
 from promptcontrollab.errors import PromptControlLabError
 from promptcontrollab.evaluation import run_import_eval
 from promptcontrollab.evidence_card import write_evidence_card
@@ -535,6 +535,27 @@ def build_parser() -> argparse.ArgumentParser:
     ecosystem_demo_parser.add_argument("--bootstrap-samples", type=int, default=1000)
     ecosystem_demo_parser.add_argument("--permutation-samples", type=int, default=1000)
     ecosystem_demo_parser.set_defaults(func=_cmd_ecosystem_demo)
+
+    ecosystem_scorecard_parser = subcommands.add_parser(
+        "ecosystem-scorecard",
+        help="Regenerate ecosystem_scorecard.json/md for an ecosystem bridge run.",
+    )
+    ecosystem_scorecard_parser.add_argument(
+        "--run",
+        type=Path,
+        required=True,
+        help="Existing ecosystem demo run directory.",
+    )
+    ecosystem_scorecard_parser.add_argument(
+        "--out",
+        type=Path,
+        default=None,
+        help=(
+            "Output JSON file or output directory. Defaults to "
+            "<run>/ecosystem_scorecard.json."
+        ),
+    )
+    ecosystem_scorecard_parser.set_defaults(func=_cmd_ecosystem_scorecard)
 
     audit_parser = subcommands.add_parser(
         "audit-diff",
@@ -1107,6 +1128,11 @@ def _cmd_ecosystem_demo(args: argparse.Namespace) -> None:
         bootstrap_samples=args.bootstrap_samples,
         permutation_samples=args.permutation_samples,
     )
+    print(json.dumps(payload, indent=2, ensure_ascii=False, sort_keys=True))
+
+
+def _cmd_ecosystem_scorecard(args: argparse.Namespace) -> None:
+    payload = write_ecosystem_scorecard(run_dir=args.run, out_path=args.out)
     print(json.dumps(payload, indent=2, ensure_ascii=False, sort_keys=True))
 
 

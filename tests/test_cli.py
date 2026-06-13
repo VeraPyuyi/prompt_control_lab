@@ -394,6 +394,20 @@ def test_cli_ecosystem_demo_runs_all_external_bridge_examples(tmp_path: Path) ->
     assert "research evidence layer" in scorecard_markdown
     assert "pcl gap-status" in scorecard_markdown
     assert "promptfoo/bridge_summary.md" in scorecard_markdown
+    (out / "ecosystem_scorecard.json").unlink()
+    (out / "ecosystem_scorecard.md").unlink()
+    assert main(["ecosystem-scorecard", "--run", str(out)]) == 0
+    refreshed = json.loads((out / "ecosystem_scorecard.json").read_text(encoding="utf-8"))
+    assert refreshed["kind"] == "ecosystem_scorecard"
+    assert refreshed["json_path"] == str(out / "ecosystem_scorecard.json")
+    assert refreshed["markdown_path"] == str(out / "ecosystem_scorecard.md")
+    assert "promptfoo/bridge_summary.md" in (out / "ecosystem_scorecard.md").read_text(
+        encoding="utf-8"
+    )
+    scorecard_dir = tmp_path / "scorecard-out"
+    assert main(["ecosystem-scorecard", "--run", str(out), "--out", str(scorecard_dir)]) == 0
+    assert (scorecard_dir / "ecosystem_scorecard.json").exists()
+    assert (scorecard_dir / "ecosystem_scorecard.md").exists()
     assert [item["tool"] for item in summary["runs"]] == ["promptfoo", "langfuse", "langsmith"]
     for tool in ["promptfoo", "langfuse", "langsmith"]:
         tool_dir = out / tool

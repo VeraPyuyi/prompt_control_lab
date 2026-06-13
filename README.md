@@ -106,6 +106,9 @@ pcl ecosystem-demo --examples examples/external --out runs/ecosystem-demo
 # Then open ecosystem_scorecard.md first, followed by research_diagnostics.md
 # and each tool-specific bridge_summary.md.
 
+# If you edit the bundle later, refresh the cross-tool scorecard directly.
+pcl ecosystem-scorecard --run runs/ecosystem-demo
+
 promptfoo eval --output results.json
 
 # One-command bridge: import baseline/candidate exports, compare them,
@@ -248,12 +251,13 @@ The repository includes narrated 4K hands-on demo videos generated from real UI 
 9. `pcl riccati`: fitted finite-dimensional Riccati/DARE surrogate diagnostics.
 10. `pcl tv-soft`: static/time-varying/shuffled/random soft-control comparison.
 11. `pcl ecosystem-demo`: run all bundled external-tool bridge examples as one comparison bundle.
-12. `pcl evidence-from`: import external baseline/candidate exports and generate a PCL evidence card in one command.
-13. `pcl ingest auto` / `promptfoo` / `langfuse` / `langsmith`: import external eval/trace artifacts into PCL research artifacts.
-14. `pcl compare-runs`: turn two imported/scored runs into stats, validity, and a report in one command.
-15. `pcl claim-check`: say what claim the current evidence tier can safely support.
-16. `pcl report` / `pcl explain` / `pcl gate`: turn artifacts into readable decisions.
-17. `pcl guard` / `pcl audit-diff`: applied AI coding agent preflight and post-run audit.
+12. `pcl ecosystem-scorecard`: regenerate the cross-tool Promptfoo/Langfuse/LangSmith positioning scorecard.
+13. `pcl evidence-from`: import external baseline/candidate exports and generate a PCL evidence card in one command.
+14. `pcl ingest auto` / `promptfoo` / `langfuse` / `langsmith`: import external eval/trace artifacts into PCL research artifacts.
+15. `pcl compare-runs`: turn two imported/scored runs into stats, validity, and a report in one command.
+16. `pcl claim-check`: say what claim the current evidence tier can safely support.
+17. `pcl report` / `pcl explain` / `pcl gate`: turn artifacts into readable decisions.
+18. `pcl guard` / `pcl audit-diff`: applied AI coding agent preflight and post-run audit.
 
 ## Install The CLI ⚙️
 

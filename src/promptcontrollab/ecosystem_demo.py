@@ -146,8 +146,43 @@ def run_ecosystem_demo(
     return payload
 
 
-def _write_scorecard(*, out_dir: Path, payload: JsonDict, diagnostics: JsonDict) -> JsonDict:
+def write_ecosystem_scorecard(*, run_dir: Path, out_path: Path | None = None) -> JsonDict:
+    """Regenerate the cross-tool ecosystem scorecard for an existing demo run."""
+
+    demo_path = run_dir / "ecosystem_demo.json"
+    if not demo_path.exists():
+        msg = f"Ecosystem demo manifest does not exist: {demo_path}"
+        raise ValueError(msg)
+    payload = read_json(demo_path)
+    diagnostics_path = run_dir / "research_diagnostics.json"
+    if diagnostics_path.exists():
+        diagnostics = read_json(diagnostics_path)
+    else:
+        diagnostics = run_research_diagnostics(
+            run_dir=run_dir,
+            mode="ecosystem_scorecard",
+            diagnostics_dir=run_dir / "diagnostics",
+            summary_dir=run_dir,
+        )
+    return _write_scorecard(
+        out_dir=run_dir,
+        payload=payload,
+        diagnostics=diagnostics,
+        out_path=out_path,
+    )
+
+
+def _write_scorecard(
+    *,
+    out_dir: Path,
+    payload: JsonDict,
+    diagnostics: JsonDict,
+    out_path: Path | None = None,
+) -> JsonDict:
     rows = _scorecard_rows(out_dir=out_dir, payload=payload, diagnostics=diagnostics)
+    json_path = _scorecard_json_path(out_dir=out_dir, out_path=out_path)
+    ensure_dir(json_path.parent)
+    md_path = json_path.with_suffix(".md")
     scorecard: JsonDict = {
         "kind": "ecosystem_scorecard",
         "positioning": (
@@ -167,16 +202,20 @@ def _write_scorecard(*, out_dir: Path, payload: JsonDict, diagnostics: JsonDict)
             "This scorecard summarizes evidence coverage. It does not claim that PCL "
             "replaces external eval, tracing, observability, or security-testing platforms."
         ),
-    }
-    json_path = out_dir / "ecosystem_scorecard.json"
-    md_path = out_dir / "ecosystem_scorecard.md"
-    write_json(json_path, scorecard)
-    md_path.write_text(_render_scorecard(scorecard), encoding="utf-8")
-    return {
         "json_path": str(json_path),
         "markdown_path": str(md_path),
-        "rows": rows,
     }
+    write_json(json_path, scorecard)
+    md_path.write_text(_render_scorecard(scorecard), encoding="utf-8")
+    return scorecard
+
+
+def _scorecard_json_path(*, out_dir: Path, out_path: Path | None) -> Path:
+    if out_path is None:
+        return out_dir / "ecosystem_scorecard.json"
+    if out_path.suffix:
+        return out_path
+    return out_path / "ecosystem_scorecard.json"
 
 
 def _scorecard_rows(*, out_dir: Path, payload: JsonDict, diagnostics: JsonDict) -> list[JsonDict]:

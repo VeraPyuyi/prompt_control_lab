@@ -276,7 +276,7 @@ explaining why PCL complements Promptfoo, Langfuse, or LangSmith instead of repl
 
 ## `ecosystem_scorecard.json` / `ecosystem_scorecard.md`
 
-Written by `pcl ecosystem-demo`.
+Written by `pcl ecosystem-demo`; refreshed by `pcl ecosystem-scorecard --run <run>`.
 
 What it explains: the cross-tool positioning for the bundled Promptfoo, Langfuse, and LangSmith
 bridge demo. It shows each external tool's strongest lane, what PCL adds as a research evidence

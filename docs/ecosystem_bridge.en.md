@@ -91,6 +91,16 @@ You can also open the root directory in the local UI with
 `pcl ui --runs runs/ecosystem-demo`; the Research Overview will show one row per
 external-tool evidence bundle.
 
+If you later edit a bridge bundle or rerun diagnostics, refresh the cross-tool
+scorecard without rebuilding the whole demo:
+
+```bash
+pcl ecosystem-scorecard --run runs/ecosystem-demo
+```
+
+Use `--out <file-or-directory>` when you want to write a separate scorecard copy
+for review.
+
 The demo automatically audits the bundle against the paper-derived evidence map.
 To regenerate that diagnosis after editing the bundle, run:
 

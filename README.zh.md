@@ -99,6 +99,9 @@ pcl ecosystem-demo --examples examples/external --out runs/ecosystem-demo
 # 然后先打开 ecosystem_scorecard.md，再看 research_diagnostics.md
 # 和每个工具目录里的 bridge_summary.md。
 
+# 如果后续修改了 bundle，可以单独刷新跨工具定位表。
+pcl ecosystem-scorecard --run runs/ecosystem-demo
+
 promptfoo eval --output results.json
 
 # 一条命令桥接：导入 baseline / candidate 导出，完成比较，
@@ -270,6 +273,7 @@ pcl doctor
 | Riccati 诊断 | `pcl riccati` | 检查有限维 surrogate 的 Riccati / DARE 稳定性。 |
 | time-varying control | `pcl tv-soft` | 比较 static、time-varying、shuffled、random control lane。 |
 | 三工具桥接 demo | `pcl ecosystem-demo` | 一次性跑完 Promptfoo、Langfuse、LangSmith 样例，并生成三套 PCL evidence bundle。 |
+| 跨工具定位表 | `pcl ecosystem-scorecard` | 重新生成 Promptfoo / Langfuse / LangSmith 与 PCL 的分工、证据缺口和补齐命令。 |
 | 一键外部证据包 | `pcl evidence-from` | 导入外部 baseline / candidate export，并一键生成 PCL evidence card。 |
 | 生态桥接 | `pcl ingest auto` / `promptfoo` / `langfuse` / `langsmith` | 导入外部 eval / trace artifact，再接 PCL 的比较有效性和研究诊断。 |
 | 一键 run 比较 | `pcl compare-runs` | 把两个导入 / 打分后的 run 变成 stats、comparison_validity 和报告。 |
