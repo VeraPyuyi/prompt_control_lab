@@ -153,12 +153,68 @@ def build_external_evidence(
     payload["research_diagnostics_path"] = str(out_dir / "research_diagnostics.json")
     payload["research_diagnostics_md_path"] = str(out_dir / "research_diagnostics.md")
     payload["research_diagnostic_type"] = diagnostics.get("diagnostic_type")
+    bridge_summary = _attach_research_diagnostics_to_bridge_summary(
+        out_dir=out_dir,
+        bridge_summary=bridge_summary,
+        diagnostics=diagnostics,
+    )
+    payload["bridge_summary"]["research_diagnostics_path"] = bridge_summary.get(
+        "research_diagnostics_path"
+    )
+    payload["bridge_summary"]["research_diagnostic_type"] = bridge_summary.get(
+        "research_diagnostic_type"
+    )
+    payload["bridge_summary"]["missing_paper_diagnostics"] = bridge_summary.get(
+        "missing_paper_diagnostics", []
+    )
     payload["next_actions"].insert(
         3,
         "Open research_diagnostics.md for paper-evidence gap coverage.",
     )
     write_json(out_dir / "evidence_from_result.json", payload)
     return payload
+
+
+def _attach_research_diagnostics_to_bridge_summary(
+    *,
+    out_dir: Path,
+    bridge_summary: JsonDict,
+    diagnostics: JsonDict,
+) -> JsonDict:
+    """Add the generated paper-evidence gap report to bridge summary artifacts."""
+
+    external = _external_diagnostic_payload(diagnostics)
+    missing = external.get("missing_paper_diagnostics")
+    missing_list = missing if isinstance(missing, list) else []
+    payload = dict(bridge_summary)
+    payload["research_diagnostics_path"] = str(out_dir / "research_diagnostics.json")
+    payload["research_diagnostics_md_path"] = str(out_dir / "research_diagnostics.md")
+    payload["research_diagnostic_type"] = diagnostics.get("diagnostic_type")
+    payload["missing_paper_diagnostics"] = missing_list
+    added = payload.get("pcl_added_evidence")
+    added_list = list(added) if isinstance(added, list) else []
+    if "paper_evidence_gap_diagnosis" not in added_list:
+        added_list.append("paper_evidence_gap_diagnosis")
+    payload["pcl_added_evidence"] = added_list
+    next_actions = payload.get("next_actions")
+    next_action_list = list(next_actions) if isinstance(next_actions, list) else []
+    action = "Open research_diagnostics.md for paper-evidence gap coverage."
+    if action not in next_action_list:
+        next_action_list.insert(1, action)
+    payload["next_actions"] = next_action_list
+    write_json(out_dir / "bridge_summary.json", payload)
+    (out_dir / "bridge_summary.md").write_text(_render_bridge_summary(payload), encoding="utf-8")
+    return payload
+
+
+def _external_diagnostic_payload(diagnostics: JsonDict) -> JsonDict:
+    diagnostic_payload = diagnostics.get("diagnostics")
+    if not isinstance(diagnostic_payload, dict):
+        return {}
+    external = diagnostic_payload.get("external_bridge")
+    if isinstance(external, dict):
+        return external
+    return {}
 
 
 def _ingest_one(
@@ -460,11 +516,34 @@ def _render_bridge_summary(payload: JsonDict) -> str:
             "",
             *[f"- `{item}`" for item in _string_list(payload.get("pcl_added_evidence"))],
             "",
-        "## Missing or review evidence",
-        "",
-        f"- Missing evidence: `{payload.get('missing_evidence', [])}`",
-        f"- Missing for next tier: `{payload.get('next_tier_missing', [])}`",
-        f"- Review items: `{payload.get('review_items', [])}`",
+            "## Research diagnostics",
+            "",
+        ]
+    )
+    research_path = payload.get("research_diagnostics_md_path")
+    if research_path:
+        lines.extend(
+            [
+                f"- Report: `{research_path}`",
+                f"- Diagnostic type: `{payload.get('research_diagnostic_type')}`",
+                f"- Missing paper diagnostics: `{payload.get('missing_paper_diagnostics', [])}`",
+                "",
+            ]
+        )
+    else:
+        lines.extend(
+            [
+                "- Research diagnostics have not been generated for this bridge yet.",
+                "",
+            ]
+        )
+    lines.extend(
+        [
+            "## Missing or review evidence",
+            "",
+            f"- Missing evidence: `{payload.get('missing_evidence', [])}`",
+            f"- Missing for next tier: `{payload.get('next_tier_missing', [])}`",
+            f"- Review items: `{payload.get('review_items', [])}`",
             f"- Blocking issues: `{payload.get('blocking_issues', [])}`",
             "",
             "## Next actions",

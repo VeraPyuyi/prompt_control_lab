@@ -236,6 +236,10 @@ def test_evidence_from_promptfoo_generates_comparison_bundle(tmp_path: Path) -> 
     assert bridge["detected_tools"] == ["promptfoo"]
     assert "paired_bootstrap_confidence_interval" in bridge["pcl_added_evidence"]
     assert "claim_scope_check" in bridge["pcl_added_evidence"]
+    assert "paper_evidence_gap_diagnosis" in bridge["pcl_added_evidence"]
+    assert bridge["research_diagnostic_type"] == "external_evidence_gap"
+    assert bridge["research_diagnostics_md_path"] == str(out_dir / "research_diagnostics.md")
+    assert "soft-to-hard projection gap" in bridge["missing_paper_diagnostics"]
     assert bridge["validity"] == "clean"
     assert bridge["evidence_tier"] == "tier_2_paired_comparison"
     assert bridge["claim_check_status"] == "pass"
@@ -243,7 +247,10 @@ def test_evidence_from_promptfoo_generates_comparison_bundle(tmp_path: Path) -> 
     assert "paired comparison claim only" in bridge["claim_language"]
     assert "hidden_state_diagnostics" in bridge["next_tier_missing"]
     assert bridge["paired_n"] == 20
-    assert "Promptfoo" in (out_dir / "bridge_summary.md").read_text(encoding="utf-8")
+    bridge_markdown = (out_dir / "bridge_summary.md").read_text(encoding="utf-8")
+    assert "Promptfoo" in bridge_markdown
+    assert "Research diagnostics" in bridge_markdown
+    assert "research_diagnostics.md" in bridge_markdown
 
 
 def test_ingest_langfuse_observations_writes_pcl_run(tmp_path: Path) -> None:

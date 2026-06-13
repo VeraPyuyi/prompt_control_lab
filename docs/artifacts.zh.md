@@ -210,7 +210,7 @@ gate decision、risk level、改动文件、测试、audit path、gate path，�
 
 由 `pcl evidence-from` 写出。
 
-说明什么问题：外部工具和 PCL 的分工。它会记录哪个工具提供 eval 或 trace export、PCL 在其上补了哪些证据、主要成对统计、prompt-only 比较有效性、缺失证据、需要复查的项目和下一步动作。当你要解释 PCL 为什么是 Promptfoo、Langfuse 或 LangSmith 的补充层，而不是替代品时，建议先打开这个文件。
+说明什么问题：外部工具和 PCL 的分工。它会记录哪个工具提供 eval 或 trace export、PCL 在其上补了哪些证据、主要成对统计、prompt-only 比较有效性、论文证据缺口诊断、缺失证据、需要复查的项目和下一步动作。当你要解释 PCL 为什么是 Promptfoo、Langfuse 或 LangSmith 的补充层，而不是替代品时，建议先打开这个文件。
 
 ## `pcl guard --json` 输出
 

@@ -268,9 +268,9 @@ Written by `pcl evidence-from`.
 
 What it explains: the division of labor between the external source tool and PCL. It records which
 tool supplied the eval or trace export, what PCL added on top, the main paired statistics,
-prompt-only comparison validity, missing evidence, review items, and next actions. This is the
-recommended first file to open when explaining why PCL complements Promptfoo, Langfuse, or
-LangSmith instead of replacing them.
+prompt-only comparison validity, paper-evidence gap diagnostics, missing evidence, review items,
+and next actions. This is the recommended first file to open when explaining why PCL complements
+Promptfoo, Langfuse, or LangSmith instead of replacing them.
 
 ## `pcl guard --json` output
 
