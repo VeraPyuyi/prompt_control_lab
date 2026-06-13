@@ -145,7 +145,8 @@ pcl claim-check \
 `pcl evidence-from` 会写出一个自包含桥接目录：`imports/` 保存外部工具的 baseline /
 candidate 导入快照，`comparison/` 保存 PCL 的成对统计和 prompt-only 有效性审计，
 根目录会放置 `bridge_summary.md`、`evidence_card.md`、`claim_check.md`、
-`research_diagnostics.md`、`report.html` 和 `evidence_from_result.json` 方便审查。建议先看
+`research_diagnostics.md`、`research_gap_plan.md`、review-first 命令脚本、`report.html`
+和 `evidence_from_result.json` 方便审查。建议先看
 `bridge_summary.md`，它会说明外部工具提供了什么、PCL 补了什么、还缺哪些证据；再看
 `research_diagnostics.md`，确认哪些论文诊断已经存在、哪些仍然缺失，以及可以复制哪些命令
 来补齐缺口，而且不会伪造 hidden-state 或 Riccati 证据；最后看 `claim_check.md`，确认当前证据最多能支持哪一层

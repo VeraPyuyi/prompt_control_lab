@@ -472,12 +472,7 @@ def run_research_diagnostics(
             "prompt improvement."
         ),
     }
-    ensure_dir(paths.summary_dir)
-    write_json(paths.summary_dir / "research_diagnostics.json", payload)
-    (paths.summary_dir / "research_diagnostics.md").write_text(
-        render_research_diagnostics_markdown(payload),
-        encoding="utf-8",
-    )
+    _write_research_outputs(summary_dir=paths.summary_dir, payload=payload)
     write_evidence_card(paths.summary_dir)
     run_claim_check(
         paths.summary_dir,
@@ -549,12 +544,196 @@ def _run_external_bridge_diagnostics(
     }
     ensure_dir(summary_dir)
     ensure_dir(diagnostics_dir)
+    _write_research_outputs(summary_dir=summary_dir, payload=payload)
+    return payload
+
+
+def _write_research_outputs(*, summary_dir: Path, payload: JsonDict) -> None:
+    ensure_dir(summary_dir)
+    gap_plan = _build_research_gap_plan(payload)
+    if gap_plan["actions"]:
+        plan_json = summary_dir / "research_gap_plan.json"
+        plan_md = summary_dir / "research_gap_plan.md"
+        commands_ps1 = summary_dir / "research_gap_commands.ps1"
+        commands_sh = summary_dir / "research_gap_commands.sh"
+        write_json(plan_json, gap_plan)
+        plan_md.write_text(_render_research_gap_plan_markdown(gap_plan), encoding="utf-8")
+        commands_ps1.write_text(_render_gap_commands_ps1(gap_plan), encoding="utf-8")
+        commands_sh.write_text(_render_gap_commands_sh(gap_plan), encoding="utf-8")
+        artifacts = payload.get("artifacts")
+        artifacts_dict = artifacts if isinstance(artifacts, dict) else {}
+        artifacts_dict.update(
+            {
+                "research_gap_plan": str(plan_json),
+                "research_gap_plan_markdown": str(plan_md),
+                "research_gap_commands_ps1": str(commands_ps1),
+                "research_gap_commands_sh": str(commands_sh),
+            }
+        )
+        payload["artifacts"] = artifacts_dict
     write_json(summary_dir / "research_diagnostics.json", payload)
     (summary_dir / "research_diagnostics.md").write_text(
         render_research_diagnostics_markdown(payload),
         encoding="utf-8",
     )
-    return payload
+
+
+def _build_research_gap_plan(payload: JsonDict) -> JsonDict:
+    actions = _gap_actions_from_payload(payload)
+    return {
+        "kind": "research_gap_plan",
+        "run_dir": payload.get("run_dir"),
+        "diagnostic_type": payload.get("diagnostic_type", payload.get("mode")),
+        "action_count": len(actions),
+        "actions": actions,
+        "boundary": (
+            "This plan is a copy-paste guide for collecting missing paper-derived evidence. "
+            "Commands with placeholders must be edited before use; no missing diagnostic is "
+            "treated as measured until its artifact exists."
+        ),
+    }
+
+
+def _gap_actions_from_payload(payload: JsonDict) -> list[JsonDict]:
+    diagnostics = payload.get("diagnostics")
+    diagnostics_dict = diagnostics if isinstance(diagnostics, dict) else {}
+    ecosystem = diagnostics_dict.get("ecosystem_bridge")
+    if isinstance(ecosystem, dict):
+        return _numbered_actions(_remediation_list(ecosystem.get("paper_gap_remediation")))
+    external = diagnostics_dict.get("external_bridge")
+    if isinstance(external, dict):
+        return _numbered_actions(_remediation_list(external.get("paper_gap_remediation")))
+
+    present = {
+        "soft-to-hard projection gap": isinstance(diagnostics_dict.get("soft_hard"), dict),
+        "HuggingFace hidden-state extraction": _has_hidden_state_input(payload),
+        "hidden-state trajectory": isinstance(diagnostics_dict.get("trajectory"), dict),
+        "Riccati surrogate": isinstance(diagnostics_dict.get("riccati"), dict),
+        "time-varying soft-control lane": isinstance(diagnostics_dict.get("tv_soft"), dict),
+    }
+    actions = [
+        _paper_remediation_for(concept)
+        for concept, is_present in present.items()
+        if not is_present and _paper_remediation_for(concept)
+    ]
+    return _numbered_actions(actions)
+
+
+def _has_hidden_state_input(payload: JsonDict) -> bool:
+    artifacts = payload.get("artifacts")
+    artifacts_dict = artifacts if isinstance(artifacts, dict) else {}
+    if artifacts_dict.get("hidden_states"):
+        return True
+    inputs = payload.get("inputs")
+    inputs_dict = inputs if isinstance(inputs, dict) else {}
+    return isinstance(inputs_dict.get("hidden_states"), dict)
+
+
+def _numbered_actions(actions: list[JsonDict]) -> list[JsonDict]:
+    numbered: list[JsonDict] = []
+    for index, action in enumerate(actions, start=1):
+        row = dict(action)
+        row["step"] = index
+        numbered.append(row)
+    return numbered
+
+
+def _render_research_gap_plan_markdown(plan: JsonDict) -> str:
+    actions = _remediation_list(plan.get("actions"))
+    lines = [
+        "# Research Evidence Gap Plan",
+        "",
+        str(plan.get("boundary", "")),
+        "",
+    ]
+    if not actions:
+        lines.extend(["No missing paper-derived diagnostic actions were found.", ""])
+        return "\n".join(lines)
+    lines.extend(
+        [
+            (
+                "| Step | Missing diagnostic | Required inputs | Command | Artifact | "
+                "What it explains |"
+            ),
+            "|---:|---|---|---|---|---|",
+        ]
+    )
+    for action in actions:
+        required = action.get("required_inputs")
+        required_inputs = (
+            ", ".join(str(item) for item in required) if isinstance(required, list) else ""
+        )
+        lines.append(
+            "| "
+            + " | ".join(
+                [
+                    str(action.get("step", "")),
+                    str(action.get("concept", "")),
+                    required_inputs,
+                    f"`{action.get('command', '')}`",
+                    f"`{action.get('artifact', '')}`",
+                    str(action.get("explains", "")),
+                ]
+            )
+            + " |"
+        )
+    lines.extend(
+        [
+            "",
+            "The companion `research_gap_commands.ps1` and `research_gap_commands.sh` files are "
+            "review-first scripts. They intentionally stop before running commands so you can "
+            "replace placeholders and confirm paths.",
+            "",
+        ]
+    )
+    return "\n".join(lines)
+
+
+def _render_gap_commands_ps1(plan: JsonDict) -> str:
+    lines = [
+        "# PromptControlLab research evidence gap commands",
+        (
+            "# Review this file, replace placeholders, then remove the exit line "
+            "and uncomment commands."
+        ),
+        'Write-Host "Review research_gap_plan.md before running these commands."',
+        "exit 1",
+        "",
+    ]
+    for action in _remediation_list(plan.get("actions")):
+        lines.extend(_command_comment_block(action, comment="#"))
+    return "\n".join(lines)
+
+
+def _render_gap_commands_sh(plan: JsonDict) -> str:
+    lines = [
+        "#!/usr/bin/env bash",
+        "set -euo pipefail",
+        (
+            "# Review this file, replace placeholders, then remove the exit line "
+            "and uncomment commands."
+        ),
+        'echo "Review research_gap_plan.md before running these commands."',
+        "exit 1",
+        "",
+    ]
+    for action in _remediation_list(plan.get("actions")):
+        lines.extend(_command_comment_block(action, comment="#"))
+    return "\n".join(lines)
+
+
+def _command_comment_block(action: JsonDict, *, comment: str) -> list[str]:
+    required = action.get("required_inputs")
+    required_inputs = (
+        ", ".join(str(item) for item in required) if isinstance(required, list) else ""
+    )
+    return [
+        f"{comment} Step {action.get('step')}: {action.get('concept')}",
+        f"{comment} Requires: {required_inputs}",
+        f"{comment} Writes: {action.get('artifact')}",
+        f"{comment} {action.get('command')}",
+        "",
+    ]
 
 
 def _summarize_ecosystem_bundle(*, run_dir: Path, payload: JsonDict) -> JsonDict:

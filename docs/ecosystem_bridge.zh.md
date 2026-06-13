@@ -64,7 +64,9 @@ pcl diagnose --run runs/ecosystem-demo
 hidden-state、soft-hard、Riccati 或 time-varying-control 测量结果。
 完成这一步后，`pcl ui --runs runs/ecosystem-demo` 的 Research Overview 也会显示
 论文证据缺口表。报告还会给出一张补齐表，写明需要准备哪些输入、可以复制哪条
-`pcl` 命令、会生成哪个 artifact，以及这个 artifact 能说明什么问题。
+`pcl` 命令、会生成哪个 artifact，以及这个 artifact 能说明什么问题。需要交接给团队成员
+时，可以直接打开 `research_gap_plan.md`；配套的 `research_gap_commands.ps1` 和 `.sh`
+是 review-first 命令脚本。
 
 Promptfoo：
 

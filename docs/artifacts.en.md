@@ -274,6 +274,23 @@ prompt-only comparison validity, paper-evidence gap diagnostics, missing evidenc
 commands, review items, and next actions. This is the recommended first file to open when
 explaining why PCL complements Promptfoo, Langfuse, or LangSmith instead of replacing them.
 
+## `research_gap_plan.json` / `research_gap_plan.md`
+
+Written by `pcl diagnose` when missing paper-derived diagnostics have actionable follow-up
+commands. `pcl evidence-from` also creates these files automatically for imported external-tool
+bundles.
+
+Important fields:
+
+- `actions`: ordered missing-diagnostic steps with required inputs, command, expected artifact,
+  and interpretation
+- `boundary`: reminder that placeholder commands must be edited and missing diagnostics are not
+  measured until their artifacts exist
+
+The companion `research_gap_commands.ps1` and `research_gap_commands.sh` files are review-first
+scripts. They intentionally stop before running any command so users can replace placeholders and
+confirm paths.
+
 ## `pcl guard --json` output
 
 Stores an input-layer prompt guard result when used by hooks, rules, or shell wrappers.

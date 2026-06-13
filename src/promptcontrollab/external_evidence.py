@@ -153,6 +153,7 @@ def build_external_evidence(
     payload["research_diagnostics_path"] = str(out_dir / "research_diagnostics.json")
     payload["research_diagnostics_md_path"] = str(out_dir / "research_diagnostics.md")
     payload["research_diagnostic_type"] = diagnostics.get("diagnostic_type")
+    _attach_gap_plan_paths(payload, diagnostics)
     bridge_summary = _attach_research_diagnostics_to_bridge_summary(
         out_dir=out_dir,
         bridge_summary=bridge_summary,
@@ -169,6 +170,12 @@ def build_external_evidence(
     )
     payload["bridge_summary"]["paper_gap_remediation"] = bridge_summary.get(
         "paper_gap_remediation", []
+    )
+    payload["bridge_summary"]["research_gap_plan_path"] = bridge_summary.get(
+        "research_gap_plan_path"
+    )
+    payload["bridge_summary"]["research_gap_plan_md_path"] = bridge_summary.get(
+        "research_gap_plan_md_path"
     )
     payload["next_actions"].insert(
         3,
@@ -197,6 +204,7 @@ def _attach_research_diagnostics_to_bridge_summary(
     payload["research_diagnostic_type"] = diagnostics.get("diagnostic_type")
     payload["missing_paper_diagnostics"] = missing_list
     payload["paper_gap_remediation"] = remediation_list
+    _attach_gap_plan_paths(payload, diagnostics)
     added = payload.get("pcl_added_evidence")
     added_list = list(added) if isinstance(added, list) else []
     if "paper_evidence_gap_diagnosis" not in added_list:
@@ -211,6 +219,23 @@ def _attach_research_diagnostics_to_bridge_summary(
     write_json(out_dir / "bridge_summary.json", payload)
     (out_dir / "bridge_summary.md").write_text(_render_bridge_summary(payload), encoding="utf-8")
     return payload
+
+
+def _attach_gap_plan_paths(payload: JsonDict, diagnostics: JsonDict) -> None:
+    artifacts = diagnostics.get("artifacts")
+    artifacts_dict = artifacts if isinstance(artifacts, dict) else {}
+    plan_path = artifacts_dict.get("research_gap_plan")
+    plan_md_path = artifacts_dict.get("research_gap_plan_markdown")
+    commands_ps1 = artifacts_dict.get("research_gap_commands_ps1")
+    commands_sh = artifacts_dict.get("research_gap_commands_sh")
+    if plan_path:
+        payload["research_gap_plan_path"] = plan_path
+    if plan_md_path:
+        payload["research_gap_plan_md_path"] = plan_md_path
+    if commands_ps1:
+        payload["research_gap_commands_ps1_path"] = commands_ps1
+    if commands_sh:
+        payload["research_gap_commands_sh_path"] = commands_sh
 
 
 def _external_diagnostic_payload(diagnostics: JsonDict) -> JsonDict:
@@ -533,6 +558,8 @@ def _render_bridge_summary(payload: JsonDict) -> str:
                 f"- Report: `{research_path}`",
                 f"- Diagnostic type: `{payload.get('research_diagnostic_type')}`",
                 f"- Missing paper diagnostics: `{payload.get('missing_paper_diagnostics', [])}`",
+                f"- Gap plan: `{payload.get('research_gap_plan_md_path', '')}`",
+                f"- Commands: `{payload.get('research_gap_commands_ps1_path', '')}`",
                 "",
             ]
         )

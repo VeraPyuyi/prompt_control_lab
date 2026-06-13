@@ -79,7 +79,8 @@ time-varying-control measurements.
 After this step, `pcl ui --runs runs/ecosystem-demo` also shows a paper-evidence
 gap table in Research Overview. The same report includes a remediation table with
 the required inputs, copy-paste `pcl` command, expected artifact, and what that
-artifact would explain.
+artifact would explain. For handoff, open `research_gap_plan.md`; the paired
+`research_gap_commands.ps1` and `.sh` files are review-first command scripts.
 
 Promptfoo:
 

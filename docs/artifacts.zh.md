@@ -214,6 +214,19 @@ gate decision、risk level、改动文件、测试、audit path、gate path，�
 
 说明什么问题：外部工具和 PCL 的分工。它会记录哪个工具提供 eval 或 trace export、PCL 在其上补了哪些证据、主要成对统计、prompt-only 比较有效性、论文证据缺口诊断、缺失证据、补齐命令、需要复查的项目和下一步动作。当你要解释 PCL 为什么是 Promptfoo、Langfuse 或 LangSmith 的补充层，而不是替代品时，建议先打开这个文件。
 
+## `research_gap_plan.json` / `research_gap_plan.md`
+
+当缺失的论文诊断有明确补齐动作时，由 `pcl diagnose` 写出。`pcl evidence-from`
+导入外部工具 bundle 时也会自动生成这些文件。
+
+重要字段：
+
+- `actions`：按顺序列出缺失诊断、所需输入、命令、预期 artifact 和结果含义
+- `boundary`：提醒用户先替换占位符；只有 artifact 真正存在时，缺失诊断才算完成测量
+
+配套的 `research_gap_commands.ps1` 和 `research_gap_commands.sh` 是 review-first 脚本。
+它们会先停止执行，要求用户确认路径并替换占位符，避免把示例命令误当成已验证命令直接运行。
+
 ## `pcl guard --json` 输出
 
 记录 hook、rules 或 shell wrapper 使用的输入层 prompt 守护结果。

@@ -149,6 +149,11 @@ def test_diagnose_summarizes_ecosystem_demo_evidence_gaps(tmp_path: Path) -> Non
     assert "Ecosystem evidence gap diagnosis" in report
     assert "How to close these gaps" in report
     assert "pcl extract-hidden" in report
+    gap_plan = read_json(out / "research_gap_plan.json")
+    assert gap_plan["kind"] == "research_gap_plan"
+    assert any("pcl trajectory" in item["command"] for item in gap_plan["actions"])
+    assert "pcl extract-hidden" in (out / "research_gap_plan.md").read_text(encoding="utf-8")
+    assert "exit 1" in (out / "research_gap_commands.ps1").read_text(encoding="utf-8")
     assert "Promptfoo" in report
     assert "Risk: `None`" not in report
     assert "Turnpike-like signal: `None`" not in report
@@ -183,6 +188,7 @@ def test_diagnose_summarizes_single_external_evidence_bundle(tmp_path: Path) -> 
     assert bridge["validity"] == "needs_review"
     assert "soft-to-hard projection gap" in bridge["missing_paper_diagnostics"]
     assert bridge["paper_gap_remediation"][0]["command"]
+    assert (out / "promptfoo" / "research_gap_plan.md").exists()
 
 
 def test_diagnose_requires_enough_inputs(tmp_path: Path) -> None:
