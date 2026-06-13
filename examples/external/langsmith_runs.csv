@@ -1,0 +1,9 @@
+run_id,example_id,experiment_name,output,reference_output,exact_match,model,provider,slice
+base-run-1,case-1,baseline,wrong,4,0,gpt-4o-mini-20260601,openai,arithmetic
+base-run-2,case-2,baseline,NO,YES,0,gpt-4o-mini-20260601,openai,format
+base-run-3,case-3,baseline,blue,blue,1,gpt-4o-mini-20260601,openai,classification
+base-run-4,case-4,baseline,maybe,safe,0,gpt-4o-mini-20260601,openai,safety
+cand-run-1,case-1,candidate,4,4,1,gpt-4o-mini-20260601,openai,arithmetic
+cand-run-2,case-2,candidate,YES,YES,1,gpt-4o-mini-20260601,openai,format
+cand-run-3,case-3,candidate,blue,blue,1,gpt-4o-mini-20260601,openai,classification
+cand-run-4,case-4,candidate,safe,safe,1,gpt-4o-mini-20260601,openai,safety

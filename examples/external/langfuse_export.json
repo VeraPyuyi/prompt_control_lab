@@ -1,0 +1,84 @@
+{
+  "observations": [
+    {
+      "id": "obs-base-1",
+      "name": "baseline",
+      "type": "GENERATION",
+      "input": {"expected": "4", "slice": "arithmetic", "question": "2+2"},
+      "output": "wrong",
+      "model": "gpt-4o-mini-20260601",
+      "metadata": {"provider": "openai", "example_id": "case-1", "slice": "arithmetic"},
+      "scores": [{"name": "exact_match", "value": 0}]
+    },
+    {
+      "id": "obs-cand-1",
+      "name": "candidate",
+      "type": "GENERATION",
+      "input": {"expected": "4", "slice": "arithmetic", "question": "2+2"},
+      "output": "4",
+      "model": "gpt-4o-mini-20260601",
+      "metadata": {"provider": "openai", "example_id": "case-1", "slice": "arithmetic"},
+      "scores": [{"name": "exact_match", "value": 1}]
+    },
+    {
+      "id": "obs-base-2",
+      "name": "baseline",
+      "type": "GENERATION",
+      "input": {"expected": "YES", "slice": "format", "question": "Return YES"},
+      "output": "NO",
+      "model": "gpt-4o-mini-20260601",
+      "metadata": {"provider": "openai", "example_id": "case-2", "slice": "format"},
+      "scores": [{"name": "exact_match", "value": 0}]
+    },
+    {
+      "id": "obs-cand-2",
+      "name": "candidate",
+      "type": "GENERATION",
+      "input": {"expected": "YES", "slice": "format", "question": "Return YES"},
+      "output": "YES",
+      "model": "gpt-4o-mini-20260601",
+      "metadata": {"provider": "openai", "example_id": "case-2", "slice": "format"},
+      "scores": [{"name": "exact_match", "value": 1}]
+    },
+    {
+      "id": "obs-base-3",
+      "name": "baseline",
+      "type": "GENERATION",
+      "input": {"expected": "blue", "slice": "classification", "question": "Color label"},
+      "output": "blue",
+      "model": "gpt-4o-mini-20260601",
+      "metadata": {"provider": "openai", "example_id": "case-3", "slice": "classification"},
+      "scores": [{"name": "exact_match", "value": 1}]
+    },
+    {
+      "id": "obs-cand-3",
+      "name": "candidate",
+      "type": "GENERATION",
+      "input": {"expected": "blue", "slice": "classification", "question": "Color label"},
+      "output": "blue",
+      "model": "gpt-4o-mini-20260601",
+      "metadata": {"provider": "openai", "example_id": "case-3", "slice": "classification"},
+      "scores": [{"name": "exact_match", "value": 1}]
+    },
+    {
+      "id": "obs-base-4",
+      "name": "baseline",
+      "type": "GENERATION",
+      "input": {"expected": "safe", "slice": "safety", "question": "Return safe"},
+      "output": "maybe",
+      "model": "gpt-4o-mini-20260601",
+      "metadata": {"provider": "openai", "example_id": "case-4", "slice": "safety"},
+      "scores": [{"name": "exact_match", "value": 0}]
+    },
+    {
+      "id": "obs-cand-4",
+      "name": "candidate",
+      "type": "GENERATION",
+      "input": {"expected": "safe", "slice": "safety", "question": "Return safe"},
+      "output": "safe",
+      "model": "gpt-4o-mini-20260601",
+      "metadata": {"provider": "openai", "example_id": "case-4", "slice": "safety"},
+      "scores": [{"name": "exact_match", "value": 1}]
+    }
+  ]
+}

@@ -90,11 +90,222 @@ allowed_models: gpt-4o,gpt-5.2
 ui.default_view: workflows
 """
 
+PROMPTFOO_RESULTS_JSON = """\
+{
+  "version": 3,
+  "timestamp": "2026-06-13T00:00:00Z",
+  "prompts": [
+    {
+      "id": "baseline",
+      "raw": "Answer the question.",
+      "label": "Baseline"
+    },
+    {
+      "id": "candidate",
+      "raw": "Answer with only the final result. Follow the requested output format exactly.",
+      "label": "Candidate"
+    }
+  ],
+  "results": [
+    {
+      "promptId": "baseline",
+      "provider": {"id": "openai:gpt-4o-mini-20260601"},
+      "testIdx": 0,
+      "testCase": {"vars": {"slice": "arithmetic"}, "assert": [{"type": "equals", "value": "4"}]},
+      "response": {"output": "wrong"},
+      "success": false,
+      "score": 0
+    },
+    {
+      "promptId": "candidate",
+      "provider": {"id": "openai:gpt-4o-mini-20260601"},
+      "testIdx": 0,
+      "testCase": {"vars": {"slice": "arithmetic"}, "assert": [{"type": "equals", "value": "4"}]},
+      "response": {"output": "4"},
+      "success": true,
+      "score": 1
+    },
+    {
+      "promptId": "baseline",
+      "provider": {"id": "openai:gpt-4o-mini-20260601"},
+      "testIdx": 1,
+      "testCase": {"vars": {"slice": "format"}, "assert": [{"type": "equals", "value": "YES"}]},
+      "response": {"output": "NO"},
+      "success": false,
+      "score": 0
+    },
+    {
+      "promptId": "candidate",
+      "provider": {"id": "openai:gpt-4o-mini-20260601"},
+      "testIdx": 1,
+      "testCase": {"vars": {"slice": "format"}, "assert": [{"type": "equals", "value": "YES"}]},
+      "response": {"output": "YES"},
+      "success": true,
+      "score": 1
+    },
+    {
+      "promptId": "baseline",
+      "provider": {"id": "openai:gpt-4o-mini-20260601"},
+      "testIdx": 2,
+      "testCase": {
+        "vars": {"slice": "classification"},
+        "assert": [{"type": "equals", "value": "blue"}]
+      },
+      "response": {"output": "blue"},
+      "success": true,
+      "score": 1
+    },
+    {
+      "promptId": "candidate",
+      "provider": {"id": "openai:gpt-4o-mini-20260601"},
+      "testIdx": 2,
+      "testCase": {
+        "vars": {"slice": "classification"},
+        "assert": [{"type": "equals", "value": "blue"}]
+      },
+      "response": {"output": "blue"},
+      "success": true,
+      "score": 1
+    },
+    {
+      "promptId": "baseline",
+      "provider": {"id": "openai:gpt-4o-mini-20260601"},
+      "testIdx": 3,
+      "testCase": {"vars": {"slice": "safety"}, "assert": [{"type": "equals", "value": "safe"}]},
+      "response": {"output": "maybe"},
+      "success": false,
+      "score": 0
+    },
+    {
+      "promptId": "candidate",
+      "provider": {"id": "openai:gpt-4o-mini-20260601"},
+      "testIdx": 3,
+      "testCase": {"vars": {"slice": "safety"}, "assert": [{"type": "equals", "value": "safe"}]},
+      "response": {"output": "safe"},
+      "success": true,
+      "score": 1
+    }
+  ]
+}
+"""
+
+LANGFUSE_EXPORT_JSON = """\
+{
+  "observations": [
+    {
+      "id": "obs-base-1",
+      "name": "baseline",
+      "type": "GENERATION",
+      "input": {"expected": "4", "slice": "arithmetic", "question": "2+2"},
+      "output": "wrong",
+      "model": "gpt-4o-mini-20260601",
+      "metadata": {"provider": "openai", "example_id": "case-1", "slice": "arithmetic"},
+      "scores": [{"name": "exact_match", "value": 0}]
+    },
+    {
+      "id": "obs-cand-1",
+      "name": "candidate",
+      "type": "GENERATION",
+      "input": {"expected": "4", "slice": "arithmetic", "question": "2+2"},
+      "output": "4",
+      "model": "gpt-4o-mini-20260601",
+      "metadata": {"provider": "openai", "example_id": "case-1", "slice": "arithmetic"},
+      "scores": [{"name": "exact_match", "value": 1}]
+    },
+    {
+      "id": "obs-base-2",
+      "name": "baseline",
+      "type": "GENERATION",
+      "input": {"expected": "YES", "slice": "format", "question": "Return YES"},
+      "output": "NO",
+      "model": "gpt-4o-mini-20260601",
+      "metadata": {"provider": "openai", "example_id": "case-2", "slice": "format"},
+      "scores": [{"name": "exact_match", "value": 0}]
+    },
+    {
+      "id": "obs-cand-2",
+      "name": "candidate",
+      "type": "GENERATION",
+      "input": {"expected": "YES", "slice": "format", "question": "Return YES"},
+      "output": "YES",
+      "model": "gpt-4o-mini-20260601",
+      "metadata": {"provider": "openai", "example_id": "case-2", "slice": "format"},
+      "scores": [{"name": "exact_match", "value": 1}]
+    },
+    {
+      "id": "obs-base-3",
+      "name": "baseline",
+      "type": "GENERATION",
+      "input": {"expected": "blue", "slice": "classification", "question": "Color label"},
+      "output": "blue",
+      "model": "gpt-4o-mini-20260601",
+      "metadata": {"provider": "openai", "example_id": "case-3", "slice": "classification"},
+      "scores": [{"name": "exact_match", "value": 1}]
+    },
+    {
+      "id": "obs-cand-3",
+      "name": "candidate",
+      "type": "GENERATION",
+      "input": {"expected": "blue", "slice": "classification", "question": "Color label"},
+      "output": "blue",
+      "model": "gpt-4o-mini-20260601",
+      "metadata": {"provider": "openai", "example_id": "case-3", "slice": "classification"},
+      "scores": [{"name": "exact_match", "value": 1}]
+    },
+    {
+      "id": "obs-base-4",
+      "name": "baseline",
+      "type": "GENERATION",
+      "input": {"expected": "safe", "slice": "safety", "question": "Return safe"},
+      "output": "maybe",
+      "model": "gpt-4o-mini-20260601",
+      "metadata": {"provider": "openai", "example_id": "case-4", "slice": "safety"},
+      "scores": [{"name": "exact_match", "value": 0}]
+    },
+    {
+      "id": "obs-cand-4",
+      "name": "candidate",
+      "type": "GENERATION",
+      "input": {"expected": "safe", "slice": "safety", "question": "Return safe"},
+      "output": "safe",
+      "model": "gpt-4o-mini-20260601",
+      "metadata": {"provider": "openai", "example_id": "case-4", "slice": "safety"},
+      "scores": [{"name": "exact_match", "value": 1}]
+    }
+  ]
+}
+"""
+
+LANGSMITH_RUNS_CSV = """\
+run_id,example_id,experiment_name,output,reference_output,exact_match,model,provider,slice
+base-run-1,case-1,baseline,wrong,4,0,gpt-4o-mini-20260601,openai,arithmetic
+base-run-2,case-2,baseline,NO,YES,0,gpt-4o-mini-20260601,openai,format
+base-run-3,case-3,baseline,blue,blue,1,gpt-4o-mini-20260601,openai,classification
+base-run-4,case-4,baseline,maybe,safe,0,gpt-4o-mini-20260601,openai,safety
+cand-run-1,case-1,candidate,4,4,1,gpt-4o-mini-20260601,openai,arithmetic
+cand-run-2,case-2,candidate,YES,YES,1,gpt-4o-mini-20260601,openai,format
+cand-run-3,case-3,candidate,blue,blue,1,gpt-4o-mini-20260601,openai,classification
+cand-run-4,case-4,candidate,safe,safe,1,gpt-4o-mini-20260601,openai,safety
+"""
+
+EXTERNAL_README_MD = """\
+# External Tool Export Examples
+
+These tiny Promptfoo, Langfuse, and LangSmith-style exports let you try
+`pcl evidence-from` without setting up those tools first.
+
+They are intentionally small. `comparison_validity.json` may say
+`needs_review` because four examples are not enough for strong statistical
+evidence. That is expected: the demo proves the bridge and artifact shape, not a
+universal prompt improvement claim.
+"""
+
 
 def write_example_project(path: Path) -> None:
     """Write a small example project."""
 
     ensure_dir(path / "examples")
+    ensure_dir(path / "examples" / "external")
     ensure_dir(path / "prompts")
     ensure_dir(path / "runs")
     (path / "examples" / "tasks.jsonl").write_text(TASKS_JSONL, encoding="utf-8")
@@ -105,6 +316,22 @@ def write_example_project(path: Path) -> None:
     )
     (path / "examples" / "guard.policy.yaml").write_text(GUARD_POLICY_YAML, encoding="utf-8")
     (path / "examples" / "gate.policy.yaml").write_text(GATE_POLICY_YAML, encoding="utf-8")
+    (path / "examples" / "external" / "README.md").write_text(
+        EXTERNAL_README_MD,
+        encoding="utf-8",
+    )
+    (path / "examples" / "external" / "promptfoo_results.json").write_text(
+        PROMPTFOO_RESULTS_JSON,
+        encoding="utf-8",
+    )
+    (path / "examples" / "external" / "langfuse_export.json").write_text(
+        LANGFUSE_EXPORT_JSON,
+        encoding="utf-8",
+    )
+    (path / "examples" / "external" / "langsmith_runs.csv").write_text(
+        LANGSMITH_RUNS_CSV,
+        encoding="utf-8",
+    )
     (path / "prompts" / "current.txt").write_text(
         "Answer the user question exactly and keep the requested output format.\n",
         encoding="utf-8",

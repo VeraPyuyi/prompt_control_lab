@@ -147,6 +147,10 @@ downstream reports. This is intentionally a bridge, not a replacement for Prompt
 provider ecosystem, Langfuse's tracing platform, or LangSmith's observability/evaluation
 workflows.
 
+For a copy-paste walkthrough with bundled sample exports, see
+[Ecosystem Bridge](docs/ecosystem_bridge.en.md) and
+[examples/external](examples/external/).
+
 ## Applied Engineering Layer
 
 The agent guard, model provenance, diff audit, GitHub Action, plugins, and UI are practical
@@ -1020,6 +1024,7 @@ PCL's comparison validity and paper-derived diagnostics on top.
 - [Tutorial](docs/tutorial.en.md)
 - [Artifacts](docs/artifacts.en.md)
 - [Research From The Paper](docs/research_from_paper.en.md)
+- [Ecosystem Bridge](docs/ecosystem_bridge.en.md)
 - [Agent guard pilot case study](docs/case_studies/agent_guard_pilot.en.md)
 - [Real paired agent pilot case study](docs/case_studies/agent_guard_paired_pilot.en.md)
 - [Production pilot protocol](docs/production_pilot.en.md)

@@ -1,0 +1,90 @@
+{
+  "version": 3,
+  "timestamp": "2026-06-13T00:00:00Z",
+  "prompts": [
+    {
+      "id": "baseline",
+      "raw": "Answer the question.",
+      "label": "Baseline"
+    },
+    {
+      "id": "candidate",
+      "raw": "Answer with only the final result. Follow the requested output format exactly.",
+      "label": "Candidate"
+    }
+  ],
+  "results": [
+    {
+      "promptId": "baseline",
+      "provider": {"id": "openai:gpt-4o-mini-20260601"},
+      "testIdx": 0,
+      "testCase": {"vars": {"slice": "arithmetic"}, "assert": [{"type": "equals", "value": "4"}]},
+      "response": {"output": "wrong"},
+      "success": false,
+      "score": 0
+    },
+    {
+      "promptId": "candidate",
+      "provider": {"id": "openai:gpt-4o-mini-20260601"},
+      "testIdx": 0,
+      "testCase": {"vars": {"slice": "arithmetic"}, "assert": [{"type": "equals", "value": "4"}]},
+      "response": {"output": "4"},
+      "success": true,
+      "score": 1
+    },
+    {
+      "promptId": "baseline",
+      "provider": {"id": "openai:gpt-4o-mini-20260601"},
+      "testIdx": 1,
+      "testCase": {"vars": {"slice": "format"}, "assert": [{"type": "equals", "value": "YES"}]},
+      "response": {"output": "NO"},
+      "success": false,
+      "score": 0
+    },
+    {
+      "promptId": "candidate",
+      "provider": {"id": "openai:gpt-4o-mini-20260601"},
+      "testIdx": 1,
+      "testCase": {"vars": {"slice": "format"}, "assert": [{"type": "equals", "value": "YES"}]},
+      "response": {"output": "YES"},
+      "success": true,
+      "score": 1
+    },
+    {
+      "promptId": "baseline",
+      "provider": {"id": "openai:gpt-4o-mini-20260601"},
+      "testIdx": 2,
+      "testCase": {"vars": {"slice": "classification"}, "assert": [{"type": "equals", "value": "blue"}]},
+      "response": {"output": "blue"},
+      "success": true,
+      "score": 1
+    },
+    {
+      "promptId": "candidate",
+      "provider": {"id": "openai:gpt-4o-mini-20260601"},
+      "testIdx": 2,
+      "testCase": {"vars": {"slice": "classification"}, "assert": [{"type": "equals", "value": "blue"}]},
+      "response": {"output": "blue"},
+      "success": true,
+      "score": 1
+    },
+    {
+      "promptId": "baseline",
+      "provider": {"id": "openai:gpt-4o-mini-20260601"},
+      "testIdx": 3,
+      "testCase": {"vars": {"slice": "safety"}, "assert": [{"type": "equals", "value": "safe"}]},
+      "response": {"output": "maybe"},
+      "success": false,
+      "score": 0
+    },
+    {
+      "promptId": "candidate",
+      "provider": {"id": "openai:gpt-4o-mini-20260601"},
+      "testIdx": 3,
+      "testCase": {"vars": {"slice": "safety"}, "assert": [{"type": "equals", "value": "safe"}]},
+      "response": {"output": "safe"},
+      "success": true,
+      "score": 1
+    }
+  ]
+}

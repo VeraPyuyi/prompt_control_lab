@@ -405,9 +405,13 @@ def _row_from_langsmith_run(
     provider = _optional_str(metadata.get("provider")) or _optional_str(item.get("provider"))
     if provider is None and model_id is not None:
         provider, model_id = _split_provider_model(model_id)
+    stable_id = _stable_example_id(metadata, item)
     return {
-        "id": _optional_str(item.get("id")) or _optional_str(item.get("run_id"))
-        or _optional_str(item.get("runId")) or f"run-{index}",
+        "id": stable_id
+        or _optional_str(item.get("id"))
+        or _optional_str(item.get("run_id"))
+        or _optional_str(item.get("runId"))
+        or f"run-{index}",
         "experiment": _langsmith_experiment(item, metadata),
         "provider": provider,
         "model_id": model_id,
@@ -433,7 +437,22 @@ def _row_from_langsmith_csv(
     if provider is None and model_id is not None:
         provider, model_id = _split_provider_model(model_id)
     return {
-        "id": _csv_first(item, ["run_id", "id", "runId"]) or f"run-{index}",
+        "id": _csv_first(
+            item,
+            [
+                "example_id",
+                "exampleId",
+                "dataset_example_id",
+                "dataset_item_id",
+                "metadata.example_id",
+                "metadata.dataset_item_id",
+                "reference_example_id",
+                "run_id",
+                "id",
+                "runId",
+            ],
+        )
+        or f"run-{index}",
         "experiment": _csv_first(item, ["experiment_name", "experiment", "session_name"]),
         "provider": provider,
         "model_id": model_id,
@@ -516,8 +535,11 @@ def _row_from_langfuse_observation(
     provider = _optional_str(metadata.get("provider")) or _optional_str(item.get("provider"))
     if provider is None and model_id is not None:
         provider, model_id = _split_provider_model(model_id)
+    stable_id = _stable_example_id(metadata, input_payload, item)
     return {
-        "id": _optional_str(item.get("id")) or _optional_str(item.get("observationId"))
+        "id": stable_id
+        or _optional_str(item.get("id"))
+        or _optional_str(item.get("observationId"))
         or f"observation-{index}",
         "name": _optional_str(item.get("name")),
         "provider": provider,
@@ -711,6 +733,29 @@ def _provider_id(value: object) -> str | None:
 
 def _optional_str(value: object) -> str | None:
     return value if isinstance(value, str) and value else None
+
+
+def _stable_example_id(*payloads: JsonDict) -> str | None:
+    keys = [
+        "example_id",
+        "exampleId",
+        "dataset_example_id",
+        "datasetExampleId",
+        "dataset_item_id",
+        "datasetItemId",
+        "reference_example_id",
+        "referenceExampleId",
+        "pcl_id",
+        "input_id",
+        "case_id",
+        "sample_id",
+    ]
+    for payload in payloads:
+        for key in keys:
+            value = payload.get(key)
+            if isinstance(value, str) and value:
+                return value
+    return None
 
 
 def _response_output(response: JsonDict, *, fallback: object) -> str:
