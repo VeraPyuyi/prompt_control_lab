@@ -578,6 +578,96 @@ def _write_research_outputs(*, summary_dir: Path, payload: JsonDict) -> None:
     )
 
 
+def write_research_gap_status(*, run_dir: Path, out_path: Path | None = None) -> JsonDict:
+    """Check whether actions in ``research_gap_plan.json`` have been completed."""
+
+    plan_path = run_dir / "research_gap_plan.json"
+    if not plan_path.exists():
+        msg = f"No research_gap_plan.json found in {run_dir}. Run `pcl diagnose --run {run_dir}`."
+        raise ValueError(msg)
+    plan = read_json(plan_path)
+    actions = _remediation_list(plan.get("actions"))
+    rows = [_gap_status_row(run_dir=run_dir, action=action) for action in actions]
+    missing = [row for row in rows if row["status"] != "present"]
+    payload: JsonDict = {
+        "kind": "research_gap_status",
+        "run_dir": str(run_dir),
+        "plan_path": str(plan_path),
+        "status": "complete" if not missing else "needs_work",
+        "action_count": len(rows),
+        "complete_count": len(rows) - len(missing),
+        "missing_count": len(missing),
+        "actions": rows,
+        "boundary": (
+            "This status only checks whether the expected artifact files exist. It does not "
+            "judge whether the diagnostic is scientifically sufficient."
+        ),
+    }
+    json_path = _gap_status_json_path(run_dir=run_dir, out_path=out_path)
+    md_path = json_path.with_suffix(".md")
+    ensure_dir(json_path.parent)
+    write_json(json_path, payload)
+    md_path.write_text(_render_research_gap_status_markdown(payload), encoding="utf-8")
+    return payload
+
+
+def _gap_status_json_path(*, run_dir: Path, out_path: Path | None) -> Path:
+    if out_path is None:
+        return run_dir / "research_gap_status.json"
+    if out_path.suffix:
+        return out_path
+    return out_path / "research_gap_status.json"
+
+
+def _gap_status_row(*, run_dir: Path, action: JsonDict) -> JsonDict:
+    artifact = str(action.get("artifact") or "")
+    artifact_path = run_dir / artifact if artifact else run_dir
+    exists = bool(artifact and artifact_path.exists())
+    required = action.get("required_inputs")
+    return {
+        "step": action.get("step"),
+        "concept": action.get("concept", ""),
+        "status": "present" if exists else "missing",
+        "artifact": artifact,
+        "artifact_path": str(artifact_path),
+        "required_inputs": required if isinstance(required, list) else [],
+        "command": action.get("command", ""),
+        "explains": action.get("explains", ""),
+    }
+
+
+def _render_research_gap_status_markdown(payload: JsonDict) -> str:
+    actions = _remediation_list(payload.get("actions"))
+    lines = [
+        "# Research Evidence Gap Status",
+        "",
+        f"- Status: `{payload.get('status')}`",
+        f"- Complete: `{payload.get('complete_count')}/{payload.get('action_count')}`",
+        f"- Missing: `{payload.get('missing_count')}`",
+        "",
+        str(payload.get("boundary", "")),
+        "",
+        "| Step | Diagnostic | Status | Artifact | Command |",
+        "|---:|---|---|---|---|",
+    ]
+    for action in actions:
+        lines.append(
+            "| "
+            + " | ".join(
+                [
+                    str(action.get("step", "")),
+                    str(action.get("concept", "")),
+                    str(action.get("status", "")),
+                    f"`{action.get('artifact', '')}`",
+                    f"`{action.get('command', '')}`",
+                ]
+            )
+            + " |"
+        )
+    lines.append("")
+    return "\n".join(lines)
+
+
 def _build_research_gap_plan(payload: JsonDict) -> JsonDict:
     actions = _gap_actions_from_payload(payload)
     return {

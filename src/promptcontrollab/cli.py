@@ -50,7 +50,11 @@ from promptcontrollab.prompt_diff import render_prompt_diff
 from promptcontrollab.prompt_guard import guard_prompt
 from promptcontrollab.prompt_improver import improve_prompt
 from promptcontrollab.reporting import generate_report
-from promptcontrollab.research_workflow import run_research_diagnostics, write_research_demo
+from promptcontrollab.research_workflow import (
+    run_research_diagnostics,
+    write_research_demo,
+    write_research_gap_status,
+)
 from promptcontrollab.riccati import analyze_riccati
 from promptcontrollab.run_comparison import compare_runs
 from promptcontrollab.soft_hard import analyze_soft_hard
@@ -721,6 +725,19 @@ def build_parser() -> argparse.ArgumentParser:
     diagnose_parser.add_argument("--tail", type=int, default=1)
     diagnose_parser.add_argument("--iterations", type=int, default=200)
     diagnose_parser.set_defaults(func=_cmd_diagnose)
+
+    gap_status_parser = subcommands.add_parser(
+        "gap-status",
+        help="Check whether research_gap_plan actions have produced their expected artifacts.",
+    )
+    gap_status_parser.add_argument("--run", type=Path, required=True, help="Run directory.")
+    gap_status_parser.add_argument(
+        "--out",
+        type=Path,
+        default=None,
+        help="Output JSON file or directory. Defaults to <run>/research_gap_status.json.",
+    )
+    gap_status_parser.set_defaults(func=_cmd_gap_status)
 
     hidden_parser = subcommands.add_parser(
         "extract-hidden",
@@ -1460,6 +1477,11 @@ def _cmd_diagnose(args: argparse.Namespace) -> None:
     )
     print(f"Wrote research diagnostics to {payload['diagnostics_dir']}")
     print(f"Report: {Path(str(payload['summary_dir'])) / 'research_diagnostics.md'}")
+
+
+def _cmd_gap_status(args: argparse.Namespace) -> None:
+    payload = write_research_gap_status(run_dir=args.run, out_path=args.out)
+    print(json.dumps(payload, indent=2, ensure_ascii=False, sort_keys=True))
 
 
 def _cmd_extract_hidden(args: argparse.Namespace) -> None:

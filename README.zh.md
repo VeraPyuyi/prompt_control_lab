@@ -153,7 +153,15 @@ candidate 导入快照，`comparison/` 保存 PCL 的成对统计和 prompt-only
 prompt optimization 主张。请使用新的或空的 `--out` 目录，避免旧 artifact 污染审计结果。
 本地 UI 的研究总览页也会展示这条桥接链路，包括识别到的外部工具、PCL 补充的证据、比较有效性、主张检查状态和缺失证据。
 
+运行建议的诊断命令之后，可以用下面的命令检查缺口是否真的补齐：
+
+```bash
+pcl gap-status --run runs/from-promptfoo-evidence
+```
+
 导入后的 run 会包含 `predictions.jsonl`、`metrics.json` 和 `manifest.json`，因此可以继续接 `pcl compare-runs`、`pcl stats`、`pcl validity` 和后续报告。`compare-runs` 会写出一个独立比较目录，里面包含成对统计、prompt-only 比较有效性、candidate metrics 快照、源 run 快照以及 Markdown / HTML 报告。`evidence-card` 会继续把这条研究证据链压缩成一份 reviewer 更容易看的卡片。请使用新的或空的 `--out` 目录，避免旧 artifact 污染审计结果。这个能力的定位是桥接 Promptfoo / Langfuse / LangSmith 生态，而不是替代 Promptfoo 的 red-team / provider 生态、Langfuse 的 tracing 平台或 LangSmith 的观测/评测工作流。
+
+竞争切口：Promptfoo、LangSmith 和 Langfuse 已经在 security testing、tracing、observability、prompt management 和生产工作流上形成很强的付费能力。PCL 更应该赢在它们通常不覆盖的 **研究证据层**：成对不确定性、prompt-only 有效性、evidence card、claim check、soft-hard gap、hidden-state trajectory、Riccati surrogate、time-varying control evidence，以及现在用 `pcl gap-status` 检查导入之后的论文诊断缺口是否真正补齐。
 
 如果想直接复制示例命令，请看 [生态桥接教程](docs/ecosystem_bridge.zh.md) 和
 [examples/external](examples/external/)。

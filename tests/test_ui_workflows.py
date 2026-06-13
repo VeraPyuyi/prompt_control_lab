@@ -394,6 +394,8 @@ def test_cli_export_report_zip_contains_known_artifacts(tmp_path: Path) -> None:
     _write(run_dir / "research_gap_plan.md", "# gap plan\n")
     _write(run_dir / "research_gap_commands.ps1", "exit 1\n")
     _write(run_dir / "research_gap_commands.sh", "exit 1\n")
+    _write_json(run_dir / "research_gap_status.json", {"kind": "research_gap_status"})
+    _write(run_dir / "research_gap_status.md", "# gap status\n")
     _write(run_dir / "report.md", "# report\n")
     _write_json(run_dir / "diagnostics" / "trajectory.json", {"drift": 0.2})
     _write(run_dir / "src.py", "print('not an artifact')\n")
@@ -414,6 +416,8 @@ def test_cli_export_report_zip_contains_known_artifacts(tmp_path: Path) -> None:
         "research_gap_commands.sh",
         "research_gap_plan.json",
         "research_gap_plan.md",
+        "research_gap_status.json",
+        "research_gap_status.md",
         "report.md",
     }
 

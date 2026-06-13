@@ -227,6 +227,12 @@ gate decision、risk level、改动文件、测试、audit path、gate path，�
 配套的 `research_gap_commands.ps1` 和 `research_gap_commands.sh` 是 review-first 脚本。
 它们会先停止执行，要求用户确认路径并替换占位符，避免把示例命令误当成已验证命令直接运行。
 
+## `research_gap_status.json` / `research_gap_status.md`
+
+由 `pcl gap-status --run <run>` 写出。
+
+说明什么问题：`research_gap_plan.json` 里列出的预期 artifact 当前是否已经存在。它是证据缺口工作流的闭环检查，不等同于判断该诊断在科学上已经充分。
+
 ## `pcl guard --json` 输出
 
 记录 hook、rules 或 shell wrapper 使用的输入层 prompt 守护结果。

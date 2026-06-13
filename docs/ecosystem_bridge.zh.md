@@ -8,6 +8,26 @@ Promptfoo、LangSmith 和 Langfuse 分别擅长 LLM 工程流程里的不同部�
 
 `prompt_control_lab` 不应该替代它们。它更适合在这些工具的导出结果之上，增加一层论文式的 prompt optimization 证据审计。
 
+## PCL 可以赢在哪里
+
+最强路线不是做一个更大的 dashboard，而是做一个更窄、更深的证据层：
+
+| 工具 | 最强能力 | PCL 的互补位置 |
+|---|---|---|
+| Promptfoo | LLM eval、红队 / 安全测试、provider 矩阵、CI 和安全报告。 | 导入 Promptfoo 评测结果之后，补上成对不确定性、prompt-only 有效性、evidence card、claim check 和论文诊断缺口闭环。 |
+| LangSmith | Agent tracing、observability、在线 / 离线评测、部署和 sandbox。 | 把 LangSmith experiment export 变成 prompt optimization 证据包，区分 prompt 效果和 model、metric、split 等混杂因素。 |
+| Langfuse | 开源 observability、prompt management、evaluation、成本跟踪和自托管 trace。 | 补上观测平台通常不覆盖的研究诊断：soft-hard gap、hidden-state trajectory、Riccati surrogate 和 time-varying control evidence。 |
+
+实际集成路线是：
+
+1. 继续用外部工具做它擅长的事：收集 trace、跑 eval、做 red-team 或管理 prompt version。
+2. 导出 baseline / candidate 结果。
+3. 用 `pcl evidence-from` 生成本地证据包。
+4. 用 `pcl diagnose` 和 `pcl gap-status` 检查论文诊断证据哪些已有、哪些缺失、哪些已经补齐。
+5. 用 `claim_check.md` 判断当前结果到底能支持多强的 prompt optimization 结论。
+
+这样 PCL 的定位会更清楚：**prompt optimization 的研究级证据层**，不是又一个泛 LLMOps 平台。
+
 ## PCL 增加了什么
 
 导入外部 baseline / candidate export 之后，PCL 会写出：

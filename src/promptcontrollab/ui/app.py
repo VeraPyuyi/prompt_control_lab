@@ -55,6 +55,7 @@ from promptcontrollab.ui.data import (
     research_evidence_map,
     research_gap_plan_rows,
     research_gap_script_rows,
+    research_gap_status_rows,
     research_status_counts,
     slice_rows,
 )
@@ -110,6 +111,7 @@ TEXT = {
         "evidence_gap_actions": "How to close these gaps",
         "research_gap_plan": "Research gap plan",
         "research_gap_scripts": "Review-first command scripts",
+        "research_gap_status": "Research gap closure status",
         "ecosystem_bridge_missing": "No external evidence bridge artifact found.",
         "external_tools": "External tools",
         "pcl_added_evidence": "PCL-added evidence",
@@ -319,6 +321,7 @@ TEXT = {
         "evidence_gap_actions": "如何补齐这些缺口",
         "research_gap_plan": "研究证据缺口计划",
         "research_gap_scripts": "Review-first 命令脚本",
+        "research_gap_status": "研究缺口补齐状态",
         "ecosystem_bridge_missing": "当前还没有外部证据桥接 artifact。",
         "external_tools": "外部工具",
         "pcl_added_evidence": "PCL 补充证据",
@@ -1349,6 +1352,7 @@ def _render_research_overview_tab(st: Any, text: dict[str, str], detail: JsonDic
     gap_action_rows = evidence_gap_action_rows(detail)
     gap_plan_rows = research_gap_plan_rows(detail)
     gap_script_rows = research_gap_script_rows(detail)
+    gap_status_rows = research_gap_status_rows(detail)
     evidence_map = research_evidence_map(detail)
 
     st.markdown(
@@ -1422,6 +1426,18 @@ def _render_research_overview_tab(st: Any, text: dict[str, str], detail: JsonDic
             unsafe_allow_html=True,
         )
         st.dataframe(gap_script_rows, use_container_width=True)
+    if gap_status_rows:
+        st.markdown(
+            f'<div class="pcl-section-title">{html.escape(text["research_gap_status"])}</div>',
+            unsafe_allow_html=True,
+        )
+        status = detail.get("research_gap_status")
+        status_dict = status if isinstance(status, dict) else {}
+        st.caption(
+            f"{status_dict.get('status', '')}: "
+            f"{status_dict.get('complete_count', 0)}/{status_dict.get('action_count', 0)}"
+        )
+        st.dataframe(gap_status_rows, use_container_width=True)
 
     _render_external_bridge_section(st, text, bridge)
 

@@ -12,6 +12,31 @@ engineering workflow:
 `prompt_control_lab` should not replace those systems. Its job is to add a
 paper-style prompt optimization evidence layer on top of their exported results.
 
+## Where PCL Can Win
+
+The strongest lane is not a broader dashboard. It is a narrower evidence layer
+that the larger tools do not focus on:
+
+| Tool | Strongest lane | PCL's complementary lane |
+|---|---|---|
+| Promptfoo | LLM evals, red-team/security tests, provider matrices, CI, and security reports. | Import Promptfoo eval results, then add paired uncertainty, prompt-only validity, evidence cards, claim checks, and paper-derived diagnostic gap closure. |
+| LangSmith | Agent tracing, observability, online/offline evals, deployment, and sandboxed agent infrastructure. | Turn LangSmith experiment exports into prompt-optimization evidence bundles that separate prompt effects from model, metric, and split confounds. |
+| Langfuse | Open-source observability, prompt management, evaluation, cost tracking, and self-hosted traces. | Add research diagnostics that are usually outside observability platforms: soft-hard gap, hidden-state trajectories, Riccati surrogates, and time-varying control evidence. |
+
+The practical integration story is:
+
+1. Use the external tool for what it already does well: collect traces, run evals,
+   red-team, or manage prompt versions.
+2. Export baseline/candidate results.
+3. Run `pcl evidence-from` to create a local evidence bundle.
+4. Run `pcl diagnose` and `pcl gap-status` to see which paper-derived evidence is
+   present, missing, or newly closed.
+5. Use `claim_check.md` to decide what strength of prompt-optimization claim is
+   actually supported.
+
+That keeps PCL focused on a defensible wedge: **research-grade prompt
+optimization evidence**, not generic LLMOps.
+
 ## What PCL Adds
 
 After importing an external baseline/candidate export, PCL writes:

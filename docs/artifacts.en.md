@@ -291,6 +291,13 @@ The companion `research_gap_commands.ps1` and `research_gap_commands.sh` files a
 scripts. They intentionally stop before running any command so users can replace placeholders and
 confirm paths.
 
+## `research_gap_status.json` / `research_gap_status.md`
+
+Written by `pcl gap-status --run <run>`.
+
+What it explains: whether the artifacts named in `research_gap_plan.json` currently exist. This is
+a closure check for the evidence-gap workflow, not a scientific sufficiency judgment.
+
 ## `pcl guard --json` output
 
 Stores an input-layer prompt guard result when used by hooks, rules, or shell wrappers.

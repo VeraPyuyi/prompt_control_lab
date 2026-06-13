@@ -163,11 +163,24 @@ new or empty `--out` directory so stale artifacts cannot contaminate the audit. 
 surfaces the bridge in Research Overview, including detected external tools, PCL-added evidence,
 comparison validity, claim-check status, and missing evidence.
 
+After running the suggested diagnostic commands, check closure with:
+
+```bash
+pcl gap-status --run runs/from-promptfoo-evidence
+```
+
 The lower-level imported run still contains `predictions.jsonl`, `metrics.json`, and
 `manifest.json`, so it can be used with `pcl compare-runs`, `pcl stats`, `pcl validity`, and
 downstream reports. This is intentionally a bridge, not a replacement for Promptfoo's red-team /
 provider ecosystem, Langfuse's tracing platform, or LangSmith's observability/evaluation
 workflows.
+
+Competitive wedge: Promptfoo, LangSmith, and Langfuse already cover strong paid lanes around
+security testing, tracing, observability, prompt management, and production workflows. PCL should
+win by being the **research evidence layer** they usually do not provide: paired uncertainty,
+prompt-only validity, evidence cards, claim checks, soft-hard gap analysis, hidden-state trajectory
+diagnostics, Riccati surrogates, time-varying control evidence, and now `pcl gap-status` for
+closing missing paper-derived diagnostics after an import.
 
 For a copy-paste walkthrough with bundled sample exports, see
 [Ecosystem Bridge](docs/ecosystem_bridge.en.md) and

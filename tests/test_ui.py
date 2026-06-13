@@ -37,6 +37,7 @@ from promptcontrollab.ui.data import (
     research_evidence_map,
     research_gap_plan_rows,
     research_gap_script_rows,
+    research_gap_status_rows,
     research_status_counts,
 )
 
@@ -259,6 +260,26 @@ def test_report_model_lists_diagnostic_artifacts(tmp_path: Path) -> None:
             "boundary": "Review commands before running.",
         },
     )
+    _write_json(
+        run / "research_gap_status.json",
+        {
+            "kind": "research_gap_status",
+            "status": "needs_work",
+            "action_count": 1,
+            "complete_count": 0,
+            "missing_count": 1,
+            "actions": [
+                {
+                    "step": 1,
+                    "concept": "hidden-state trajectory",
+                    "status": "missing",
+                    "artifact": "diagnostics/trajectory.json",
+                    "command": "pcl trajectory --states inputs/hidden_states.npz --out diagnostics",
+                }
+            ],
+        },
+    )
+    (run / "research_gap_status.md").write_text("# status\n", encoding="utf-8")
     (run / "research_gap_plan.md").write_text("# plan\n", encoding="utf-8")
     (run / "research_gap_commands.ps1").write_text("exit 1\n", encoding="utf-8")
     (run / "research_gap_commands.sh").write_text("exit 1\n", encoding="utf-8")
@@ -268,9 +289,11 @@ def test_report_model_lists_diagnostic_artifacts(tmp_path: Path) -> None:
 
     assert detail["research_diagnostics"]["inputs"]["hidden_states"]["source"] == "hf"
     assert detail["research_gap_plan"]["kind"] == "research_gap_plan"
+    assert detail["research_gap_status"]["status"] == "needs_work"
     assert "diagnostics/trajectory.json" in detail["artifacts"]
     assert "research_diagnostics.json" in detail["artifacts"]
     assert "research_gap_plan.json" in detail["artifacts"]
+    assert "research_gap_status.json" in detail["artifacts"]
     assert "research_gap_commands.ps1" in detail["artifacts"]
     assert detail["diagnostics"]["trajectory"]["drift"] == 0.1
     plan_rows = research_gap_plan_rows(detail)
@@ -281,6 +304,9 @@ def test_report_model_lists_diagnostic_artifacts(tmp_path: Path) -> None:
         "research_gap_commands.ps1",
         "research_gap_commands.sh",
     ]
+    status_rows = research_gap_status_rows(detail)
+    assert status_rows[0]["diagnostic"] == "hidden-state trajectory"
+    assert status_rows[0]["status"] == "missing"
 
 
 def test_report_model_and_ui_detail_read_evidence_card(tmp_path: Path) -> None:

@@ -22,6 +22,7 @@ RUN_ARTIFACTS = [
     "agent_run.json",
     "research_diagnostics.json",
     "research_gap_plan.json",
+    "research_gap_status.json",
     "evidence_card.json",
     "claim_check.json",
     "evidence_from_result.json",
@@ -40,6 +41,7 @@ RUN_LEVEL_ARTIFACTS = [
     "agent_run.json",
     "research_diagnostics.json",
     "research_gap_plan.json",
+    "research_gap_status.json",
     "evidence_card.json",
     "claim_check.json",
     "evidence_from_result.json",
@@ -91,6 +93,7 @@ def load_run_detail(run_dir: Path) -> JsonDict:
         "agent_run": model.agent_run,
         "research_diagnostics": model.research_diagnostics,
         "research_gap_plan": model.research_gap_plan,
+        "research_gap_status": model.research_gap_status,
         "evidence_card": model.evidence_card,
         "claim_check": model.claim_check,
         "external_evidence": model.external_evidence,
@@ -460,6 +463,31 @@ def research_gap_script_rows(detail: JsonDict) -> list[JsonDict]:
     for name in ["research_gap_plan.md", "research_gap_commands.ps1", "research_gap_commands.sh"]:
         if name in artifact_list:
             rows.append({"artifact": name, "purpose": _gap_script_purpose(name)})
+    return rows
+
+
+def research_gap_status_rows(detail: JsonDict) -> list[JsonDict]:
+    """Return rows from ``research_gap_status.json``."""
+
+    status = detail.get("research_gap_status")
+    if not isinstance(status, dict):
+        return []
+    actions = status.get("actions")
+    if not isinstance(actions, list):
+        return []
+    rows: list[JsonDict] = []
+    for item in actions:
+        if not isinstance(item, dict):
+            continue
+        rows.append(
+            {
+                "step": item.get("step"),
+                "diagnostic": item.get("concept", ""),
+                "status": item.get("status", ""),
+                "artifact": item.get("artifact", ""),
+                "command": item.get("command", ""),
+            }
+        )
     return rows
 
 
