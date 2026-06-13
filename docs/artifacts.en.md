@@ -180,6 +180,9 @@ If `comparison_validity.json` exists, the gate also consumes it: `invalid` becom
 
 ## External ingest manifests
 
+`pcl ingest auto` detects Promptfoo, Langfuse, or LangSmith exports, then delegates to the matching
+explicit importer. The written manifest still records the concrete source tool.
+
 `pcl ingest promptfoo` writes `manifest.json` with `mode: promptfoo_ingest`, `source_tool:
 promptfoo`, and a `promptfoo_filter` recording the selected prompt/provider.
 

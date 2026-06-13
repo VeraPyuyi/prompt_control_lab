@@ -7,6 +7,7 @@ import pytest
 from promptcontrollab.cli import main
 from promptcontrollab.files import read_json, read_jsonl
 from promptcontrollab.ingest import (
+    ingest_auto_results,
     ingest_langfuse_results,
     ingest_langsmith_results,
     ingest_promptfoo_results,
@@ -143,6 +144,19 @@ def test_ingest_promptfoo_v2_table_shape(tmp_path: Path) -> None:
     assert predictions[0]["score"] == 1.0
 
 
+def test_ingest_auto_detects_promptfoo_json(tmp_path: Path) -> None:
+    source = tmp_path / "promptfoo-results.json"
+    out_dir = tmp_path / "runs" / "auto-promptfoo"
+    source.write_text(json.dumps(_promptfoo_v3_payload()), encoding="utf-8")
+
+    payload = ingest_auto_results(source_path=source, out_dir=out_dir)
+
+    assert payload["source_tool"] == "promptfoo"
+    manifest = read_json(out_dir / "manifest.json")
+    assert manifest["mode"] == "promptfoo_ingest"
+    assert manifest["source_tool"] == "promptfoo"
+
+
 def test_ingest_langfuse_observations_writes_pcl_run(tmp_path: Path) -> None:
     source = tmp_path / "langfuse-export.json"
     out_dir = tmp_path / "runs" / "from-langfuse"
@@ -254,6 +268,34 @@ def test_ingest_langfuse_requires_filter_for_multiple_names(tmp_path: Path) -> N
             out_dir=tmp_path / "run",
             score_name="exact_match",
         )
+
+
+def test_ingest_auto_detects_langfuse_json(tmp_path: Path) -> None:
+    source = tmp_path / "langfuse-export.json"
+    out_dir = tmp_path / "runs" / "auto-langfuse"
+    source.write_text(json.dumps(_langfuse_payload()), encoding="utf-8")
+
+    assert (
+        main(
+            [
+                "ingest",
+                "auto",
+                "--input",
+                str(source),
+                "--out",
+                str(out_dir),
+                "--name",
+                "candidate",
+                "--score-name",
+                "exact_match",
+            ]
+        )
+        == 0
+    )
+
+    manifest = read_json(out_dir / "manifest.json")
+    assert manifest["mode"] == "langfuse_ingest"
+    assert manifest["source_tool"] == "langfuse"
 
 
 def test_ingest_langsmith_runs_writes_pcl_run(tmp_path: Path) -> None:
@@ -389,6 +431,33 @@ def test_ingest_langsmith_requires_filter_for_multiple_experiments(tmp_path: Pat
             out_dir=tmp_path / "run",
             score_name="exact_match",
         )
+
+
+def test_ingest_auto_detects_langsmith_csv(tmp_path: Path) -> None:
+    source = tmp_path / "langsmith-runs.csv"
+    out_dir = tmp_path / "runs" / "auto-langsmith"
+    source.write_text(
+        "\n".join(
+            [
+                "run_id,experiment_name,output,reference_output,exact_match,model,provider,slice",
+                "run-1,candidate,YES,YES,1,gpt-4o-mini,openai,format",
+                "run-2,candidate,NO,YES,0,gpt-4o-mini,openai,format",
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    payload = ingest_auto_results(
+        source_path=source,
+        out_dir=out_dir,
+        experiment="candidate",
+        score_name="exact_match",
+    )
+
+    assert payload["source_tool"] == "langsmith"
+    manifest = read_json(out_dir / "manifest.json")
+    assert manifest["mode"] == "langsmith_ingest"
+    assert manifest["source_tool"] == "langsmith"
 
 
 def _promptfoo_v3_payload() -> dict[str, Any]:

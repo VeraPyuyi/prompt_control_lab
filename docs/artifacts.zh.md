@@ -135,6 +135,8 @@ gate decision、risk level、改动文件、测试、audit path、gate path，�
 
 ## 外部导入 manifest
 
+`pcl ingest auto` 会自动识别 Promptfoo、Langfuse 或 LangSmith 导出，然后转交给对应的显式导入器。最终写出的 manifest 仍然会记录具体 source tool。
+
 `pcl ingest promptfoo` 会写出 `mode: promptfoo_ingest`、`source_tool: promptfoo`，并在
 `promptfoo_filter` 里记录导入时选择的 prompt / provider。
 

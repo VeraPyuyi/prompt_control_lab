@@ -15,6 +15,74 @@ from promptcontrollab.schemas import PredictionRecord
 from promptcontrollab.version import __version__
 
 
+def ingest_auto_results(
+    *,
+    source_path: Path,
+    out_dir: Path,
+    prompt_id: str | None = None,
+    name: str | None = None,
+    experiment: str | None = None,
+    score_name: str | None = None,
+    model: str | None = None,
+    provider: str | None = None,
+    method: str | None = None,
+) -> JsonDict:
+    """Auto-detect Promptfoo/Langfuse/LangSmith exports and import them."""
+
+    source_tool = detect_ingest_source(source_path)
+    if source_tool == "promptfoo":
+        payload = ingest_promptfoo_results(
+            source_path=source_path,
+            out_dir=out_dir,
+            prompt_id=prompt_id,
+            provider=provider,
+            method=method,
+        )
+    elif source_tool == "langfuse":
+        payload = ingest_langfuse_results(
+            source_path=source_path,
+            out_dir=out_dir,
+            name=name,
+            score_name=score_name,
+            model=model,
+            provider=provider,
+            method=method,
+        )
+    elif source_tool == "langsmith":
+        payload = ingest_langsmith_results(
+            source_path=source_path,
+            out_dir=out_dir,
+            experiment=experiment,
+            score_name=score_name,
+            model=model,
+            provider=provider,
+            method=method,
+        )
+    else:
+        msg = f"Unsupported ingest source `{source_tool}`"
+        raise ValueError(msg)
+    return {"source_tool": source_tool, **payload}
+
+
+def detect_ingest_source(source_path: Path) -> str:
+    """Detect which external eval/trace tool produced an export file."""
+
+    if source_path.suffix.lower() == ".csv":
+        return "langsmith"
+    payload = read_json(source_path)
+    if _looks_like_promptfoo(payload):
+        return "promptfoo"
+    if _looks_like_langfuse(payload):
+        return "langfuse"
+    if _looks_like_langsmith(payload):
+        return "langsmith"
+    msg = (
+        "Could not detect export source. Use `pcl ingest promptfoo`, "
+        "`pcl ingest langfuse`, or `pcl ingest langsmith` explicitly."
+    )
+    raise ValueError(msg)
+
+
 def ingest_promptfoo_results(
     *,
     source_path: Path,
@@ -231,6 +299,49 @@ def _promptfoo_rows(payload: JsonDict) -> list[JsonDict]:
                     rows.extend(_rows_from_table_row(row))
             return rows
     return []
+
+
+def _looks_like_promptfoo(payload: JsonDict) -> bool:
+    if isinstance(payload.get("table"), dict):
+        return True
+    results = payload.get("results")
+    if isinstance(results, list):
+        for item in results:
+            if isinstance(item, dict) and (
+                "promptId" in item or "testCase" in item or "gradingResult" in item
+            ):
+                return True
+    return False
+
+
+def _looks_like_langfuse(payload: JsonDict) -> bool:
+    for key in ["observations", "generations"]:
+        if isinstance(payload.get(key), list):
+            return True
+    for key in ["traces", "data"]:
+        value = payload.get(key)
+        if isinstance(value, list):
+            for item in value:
+                if isinstance(item, dict) and isinstance(item.get("observations"), list):
+                    return True
+    return False
+
+
+def _looks_like_langsmith(payload: JsonDict) -> bool:
+    for key in ["runs", "examples"]:
+        if isinstance(payload.get(key), list):
+            return True
+    for key in ["results", "data"]:
+        value = payload.get(key)
+        if isinstance(value, list):
+            for item in value:
+                if isinstance(item, dict) and (
+                    "experiment_name" in item
+                    or "reference_outputs" in item
+                    or "feedback_stats" in item
+                ):
+                    return True
+    return False
 
 
 def _langfuse_rows(payload: JsonDict, *, score_name: str | None) -> list[JsonDict]:

@@ -31,6 +31,7 @@ from promptcontrollab.files import JsonDict, ensure_dir, write_json
 from promptcontrollab.gate import run_gate
 from promptcontrollab.history import compare_history, index_history
 from promptcontrollab.ingest import (
+    ingest_auto_results,
     ingest_langfuse_results,
     ingest_langsmith_results,
     ingest_promptfoo_results,
@@ -123,6 +124,20 @@ def build_parser() -> argparse.ArgumentParser:
         help="Import external eval-tool results into PromptControlLab artifacts.",
     )
     ingest_subcommands = ingest_parser.add_subparsers(dest="ingest_command", required=True)
+    auto_ingest = ingest_subcommands.add_parser(
+        "auto",
+        help="Auto-detect Promptfoo/Langfuse/LangSmith exports and import them.",
+    )
+    auto_ingest.add_argument("--input", type=Path, required=True, help="External export file.")
+    auto_ingest.add_argument("--out", type=Path, required=True, help="PCL run directory.")
+    auto_ingest.add_argument("--prompt-id", default=None, help="Promptfoo prompt filter.")
+    auto_ingest.add_argument("--name", default=None, help="Langfuse observation name filter.")
+    auto_ingest.add_argument("--experiment", default=None, help="LangSmith experiment filter.")
+    auto_ingest.add_argument("--score-name", default=None, help="Langfuse/LangSmith score filter.")
+    auto_ingest.add_argument("--model", default=None, help="Model id filter.")
+    auto_ingest.add_argument("--provider", default=None, help="Provider filter.")
+    auto_ingest.add_argument("--method", default=None, help="Method name written to predictions.")
+    auto_ingest.set_defaults(func=_cmd_ingest_auto)
     promptfoo_ingest = ingest_subcommands.add_parser(
         "promptfoo",
         help="Import `promptfoo eval --output results.json` output.",
@@ -760,6 +775,21 @@ def build_parser() -> argparse.ArgumentParser:
 def _cmd_init(args: argparse.Namespace) -> None:
     write_example_project(args.path)
     print(f"Created PromptControlLab example at {args.path}")
+
+
+def _cmd_ingest_auto(args: argparse.Namespace) -> None:
+    payload = ingest_auto_results(
+        source_path=args.input,
+        out_dir=args.out,
+        prompt_id=args.prompt_id,
+        name=args.name,
+        experiment=args.experiment,
+        score_name=args.score_name,
+        model=args.model,
+        provider=args.provider,
+        method=args.method,
+    )
+    print(json.dumps(payload, indent=2, ensure_ascii=False, sort_keys=True))
 
 
 def _cmd_ingest_promptfoo(args: argparse.Namespace) -> None:
