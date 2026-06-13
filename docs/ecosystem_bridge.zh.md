@@ -16,6 +16,7 @@ Promptfoo、LangSmith 和 Langfuse 分别擅长 LLM 工程流程里的不同部�
 - `comparison/stats.json`：成对 bootstrap CI、成对 permutation p-value 和 Holm-adjusted p-value。
 - `comparison/comparison_validity.json`：检查 prompt identity、model identity、split hash、metric identity、统计证据和 slice regression。
 - `evidence_card.md/json`：给 reviewer 快速阅读的证据卡。
+- `bridge_summary.md/json`：简短说明外部工具提供了什么、PCL 补了什么、还缺哪些证据。
 - `report.html`：可以和本次 run 一起归档的本地报告。
 
 这条桥接链路适合这些问题：
@@ -87,3 +88,6 @@ pcl evidence-from \
 ## 解读边界
 
 示例文件故意很小。生成的 evidence card 可能会显示 `needs_review`，因为 4 条样本不足以支撑强统计结论。这是预期行为：PCL 应该把缺失证据暴露出来，而不是把 smoke test 包装成 benchmark。
+
+如果要向团队解释生态关系，建议先打开 `bridge_summary.md`；如果要审查具体 prompt
+优化证据，再打开 `evidence_card.md`。

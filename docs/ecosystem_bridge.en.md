@@ -24,6 +24,8 @@ After importing an external baseline/candidate export, PCL writes:
   prompt identity, model identity, split hash, metric identity, statistical
   evidence, and slice regressions.
 - `evidence_card.md/json`: a compact reviewer-facing evidence card.
+- `bridge_summary.md/json`: a concise explanation of what the external tool
+  supplied, what PCL added, and what evidence is still missing.
 - `report.html`: a local report that can be archived with the run.
 
 This makes the bridge useful when you already trust another tool for eval or
@@ -104,3 +106,7 @@ The example files are intentionally tiny. A generated evidence card may say
 `needs_review` because four samples are not enough to support strong statistical
 claims. That is a feature, not a bug: PCL should make missing evidence visible
 instead of turning a small smoke test into a benchmark claim.
+
+Start with `bridge_summary.md` when explaining the ecosystem relationship to a
+teammate, then open `evidence_card.md` when reviewing the actual prompt
+optimization evidence.

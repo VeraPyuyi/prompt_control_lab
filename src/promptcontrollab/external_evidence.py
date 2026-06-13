@@ -101,9 +101,17 @@ def build_external_evidence(
         permutation_samples=permutation_samples,
     )
     copied_artifacts = _copy_headline_artifacts(comparison_dir=comparison_dir, out_dir=out_dir)
+    bridge_summary = _write_bridge_summary(
+        out_dir=out_dir,
+        requested_tool=tool,
+        baseline_payload=baseline_payload,
+        candidate_payload=candidate_payload,
+        comparison_dir=comparison_dir,
+    )
     payload: JsonDict = {
         "kind": "external_evidence",
         "tool": tool,
+        "detected_tools": bridge_summary.get("detected_tools", []),
         "out_dir": str(out_dir),
         "imports_dir": str(imports_dir),
         "baseline_import": baseline_payload,
@@ -117,8 +125,16 @@ def build_external_evidence(
             "report_html": comparison_payload.get("report_html"),
             "evidence_card": comparison_payload.get("evidence_card"),
         },
+        "bridge_summary": {
+            "json_path": str(out_dir / "bridge_summary.json"),
+            "markdown_path": str(out_dir / "bridge_summary.md"),
+            "recommendation": bridge_summary.get("recommendation"),
+            "validity": bridge_summary.get("validity"),
+            "missing_evidence": bridge_summary.get("missing_evidence", []),
+        },
         "copied_artifacts": [str(path) for path in copied_artifacts],
         "next_actions": [
+            "Open bridge_summary.md to see what the external tool supplied and what PCL added.",
             "Open evidence_card.md for the compact prompt optimization evidence card.",
             "Open report.html for the full comparison dashboard.",
             "Review imports/baseline and imports/candidate if provenance looks incomplete.",
@@ -222,3 +238,217 @@ def _copy_headline_artifacts(*, comparison_dir: Path, out_dir: Path) -> list[Pat
         shutil.copy2(source, target)
         copied.append(target)
     return copied
+
+
+def _write_bridge_summary(
+    *,
+    out_dir: Path,
+    requested_tool: ExternalTool,
+    baseline_payload: JsonDict,
+    candidate_payload: JsonDict,
+    comparison_dir: Path,
+) -> JsonDict:
+    evidence_card = _read_optional_json(comparison_dir / "evidence_card.json")
+    validity = _read_optional_json(comparison_dir / "comparison_validity.json")
+    stats = _read_optional_json(comparison_dir / "stats.json")
+    comparison = _first_comparison(stats)
+    detected_tools = _detected_tools(requested_tool, baseline_payload, candidate_payload)
+    missing = evidence_card.get("missing_artifacts")
+    missing_evidence = missing if isinstance(missing, list) else []
+    payload: JsonDict = {
+        "kind": "external_bridge_summary",
+        "requested_tool": requested_tool,
+        "detected_tools": detected_tools,
+        "source_tool_roles": [_tool_role(tool) for tool in detected_tools],
+        "pcl_role": (
+            "PCL converts external eval/observability exports into a paired prompt "
+            "optimization evidence bundle with statistics, prompt-only validity checks, "
+            "and paper-derived diagnostic hooks."
+        ),
+        "pcl_added_evidence": [
+            "paired_bootstrap_confidence_interval",
+            "paired_permutation_p_value",
+            "holm_adjusted_p_value",
+            "prompt_only_comparison_validity",
+            "evidence_card",
+            "local_archivable_report",
+        ],
+        "recommendation": evidence_card.get("recommendation", "needs_review"),
+        "summary": evidence_card.get("summary", ""),
+        "validity": validity.get("validity", "unknown"),
+        "prompt_only_comparison": validity.get("prompt_only_comparison"),
+        "mean_delta": comparison.get("mean_delta"),
+        "bootstrap_ci": comparison.get("bootstrap_ci"),
+        "permutation_p_value": comparison.get("permutation_p_value"),
+        "holm_adjusted_p_value": comparison.get("holm_adjusted_p_value"),
+        "paired_n": comparison.get("n"),
+        "missing_evidence": missing_evidence,
+        "review_items": validity.get("review_items", []),
+        "blocking_issues": validity.get("blocking_issues", []),
+        "next_actions": _bridge_next_actions(
+            recommendation=str(evidence_card.get("recommendation", "needs_review")),
+            validity=str(validity.get("validity", "unknown")),
+            missing_evidence=missing_evidence,
+        ),
+        "boundary": (
+            "This bridge does not replace the external tool. It records how external "
+            "results were converted into PCL artifacts and highlights whether the "
+            "result is strong enough for a prompt optimization claim."
+        ),
+    }
+    write_json(out_dir / "bridge_summary.json", payload)
+    (out_dir / "bridge_summary.md").write_text(_render_bridge_summary(payload), encoding="utf-8")
+    return payload
+
+
+def _read_optional_json(path: Path) -> JsonDict:
+    if not path.exists():
+        return {}
+    return read_json(path)
+
+
+def _first_comparison(stats: JsonDict) -> JsonDict:
+    comparisons = stats.get("comparisons")
+    if isinstance(comparisons, list) and comparisons and isinstance(comparisons[0], dict):
+        return comparisons[0]
+    return stats
+
+
+def _detected_tools(
+    requested_tool: ExternalTool,
+    baseline_payload: JsonDict,
+    candidate_payload: JsonDict,
+) -> list[str]:
+    values = [
+        baseline_payload.get("source_tool"),
+        candidate_payload.get("source_tool"),
+    ]
+    tools = [str(value) for value in values if isinstance(value, str) and value]
+    if not tools and requested_tool != "auto":
+        tools = [requested_tool]
+    return sorted(set(tools))
+
+
+def _tool_role(tool: str) -> JsonDict:
+    roles = {
+        "promptfoo": {
+            "tool": "promptfoo",
+            "display_name": "Promptfoo",
+            "role": "evals, provider matrices, red-team/security tests, and CI reports",
+            "pcl_adds": (
+                "paired statistical evidence, prompt-only validity, and paper-style diagnostics"
+            ),
+        },
+        "langfuse": {
+            "tool": "langfuse",
+            "display_name": "Langfuse",
+            "role": (
+                "open-source tracing, prompt management, scores, costs, and self-hosted "
+                "observability"
+            ),
+            "pcl_adds": (
+                "export-to-evidence conversion, paired validity checks, and local evidence cards"
+            ),
+        },
+        "langsmith": {
+            "tool": "langsmith",
+            "display_name": "LangSmith",
+            "role": "agent tracing, datasets, online/offline evals, and production debugging",
+            "pcl_adds": "prompt optimization evidence cards and comparison confound checks",
+        },
+    }
+    return roles.get(
+        tool,
+        {
+            "tool": tool,
+            "display_name": tool,
+            "role": "external eval or observability export",
+            "pcl_adds": "paired prompt optimization evidence and diagnostics",
+        },
+    )
+
+
+def _bridge_next_actions(
+    *,
+    recommendation: str,
+    validity: str,
+    missing_evidence: list[object],
+) -> list[str]:
+    actions = [
+        "Archive imports/, comparison/, evidence_card.md, and report.html together.",
+    ]
+    if validity != "clean":
+        actions.append(
+            "Fix comparison-validity review items before claiming a clean prompt-only comparison."
+        )
+    if missing_evidence:
+        actions.append("Run the missing diagnostics that matter for your claim.")
+    if recommendation == "supported" and validity == "clean":
+        actions.append(
+            "Use the evidence card as reviewer-facing support, with the stated boundary."
+        )
+    else:
+        actions.append("Treat this as useful evidence, not a final benchmark claim.")
+    return actions
+
+
+def _render_bridge_summary(payload: JsonDict) -> str:
+    lines = [
+        "# External Evidence Bridge Summary",
+        "",
+        f"- Requested tool: `{payload.get('requested_tool')}`",
+        f"- Detected tools: `{payload.get('detected_tools', [])}`",
+        f"- Recommendation: `{payload.get('recommendation')}`",
+        f"- Validity: `{payload.get('validity')}`",
+        f"- Paired n: `{payload.get('paired_n')}`",
+        f"- Mean delta: `{payload.get('mean_delta')}`",
+        f"- Bootstrap CI: `{payload.get('bootstrap_ci')}`",
+        f"- Permutation p-value: `{payload.get('permutation_p_value')}`",
+        f"- Holm-adjusted p-value: `{payload.get('holm_adjusted_p_value')}`",
+        "",
+        "## Tool roles",
+        "",
+    ]
+    roles = payload.get("source_tool_roles")
+    if isinstance(roles, list):
+        for role in roles:
+            if not isinstance(role, dict):
+                continue
+            lines.extend(
+                [
+                    f"### {role.get('display_name') or role.get('tool')}",
+                    "",
+                    f"- External tool role: {role.get('role')}",
+                    f"- What PCL adds: {role.get('pcl_adds')}",
+                    "",
+                ]
+            )
+    lines.extend(
+        [
+            "## PCL added evidence",
+            "",
+            *[f"- `{item}`" for item in _string_list(payload.get("pcl_added_evidence"))],
+            "",
+            "## Missing or review evidence",
+            "",
+            f"- Missing evidence: `{payload.get('missing_evidence', [])}`",
+            f"- Review items: `{payload.get('review_items', [])}`",
+            f"- Blocking issues: `{payload.get('blocking_issues', [])}`",
+            "",
+            "## Next actions",
+            "",
+            *[f"- {item}" for item in _string_list(payload.get("next_actions"))],
+            "",
+            "## Boundary",
+            "",
+            str(payload.get("boundary", "")),
+            "",
+        ]
+    )
+    return "\n".join(lines)
+
+
+def _string_list(value: object) -> list[str]:
+    if not isinstance(value, list):
+        return []
+    return [str(item) for item in value]

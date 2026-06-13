@@ -198,6 +198,8 @@ def test_evidence_from_promptfoo_generates_comparison_bundle(tmp_path: Path) -> 
         "comparison/comparison_validity.json",
         "comparison/evidence_card.json",
         "comparison/report.html",
+        "bridge_summary.json",
+        "bridge_summary.md",
         "evidence_card.md",
         "report.html",
         "evidence_from_result.json",
@@ -212,6 +214,14 @@ def test_evidence_from_promptfoo_generates_comparison_bundle(tmp_path: Path) -> 
     result = read_json(out_dir / "evidence_from_result.json")
     assert result["kind"] == "external_evidence"
     assert result["tool"] == "promptfoo"
+    assert result["bridge_summary"]["recommendation"] == "supported"
+    bridge = read_json(out_dir / "bridge_summary.json")
+    assert bridge["kind"] == "external_bridge_summary"
+    assert bridge["detected_tools"] == ["promptfoo"]
+    assert "paired_bootstrap_confidence_interval" in bridge["pcl_added_evidence"]
+    assert bridge["validity"] == "clean"
+    assert bridge["paired_n"] == 20
+    assert "Promptfoo" in (out_dir / "bridge_summary.md").read_text(encoding="utf-8")
 
 
 def test_ingest_langfuse_observations_writes_pcl_run(tmp_path: Path) -> None:

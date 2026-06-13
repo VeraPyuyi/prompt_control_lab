@@ -96,6 +96,10 @@ def test_packaged_external_examples_run_evidence_from(
     assert stats["comparisons"][0]["mean_delta"] == 0.75
     assert (out_dir / "evidence_card.md").exists()
     assert (out_dir / "report.html").exists()
+    assert (out_dir / "bridge_summary.md").exists()
+    bridge = read_json(out_dir / "bridge_summary.json")
+    assert tool in bridge["detected_tools"]
+    assert bridge["validity"] == "needs_review"
 
 
 def test_evidence_from_langfuse_pairs_by_example_id(tmp_path: Path) -> None:

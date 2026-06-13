@@ -137,9 +137,10 @@ pcl evidence-card \
 
 `pcl evidence-from` writes a self-contained bridge directory: `imports/` keeps the external-tool
 baseline/candidate snapshots, `comparison/` keeps the PCL paired statistics and prompt-only
-validity audit, and the root directory exposes `evidence_card.md`, `report.html`, and
-`evidence_from_result.json` for reviewers. Use a new or empty `--out` directory so stale artifacts
-cannot contaminate the audit.
+validity audit, and the root directory exposes `bridge_summary.md`, `evidence_card.md`,
+`report.html`, and `evidence_from_result.json` for reviewers. Start with `bridge_summary.md` to
+see what the external tool supplied, what PCL added, and which evidence is still missing. Use a
+new or empty `--out` directory so stale artifacts cannot contaminate the audit.
 
 The lower-level imported run still contains `predictions.jsonl`, `metrics.json`, and
 `manifest.json`, so it can be used with `pcl compare-runs`, `pcl stats`, `pcl validity`, and

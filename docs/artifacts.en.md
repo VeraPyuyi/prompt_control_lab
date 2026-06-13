@@ -241,6 +241,16 @@ Important fields:
 What it explains: how an external eval or observability export was converted into a
 PromptControlLab prompt-optimization evidence bundle without replacing the external tool.
 
+## `bridge_summary.json` / `bridge_summary.md`
+
+Written by `pcl evidence-from`.
+
+What it explains: the division of labor between the external source tool and PCL. It records which
+tool supplied the eval or trace export, what PCL added on top, the main paired statistics,
+prompt-only comparison validity, missing evidence, review items, and next actions. This is the
+recommended first file to open when explaining why PCL complements Promptfoo, Langfuse, or
+LangSmith instead of replacing them.
+
 ## `pcl guard --json` output
 
 Stores an input-layer prompt guard result when used by hooks, rules, or shell wrappers.
