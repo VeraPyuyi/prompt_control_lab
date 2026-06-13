@@ -23,6 +23,7 @@ def generate_report(run_dir: Path, *, title: str) -> tuple[Path, Path]:
         gate=model.gate,
         comparison_validity=model.comparison_validity,
         diagnostics=model.diagnostics,
+        evidence_card=model.evidence_card,
         first_comparison=model.first_comparison,
     )
     md_path = run_dir / "report.md"
@@ -43,12 +44,15 @@ def render_markdown(
     gate: JsonDict,
     comparison_validity: JsonDict,
     diagnostics: dict[str, JsonDict],
+    evidence_card: JsonDict | None = None,
     first_comparison: JsonDict | None = None,
 ) -> str:
     """Render a compact diagnostic report."""
 
     lines: list[str] = [f"# {title}", ""]
     lines += _deployment_recommendation_lines(explanation, gate)
+    if evidence_card:
+        lines += _evidence_card_lines(evidence_card)
     if manifest:
         lines += [
             "## Run",
@@ -268,6 +272,30 @@ def _comparison_validity_lines(payload: JsonDict) -> list[str]:
     return lines
 
 
+def _evidence_card_lines(payload: JsonDict) -> list[str]:
+    sections = payload.get("sections")
+    section_statuses: list[str] = []
+    if isinstance(sections, dict):
+        for name, section in sorted(sections.items()):
+            if isinstance(section, dict):
+                section_statuses.append(f"{name}={section.get('status', 'unknown')}")
+    missing = payload.get("missing_artifacts")
+    return [
+        "## Prompt Optimization Evidence Card",
+        "",
+        f"- Evidence recommendation: `{payload.get('recommendation', 'needs_review')}`",
+        f"- Evidence summary: {payload.get('summary', '')}",
+        f"- Missing evidence: `{missing if isinstance(missing, list) else []}`",
+        f"- Section statuses: `{', '.join(section_statuses)}`",
+        "",
+        "This section summarizes whether the recorded artifact bundle supports a prompt "
+        "optimization claim across protocol hygiene, paired statistics, comparison validity, "
+        "deployment risk, trajectory diagnostics, Riccati surrogate checks, and time-varying "
+        "control evidence.",
+        "",
+    ]
+
+
 def _issue_lines(label: str, value: object) -> list[str]:
     if not isinstance(value, list) or not value:
         return []
@@ -370,6 +398,10 @@ def _html_dashboard(markdown: str) -> str:
             _prompt_only_validity(markdown),
         )
         + _html_dashboard_card(
+            "Prompt optimization evidence",
+            _prompt_evidence_summary(markdown),
+        )
+        + _html_dashboard_card(
             "Model provenance",
             "<br>".join(
                 [
@@ -422,6 +454,17 @@ def _prompt_only_validity(markdown: str) -> str:
     if any("missing model identity" in warning for warning in warnings):
         return "Needs review: model identity is missing."
     return "Clean if baseline and candidate model ids match."
+
+
+def _prompt_evidence_summary(markdown: str) -> str:
+    recommendation = _markdown_field(markdown, "Evidence recommendation") or "missing"
+    summary = _markdown_field(markdown, "Evidence summary") or "Run `pcl evidence-card`."
+    missing = _markdown_field(markdown, "Missing evidence") or "unknown"
+    return (
+        f"Recommendation: {html.escape(recommendation)}<br>"
+        f"Summary: {html.escape(summary)}<br>"
+        f"Missing: {html.escape(missing)}"
+    )
 
 
 def _html_sample_changes(markdown: str) -> str:

@@ -20,6 +20,7 @@ RUN_ARTIFACTS = [
     "history_compare.json",
     "agent_run.json",
     "research_diagnostics.json",
+    "evidence_card.json",
 ]
 
 RUN_LEVEL_ARTIFACTS = [
@@ -32,6 +33,7 @@ RUN_LEVEL_ARTIFACTS = [
     "audit_result.json",
     "agent_run.json",
     "research_diagnostics.json",
+    "evidence_card.json",
 ]
 
 
@@ -76,6 +78,7 @@ def load_run_detail(run_dir: Path) -> JsonDict:
         "history_compare": model.history_compare,
         "agent_run": model.agent_run,
         "research_diagnostics": model.research_diagnostics,
+        "evidence_card": model.evidence_card,
         "diagnostics": model.diagnostics,
         "baseline_metrics": model.baseline_metrics,
         "candidate_metrics": model.candidate_metrics,
@@ -188,6 +191,29 @@ def research_status_counts(detail: JsonDict) -> dict[str, int]:
     return counts
 
 
+def evidence_card_rows(detail: JsonDict) -> list[JsonDict]:
+    """Return normalized evidence-card section rows for the research overview."""
+
+    card = detail.get("evidence_card")
+    if not isinstance(card, dict):
+        return []
+    sections = card.get("sections")
+    if not isinstance(sections, dict):
+        return []
+    rows: list[JsonDict] = []
+    for name, raw_section in sections.items():
+        if not isinstance(raw_section, dict):
+            continue
+        rows.append(
+            {
+                "section": str(name).replace("_", " "),
+                "status": raw_section.get("status", "unknown"),
+                "signal": _evidence_signal(str(name), raw_section),
+            }
+        )
+    return rows
+
+
 def history_rows(detail: JsonDict) -> list[JsonDict]:
     """Return normalized history rows for tables and trend charts."""
 
@@ -256,6 +282,35 @@ def _tv_soft_signal(payload: JsonDict) -> str:
         return f"best delta={best_key}:{deltas.get(best_key)}"
     means = payload.get("method_means")
     return f"method means={len(means) if isinstance(means, dict) else 0}"
+
+
+def _evidence_signal(section_name: str, payload: JsonDict) -> str:
+    if section_name == "statistical_evidence":
+        return (
+            f"delta={payload.get('mean_delta')}; "
+            f"p={payload.get('permutation_p_value')}"
+        )
+    if section_name == "comparison_validity":
+        prompt_only = payload.get("prompt_only_comparison")
+        return f"validity={payload.get('status')}; prompt-only={prompt_only}"
+    if section_name == "deployment_diagnostics":
+        return f"soft-hard risk={payload.get('soft_hard_risk')}"
+    if section_name == "hidden_state_diagnostics":
+        return (
+            f"source={payload.get('input_source')}; "
+            f"turnpike={payload.get('turnpike_like_signal')}"
+        )
+    if section_name == "riccati_surrogate":
+        return (
+            f"stable={payload.get('stable_surrogate')}; "
+            f"rho={payload.get('closed_loop_spectral_radius')}"
+        )
+    if section_name == "time_varying_control":
+        return (
+            f"best={payload.get('best_delta_method')}; "
+            f"delta={payload.get('best_delta')}"
+        )
+    return str(payload.get("reason") or payload.get("status") or "")
 
 
 def _hidden_state_payload(detail: JsonDict) -> JsonDict:

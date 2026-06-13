@@ -35,6 +35,7 @@ from promptcontrollab.ui.components import (
 from promptcontrollab.ui.data import (
     audit_detail_sections,
     changed_line_rows,
+    evidence_card_rows,
     filter_history_rows,
     first_comparison,
     guard_download_payloads,
@@ -76,6 +77,12 @@ TEXT = {
         "paper_protocol": "Protocol hygiene",
         "diagnostic_coverage": "Diagnostics ready",
         "artifact_evidence": "Evidence artifacts",
+        "evidence_card": "Evidence card",
+        "evidence_card_missing": "No evidence_card.json found yet.",
+        "evidence_card_command": "pcl evidence-card --run <selected-run>",
+        "evidence_recommendation": "Evidence recommendation",
+        "evidence_summary": "Evidence summary",
+        "evidence_sections": "Evidence card sections",
         "hidden_state_input": "Hidden-state input",
         "research_boundary": (
             "These diagnostics make prompt experiments easier to inspect. They are not "
@@ -240,6 +247,12 @@ TEXT = {
         "paper_protocol": "协议洁净度",
         "diagnostic_coverage": "已完成诊断",
         "artifact_evidence": "证据 artifact",
+        "evidence_card": "证据卡",
+        "evidence_card_missing": "当前还没有 evidence_card.json。",
+        "evidence_card_command": "pcl evidence-card --run <选中的 run>",
+        "evidence_recommendation": "证据推荐",
+        "evidence_summary": "证据摘要",
+        "evidence_sections": "证据卡分段",
         "hidden_state_input": "hidden-state 输入",
         "research_boundary": (
             "这些诊断让 prompt 实验更容易被检查和复现，但它们不是完整语言模型稳定性"
@@ -1221,6 +1234,9 @@ def _render_research_overview_tab(st: Any, text: dict[str, str], detail: JsonDic
     artifact_count = len(artifacts) if isinstance(artifacts, list) else 0
     protocol_ready = "yes" if detail.get("splits") or detail.get("manifest") else "partial"
     stats_ready = "yes" if detail.get("first_comparison") or detail.get("stats") else "missing"
+    evidence_card = detail.get("evidence_card")
+    evidence_dict = evidence_card if isinstance(evidence_card, dict) else {}
+    evidence_recommendation = evidence_dict.get("recommendation", "missing")
 
     st.markdown(
         '<div class="pcl-grid">'
@@ -1232,10 +1248,27 @@ def _render_research_overview_tab(st: Any, text: dict[str, str], detail: JsonDic
         )
         + stat_card_html(text["artifact_evidence"], artifact_count, "JSON / HTML / Markdown")
         + stat_card_html(text["paired_stats"], stats_ready, "bootstrap CI / p-value")
+        + stat_card_html(
+            text["evidence_recommendation"],
+            evidence_recommendation,
+            text["evidence_card"],
+        )
         + "</div>",
         unsafe_allow_html=True,
     )
     _render_research_pipeline(st, text)
+
+    st.markdown(
+        f'<div class="pcl-section-title">{html.escape(text["evidence_card"])}</div>',
+        unsafe_allow_html=True,
+    )
+    if evidence_dict:
+        st.write(f"**{text['evidence_summary']}:** {evidence_dict.get('summary', '')}")
+        evidence_rows = evidence_card_rows(detail)
+        if evidence_rows:
+            st.dataframe(evidence_rows, use_container_width=True)
+    else:
+        empty_state(st, text["evidence_card_missing"], text["evidence_card_command"])
 
     st.markdown(f'<div class="pcl-section-title">{html.escape(text["research_diagnostics"])}</div>', unsafe_allow_html=True)
     st.plotly_chart(

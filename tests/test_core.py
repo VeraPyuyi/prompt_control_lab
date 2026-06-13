@@ -114,6 +114,32 @@ def test_report_renders_comparison_validity(tmp_path: Path) -> None:
     assert "Prompt-only comparison validity" in html
 
 
+def test_report_renders_prompt_optimization_evidence_card(tmp_path: Path) -> None:
+    run = tmp_path / "runs" / "candidate"
+    write_json(
+        run / "evidence_card.json",
+        {
+            "kind": "prompt_optimization_evidence_card",
+            "recommendation": "supported",
+            "summary": "Recorded artifacts support the candidate.",
+            "missing_artifacts": [],
+            "sections": {
+                "statistical_evidence": {"status": "pass"},
+                "comparison_validity": {"status": "clean"},
+            },
+        },
+    )
+
+    md_path, html_path = generate_report(run, title="Evidence Report")
+    markdown = md_path.read_text(encoding="utf-8")
+    html = html_path.read_text(encoding="utf-8")
+
+    assert "## Prompt Optimization Evidence Card" in markdown
+    assert "Evidence recommendation: `supported`" in markdown
+    assert "Recorded artifacts support the candidate." in markdown
+    assert "Prompt optimization evidence" in html
+
+
 def test_metrics_json_is_plain_json(tmp_path: Path) -> None:
     data = tmp_path / "tasks.jsonl"
     predictions = tmp_path / "predictions.jsonl"

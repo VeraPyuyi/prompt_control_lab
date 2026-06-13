@@ -15,6 +15,7 @@ from promptcontrollab.ui.components import dashboard_css, stat_card_html
 from promptcontrollab.ui.data import (
     audit_detail_sections,
     changed_line_rows,
+    evidence_card_rows,
     filter_history_rows,
     first_comparison,
     guard_download_payloads,
@@ -235,6 +236,32 @@ def test_report_model_lists_diagnostic_artifacts(tmp_path: Path) -> None:
     assert "diagnostics/trajectory.json" in detail["artifacts"]
     assert "research_diagnostics.json" in detail["artifacts"]
     assert detail["diagnostics"]["trajectory"]["drift"] == 0.1
+
+
+def test_report_model_and_ui_detail_read_evidence_card(tmp_path: Path) -> None:
+    run = tmp_path / "runs" / "research-demo"
+    _write_json(
+        run / "evidence_card.json",
+        {
+            "kind": "prompt_optimization_evidence_card",
+            "recommendation": "supported",
+            "summary": "Recorded artifacts support the candidate.",
+            "sections": {
+                "statistical_evidence": {"status": "pass", "mean_delta": 0.2},
+                "riccati_surrogate": {"status": "pass", "stable_surrogate": True},
+            },
+        },
+    )
+
+    model = ReportModel.from_run(run)
+    detail = load_run_detail(run)
+    rows = evidence_card_rows(detail)
+
+    assert model.evidence_card["recommendation"] == "supported"
+    assert "evidence_card.json" in model.artifacts
+    assert detail["evidence_card"]["summary"] == "Recorded artifacts support the candidate."
+    assert {row["section"] for row in rows} == {"statistical evidence", "riccati surrogate"}
+    assert rows[0]["status"] == "pass"
 
 
 def test_research_diagnostic_rows_summarize_paper_artifacts(tmp_path: Path) -> None:

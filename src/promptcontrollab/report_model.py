@@ -28,6 +28,7 @@ class ReportModel:
     history_compare: JsonDict
     agent_run: JsonDict
     research_diagnostics: JsonDict
+    evidence_card: JsonDict
     diagnostics: dict[str, JsonDict]
     artifacts: list[str]
     candidate_score: float | None
@@ -61,6 +62,7 @@ class ReportModel:
             history_compare=_read_optional(run_dir / "history_compare.json"),
             agent_run=_read_optional(run_dir / "agent_run.json"),
             research_diagnostics=_read_optional(run_dir / "research_diagnostics.json"),
+            evidence_card=_read_optional(run_dir / "evidence_card.json"),
             diagnostics=diagnostics,
             artifacts=artifacts,
             candidate_score=_first_score(candidate_metrics, root_metrics),
@@ -129,6 +131,8 @@ def _existing_artifacts(run_dir: Path, diagnostics: dict[str, JsonDict]) -> list
         "agent_run.json",
         "research_diagnostics.json",
         "research_diagnostics.md",
+        "evidence_card.json",
+        "evidence_card.md",
         "inputs/hidden_states.npz",
         "inputs/hidden_states.npz.metadata.json",
         "report.md",
