@@ -394,14 +394,22 @@ def test_cli_ecosystem_demo_runs_all_external_bridge_examples(tmp_path: Path) ->
         "deepeval",
     ]
     assert scorecard["rows"][0]["gap_status"] == "not_checked"
+    promptfoo_links = scorecard["rows"][0]["artifact_links"]
+    assert {"label": "Evidence card", "path": "promptfoo/evidence_card.md"} in promptfoo_links
+    assert {"label": "Claim check", "path": "promptfoo/claim_check.md"} in promptfoo_links
+    assert {"label": "HTML report", "path": "promptfoo/report.html"} in promptfoo_links
     scorecard_markdown = (out / "ecosystem_scorecard.md").read_text(encoding="utf-8")
     assert "research evidence layer" in scorecard_markdown
     assert "pcl gap-status" in scorecard_markdown
     assert "promptfoo/bridge_summary.md" in scorecard_markdown
+    assert "[Evidence card](promptfoo/evidence_card.md)" in scorecard_markdown
+    assert "[Claim check](promptfoo/claim_check.md)" in scorecard_markdown
     scorecard_html = (out / "ecosystem_scorecard.html").read_text(encoding="utf-8")
     assert "Ecosystem Scorecard" in scorecard_html
     assert "DeepEval" in scorecard_html
     assert "promptfoo/bridge_summary.md" in scorecard_html
+    assert "promptfoo/evidence_card.md" in scorecard_html
+    assert "promptfoo/report.html" in scorecard_html
     assert main(["gap-status", "--run", str(out / "promptfoo")]) == 0
     (out / "ecosystem_scorecard.json").unlink()
     (out / "ecosystem_scorecard.md").unlink()

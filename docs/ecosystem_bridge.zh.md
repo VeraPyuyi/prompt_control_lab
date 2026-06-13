@@ -74,7 +74,9 @@ evidence bundle：
 
 如果要向团队解释定位，建议先打开根目录里的 `ecosystem_scorecard.html`。它会按工具列出：
 外部工具擅长什么、PCL 补了什么、还缺哪些论文诊断。`ecosystem_scorecard.md` 仍适合
-纯文本 review。然后再打开每个目录里的 `bridge_summary.md` 看工具级 provenance。
+纯文本 review。它还会在文件存在时直接链接到每个工具的 bridge summary、evidence card、
+claim check、HTML report 和 gap artifact。然后再打开每个目录里的 `bridge_summary.md`
+看工具级 provenance。
 也可以用 `pcl ui --runs runs/ecosystem-demo` 打开根目录；Research Overview
 会按外部工具逐行展示每套 evidence bundle。
 

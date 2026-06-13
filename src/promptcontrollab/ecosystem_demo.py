@@ -250,6 +250,7 @@ def _scorecard_rows(*, out_dir: Path, payload: JsonDict, diagnostics: JsonDict) 
         bridge = read_json(bridge_path) if bridge_path.exists() else {}
         diagnostic = diagnostic_rows.get(tool, {})
         gap_status = _gap_status_summary(tool_dir)
+        artifact_links = _scorecard_artifact_links(out_dir=out_dir, tool_dir=tool_dir)
         rows.append(
             {
                 "tool": tool,
@@ -278,9 +279,26 @@ def _scorecard_rows(*, out_dir: Path, payload: JsonDict, diagnostics: JsonDict) 
                 if (tool_dir / "research_gap_status.md").exists()
                 else "",
                 "open_first": _relative_to(out_dir, tool_dir / "bridge_summary.md"),
+                "artifact_links": artifact_links,
             }
         )
     return rows
+
+
+def _scorecard_artifact_links(*, out_dir: Path, tool_dir: Path) -> list[JsonDict]:
+    candidates = [
+        ("Bridge summary", tool_dir / "bridge_summary.md"),
+        ("Evidence card", tool_dir / "evidence_card.md"),
+        ("Claim check", tool_dir / "claim_check.md"),
+        ("HTML report", tool_dir / "report.html"),
+        ("Gap plan", tool_dir / "research_gap_plan.md"),
+        ("Gap status", tool_dir / "research_gap_status.md"),
+    ]
+    return [
+        {"label": label, "path": _relative_to(out_dir, path)}
+        for label, path in candidates
+        if path.exists()
+    ]
 
 
 def _gap_status_summary(tool_dir: Path) -> JsonDict:
@@ -378,9 +396,9 @@ def _render_scorecard(payload: JsonDict) -> str:
         "",
         (
             "| Tool | External strength | What PCL adds | Validity | Evidence tier | "
-            "Gap status | Missing paper diagnostics |"
+            "Gap status | Reviewer artifacts | Missing paper diagnostics |"
         ),
-        "|---|---|---|---|---|---|---|",
+        "|---|---|---|---|---|---|---|---|",
     ]
     rows = payload.get("rows")
     if isinstance(rows, list):
@@ -403,6 +421,7 @@ def _render_scorecard(payload: JsonDict) -> str:
                         str(row.get("validity", "")),
                         str(row.get("evidence_tier", "")),
                         str(row.get("gap_status", "")),
+                        _artifact_links_markdown(row.get("artifact_links")),
                         missing_text,
                     ]
                 )
@@ -449,6 +468,20 @@ def _render_scorecard(payload: JsonDict) -> str:
         ]
     )
     return "\n".join(lines)
+
+
+def _artifact_links_markdown(value: object) -> str:
+    if not isinstance(value, list):
+        return ""
+    links: list[str] = []
+    for item in value:
+        if not isinstance(item, dict):
+            continue
+        label = str(item.get("label") or "")
+        path = str(item.get("path") or "")
+        if label and path:
+            links.append(f"[{label}]({path})")
+    return "<br>".join(links)
 
 
 def _render_scorecard_html(payload: JsonDict) -> str:
@@ -542,7 +575,7 @@ def _render_scorecard_html(payload: JsonDict) -> str:
     }}
     table {{
       width: 100%;
-      min-width: 1120px;
+      min-width: 1280px;
       border-collapse: collapse;
     }}
     th, td {{
@@ -628,6 +661,7 @@ def _render_scorecard_html(payload: JsonDict) -> str:
             <th>Validity</th>
             <th>Evidence</th>
             <th>Gap</th>
+            <th>Reviewer artifacts</th>
             <th>Missing diagnostics</th>
             <th>Open first</th>
             <th>Next command</th>
@@ -694,11 +728,26 @@ def _render_scorecard_html_row(row: JsonDict) -> str:
         f"<td>{_html_badge(row.get('validity'))}</td>"
         f"<td>{_html_badge(row.get('evidence_tier'))}</td>"
         f"<td>{_html_badge(gap_status)}</td>"
+        f"<td>{_html_artifact_links(row.get('artifact_links'))}</td>"
         f"<td class=\"muted\">{_html_text(missing_text)}</td>"
         f"<td>{_html_link(row.get('open_first'))}</td>"
         f"<td><code>{_html_text(row.get('gap_status_command', ''))}</code></td>"
         "</tr>"
     )
+
+
+def _html_artifact_links(value: object) -> str:
+    if not isinstance(value, list):
+        return ""
+    links: list[str] = []
+    for item in value:
+        if not isinstance(item, dict):
+            continue
+        label = str(item.get("label") or "")
+        path = str(item.get("path") or "")
+        if label and path:
+            links.append(_html_link_with_label(path=path, label=label))
+    return "<br>".join(links)
 
 
 def _html_badge(value: object) -> str:
@@ -726,6 +775,11 @@ def _html_link(value: object) -> str:
         return ""
     escaped = html.escape(text, quote=True)
     return f'<a href="{escaped}">{html.escape(text)}</a>'
+
+
+def _html_link_with_label(*, path: str, label: str) -> str:
+    escaped = html.escape(path, quote=True)
+    return f'<a href="{escaped}">{_html_text(label)}</a>'
 
 
 def _html_text(value: object) -> str:

@@ -289,7 +289,8 @@ LangSmith bridge demo. It shows each external tool's strongest lane, what PCL ad
 evidence layer, the current validity/evidence tier, the current gap-status result when available,
 missing paper diagnostics, and the `pcl gap-status` command to run after closing those gaps.
 This is the recommended first file to open when showing why PCL complements existing eval,
-observability, and security-testing tools.
+observability, and security-testing tools. Each row also links to the tool-specific bridge
+summary, evidence card, claim check, HTML report, and gap artifacts when those files exist.
 The HTML version is the reviewer-facing dashboard artifact; the Markdown version is easier to
 review in plain text, and the JSON version is for automation.
 

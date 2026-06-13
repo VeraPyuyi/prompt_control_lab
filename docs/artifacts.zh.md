@@ -225,7 +225,7 @@ gate decision、risk level、改动文件、测试、audit path、gate path，�
 
 由 `pcl ecosystem-demo` 写出；也可以用 `pcl ecosystem-scorecard --run <run>` 单独刷新。
 
-说明什么问题：Promptfoo、DeepEval、Langfuse 和 LangSmith 这类外部工具各自擅长什么，PCL 在其上补了什么研究证据层，当前比较的 validity / evidence tier 是什么，已经运行过的 gap-status 结果是什么，还缺哪些论文诊断，以及补齐之后应该运行哪条 `pcl gap-status` 命令。它适合作为解释 PCL 生态定位和 prompt optimization 证据缺口的第一份文件。HTML 版本适合给 reviewer 或团队成员直接打开查看，Markdown 版本适合纯文本审查，JSON 版本适合自动化读取。
+说明什么问题：Promptfoo、DeepEval、Langfuse 和 LangSmith 这类外部工具各自擅长什么，PCL 在其上补了什么研究证据层，当前比较的 validity / evidence tier 是什么，已经运行过的 gap-status 结果是什么，还缺哪些论文诊断，以及补齐之后应该运行哪条 `pcl gap-status` 命令。它适合作为解释 PCL 生态定位和 prompt optimization 证据缺口的第一份文件。每一行还会在对应文件存在时链接到该工具的 bridge summary、evidence card、claim check、HTML report 和 gap artifact。HTML 版本适合给 reviewer 或团队成员直接打开查看，Markdown 版本适合纯文本审查，JSON 版本适合自动化读取。
 
 ## `research_gap_plan.json` / `research_gap_plan.md`
 
