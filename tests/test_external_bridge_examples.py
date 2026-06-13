@@ -151,6 +151,20 @@ def test_packaged_promptfoo_example_runs_evidence_audit(tmp_path: Path) -> None:
     assert result["kind"] == "external_evidence_audit"
     assert result["gap_status"]["status"] == "needs_work"
     assert result["bundle_verification"]["status"] == "pass"
+    assert result["markdown_path"].endswith("evidence_audit_result.md")
+    assert result["html_path"].endswith("evidence_audit_result.html")
+    assert (out_dir / "evidence_audit_result.md").exists()
+    assert (out_dir / "evidence_audit_result.html").exists()
+    audit_markdown = (out_dir / "evidence_audit_result.md").read_text(encoding="utf-8")
+    assert "External Evidence Audit Summary" in audit_markdown
+    audit_html = (out_dir / "evidence_audit_result.html").read_text(encoding="utf-8")
+    assert "External Evidence Audit Summary" in audit_html
+    assert "Bridge summary" in audit_html
+    bundle = read_json(out_dir / "research_bundle.json")
+    artifact_rows = {item["path"]: item for item in bundle["artifacts"]}
+    assert artifact_rows["evidence_audit_result.html"]["hash_status"] == (
+        "audit_summary_not_hashed"
+    )
     assert (out_dir / "research_gap_status.html").exists()
     assert (out_dir / "research_bundle_verification.html").exists()
     assert (out_dir / "bridge_summary.html").exists()

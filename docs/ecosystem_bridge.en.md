@@ -125,9 +125,10 @@ pcl evidence-audit \
   --out runs/from-promptfoo-audit
 ```
 
-Open `evidence_audit_result.json` first when automation needs the summary. Open
-`bridge_summary.html`, `research_gap_status.html`, and `research_bundle_verification.html` when a
-human reviewer needs the evidence trail.
+Open `evidence_audit_result.html` first when a human reviewer needs the one-command audit
+summary. Use `evidence_audit_result.json` when automation needs the same status. Then open
+`bridge_summary.html`, `research_gap_status.html`, and `research_bundle_verification.html` for the
+full evidence trail.
 
 The demo automatically audits the bundle against the paper-derived evidence map.
 To regenerate that diagnosis after editing the bundle, run:

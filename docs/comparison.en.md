@@ -53,9 +53,10 @@ PCL should answer questions that broad eval/observability tools usually leave im
    identity of the project.
 3. Improve importers for real Promptfoo, LangSmith, and Langfuse exports instead of rebuilding
    their platforms.
-4. Make reviewer-facing HTML artifacts the primary user experience: `bridge_summary.html`,
-   `research_bundle.html`, `evidence_card.html`, `claim_check.html`, `research_gap_status.html`,
-   and `research_bundle_verification.html`.
+4. Make reviewer-facing HTML artifacts the primary user experience:
+   `evidence_audit_result.html`, `bridge_summary.html`, `research_bundle.html`,
+   `evidence_card.html`, `claim_check.html`, `research_gap_status.html`, and
+   `research_bundle_verification.html`.
 5. Use plain explanations for hard research terms: deployment gap, internal trajectory stability,
    surrogate stability, time-varying evidence, and claim boundary.
 

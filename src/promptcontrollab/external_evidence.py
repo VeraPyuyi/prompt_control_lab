@@ -18,6 +18,7 @@ from promptcontrollab.ingest import (
 from promptcontrollab.research_workflow import (
     run_research_diagnostics,
     verify_research_bundle_index,
+    write_research_bundle_index,
     write_research_gap_status,
 )
 from promptcontrollab.run_comparison import compare_runs
@@ -267,12 +268,15 @@ def build_external_evidence_audit(
         permutation_samples=permutation_samples,
     )
     gap_status = write_research_gap_status(run_dir=out_dir)
-    verification = verify_research_bundle_index(out_dir)
-    bridge_summary = _refresh_bridge_integrity_after_verification(out_dir)
+    bridge_summary_path = out_dir / "bridge_summary.json"
+    bridge_summary = read_json(bridge_summary_path) if bridge_summary_path.exists() else {}
     payload: JsonDict = {
         "kind": "external_evidence_audit",
         "tool": tool,
         "out_dir": str(out_dir),
+        "json_path": str(out_dir / "evidence_audit_result.json"),
+        "markdown_path": str(out_dir / "evidence_audit_result.md"),
+        "html_path": str(out_dir / "evidence_audit_result.html"),
         "evidence_from_result_path": str(out_dir / "evidence_from_result.json"),
         "bridge_summary_path": str(out_dir / "bridge_summary.md"),
         "bridge_summary_html_path": str(out_dir / "bridge_summary.html"),
@@ -291,14 +295,13 @@ def build_external_evidence_audit(
             "complete_count": gap_status.get("complete_count"),
             "missing_count": gap_status.get("missing_count"),
         },
-        "bundle_verification": {
-            "status": verification.get("status"),
-            "checked_count": verification.get("checked_count"),
-            "mismatch_count": verification.get("mismatch_count"),
-            "missing_count": verification.get("missing_count"),
-        },
+        "bundle_verification": {},
         "missing_paper_diagnostics": bridge_summary.get("missing_paper_diagnostics", []),
         "next_actions": [
+            (
+                "Open evidence_audit_result.html for the reviewer-facing audit "
+                "summary."
+            ),
             "Open bridge_summary.html to see what the external tool supplied and what PCL added.",
             "Open research_bundle.html as the browser-first evidence index.",
             (
@@ -316,8 +319,41 @@ def build_external_evidence_audit(
             "production monitoring."
         ),
     }
-    write_json(out_dir / "evidence_audit_result.json", payload)
+    _write_evidence_audit_artifacts(out_dir, payload)
+    write_research_bundle_index(out_dir)
+    verification = verify_research_bundle_index(out_dir)
+    bridge_summary = _refresh_bridge_integrity_after_verification(out_dir)
+    payload.update(
+        {
+            "claim_scope": bridge_summary.get("claim_scope"),
+            "evidence_tier": bridge_summary.get("evidence_tier"),
+            "validity": bridge_summary.get("validity"),
+            "missing_paper_diagnostics": bridge_summary.get(
+                "missing_paper_diagnostics",
+                [],
+            ),
+            "bundle_verification": {
+                "status": verification.get("status"),
+                "checked_count": verification.get("checked_count"),
+                "mismatch_count": verification.get("mismatch_count"),
+                "missing_count": verification.get("missing_count"),
+            },
+        }
+    )
+    _write_evidence_audit_artifacts(out_dir, payload)
     return payload
+
+
+def _write_evidence_audit_artifacts(out_dir: Path, payload: JsonDict) -> None:
+    write_json(out_dir / "evidence_audit_result.json", payload)
+    (out_dir / "evidence_audit_result.md").write_text(
+        _render_evidence_audit_markdown(payload),
+        encoding="utf-8",
+    )
+    (out_dir / "evidence_audit_result.html").write_text(
+        render_evidence_audit_html(payload),
+        encoding="utf-8",
+    )
 
 
 def _refresh_bridge_integrity_after_verification(out_dir: Path) -> JsonDict:
@@ -848,6 +884,136 @@ def _render_bridge_summary(payload: JsonDict) -> str:
         ]
     )
     return "\n".join(lines)
+
+
+def _render_evidence_audit_markdown(payload: JsonDict) -> str:
+    gap = payload.get("gap_status")
+    verification = payload.get("bundle_verification")
+    gap_summary = gap if isinstance(gap, dict) else {}
+    verification_summary = verification if isinstance(verification, dict) else {}
+    lines = [
+        "# External Evidence Audit Summary",
+        "",
+        f"- Tool: `{payload.get('tool')}`",
+        f"- Claim scope: `{payload.get('claim_scope')}`",
+        f"- Evidence tier: `{payload.get('evidence_tier')}`",
+        f"- Prompt-only validity: `{payload.get('validity')}`",
+        f"- Gap status: `{gap_summary.get('status')}`",
+        f"- Missing paper diagnostics: `{payload.get('missing_paper_diagnostics', [])}`",
+        f"- Bundle verification: `{verification_summary.get('status')}`",
+        (
+            f"- Verification counts: checked `{verification_summary.get('checked_count')}`, "
+            f"mismatch `{verification_summary.get('mismatch_count')}`, "
+            f"missing `{verification_summary.get('missing_count')}`"
+        ),
+        "",
+        "## Reviewer links",
+        "",
+        f"- Evidence audit HTML: `{payload.get('html_path')}`",
+        f"- Bridge summary: `{payload.get('bridge_summary_html_path')}`",
+        f"- Research bundle: `{payload.get('research_bundle_path')}`",
+        f"- Research diagnostics: `{payload.get('research_diagnostics_path')}`",
+        f"- Gap status: `{payload.get('research_gap_status_path')}`",
+        f"- Bundle verification: `{payload.get('research_bundle_verification_path')}`",
+        "",
+        "## What this audit did",
+        "",
+        "- Imported external baseline and candidate exports.",
+        "- Built paired prompt-optimization comparison evidence.",
+        "- Checked whether the comparison is valid as prompt-only evidence.",
+        "- Checked paper-derived diagnostic gaps.",
+        "- Verified the research bundle against recorded artifact hashes.",
+        "",
+        "## Next actions",
+        "",
+        *[f"- {item}" for item in _string_list(payload.get("next_actions"))],
+        "",
+        "## Boundary",
+        "",
+        str(payload.get("boundary", "")),
+        "",
+    ]
+    return "\n".join(lines)
+
+
+def render_evidence_audit_html(payload: JsonDict) -> str:
+    """Render the top-level ``pcl evidence-audit`` summary as HTML."""
+
+    gap = payload.get("gap_status")
+    verification = payload.get("bundle_verification")
+    gap_summary = gap if isinstance(gap, dict) else {}
+    verification_summary = verification if isinstance(verification, dict) else {}
+    cards = "\n".join(
+        [
+            _html_card("Tool", payload.get("tool")),
+            _html_card("Evidence tier", payload.get("evidence_tier")),
+            _html_card("Validity", payload.get("validity")),
+            _html_card("Gap status", gap_summary.get("status")),
+            _html_card("Missing diagnostics", gap_summary.get("missing_count")),
+            _html_card("Bundle verification", verification_summary.get("status")),
+        ]
+    )
+    reviewer_links = " ".join(
+        item
+        for item in [
+            _html_link(payload.get("bridge_summary_html_path"), "Bridge summary"),
+            _html_link(payload.get("research_bundle_path"), "Research bundle"),
+            _html_link(payload.get("research_diagnostics_path"), "Research diagnostics"),
+            _html_link(payload.get("research_gap_status_path"), "Gap status"),
+            _html_link(
+                payload.get("research_bundle_verification_path"),
+                "Bundle verification",
+            ),
+        ]
+        if item
+    )
+    audit_steps = [
+        "Imported external baseline and candidate exports.",
+        "Built paired prompt-optimization comparison evidence.",
+        "Checked whether the comparison is valid as prompt-only evidence.",
+        "Checked paper-derived diagnostic gaps.",
+        "Verified the research bundle against recorded artifact hashes.",
+    ]
+    steps_html = "".join(f"<li>{_html_text(item)}</li>" for item in audit_steps)
+    next_actions = "".join(
+        f"<li>{_html_text(item)}</li>" for item in _string_list(payload.get("next_actions"))
+    )
+    missing = _html_text(payload.get("missing_paper_diagnostics", []))
+    verification_counts = (
+        f"checked {verification_summary.get('checked_count')}, "
+        f"mismatch {verification_summary.get('mismatch_count')}, "
+        f"missing {verification_summary.get('missing_count')}"
+    )
+    body = f"""
+    <section class="hero">
+      <p class="eyebrow">prompt_control_lab evidence audit</p>
+      <h1>External Evidence Audit Summary</h1>
+      <p>{_html_text(payload.get("claim_scope"))}</p>
+    </section>
+    <section class="cards">{cards}</section>
+    <section>
+      <h2>Reviewer Links</h2>
+      <p>{reviewer_links}</p>
+    </section>
+    <section>
+      <h2>What This Audit Did</h2>
+      <ol>{steps_html}</ol>
+    </section>
+    <section>
+      <h2>Paper Diagnostic Gaps</h2>
+      <p><strong>Missing paper diagnostics:</strong> {missing}</p>
+      <p><strong>Bundle verification counts:</strong> {_html_text(verification_counts)}</p>
+    </section>
+    <section>
+      <h2>Next Actions</h2>
+      <ol>{next_actions}</ol>
+    </section>
+    <section>
+      <h2>Boundary</h2>
+      <p>{_html_text(payload.get("boundary"))}</p>
+    </section>
+    """
+    return _html_page(title="External Evidence Audit Summary", body=body)
 
 
 def render_bridge_summary_html(payload: JsonDict) -> str:

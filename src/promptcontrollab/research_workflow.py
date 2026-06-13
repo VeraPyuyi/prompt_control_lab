@@ -814,6 +814,11 @@ def _bundle_status(
 def _bundle_review_order(run_dir: Path) -> list[JsonDict]:
     candidates = [
         (
+            "Evidence audit",
+            "evidence_audit_result.html",
+            "One-command audit summary for external imports, gaps, and bundle verification.",
+        ),
+        (
             "Bridge summary",
             "bridge_summary.html",
             "External-tool provenance, PCL-added evidence, and next review actions.",
@@ -856,6 +861,9 @@ def _bundle_artifacts(run_dir: Path) -> list[JsonDict]:
     names = [
         "research_bundle.html",
         "research_bundle.json",
+        "evidence_audit_result.html",
+        "evidence_audit_result.md",
+        "evidence_audit_result.json",
         "research_bundle_verification.html",
         "research_bundle_verification.md",
         "research_bundle_verification.json",
@@ -886,6 +894,7 @@ def _bundle_artifacts(run_dir: Path) -> list[JsonDict]:
 def _bundle_artifact_row(*, run_dir: Path, name: str) -> JsonDict:
     path = run_dir / name
     self_generated = name in {"research_bundle.html", "research_bundle.json"}
+    audit_summary = name.startswith("evidence_audit_result.")
     exists = path.exists() or self_generated
     row: JsonDict = {
         "path": name,
@@ -898,6 +907,10 @@ def _bundle_artifact_row(*, run_dir: Path, name: str) -> JsonDict:
             row["hash_status"] = "generated_during_refresh"
             return row
         row["hash_status"] = "self_index_not_hashed"
+        return row
+    if audit_summary and path.exists():
+        row["bytes"] = path.stat().st_size
+        row["hash_status"] = "audit_summary_not_hashed"
         return row
     if path.exists() and path.is_file():
         row["bytes"] = path.stat().st_size
