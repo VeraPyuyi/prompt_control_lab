@@ -232,6 +232,7 @@ def _scorecard_rows(*, out_dir: Path, payload: JsonDict, diagnostics: JsonDict) 
         bridge_path = tool_dir / "bridge_summary.json"
         bridge = read_json(bridge_path) if bridge_path.exists() else {}
         diagnostic = diagnostic_rows.get(tool, {})
+        gap_status = _gap_status_summary(tool_dir)
         rows.append(
             {
                 "tool": tool,
@@ -253,10 +254,32 @@ def _scorecard_rows(*, out_dir: Path, payload: JsonDict, diagnostics: JsonDict) 
                 if (tool_dir / "research_gap_plan.md").exists()
                 else "",
                 "gap_status_command": f"pcl gap-status --run {_relative_to(out_dir, tool_dir)}",
+                "gap_status": gap_status.get("status"),
+                "gap_complete_count": gap_status.get("complete_count"),
+                "gap_missing_count": gap_status.get("missing_count"),
+                "gap_status_path": _relative_to(out_dir, tool_dir / "research_gap_status.md")
+                if (tool_dir / "research_gap_status.md").exists()
+                else "",
                 "open_first": _relative_to(out_dir, tool_dir / "bridge_summary.md"),
             }
         )
     return rows
+
+
+def _gap_status_summary(tool_dir: Path) -> JsonDict:
+    path = tool_dir / "research_gap_status.json"
+    if not path.exists():
+        return {
+            "status": "not_checked",
+            "complete_count": None,
+            "missing_count": None,
+        }
+    payload = read_json(path)
+    return {
+        "status": payload.get("status", "unknown"),
+        "complete_count": payload.get("complete_count"),
+        "missing_count": payload.get("missing_count"),
+    }
 
 
 def _relative_to(base: Path, path: Path) -> str:
@@ -332,9 +355,9 @@ def _render_scorecard(payload: JsonDict) -> str:
         "",
         (
             "| Tool | External strength | What PCL adds | Validity | Evidence tier | "
-            "Missing paper diagnostics |"
+            "Gap status | Missing paper diagnostics |"
         ),
-        "|---|---|---|---|---|---|",
+        "|---|---|---|---|---|---|---|",
     ]
     rows = payload.get("rows")
     if isinstance(rows, list):
@@ -356,6 +379,7 @@ def _render_scorecard(payload: JsonDict) -> str:
                         str(row.get("pcl_adds", "")),
                         str(row.get("validity", "")),
                         str(row.get("evidence_tier", "")),
+                        str(row.get("gap_status", "")),
                         missing_text,
                     ]
                 )
@@ -374,13 +398,16 @@ def _render_scorecard(payload: JsonDict) -> str:
         for row in rows:
             if not isinstance(row, dict):
                 continue
+            gap_status = str(row.get("gap_status", ""))
+            if row.get("gap_missing_count") is not None:
+                gap_status = f"{gap_status} ({row.get('gap_missing_count')} missing)"
             lines.append(
                 "| "
                 + " | ".join(
                     [
                         str(row.get("display_name", "")),
                         f"`{row.get('open_first', '')}`",
-                        f"`{row.get('gap_status_command', '')}`",
+                        f"{gap_status}; `{row.get('gap_status_command', '')}`",
                     ]
                 )
                 + " |"

@@ -280,9 +280,10 @@ Written by `pcl ecosystem-demo`; refreshed by `pcl ecosystem-scorecard --run <ru
 
 What it explains: the cross-tool positioning for the bundled Promptfoo, Langfuse, and LangSmith
 bridge demo. It shows each external tool's strongest lane, what PCL adds as a research evidence
-layer, the current validity/evidence tier, missing paper diagnostics, and the `pcl gap-status`
-command to run after closing those gaps. This is the recommended first file to open when showing
-why PCL complements existing eval, observability, and security-testing tools.
+layer, the current validity/evidence tier, the current gap-status result when available,
+missing paper diagnostics, and the `pcl gap-status` command to run after closing those gaps.
+This is the recommended first file to open when showing why PCL complements existing eval,
+observability, and security-testing tools.
 
 ## `research_gap_plan.json` / `research_gap_plan.md`
 
