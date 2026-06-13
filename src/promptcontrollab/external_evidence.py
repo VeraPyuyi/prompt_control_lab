@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import html
 import shutil
 from pathlib import Path
 from typing import Literal
@@ -134,6 +135,7 @@ def build_external_evidence(
         "bridge_summary": {
             "json_path": str(out_dir / "bridge_summary.json"),
             "markdown_path": str(out_dir / "bridge_summary.md"),
+            "html_path": str(out_dir / "bridge_summary.html"),
             "recommendation": bridge_summary.get("recommendation"),
             "evidence_tier": bridge_summary.get("evidence_tier"),
             "claim_scope": bridge_summary.get("claim_scope"),
@@ -142,7 +144,7 @@ def build_external_evidence(
         },
         "copied_artifacts": [str(path) for path in copied_artifacts],
         "next_actions": [
-            "Open bridge_summary.md to see what the external tool supplied and what PCL added.",
+            "Open bridge_summary.html to see what the external tool supplied and what PCL added.",
             "Open evidence_card.html for the compact prompt optimization evidence card.",
             "Open report.html for the full comparison dashboard.",
             "Review imports/baseline and imports/candidate if provenance looks incomplete.",
@@ -273,6 +275,7 @@ def build_external_evidence_audit(
         "out_dir": str(out_dir),
         "evidence_from_result_path": str(out_dir / "evidence_from_result.json"),
         "bridge_summary_path": str(out_dir / "bridge_summary.md"),
+        "bridge_summary_html_path": str(out_dir / "bridge_summary.html"),
         "research_bundle_path": str(out_dir / "research_bundle.html"),
         "research_diagnostics_path": str(out_dir / "research_diagnostics.html"),
         "research_gap_status_path": str(out_dir / "research_gap_status.html"),
@@ -296,7 +299,7 @@ def build_external_evidence_audit(
         },
         "missing_paper_diagnostics": bridge_summary.get("missing_paper_diagnostics", []),
         "next_actions": [
-            "Open bridge_summary.md to see what the external tool supplied and what PCL added.",
+            "Open bridge_summary.html to see what the external tool supplied and what PCL added.",
             "Open research_bundle.html as the browser-first evidence index.",
             (
                 "Open research_gap_status.html to see which paper-derived diagnostics "
@@ -327,6 +330,10 @@ def _refresh_bridge_integrity_after_verification(out_dir: Path) -> JsonDict:
     payload["research_bundle_integrity"] = _research_bundle_integrity(out_dir)
     write_json(path, payload)
     (out_dir / "bridge_summary.md").write_text(_render_bridge_summary(payload), encoding="utf-8")
+    (out_dir / "bridge_summary.html").write_text(
+        render_bridge_summary_html(payload),
+        encoding="utf-8",
+    )
     return payload
 
 
@@ -369,6 +376,10 @@ def _attach_research_diagnostics_to_bridge_summary(
     payload["next_actions"] = next_action_list
     write_json(out_dir / "bridge_summary.json", payload)
     (out_dir / "bridge_summary.md").write_text(_render_bridge_summary(payload), encoding="utf-8")
+    (out_dir / "bridge_summary.html").write_text(
+        render_bridge_summary_html(payload),
+        encoding="utf-8",
+    )
     return payload
 
 
@@ -572,6 +583,7 @@ def _write_bridge_summary(
     missing_evidence = missing if isinstance(missing, list) else []
     payload: JsonDict = {
         "kind": "external_bridge_summary",
+        "html_path": str(out_dir / "bridge_summary.html"),
         "requested_tool": requested_tool,
         "detected_tools": detected_tools,
         "source_tool_roles": [_tool_role(tool) for tool in detected_tools],
@@ -621,6 +633,10 @@ def _write_bridge_summary(
     }
     write_json(out_dir / "bridge_summary.json", payload)
     (out_dir / "bridge_summary.md").write_text(_render_bridge_summary(payload), encoding="utf-8")
+    (out_dir / "bridge_summary.html").write_text(
+        render_bridge_summary_html(payload),
+        encoding="utf-8",
+    )
     return payload
 
 
@@ -832,6 +848,257 @@ def _render_bridge_summary(payload: JsonDict) -> str:
         ]
     )
     return "\n".join(lines)
+
+
+def render_bridge_summary_html(payload: JsonDict) -> str:
+    """Render a reviewer-facing HTML summary for an external evidence bridge."""
+
+    roles = payload.get("source_tool_roles")
+    role_rows = []
+    if isinstance(roles, list):
+        for role in roles:
+            if not isinstance(role, dict):
+                continue
+            display = _html_text(role.get("display_name") or role.get("tool"))
+            role_rows.append(
+                "<tr>"
+                f"<td><strong>{display}</strong></td>"
+                f"<td>{_html_text(role.get('role'))}</td>"
+                f"<td>{_html_text(role.get('pcl_adds'))}</td>"
+                "</tr>"
+            )
+    role_table = _html_table(
+        ["Tool", "External tool role", "What PCL adds"],
+        role_rows,
+        empty="No external tool roles recorded.",
+    )
+    evidence_items = "".join(
+        f"<li><code>{_html_text(item)}</code></li>"
+        for item in _string_list(payload.get("pcl_added_evidence"))
+    )
+    integrity = _bridge_bundle_integrity_lines(payload.get("research_bundle_integrity"))
+    integrity_items = "".join(f"<li>{_markdownish_to_html(item)}</li>" for item in integrity)
+    remediation_rows = _remediation_html_rows(payload.get("paper_gap_remediation"))
+    remediation_table = _html_table(
+        ["Missing diagnostic", "Command", "Artifact"],
+        remediation_rows,
+        empty="No paper-evidence gap remediation commands recorded.",
+    )
+    next_actions = "".join(
+        f"<li>{_html_text(item)}</li>" for item in _string_list(payload.get("next_actions"))
+    )
+    cards = "\n".join(
+        [
+            _html_card("Recommendation", payload.get("recommendation")),
+            _html_card("Evidence tier", payload.get("evidence_tier")),
+            _html_card("Validity", payload.get("validity")),
+            _html_card("Paired n", payload.get("paired_n")),
+            _html_card("Mean delta", payload.get("mean_delta")),
+            _html_card("Permutation p-value", payload.get("permutation_p_value")),
+        ]
+    )
+    bundle_link = _html_link(payload.get("research_bundle_html_path"), "Research bundle")
+    diagnostics_link = _html_link(
+        payload.get("research_diagnostics_html_path")
+        or payload.get("research_diagnostics_md_path"),
+        "Research diagnostics",
+    )
+    gap_plan_link = _html_link(
+        payload.get("research_gap_plan_html_path") or payload.get("research_gap_plan_md_path"),
+        "Gap plan",
+    )
+    missing_paper = _html_text(payload.get("missing_paper_diagnostics", []))
+    next_tier = _html_text(payload.get("next_tier_missing", []))
+    body = f"""
+    <section class="hero">
+      <p class="eyebrow">prompt_control_lab external evidence bridge</p>
+      <h1>External Evidence Bridge Summary</h1>
+      <p>{_html_text(payload.get("claim_scope"))}</p>
+    </section>
+    <section class="cards">{cards}</section>
+    <section>
+      <h2>Tool Roles</h2>
+      {role_table}
+    </section>
+    <section>
+      <h2>PCL Added Evidence</h2>
+      <ul>{evidence_items}</ul>
+    </section>
+    <section>
+      <h2>Research Diagnostics</h2>
+      <p>{bundle_link} {diagnostics_link} {gap_plan_link}</p>
+      <ul>{integrity_items}</ul>
+      <p><strong>Diagnostic type:</strong> {_html_text(payload.get("research_diagnostic_type"))}</p>
+      <p><strong>Missing paper diagnostics:</strong> {missing_paper}</p>
+      {remediation_table}
+    </section>
+    <section>
+      <h2>Missing Or Review Evidence</h2>
+      <p><strong>Missing evidence:</strong> {_html_text(payload.get("missing_evidence", []))}</p>
+      <p><strong>Missing for next tier:</strong> {next_tier}</p>
+      <p><strong>Review items:</strong> {_html_text(payload.get("review_items", []))}</p>
+      <p><strong>Blocking issues:</strong> {_html_text(payload.get("blocking_issues", []))}</p>
+    </section>
+    <section>
+      <h2>Next Actions</h2>
+      <ol>{next_actions}</ol>
+    </section>
+    <section>
+      <h2>Boundary</h2>
+      <p>{_html_text(payload.get("boundary"))}</p>
+    </section>
+    """
+    return _html_page(title="External Evidence Bridge Summary", body=body)
+
+
+def _html_page(*, title: str, body: str) -> str:
+    return f"""<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{_html_text(title)}</title>
+  <style>
+    :root {{
+      color-scheme: light;
+      --bg: #f8fafc;
+      --panel: #ffffff;
+      --ink: #0f172a;
+      --muted: #64748b;
+      --line: #dbe4ef;
+      --accent: #2563eb;
+    }}
+    body {{
+      margin: 0;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system,
+        BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: var(--bg);
+      color: var(--ink);
+      line-height: 1.55;
+    }}
+    main {{
+      max-width: 1180px;
+      margin: 0 auto;
+      padding: 40px 24px 64px;
+    }}
+    section {{
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 24px;
+      margin: 18px 0;
+      box-shadow: 0 12px 32px rgba(15, 23, 42, 0.06);
+    }}
+    .hero {{
+      background: linear-gradient(135deg, #ffffff 0%, #eef6ff 100%);
+    }}
+    .eyebrow {{
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      color: var(--accent);
+      font-size: 13px;
+      font-weight: 700;
+    }}
+    h1 {{ font-size: 34px; margin: 8px 0 12px; }}
+    h2 {{ font-size: 20px; margin-top: 0; }}
+    .cards {{
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 12px;
+      background: transparent;
+      border: 0;
+      box-shadow: none;
+      padding: 0;
+    }}
+    .card {{
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 18px;
+    }}
+    .label {{ color: var(--muted); font-size: 12px; font-weight: 700; text-transform: uppercase; }}
+    .value {{ margin-top: 8px; font-size: 18px; font-weight: 700; overflow-wrap: anywhere; }}
+    table {{
+      border-collapse: collapse;
+      width: 100%;
+      margin-top: 12px;
+    }}
+    th, td {{
+      border-bottom: 1px solid var(--line);
+      padding: 10px 8px;
+      text-align: left;
+      vertical-align: top;
+    }}
+    th {{ color: var(--muted); font-size: 13px; }}
+    code {{
+      background: #eef2f7;
+      border-radius: 6px;
+      padding: 2px 6px;
+      overflow-wrap: anywhere;
+    }}
+    a {{ color: var(--accent); font-weight: 700; text-decoration: none; margin-right: 14px; }}
+    a:hover {{ text-decoration: underline; }}
+  </style>
+</head>
+<body>
+  <main>{body}</main>
+</body>
+</html>
+"""
+
+
+def _html_card(label: str, value: object) -> str:
+    return (
+        '<div class="card">'
+        f'<div class="label">{_html_text(label)}</div>'
+        f'<div class="value">{_html_text(value)}</div>'
+        "</div>"
+    )
+
+
+def _html_table(headers: list[str], rows: list[str], *, empty: str) -> str:
+    if not rows:
+        return f"<p>{_html_text(empty)}</p>"
+    header_html = "".join(f"<th>{_html_text(header)}</th>" for header in headers)
+    return (
+        "<table><thead><tr>"
+        + header_html
+        + "</tr></thead><tbody>"
+        + "".join(rows)
+        + "</tbody></table>"
+    )
+
+
+def _html_link(path: object, label: str) -> str:
+    text = str(path or "")
+    if not text:
+        return ""
+    return f'<a href="{html.escape(text, quote=True)}">{_html_text(label)}</a>'
+
+
+def _html_text(value: object) -> str:
+    return html.escape(str(value or ""))
+
+
+def _markdownish_to_html(text: str) -> str:
+    return _html_text(text).replace("`", "")
+
+
+def _remediation_html_rows(value: object) -> list[str]:
+    if not isinstance(value, list):
+        return []
+    rows: list[str] = []
+    for item in value:
+        if not isinstance(item, dict):
+            continue
+        rows.append(
+            "<tr>"
+            f"<td>{_html_text(item.get('missing_diagnostic'))}</td>"
+            f"<td><code>{_html_text(item.get('command'))}</code></td>"
+            f"<td>{_html_text(item.get('expected_artifact'))}</td>"
+            "</tr>"
+        )
+    return rows
 
 
 def _bridge_bundle_integrity_lines(value: object) -> list[str]:

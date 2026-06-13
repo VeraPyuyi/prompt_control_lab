@@ -99,6 +99,7 @@ def test_packaged_external_examples_run_evidence_from(
     assert (out_dir / "claim_check.html").exists()
     assert (out_dir / "report.html").exists()
     assert (out_dir / "bridge_summary.md").exists()
+    assert (out_dir / "bridge_summary.html").exists()
     bridge = read_json(out_dir / "bridge_summary.json")
     assert tool in bridge["detected_tools"]
     assert bridge["validity"] == "needs_review"
@@ -152,10 +153,14 @@ def test_packaged_promptfoo_example_runs_evidence_audit(tmp_path: Path) -> None:
     assert result["bundle_verification"]["status"] == "pass"
     assert (out_dir / "research_gap_status.html").exists()
     assert (out_dir / "research_bundle_verification.html").exists()
+    assert (out_dir / "bridge_summary.html").exists()
     bridge = read_json(out_dir / "bridge_summary.json")
     assert bridge["research_bundle_integrity"]["verification_status"] == "pass"
     bridge_markdown = (out_dir / "bridge_summary.md").read_text(encoding="utf-8")
     assert "Bundle verification: `pass`" in bridge_markdown
+    bridge_html = (out_dir / "bridge_summary.html").read_text(encoding="utf-8")
+    assert "External Evidence Bridge Summary" in bridge_html
+    assert "Research bundle" in bridge_html
 
 
 def test_evidence_from_langfuse_pairs_by_example_id(tmp_path: Path) -> None:

@@ -54,7 +54,7 @@ After importing an external baseline/candidate export, PCL writes:
 - `evidence_card.html/md/json`: a compact reviewer-facing evidence card.
 - `claim_check.html/md/json`: a direct answer to which claim scope the current
   evidence tier supports.
-- `bridge_summary.md/json`: a concise explanation of what the external tool
+- `bridge_summary.html/md/json`: a concise explanation of what the external tool
   supplied, what PCL added, and what evidence is still missing.
 - `report.html`: a local report that can be archived with the run.
 
@@ -94,7 +94,7 @@ Open `ecosystem_scorecard.html` first when you need a reviewer-facing cross-tool
 positioning table: what each external tool is good at, what PCL adds, and which paper
 diagnostics are still missing. It also links to each bridge summary, evidence card, claim
 check, HTML report, and gap artifact when available. Use `ecosystem_scorecard.md` for
-plain-text review. Then open each `bridge_summary.md` for tool-specific provenance.
+plain-text review. Then open each `bridge_summary.html` for tool-specific provenance.
 You can also open the root directory in the local UI with
 `pcl ui --runs runs/ecosystem-demo`; the Research Overview will show one row per
 external-tool evidence bundle.
@@ -126,7 +126,7 @@ pcl evidence-audit \
 ```
 
 Open `evidence_audit_result.json` first when automation needs the summary. Open
-`bridge_summary.md`, `research_gap_status.html`, and `research_bundle_verification.html` when a
+`bridge_summary.html`, `research_gap_status.html`, and `research_bundle_verification.html` when a
 human reviewer needs the evidence trail.
 
 The demo automatically audits the bundle against the paper-derived evidence map.
@@ -238,7 +238,7 @@ The example files are intentionally tiny. A generated evidence card may say
 claims. That is a feature, not a bug: PCL should make missing evidence visible
 instead of turning a small smoke test into a benchmark claim.
 
-Start with `bridge_summary.md` when explaining the ecosystem relationship to a
+Start with `bridge_summary.html` when explaining the ecosystem relationship to a
 teammate, open `research_bundle.html` for reviewer navigation, open
 `claim_check.html` when deciding what you can safely say, then open
 `evidence_card.html` when reviewing the actual prompt optimization evidence. The

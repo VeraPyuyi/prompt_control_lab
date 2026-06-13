@@ -230,7 +230,7 @@ gate decision、risk level、改动文件、测试、audit path、gate path，�
 说明什么问题：外部 eval / observability 导出是否已经被转换成可审查的 PCL 证据包，
 还缺哪些研究诊断，以及当前链接的证据包是否通过了最新一次本地哈希验证。
 
-## `bridge_summary.json` / `bridge_summary.md`
+## `bridge_summary.json` / `bridge_summary.md` / `bridge_summary.html`
 
 由 `pcl evidence-from` 写出。
 

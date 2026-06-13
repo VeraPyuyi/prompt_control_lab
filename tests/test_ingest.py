@@ -309,6 +309,7 @@ def test_evidence_from_promptfoo_generates_comparison_bundle(tmp_path: Path) -> 
         "comparison/report.html",
         "bridge_summary.json",
         "bridge_summary.md",
+        "bridge_summary.html",
         "claim_check.json",
         "claim_check.md",
         "claim_check.html",
@@ -379,6 +380,10 @@ def test_evidence_from_promptfoo_generates_comparison_bundle(tmp_path: Path) -> 
     assert "research_diagnostics.html" in bridge_markdown
     assert "research_gap_plan.html" in bridge_markdown
     assert "pcl soft-hard" in bridge_markdown
+    bridge_html = (out_dir / "bridge_summary.html").read_text(encoding="utf-8")
+    assert "External Evidence Bridge Summary" in bridge_html
+    assert "Promptfoo" in bridge_html
+    assert "research_bundle.html" in bridge_html
 
 
 def test_ingest_langfuse_observations_writes_pcl_run(tmp_path: Path) -> None:

@@ -252,7 +252,7 @@ statistics, reports, or paper-derived diagnostics on top.
 
 ## `evidence_from_result.json`
 
-Written by `pcl evidence-from`. This one-command bridge imports a baseline export and a
+Written by `pcl evidence-from` and updated by `pcl evidence-audit`. This one-command bridge imports a baseline export and a
 candidate export from Promptfoo, DeepEval, Langfuse, or LangSmith, snapshots them under `imports/`,
 runs a PCL comparison under `comparison/`, copies the headline `evidence_card.md`,
 `evidence_card.html`, `claim_check.md`, `claim_check.html`, `report.html`, `stats.json`, and
@@ -292,9 +292,9 @@ What it explains: whether an external eval or observability export has been turn
 reviewable PCL evidence bundle, which research diagnostics are still missing, and whether the
 linked evidence package has passed the latest local hash verification.
 
-## `bridge_summary.json` / `bridge_summary.md`
+## `bridge_summary.json` / `bridge_summary.md` / `bridge_summary.html`
 
-Written by `pcl evidence-from`.
+Written by `pcl evidence-from` and updated by `pcl evidence-audit`.
 
 What it explains: the division of labor between the external source tool and PCL. It records which
 tool supplied the eval or trace export, what PCL added on top, the main paired statistics,

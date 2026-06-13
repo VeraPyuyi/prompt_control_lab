@@ -106,7 +106,7 @@ research diagnostics layer on top:
 pcl ecosystem-demo --examples examples/external --out runs/ecosystem-demo
 
 # Then open ecosystem_scorecard.html first, followed by research_bundle.html
-# and each tool-specific bridge_summary.md.
+# and each tool-specific bridge_summary.html.
 
 # If you edit the bundle later, refresh the cross-tool scorecard directly.
 pcl ecosystem-scorecard --run runs/ecosystem-demo
@@ -171,10 +171,10 @@ pcl claim-check \
 
 `pcl evidence-from` writes a self-contained bridge directory: `imports/` keeps the external-tool
 baseline/candidate snapshots, `comparison/` keeps the PCL paired statistics and prompt-only
-validity audit, and the root directory exposes `bridge_summary.md`, `research_bundle.html`,
+validity audit, and the root directory exposes `bridge_summary.html`, `research_bundle.html`,
 `evidence_card.html`, `claim_check.html`, `research_diagnostics.html`, `research_gap_plan.html`, review-first command
 scripts, `report.html`, and `evidence_from_result.json` for reviewers. Start with
-`bridge_summary.md` to see what the external tool supplied, what PCL added, and which evidence is
+`bridge_summary.html` to see what the external tool supplied, what PCL added, and which evidence is
 still missing. Use `research_bundle.html` as the browser-first reviewer entry, then
 `research_diagnostics.html` to see which paper-derived diagnostics are present
 or still missing, and which copy-paste commands can close each missing gap, without fabricating
@@ -196,7 +196,7 @@ The refreshed `research_bundle.json` records the visible artifact inventory plus
 shared.
 The `--verify` mode does not refresh hashes first; it verifies the existing bundle and writes
 `research_bundle_verification.json/md/html` so tampering or accidental edits show up as mismatches.
-`bridge_summary.md` and `ecosystem_scorecard.html` surface this bundle integrity summary so the
+`bridge_summary.html` and `ecosystem_scorecard.html` surface this bundle integrity summary so the
 cross-tool view shows not only what PCL adds, but whether the linked evidence package is hashed and
 whether the last verification passed.
 

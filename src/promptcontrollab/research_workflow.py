@@ -814,6 +814,11 @@ def _bundle_status(
 def _bundle_review_order(run_dir: Path) -> list[JsonDict]:
     candidates = [
         (
+            "Bridge summary",
+            "bridge_summary.html",
+            "External-tool provenance, PCL-added evidence, and next review actions.",
+        ),
+        (
             "Start here",
             "research_diagnostics.html",
             "Paper-derived diagnostic coverage and missing evidence.",
@@ -857,6 +862,9 @@ def _bundle_artifacts(run_dir: Path) -> list[JsonDict]:
         "research_diagnostics.html",
         "research_diagnostics.md",
         "research_diagnostics.json",
+        "bridge_summary.html",
+        "bridge_summary.md",
+        "bridge_summary.json",
         "evidence_card.html",
         "evidence_card.md",
         "evidence_card.json",
@@ -1429,7 +1437,9 @@ def _summarize_external_bundle(*, run_dir: Path, fallback: JsonDict) -> JsonDict
         "paper_gap_remediation": paper_gap_remediation,
         "missing_evidence": bridge.get("missing_evidence", fallback.get("missing_evidence", [])),
         "next_actions": bridge.get("next_actions", fallback.get("next_actions", [])),
-        "bridge_summary_path": str(run_dir / "bridge_summary.md")
+        "bridge_summary_path": str(run_dir / "bridge_summary.html")
+        if (run_dir / "bridge_summary.html").exists()
+        else str(run_dir / "bridge_summary.md")
         if (run_dir / "bridge_summary.md").exists()
         else fallback.get("bridge_summary_path"),
         "report_html_path": str(run_dir / "report.html")

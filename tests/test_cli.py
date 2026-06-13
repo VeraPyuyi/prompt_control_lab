@@ -409,6 +409,7 @@ def test_cli_ecosystem_demo_runs_all_external_bridge_examples(tmp_path: Path) ->
         == "not_checked"
     )
     promptfoo_links = scorecard["rows"][0]["artifact_links"]
+    assert {"label": "Bridge summary", "path": "promptfoo/bridge_summary.html"} in promptfoo_links
     assert {"label": "Research bundle", "path": "promptfoo/research_bundle.html"} in promptfoo_links
     assert {"label": "Evidence card", "path": "promptfoo/evidence_card.html"} in promptfoo_links
     assert {"label": "Claim check", "path": "promptfoo/claim_check.html"} in promptfoo_links
@@ -419,14 +420,14 @@ def test_cli_ecosystem_demo_runs_all_external_bridge_examples(tmp_path: Path) ->
     assert "Bundle integrity" in scorecard_markdown
     assert "hashed; present" in scorecard_markdown
     assert "verify not_checked" in scorecard_markdown
-    assert "promptfoo/bridge_summary.md" in scorecard_markdown
+    assert "promptfoo/bridge_summary.html" in scorecard_markdown
     assert "[Research bundle](promptfoo/research_bundle.html)" in scorecard_markdown
     assert "[Evidence card](promptfoo/evidence_card.html)" in scorecard_markdown
     assert "[Claim check](promptfoo/claim_check.html)" in scorecard_markdown
     scorecard_html = (out / "ecosystem_scorecard.html").read_text(encoding="utf-8")
     assert "Ecosystem Scorecard" in scorecard_html
     assert "DeepEval" in scorecard_html
-    assert "promptfoo/bridge_summary.md" in scorecard_html
+    assert "promptfoo/bridge_summary.html" in scorecard_html
     assert "Bundle integrity" in scorecard_html
     assert "hashed; present" in scorecard_html
     assert "verify not_checked" in scorecard_html
@@ -451,7 +452,7 @@ def test_cli_ecosystem_demo_runs_all_external_bridge_examples(tmp_path: Path) ->
     assert promptfoo_row["research_bundle_integrity"]["verification_mismatch_count"] == 0
     assert promptfoo_row["gap_missing_count"] > 0
     assert promptfoo_row["gap_status_path"] == "promptfoo/research_gap_status.html"
-    assert "promptfoo/bridge_summary.md" in (out / "ecosystem_scorecard.md").read_text(
+    assert "promptfoo/bridge_summary.html" in (out / "ecosystem_scorecard.md").read_text(
         encoding="utf-8"
     )
     assert "needs_work" in (out / "ecosystem_scorecard.md").read_text(encoding="utf-8")
@@ -473,6 +474,7 @@ def test_cli_ecosystem_demo_runs_all_external_bridge_examples(tmp_path: Path) ->
         tool_dir = out / tool
         assert (tool_dir / "evidence_from_result.json").exists()
         assert (tool_dir / "bridge_summary.md").exists()
+        assert (tool_dir / "bridge_summary.html").exists()
         assert (tool_dir / "claim_check.md").exists()
         assert (tool_dir / "claim_check.html").exists()
         assert (tool_dir / "evidence_card.html").exists()

@@ -39,7 +39,7 @@ Promptfoo、DeepEval、LangSmith 和 Langfuse 分别擅长 LLM 工程流程里�
 - `comparison/comparison_validity.json`：检查 prompt identity、model identity、split hash、metric identity、统计证据和 slice regression。
 - `evidence_card.html/md/json`：给 reviewer 快速阅读的证据卡。
 - `claim_check.html/md/json`：直接说明当前 evidence tier 最多能支持哪一层 claim scope。
-- `bridge_summary.md/json`：简短说明外部工具提供了什么、PCL 补了什么、还缺哪些证据。
+- `bridge_summary.html/md/json`：简短说明外部工具提供了什么、PCL 补了什么、还缺哪些证据。
 - `report.html`：可以和本次 run 一起归档的本地报告。
 
 这条桥接链路适合这些问题：
@@ -75,7 +75,7 @@ evidence bundle：
 如果要向团队解释定位，建议先打开根目录里的 `ecosystem_scorecard.html`。它会按工具列出：
 外部工具擅长什么、PCL 补了什么、还缺哪些论文诊断。`ecosystem_scorecard.md` 仍适合
 纯文本 review。它还会在文件存在时直接链接到每个工具的 bridge summary、evidence card、
-claim check、HTML report 和 gap artifact。然后再打开每个目录里的 `bridge_summary.md`
+claim check、HTML report 和 gap artifact。然后再打开每个目录里的 `bridge_summary.html`
 看工具级 provenance。
 也可以用 `pcl ui --runs runs/ecosystem-demo` 打开根目录；Research Overview
 会按外部工具逐行展示每套 evidence bundle。
@@ -103,7 +103,7 @@ pcl evidence-audit \
   --out runs/from-promptfoo-audit
 ```
 
-自动化场景建议先读 `evidence_audit_result.json`；人工审查建议打开 `bridge_summary.md`、
+自动化场景建议先读 `evidence_audit_result.json`；人工审查建议打开 `bridge_summary.html`、
 `research_gap_status.html` 和 `research_bundle_verification.html`。
 
 demo 会自动按论文证据地图审计整套 bundle。如果之后手动改过 bundle，可以重新运行：
@@ -200,5 +200,5 @@ pcl evidence-from \
 
 示例文件故意很小。生成的 evidence card 可能会显示 `needs_review`，因为 4 条样本不足以支撑强统计结论。这是预期行为：PCL 应该把缺失证据暴露出来，而不是把 smoke test 包装成 benchmark。
 
-如果要向团队解释生态关系，建议先打开 `bridge_summary.md`；如果要判断当前结果能安全声称什么，打开 `claim_check.html`；如果要审查具体 prompt
+如果要向团队解释生态关系，建议先打开 `bridge_summary.html`；如果要判断当前结果能安全声称什么，打开 `claim_check.html`；如果要审查具体 prompt
 优化证据，再打开 `evidence_card.html`。Markdown 文件仍然适合纯文本 review。

@@ -120,6 +120,7 @@ def run_ecosystem_demo(
                 "next_actions": bridge.get("next_actions", []),
                 "result_path": str(tool_dir / "evidence_from_result.json"),
                 "bridge_summary_path": str(tool_dir / "bridge_summary.md"),
+                "bridge_summary_html_path": str(tool_dir / "bridge_summary.html"),
                 "report_html_path": str(tool_dir / "report.html"),
             }
         )
@@ -134,7 +135,7 @@ def run_ecosystem_demo(
         ),
         "runs": runs,
         "next_steps": [
-            "Open each bridge_summary.md to see what the external tool supplied.",
+            "Open each bridge_summary.html to see what the external tool supplied.",
             "Open each evidence_card.html to inspect the prompt optimization evidence.",
             "Open each claim_check.html to see the strongest supported claim.",
             "Open report.html or the local UI Research Overview for reviewer-facing inspection.",
@@ -211,7 +212,7 @@ def _write_scorecard(
         "recommended_review_order": [
             "Open ecosystem_scorecard.html for the cross-tool summary.",
             "Use ecosystem_scorecard.md for plain-text review.",
-            "Open each bridge_summary.md for tool-specific provenance.",
+            "Open each bridge_summary.html for tool-specific provenance.",
             "Open evidence_card.html and claim_check.html before making an optimization claim.",
             "Open research_gap_plan.html, run the reviewed commands, then run pcl gap-status.",
         ],
@@ -287,7 +288,10 @@ def _scorecard_rows(*, out_dir: Path, payload: JsonDict, diagnostics: JsonDict) 
                 )
                 if _preferred_artifact(tool_dir, "research_gap_status", "html", "md").exists()
                 else "",
-                "open_first": _relative_to(out_dir, tool_dir / "bridge_summary.md"),
+                "open_first": _relative_to(
+                    out_dir,
+                    _preferred_artifact(tool_dir, "bridge_summary", "html", "md"),
+                ),
                 "artifact_links": artifact_links,
             }
         )
@@ -296,7 +300,7 @@ def _scorecard_rows(*, out_dir: Path, payload: JsonDict, diagnostics: JsonDict) 
 
 def _scorecard_artifact_links(*, out_dir: Path, tool_dir: Path) -> list[JsonDict]:
     candidates = [
-        ("Bridge summary", tool_dir / "bridge_summary.md"),
+        ("Bridge summary", _preferred_artifact(tool_dir, "bridge_summary", "html", "md")),
         ("Research bundle", tool_dir / "research_bundle.html"),
         ("Evidence card", _preferred_artifact(tool_dir, "evidence_card", "html", "md")),
         ("Claim check", _preferred_artifact(tool_dir, "claim_check", "html", "md")),
@@ -903,7 +907,7 @@ def _render_readme(payload: JsonDict) -> str:
                         str(run.get("validity", "")),
                         str(run.get("evidence_tier", "")),
                         str(run.get("claim_check_status", "")),
-                        f"[bridge_summary.md]({tool}/bridge_summary.md)",
+                        f"[bridge_summary.html]({tool}/bridge_summary.html)",
                     ]
                 )
                 + " |"
@@ -913,7 +917,7 @@ def _render_readme(payload: JsonDict) -> str:
             "",
             "## Suggested review order",
             "",
-            "1. Read `bridge_summary.md` for each tool.",
+            "1. Open `bridge_summary.html` for each tool.",
             "2. Open `research_bundle.html` for reviewer navigation.",
             "3. Check `evidence_card.html` for protocol and statistical evidence.",
             "4. Check `claim_check.html` before making any prompt optimization claim.",
