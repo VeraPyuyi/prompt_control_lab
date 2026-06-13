@@ -53,6 +53,7 @@ from promptcontrollab.prompt_improver import improve_prompt
 from promptcontrollab.reporting import generate_report
 from promptcontrollab.research_workflow import (
     run_research_diagnostics,
+    verify_research_bundle_index,
     write_research_bundle_index,
     write_research_demo,
     write_research_gap_status,
@@ -749,6 +750,11 @@ def build_parser() -> argparse.ArgumentParser:
         help="Refresh research_bundle.json/html for a run directory.",
     )
     research_bundle_parser.add_argument("--run", type=Path, required=True, help="Run directory.")
+    research_bundle_parser.add_argument(
+        "--verify",
+        action="store_true",
+        help="Verify hashes in the existing bundle instead of refreshing it.",
+    )
     research_bundle_parser.set_defaults(func=_cmd_research_bundle)
 
     diagnose_parser = subcommands.add_parser(
@@ -1538,7 +1544,10 @@ def _cmd_research_demo(args: argparse.Namespace) -> None:
 
 
 def _cmd_research_bundle(args: argparse.Namespace) -> None:
-    payload = write_research_bundle_index(args.run)
+    if args.verify:
+        payload = verify_research_bundle_index(args.run)
+    else:
+        payload = write_research_bundle_index(args.run)
     print(json.dumps(payload, indent=2, ensure_ascii=False, sort_keys=True))
 
 

@@ -652,6 +652,87 @@ def write_research_bundle_index(run_dir: Path) -> JsonDict:
     return payload
 
 
+def verify_research_bundle_index(run_dir: Path) -> JsonDict:
+    """Verify hashes recorded in an existing research bundle index."""
+
+    bundle_path = run_dir / "research_bundle.json"
+    if not bundle_path.exists():
+        msg = f"Research bundle index does not exist: {bundle_path}"
+        raise ValueError(msg)
+    bundle = read_json(bundle_path)
+    artifacts = bundle.get("artifacts")
+    rows = artifacts if isinstance(artifacts, list) else []
+    results = [_verify_bundle_artifact(run_dir=run_dir, item=item) for item in rows]
+    checked = [item for item in results if item.get("status") in {"ok", "mismatch", "missing"}]
+    mismatches = [item for item in results if item.get("status") == "mismatch"]
+    missing = [item for item in results if item.get("status") == "missing"]
+    payload: JsonDict = {
+        "kind": "research_bundle_verification",
+        "run_dir": str(run_dir),
+        "bundle_path": str(bundle_path),
+        "status": "pass" if not mismatches and not missing else "fail",
+        "checked_count": len(checked),
+        "ok_count": sum(1 for item in results if item.get("status") == "ok"),
+        "mismatch_count": len(mismatches),
+        "missing_count": len(missing),
+        "unchecked_count": sum(1 for item in results if item.get("status") == "unchecked"),
+        "self_index_count": sum(1 for item in results if item.get("status") == "self_index"),
+        "results": results,
+        "boundary": (
+            "This check verifies recorded SHA-256 values for linked evidence artifacts. "
+            "It is tamper-evidence for this local bundle, not a cryptographic signature "
+            "or proof of scientific sufficiency."
+        ),
+    }
+    write_json(run_dir / "research_bundle_verification.json", payload)
+    (run_dir / "research_bundle_verification.md").write_text(
+        _render_research_bundle_verification_markdown(payload),
+        encoding="utf-8",
+    )
+    (run_dir / "research_bundle_verification.html").write_text(
+        render_research_bundle_verification_html(payload),
+        encoding="utf-8",
+    )
+    return payload
+
+
+def _verify_bundle_artifact(*, run_dir: Path, item: object) -> JsonDict:
+    if not isinstance(item, dict):
+        return {"path": "", "status": "unchecked", "reason": "invalid artifact row"}
+    relative = str(item.get("path") or "")
+    path = run_dir / relative
+    expected = item.get("sha256")
+    if item.get("generated_index_artifact"):
+        return {
+            "path": relative,
+            "status": "self_index",
+            "expected_sha256": expected,
+            "reason": "generated index artifacts are not self-hashed",
+        }
+    if not expected:
+        return {
+            "path": relative,
+            "status": "unchecked",
+            "expected_sha256": None,
+            "reason": "no recorded sha256",
+        }
+    if not path.exists() or not path.is_file():
+        return {
+            "path": relative,
+            "status": "missing",
+            "expected_sha256": expected,
+            "actual_sha256": None,
+        }
+    actual = _sha256_file(path)
+    return {
+        "path": relative,
+        "status": "ok" if actual == expected else "mismatch",
+        "expected_sha256": expected,
+        "actual_sha256": actual,
+        "bytes": path.stat().st_size,
+    }
+
+
 def build_research_bundle_index(run_dir: Path) -> JsonDict:
     """Collect known research artifacts into one navigable index payload."""
 
@@ -770,6 +851,9 @@ def _bundle_artifacts(run_dir: Path) -> list[JsonDict]:
     names = [
         "research_bundle.html",
         "research_bundle.json",
+        "research_bundle_verification.html",
+        "research_bundle_verification.md",
+        "research_bundle_verification.json",
         "research_diagnostics.html",
         "research_diagnostics.md",
         "research_diagnostics.json",
@@ -898,6 +982,77 @@ def render_research_bundle_index_html(payload: JsonDict) -> str:
             _section("Boundary", _paragraph(payload.get("boundary"))),
         ],
     )
+
+
+def _render_research_bundle_verification_markdown(payload: JsonDict) -> str:
+    lines = [
+        "# Research Bundle Verification",
+        "",
+        f"- Status: `{payload.get('status')}`",
+        f"- Checked artifacts: `{payload.get('checked_count')}`",
+        f"- OK: `{payload.get('ok_count')}`",
+        f"- Mismatches: `{payload.get('mismatch_count')}`",
+        f"- Missing: `{payload.get('missing_count')}`",
+        f"- Unchecked: `{payload.get('unchecked_count')}`",
+        "",
+        "| Artifact | Status | Expected SHA-256 | Actual SHA-256 |",
+        "|---|---|---|---|",
+    ]
+    for item in _verification_rows(payload.get("results")):
+        lines.append(
+            "| "
+            + " | ".join(
+                [
+                    str(item.get("path", "")),
+                    str(item.get("status", "")),
+                    str(item.get("expected_sha256", "")),
+                    str(item.get("actual_sha256", "")),
+                ]
+            )
+            + " |"
+        )
+    lines.extend(["", str(payload.get("boundary", "")), ""])
+    return "\n".join(lines)
+
+
+def render_research_bundle_verification_html(payload: JsonDict) -> str:
+    """Render research bundle hash verification as browser-friendly HTML."""
+
+    rows = [
+        [
+            item.get("path", ""),
+            _badge(str(item.get("status", ""))),
+            item.get("expected_sha256", ""),
+            item.get("actual_sha256", ""),
+        ]
+        for item in _verification_rows(payload.get("results"))
+    ]
+    return _html_page(
+        title="Research Bundle Verification",
+        subtitle="SHA-256 verification for linked paper-evidence artifacts.",
+        body=[
+            _metric_grid(
+                [
+                    ("Status", _badge(str(payload.get("status", "")))),
+                    ("Checked", payload.get("checked_count", "")),
+                    ("OK", payload.get("ok_count", "")),
+                    ("Mismatches", payload.get("mismatch_count", "")),
+                    ("Missing", payload.get("missing_count", "")),
+                ]
+            ),
+            _section(
+                "Artifact Hash Checks",
+                _table(["Artifact", "Status", "Expected SHA-256", "Actual SHA-256"], rows),
+            ),
+            _section("Boundary", _paragraph(payload.get("boundary"))),
+        ],
+    )
+
+
+def _verification_rows(value: object) -> list[JsonDict]:
+    if not isinstance(value, list):
+        return []
+    return [item for item in value if isinstance(item, dict)]
 
 
 def _gap_status_row(*, run_dir: Path, action: JsonDict) -> JsonDict:

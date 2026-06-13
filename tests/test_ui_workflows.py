@@ -404,6 +404,12 @@ def test_cli_export_report_zip_contains_known_artifacts(tmp_path: Path) -> None:
     _write(run_dir / "claim_check.html", "<h1>claim</h1>\n")
     _write_json(run_dir / "research_bundle.json", {"kind": "research_bundle_index"})
     _write(run_dir / "research_bundle.html", "<h1>bundle</h1>\n")
+    _write_json(
+        run_dir / "research_bundle_verification.json",
+        {"kind": "research_bundle_verification"},
+    )
+    _write(run_dir / "research_bundle_verification.md", "# verification\n")
+    _write(run_dir / "research_bundle_verification.html", "<h1>verification</h1>\n")
     _write_json(run_dir / "research_gap_plan.json", {"kind": "research_gap_plan"})
     _write(run_dir / "research_gap_plan.md", "# gap plan\n")
     _write(run_dir / "research_gap_plan.html", "<h1>gap plan</h1>\n")
@@ -433,6 +439,9 @@ def test_cli_export_report_zip_contains_known_artifacts(tmp_path: Path) -> None:
         "manifest.json",
         "research_bundle.json",
         "research_bundle.html",
+        "research_bundle_verification.json",
+        "research_bundle_verification.md",
+        "research_bundle_verification.html",
         "research_diagnostics.html",
         "research_gap_commands.ps1",
         "research_gap_commands.sh",

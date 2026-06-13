@@ -166,10 +166,13 @@ prompt optimization 主张。请使用新的或空的 `--out` 目录，避免旧
 
 ```bash
 pcl research-bundle --run runs/from-promptfoo-evidence
+pcl research-bundle --run runs/from-promptfoo-evidence --verify
 ```
 
 刷新后的 `research_bundle.json` 会记录 artifact 清单，并为已存在的证据文件写入 `bytes`
 和 `sha256`，方便 reviewer 判断共享之后证据包是否发生过变化。
+`--verify` 模式不会先刷新哈希；它会验证现有 bundle，并写出
+`research_bundle_verification.json/md/html`，让篡改或误改显示为 mismatch。
 `bridge_summary.md` 和 `ecosystem_scorecard.html` 也会展示这份 bundle integrity 摘要，让跨工具视图不仅说明 PCL 补了什么，还说明被链接的证据包是否可审计。
 
 运行建议的诊断命令之后，可以用下面的命令检查缺口是否真的补齐：

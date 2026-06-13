@@ -308,6 +308,7 @@ bundle index directly with:
 
 ```bash
 pcl research-bundle --run runs/from-promptfoo-evidence
+pcl research-bundle --run runs/from-promptfoo-evidence --verify
 ```
 
 What it explains: the browser-first review order for the current research evidence bundle. It
@@ -318,6 +319,12 @@ linked evidence files include `bytes` and `sha256` fields so reviewers can audit
 changed after it was shared. The self-generated `research_bundle.html/json` files are marked as
 generated index artifacts instead of being self-hashed. This file is only a navigation aid: it does
 not add evidence beyond the linked artifacts.
+
+The `--verify` mode reads the existing `research_bundle.json` without refreshing it first. It writes
+`research_bundle_verification.json`, `.md`, and `.html`, including `status`, `checked_count`,
+`ok_count`, `mismatch_count`, `missing_count`, and one row per recorded hash. Use it after sharing a
+bundle to detect local edits or stale evidence files. It is tamper-evidence for the recorded local
+artifacts, not a cryptographic signature.
 
 ## `research_gap_plan.json` / `research_gap_plan.md` / `research_gap_plan.html`
 

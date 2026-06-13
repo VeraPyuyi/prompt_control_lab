@@ -176,11 +176,14 @@ Refresh the browser-first evidence index after adding diagnostics or importing e
 
 ```bash
 pcl research-bundle --run runs/from-promptfoo-evidence
+pcl research-bundle --run runs/from-promptfoo-evidence --verify
 ```
 
 The refreshed `research_bundle.json` records the visible artifact inventory plus `bytes` and
 `sha256` for linked evidence files, so a reviewer can tell whether the bundle changed after it was
 shared.
+The `--verify` mode does not refresh hashes first; it verifies the existing bundle and writes
+`research_bundle_verification.json/md/html` so tampering or accidental edits show up as mismatches.
 `bridge_summary.md` and `ecosystem_scorecard.html` surface this bundle integrity summary so the
 cross-tool view shows not only what PCL adds, but whether the linked evidence package is auditable.
 

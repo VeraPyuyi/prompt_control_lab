@@ -61,6 +61,10 @@ def test_research_demo_generates_paper_diagnostics(tmp_path: Path) -> None:
     assert main(["research-bundle", "--run", str(run_dir)]) == 0
     refreshed_bundle = read_json(run_dir / "research_bundle.json")
     assert refreshed_bundle["hashed_artifact_count"] >= bundle["hashed_artifact_count"]
+    assert main(["research-bundle", "--run", str(run_dir), "--verify"]) == 0
+    verification = read_json(run_dir / "research_bundle_verification.json")
+    assert verification["status"] == "pass"
+    assert verification["mismatch_count"] == 0
     evidence = read_json(run_dir / "evidence_card.json")
     assert evidence["kind"] == "prompt_optimization_evidence_card"
     assert evidence["sections"]["hidden_state_diagnostics"]["input_source"] == "synthetic_demo"
@@ -132,6 +136,19 @@ def test_research_bundle_refresh_writes_hashes(tmp_path: Path) -> None:
         "self_index_not_hashed",
     }
     assert (run_dir / "research_bundle.html").exists()
+    assert main(["research-bundle", "--run", str(run_dir), "--verify"]) == 0
+    verification = read_json(run_dir / "research_bundle_verification.json")
+    assert verification["status"] == "pass"
+    assert verification["checked_count"] == 2
+    assert (run_dir / "research_bundle_verification.md").exists()
+    assert (run_dir / "research_bundle_verification.html").exists()
+
+    (run_dir / "evidence_card.json").write_text('{"recommendation": "changed"}', encoding="utf-8")
+    assert main(["research-bundle", "--run", str(run_dir), "--verify"]) == 0
+    changed = read_json(run_dir / "research_bundle_verification.json")
+    assert changed["status"] == "fail"
+    assert changed["mismatch_count"] == 1
+    assert _verification_result(changed, "evidence_card.json")["status"] == "mismatch"
 
 
 def test_diagnose_reuses_research_demo_inputs(tmp_path: Path) -> None:
@@ -316,3 +333,12 @@ def _artifact(bundle: dict[str, Any], path: str) -> dict[str, Any]:
         if isinstance(artifact, dict) and artifact.get("path") == path:
             return artifact
     raise AssertionError(f"missing artifact {path}")
+
+
+def _verification_result(payload: dict[str, Any], path: str) -> dict[str, Any]:
+    results = payload.get("results")
+    assert isinstance(results, list)
+    for result in results:
+        if isinstance(result, dict) and result.get("path") == path:
+            return result
+    raise AssertionError(f"missing verification result {path}")

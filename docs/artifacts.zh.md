@@ -232,9 +232,14 @@ gate decision、risk level、改动文件、测试、audit path、gate path，�
 
 ```bash
 pcl research-bundle --run runs/from-promptfoo-evidence
+pcl research-bundle --run runs/from-promptfoo-evidence --verify
 ```
 
 说明什么问题：当前研究证据包应该按什么顺序审查。它会在文件存在时链接到 `research_diagnostics.html`、`evidence_card.html`、`claim_check.html`、`research_gap_plan.html`、`research_gap_status.html` 和 `report.html`，并记录仍然缺失的 HTML artifact、简短状态和 artifact 清单。已存在的证据文件会包含 `bytes` 和 `sha256` 字段，方便 reviewer 判断证据包在共享之后是否变化过。`research_bundle.html/json` 自身会标记为生成索引文件，不做自引用哈希。这个文件只是浏览器导航入口，不会在被链接的 artifact 之外新增证据。
+
+`--verify` 模式会读取已有的 `research_bundle.json`，不会先刷新哈希。它会写出
+`research_bundle_verification.json`、`.md` 和 `.html`，包含 `status`、`checked_count`、
+`ok_count`、`mismatch_count`、`missing_count`，以及每个已记录哈希的检查结果。共享证据包之后可以用它检查本地文件是否被改动或变旧。它提供的是本地 artifact 的篡改迹象检查，不是加密签名。
 
 ## `research_gap_plan.json` / `research_gap_plan.md` / `research_gap_plan.html`
 
