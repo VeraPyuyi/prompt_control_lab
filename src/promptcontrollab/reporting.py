@@ -284,7 +284,11 @@ def _evidence_card_lines(payload: JsonDict) -> list[str]:
         "## Prompt Optimization Evidence Card",
         "",
         f"- Evidence recommendation: `{payload.get('recommendation', 'needs_review')}`",
+        f"- Evidence tier: `{payload.get('evidence_tier', 'unknown')}`",
+        f"- Claim scope: {payload.get('claim_scope', '')}",
+        f"- Safe claim language: {payload.get('claim_language', '')}",
         f"- Evidence summary: {payload.get('summary', '')}",
+        f"- Next tier missing: `{payload.get('next_tier_missing', [])}`",
         f"- Missing evidence: `{missing if isinstance(missing, list) else []}`",
         f"- Section statuses: `{', '.join(section_statuses)}`",
         "",
@@ -458,10 +462,14 @@ def _prompt_only_validity(markdown: str) -> str:
 
 def _prompt_evidence_summary(markdown: str) -> str:
     recommendation = _markdown_field(markdown, "Evidence recommendation") or "missing"
+    tier = _markdown_field(markdown, "Evidence tier") or "unknown"
+    scope = _markdown_field(markdown, "Claim scope") or "unknown"
     summary = _markdown_field(markdown, "Evidence summary") or "Run `pcl evidence-card`."
     missing = _markdown_field(markdown, "Missing evidence") or "unknown"
     return (
         f"Recommendation: {html.escape(recommendation)}<br>"
+        f"Tier: {html.escape(tier)}<br>"
+        f"Scope: {html.escape(scope)}<br>"
         f"Summary: {html.escape(summary)}<br>"
         f"Missing: {html.escape(missing)}"
     )

@@ -27,11 +27,16 @@ def build_evidence_card(run_dir: Path) -> JsonDict:
         if isinstance(section, dict) and section.get("status") == "missing"
     ]
     recommendation = _recommendation(sections)
+    tier = _evidence_tier(sections, recommendation)
     return {
         "kind": "prompt_optimization_evidence_card",
         "run_dir": str(run_dir),
         "recommendation": recommendation,
-        "summary": _summary(recommendation, sections, missing),
+        "evidence_tier": tier["evidence_tier"],
+        "claim_scope": tier["claim_scope"],
+        "claim_language": tier["claim_language"],
+        "next_tier_missing": tier["next_tier_missing"],
+        "summary": _summary(recommendation, sections, missing, tier),
         "sections": sections,
         "missing_artifacts": missing,
         "artifacts": model.artifacts,
@@ -72,7 +77,11 @@ def render_evidence_card_markdown(card: JsonDict) -> str:
         "# Prompt Optimization Evidence Card",
         "",
         f"- Recommendation: `{card.get('recommendation', 'needs_review')}`",
+        f"- Evidence tier: `{card.get('evidence_tier', 'unknown')}`",
+        f"- Claim scope: {card.get('claim_scope', '')}",
+        f"- Safe claim language: {card.get('claim_language', '')}",
         f"- Summary: {card.get('summary', '')}",
+        f"- Next tier missing: `{card.get('next_tier_missing', [])}`",
         f"- Run directory: `{card.get('run_dir', '')}`",
         "",
         "## Protocol hygiene",
@@ -253,8 +262,108 @@ def _recommendation(sections: dict[str, JsonDict]) -> str:
     return "supported" if all(required) else "needs_review"
 
 
-def _summary(recommendation: str, sections: dict[str, JsonDict], missing: list[str]) -> str:
+def _evidence_tier(sections: dict[str, JsonDict], recommendation: str) -> JsonDict:
+    if recommendation in {"not_supported", "insufficient_evidence"}:
+        return {
+            "evidence_tier": "tier_0_insufficient_or_contradicted",
+            "claim_scope": "No positive prompt-optimization claim is supported.",
+            "claim_language": (
+                "The recorded artifacts are insufficient or contradictory; inspect blocking "
+                "issues before making a prompt-improvement claim."
+            ),
+            "next_tier_missing": _missing_for_sections(
+                sections,
+                ["statistical_evidence", "comparison_validity"],
+            ),
+        }
+
+    statistical_status = sections["statistical_evidence"].get("status")
+    validity = sections["comparison_validity"].get("status")
+    has_pairing = statistical_status in {"pass", "review"} and validity in {"clean", "needs_review"}
+    has_deployment = sections["deployment_diagnostics"].get("status") != "missing"
+    has_hidden = sections["hidden_state_diagnostics"].get("status") != "missing"
+    has_riccati = sections["riccati_surrogate"].get("status") != "missing"
+    has_tv = sections["time_varying_control"].get("status") != "missing"
+    has_protocol = sections["protocol_hygiene"].get("status") != "missing"
+    research_sections = [
+        "protocol_hygiene",
+        "deployment_diagnostics",
+        "hidden_state_diagnostics",
+        "riccati_surrogate",
+        "time_varying_control",
+    ]
+
+    if has_pairing and has_protocol and has_deployment and has_hidden and has_riccati and has_tv:
+        return {
+            "evidence_tier": "tier_4_full_research_diagnostics",
+            "claim_scope": (
+                "Paired prompt comparison plus paper-derived deployment, trajectory, "
+                "Riccati, and time-varying diagnostics."
+            ),
+            "claim_language": (
+                "Recorded artifacts support the candidate within the configured research "
+                "diagnostic protocol; this is still not a proof of global prompt optimality."
+            ),
+            "next_tier_missing": [],
+        }
+
+    if has_pairing and (has_deployment or has_hidden or has_riccati or has_tv):
+        return {
+            "evidence_tier": "tier_3_partial_research_diagnostics",
+            "claim_scope": (
+                "Paired prompt comparison with some paper-derived diagnostics, but not the "
+                "full research diagnostic stack."
+            ),
+            "claim_language": (
+                "Recorded artifacts support a bounded diagnostic claim; avoid calling it a "
+                "complete prompt-control analysis until the missing diagnostics are added."
+            ),
+            "next_tier_missing": _missing_for_sections(sections, research_sections),
+        }
+
+    if has_pairing:
+        return {
+            "evidence_tier": "tier_2_paired_comparison",
+            "claim_scope": (
+                "Paired baseline/candidate output comparison with statistical and "
+                "prompt-only-validity evidence."
+            ),
+            "claim_language": (
+                "Recorded artifacts support a paired comparison claim only; they do not yet "
+                "support soft-hard, hidden-state, Riccati, or time-varying diagnostic claims."
+            ),
+            "next_tier_missing": _missing_for_sections(sections, research_sections),
+        }
+
+    return {
+        "evidence_tier": "tier_1_incomplete_comparison",
+        "claim_scope": "Partial score or artifact review without a clean paired comparison.",
+        "claim_language": (
+            "Use this as an audit trail, not as evidence that the candidate prompt improved."
+        ),
+        "next_tier_missing": _missing_for_sections(
+            sections,
+            ["statistical_evidence", "comparison_validity"],
+        ),
+    }
+
+
+def _missing_for_sections(sections: dict[str, JsonDict], names: list[str]) -> list[str]:
+    return [name for name in names if sections[name].get("status") == "missing"]
+
+
+def _summary(
+    recommendation: str,
+    sections: dict[str, JsonDict],
+    missing: list[str],
+    tier: JsonDict,
+) -> str:
     if recommendation == "supported":
+        if tier.get("evidence_tier") != "tier_4_full_research_diagnostics":
+            return (
+                "Recorded artifacts support the candidate within a bounded scope: "
+                f"{tier.get('claim_scope')}"
+            )
         return (
             "Recorded artifacts support the candidate under the configured prompt optimization "
             "evidence checks."

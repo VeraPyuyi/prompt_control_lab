@@ -77,6 +77,9 @@ def test_evidence_card_summarizes_research_and_validity_artifacts(tmp_path: Path
 
     assert card["kind"] == "prompt_optimization_evidence_card"
     assert card["recommendation"] == "supported"
+    assert card["evidence_tier"] == "tier_4_full_research_diagnostics"
+    assert "paper-derived deployment" in card["claim_scope"]
+    assert card["next_tier_missing"] == []
     assert card["sections"]["protocol_hygiene"]["status"] == "pass"
     assert card["sections"]["statistical_evidence"]["mean_delta"] == 0.18
     assert card["sections"]["comparison_validity"]["status"] == "clean"
@@ -89,6 +92,7 @@ def test_evidence_card_summarizes_research_and_validity_artifacts(tmp_path: Path
     markdown = render_evidence_card_markdown(card)
     assert "# Prompt Optimization Evidence Card" in markdown
     assert "Recommendation: `supported`" in markdown
+    assert "Evidence tier: `tier_4_full_research_diagnostics`" in markdown
     assert "Hidden-state diagnostics" in markdown
     assert "Riccati surrogate" in markdown
 
@@ -117,6 +121,8 @@ def test_cli_evidence_card_writes_json_and_markdown(tmp_path: Path) -> None:
     payload = read_json(json_out)
     assert payload["kind"] == "prompt_optimization_evidence_card"
     assert payload["recommendation"] == "needs_review"
+    assert payload["evidence_tier"] == "tier_1_incomplete_comparison"
+    assert "not as evidence" in payload["claim_language"]
     assert markdown_out.exists()
     assert "Statistical evidence" in markdown_out.read_text(encoding="utf-8")
 

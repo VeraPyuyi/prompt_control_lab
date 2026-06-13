@@ -100,6 +100,7 @@ def test_packaged_external_examples_run_evidence_from(
     bridge = read_json(out_dir / "bridge_summary.json")
     assert tool in bridge["detected_tools"]
     assert bridge["validity"] == "needs_review"
+    assert bridge["evidence_tier"] == "tier_2_paired_comparison"
 
 
 def test_evidence_from_langfuse_pairs_by_example_id(tmp_path: Path) -> None:

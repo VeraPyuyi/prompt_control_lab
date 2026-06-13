@@ -215,11 +215,15 @@ def test_evidence_from_promptfoo_generates_comparison_bundle(tmp_path: Path) -> 
     assert result["kind"] == "external_evidence"
     assert result["tool"] == "promptfoo"
     assert result["bridge_summary"]["recommendation"] == "supported"
+    assert result["bridge_summary"]["evidence_tier"] == "tier_2_paired_comparison"
     bridge = read_json(out_dir / "bridge_summary.json")
     assert bridge["kind"] == "external_bridge_summary"
     assert bridge["detected_tools"] == ["promptfoo"]
     assert "paired_bootstrap_confidence_interval" in bridge["pcl_added_evidence"]
     assert bridge["validity"] == "clean"
+    assert bridge["evidence_tier"] == "tier_2_paired_comparison"
+    assert "paired comparison claim only" in bridge["claim_language"]
+    assert "hidden_state_diagnostics" in bridge["next_tier_missing"]
     assert bridge["paired_n"] == 20
     assert "Promptfoo" in (out_dir / "bridge_summary.md").read_text(encoding="utf-8")
 

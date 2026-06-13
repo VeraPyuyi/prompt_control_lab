@@ -99,6 +99,10 @@ model identity、split hash、metric identity、成对统计证据和 slice 退�
 Riccati surrogate 状态和 time-varying soft-control 证据。`supported` 表示已记录证据与配置的检查一致；
 它不是“prompt 一定全局最优”的证明。
 
+证据卡还会记录 `evidence_tier`、`claim_scope`、`claim_language` 和
+`next_tier_missing`。这些字段用于约束可声明范围：从 Promptfoo、Langfuse 或
+LangSmith 导入的比较结果可能足以支持“成对比较”层面的结论，但仍然缺少完整论文诊断所需的 soft-hard、trajectory、Riccati 或 time-varying 证据。
+
 ## `compare_runs_result.json`
 
 由 `pcl compare-runs --baseline runs/baseline --candidate runs/candidate --out

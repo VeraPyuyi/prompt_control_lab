@@ -114,6 +114,12 @@ The card gives a bounded recommendation: `supported`, `needs_review`,
 `not_supported`, or `insufficient_evidence`. It is meant to make the evidence
 trail easy to inspect, not to claim global prompt optimality.
 
+The card also reports an evidence tier. `tier_2_paired_comparison` means the
+score comparison is paired and auditable, but it is not yet a full research
+diagnostic claim. `tier_4_full_research_diagnostics` means the artifact bundle
+also contains the paper-derived soft-hard, trajectory, Riccati, and time-varying
+diagnostics.
+
 ## 6. Soft-To-Hard Deployment Gap
 
 Soft prompts can look good during optimization but fail when projected to hard

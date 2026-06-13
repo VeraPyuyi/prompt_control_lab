@@ -131,6 +131,11 @@ soft-to-hard deployment risk, hidden-state trajectory evidence, Riccati surrogat
 time-varying soft-control evidence. A `supported` recommendation means the recorded evidence is
 consistent with the configured checks; it is not a proof of universal prompt improvement.
 
+The card also records `evidence_tier`, `claim_scope`, `claim_language`, and
+`next_tier_missing`. These fields keep the claim honest: an imported Promptfoo/Langfuse/LangSmith
+comparison may support a paired-comparison claim while still missing the full paper-derived
+soft-hard, trajectory, Riccati, or time-varying diagnostic stack.
+
 ## `compare_runs_result.json`
 
 Written by `pcl compare-runs --baseline runs/baseline --candidate runs/candidate --out

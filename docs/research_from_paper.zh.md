@@ -107,6 +107,8 @@ pcl evidence-card --run runs/candidate --out runs/candidate/evidence_card.md
 证据卡会给出有边界的推荐：`supported`、`needs_review`、`not_supported` 或
 `insufficient_evidence`。它的用途是让证据更容易审查，而不是声称找到了全局最优 prompt。
 
+证据卡还会给出 evidence tier。`tier_2_paired_comparison` 表示分数比较已经成对且可审计，但还不是完整论文诊断结论。`tier_4_full_research_diagnostics` 表示 artifact bundle 同时包含 soft-hard、trajectory、Riccati 和 time-varying 等论文诊断。
+
 ## 6. soft-to-hard 部署 gap
 
 soft prompt 在优化时可能表现很好，但投影成 hard token 后损失明显。`soft-hard` 诊断用于量化这个风险：
