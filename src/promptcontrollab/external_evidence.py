@@ -154,6 +154,7 @@ def build_external_evidence(
     payload["research_diagnostics_path"] = str(out_dir / "research_diagnostics.json")
     payload["research_diagnostics_md_path"] = str(out_dir / "research_diagnostics.md")
     payload["research_diagnostics_html_path"] = str(out_dir / "research_diagnostics.html")
+    payload["research_bundle_html_path"] = str(out_dir / "research_bundle.html")
     payload["research_diagnostic_type"] = diagnostics.get("diagnostic_type")
     _attach_gap_plan_paths(payload, diagnostics)
     bridge_summary = _attach_research_diagnostics_to_bridge_summary(
@@ -166,6 +167,9 @@ def build_external_evidence(
     )
     payload["bridge_summary"]["research_diagnostics_html_path"] = bridge_summary.get(
         "research_diagnostics_html_path"
+    )
+    payload["bridge_summary"]["research_bundle_html_path"] = bridge_summary.get(
+        "research_bundle_html_path"
     )
     payload["bridge_summary"]["research_diagnostic_type"] = bridge_summary.get(
         "research_diagnostic_type"
@@ -187,6 +191,10 @@ def build_external_evidence(
     )
     payload["next_actions"].insert(
         3,
+        "Open research_bundle.html as the browser-first research evidence index.",
+    )
+    payload["next_actions"].insert(
+        4,
         "Open research_diagnostics.html for paper-evidence gap coverage.",
     )
     write_json(out_dir / "evidence_from_result.json", payload)
@@ -210,6 +218,7 @@ def _attach_research_diagnostics_to_bridge_summary(
     payload["research_diagnostics_path"] = str(out_dir / "research_diagnostics.json")
     payload["research_diagnostics_md_path"] = str(out_dir / "research_diagnostics.md")
     payload["research_diagnostics_html_path"] = str(out_dir / "research_diagnostics.html")
+    payload["research_bundle_html_path"] = str(out_dir / "research_bundle.html")
     payload["research_diagnostic_type"] = diagnostics.get("diagnostic_type")
     payload["missing_paper_diagnostics"] = missing_list
     payload["paper_gap_remediation"] = remediation_list
@@ -221,6 +230,9 @@ def _attach_research_diagnostics_to_bridge_summary(
     payload["pcl_added_evidence"] = added_list
     next_actions = payload.get("next_actions")
     next_action_list = list(next_actions) if isinstance(next_actions, list) else []
+    bundle_action = "Open research_bundle.html as the browser-first research evidence index."
+    if bundle_action not in next_action_list:
+        next_action_list.insert(1, bundle_action)
     action = "Open research_diagnostics.html for paper-evidence gap coverage."
     if action not in next_action_list:
         next_action_list.insert(1, action)
@@ -586,6 +598,7 @@ def _render_bridge_summary(payload: JsonDict) -> str:
             "",
         ]
     )
+    bundle_path = payload.get("research_bundle_html_path")
     research_path = payload.get("research_diagnostics_html_path") or payload.get(
         "research_diagnostics_md_path"
     )
@@ -596,6 +609,7 @@ def _render_bridge_summary(payload: JsonDict) -> str:
         )
         lines.extend(
             [
+                f"- Bundle index: `{bundle_path or ''}`",
                 f"- Report: `{research_path}`",
                 f"- Diagnostic type: `{payload.get('research_diagnostic_type')}`",
                 f"- Missing paper diagnostics: `{payload.get('missing_paper_diagnostics', [])}`",

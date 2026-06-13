@@ -98,7 +98,7 @@ prompt-only 比较有效性、`evidence_card.json` / `.md` / `.html` 和 `claim_
 # 一次性运行仓库自带的 Promptfoo / DeepEval / Langfuse / LangSmith 风格导出示例。
 pcl ecosystem-demo --examples examples/external --out runs/ecosystem-demo
 
-# 然后先打开 ecosystem_scorecard.html，再看 research_diagnostics.html
+# 然后先打开 ecosystem_scorecard.html，再看 research_bundle.html
 # 和每个工具目录里的 bridge_summary.md。
 
 # 如果后续修改了 bundle，可以单独刷新跨工具定位表。
@@ -152,11 +152,12 @@ pcl claim-check \
 
 `pcl evidence-from` 会写出一个自包含桥接目录：`imports/` 保存外部工具的 baseline /
 candidate 导入快照，`comparison/` 保存 PCL 的成对统计和 prompt-only 有效性审计，
-根目录会放置 `bridge_summary.md`、`evidence_card.html`、`claim_check.html`、
+根目录会放置 `bridge_summary.md`、`research_bundle.html`、`evidence_card.html`、`claim_check.html`、
 `research_diagnostics.html`、`research_gap_plan.html`、review-first 命令脚本、`report.html`
 和 `evidence_from_result.json` 方便审查。建议先看
 `bridge_summary.md`，它会说明外部工具提供了什么、PCL 补了什么、还缺哪些证据；再看
-`research_diagnostics.html`，确认哪些论文诊断已经存在、哪些仍然缺失，以及可以复制哪些命令
+`research_bundle.html` 作为浏览器里的 reviewer 入口，再打开 `research_diagnostics.html`，
+确认哪些论文诊断已经存在、哪些仍然缺失，以及可以复制哪些命令
 来补齐缺口，而且不会伪造 hidden-state 或 Riccati 证据；最后看 `claim_check.html` 或 `.md`，确认当前证据最多能支持哪一层
 prompt optimization 主张。请使用新的或空的 `--out` 目录，避免旧 artifact 污染审计结果。
 本地 UI 的研究总览页也会展示这条桥接链路，包括识别到的外部工具、PCL 补充的证据、比较有效性、主张检查状态和缺失证据。

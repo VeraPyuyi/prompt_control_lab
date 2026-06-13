@@ -46,6 +46,13 @@ def test_research_demo_generates_paper_diagnostics(tmp_path: Path) -> None:
     report_html = (run_dir / "research_diagnostics.html").read_text(encoding="utf-8")
     assert "Research Diagnostics Report" in report_html
     assert "Hidden-state Trajectory" in report_html
+    bundle = read_json(run_dir / "research_bundle.json")
+    assert bundle["kind"] == "research_bundle_index"
+    assert bundle["status"] == "supported"
+    assert (run_dir / "research_bundle.html").exists()
+    assert "Research Evidence Bundle" in (run_dir / "research_bundle.html").read_text(
+        encoding="utf-8"
+    )
     evidence = read_json(run_dir / "evidence_card.json")
     assert evidence["kind"] == "prompt_optimization_evidence_card"
     assert evidence["sections"]["hidden_state_diagnostics"]["input_source"] == "synthetic_demo"
@@ -116,6 +123,7 @@ def test_diagnose_reuses_research_demo_inputs(tmp_path: Path) -> None:
     assert (run_dir / "claim_check.json").exists()
     assert (run_dir / "claim_check.html").exists()
     assert (run_dir / "research_diagnostics.html").exists()
+    assert (run_dir / "research_bundle.html").exists()
 
 
 def test_diagnose_summarizes_ecosystem_demo_evidence_gaps(tmp_path: Path) -> None:
@@ -168,6 +176,9 @@ def test_diagnose_summarizes_ecosystem_demo_evidence_gaps(tmp_path: Path) -> Non
     assert "Research Diagnostics Report" in (out / "research_diagnostics.html").read_text(
         encoding="utf-8"
     )
+    assert "Research Evidence Bundle" in (out / "research_bundle.html").read_text(
+        encoding="utf-8"
+    )
     assert "exit 1" in (out / "research_gap_commands.ps1").read_text(encoding="utf-8")
     assert "Promptfoo" in report
     assert "Risk: `None`" not in report
@@ -205,6 +216,7 @@ def test_diagnose_summarizes_single_external_evidence_bundle(tmp_path: Path) -> 
     assert bridge["paper_gap_remediation"][0]["command"]
     assert (out / "promptfoo" / "research_gap_plan.md").exists()
     assert (out / "promptfoo" / "research_gap_plan.html").exists()
+    assert (out / "promptfoo" / "research_bundle.html").exists()
 
 
 def test_gap_status_checks_expected_research_artifacts(tmp_path: Path) -> None:
@@ -251,6 +263,8 @@ def test_gap_status_checks_expected_research_artifacts(tmp_path: Path) -> None:
     assert read_json(run / "research_gap_status.json")["html_path"] == str(
         run / "research_gap_status.html"
     )
+    assert (run / "research_bundle.html").exists()
+    assert read_json(run / "research_bundle.json")["gap_status"] == "needs_work"
 
 
 def test_diagnose_requires_enough_inputs(tmp_path: Path) -> None:

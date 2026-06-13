@@ -480,6 +480,7 @@ def run_research_diagnostics(
         claim="full-research",
         out_path=paths.summary_dir / "claim_check.json",
     )
+    write_research_bundle_index(paths.summary_dir)
     return payload
 
 
@@ -546,6 +547,7 @@ def _run_external_bridge_diagnostics(
     ensure_dir(summary_dir)
     ensure_dir(diagnostics_dir)
     _write_research_outputs(summary_dir=summary_dir, payload=payload)
+    write_research_bundle_index(summary_dir)
     return payload
 
 
@@ -576,9 +578,11 @@ def _write_research_outputs(*, summary_dir: Path, payload: JsonDict) -> None:
         )
         payload["artifacts"] = artifacts_dict
     diagnostics_html = summary_dir / "research_diagnostics.html"
+    bundle_html = summary_dir / "research_bundle.html"
     artifacts = payload.get("artifacts")
     artifacts_dict = artifacts if isinstance(artifacts, dict) else {}
     artifacts_dict["research_diagnostics_html"] = str(diagnostics_html)
+    artifacts_dict["research_bundle_html"] = str(bundle_html)
     payload["artifacts"] = artifacts_dict
     write_json(summary_dir / "research_diagnostics.json", payload)
     (summary_dir / "research_diagnostics.md").write_text(
@@ -586,6 +590,7 @@ def _write_research_outputs(*, summary_dir: Path, payload: JsonDict) -> None:
         encoding="utf-8",
     )
     diagnostics_html.write_text(render_research_diagnostics_html(payload), encoding="utf-8")
+    write_research_bundle_index(summary_dir)
 
 
 def write_research_gap_status(*, run_dir: Path, out_path: Path | None = None) -> JsonDict:
@@ -623,6 +628,7 @@ def write_research_gap_status(*, run_dir: Path, out_path: Path | None = None) ->
     write_json(json_path, payload)
     md_path.write_text(_render_research_gap_status_markdown(payload), encoding="utf-8")
     html_path.write_text(render_research_gap_status_html(payload), encoding="utf-8")
+    write_research_bundle_index(json_path.parent)
     return payload
 
 
@@ -632,6 +638,233 @@ def _gap_status_json_path(*, run_dir: Path, out_path: Path | None) -> Path:
     if out_path.suffix:
         return out_path
     return out_path / "research_gap_status.json"
+
+
+def write_research_bundle_index(run_dir: Path) -> JsonDict:
+    """Write a browser-first index for the research evidence bundle."""
+
+    ensure_dir(run_dir)
+    payload = build_research_bundle_index(run_dir)
+    out_path = run_dir / "research_bundle.html"
+    out_path.write_text(render_research_bundle_index_html(payload), encoding="utf-8")
+    payload["html_path"] = str(out_path)
+    write_json(run_dir / "research_bundle.json", payload)
+    return payload
+
+
+def build_research_bundle_index(run_dir: Path) -> JsonDict:
+    """Collect known research artifacts into one navigable index payload."""
+
+    artifacts = _bundle_artifacts(run_dir)
+    diagnostics = _read_optional_research_json(run_dir / "research_diagnostics.json")
+    evidence = _read_optional_research_json(run_dir / "evidence_card.json")
+    claim = _read_optional_research_json(run_dir / "claim_check.json")
+    gap_status = _read_optional_research_json(run_dir / "research_gap_status.json")
+    gap_plan = _read_optional_research_json(run_dir / "research_gap_plan.json")
+    diagnostics_payload = diagnostics.get("diagnostics")
+    diagnostics_dict = diagnostics_payload if isinstance(diagnostics_payload, dict) else {}
+    expected = [
+        "research_diagnostics.html",
+        "evidence_card.html",
+        "claim_check.html",
+        "research_gap_plan.html",
+        "research_gap_status.html",
+        "report.html",
+    ]
+    return {
+        "kind": "research_bundle_index",
+        "run_dir": str(run_dir),
+        "status": _bundle_status(
+            evidence=evidence,
+            claim=claim,
+            gap_status=gap_status,
+            gap_plan=gap_plan,
+        ),
+        "recommendation": evidence.get("recommendation") or claim.get("status") or "review",
+        "evidence_tier": evidence.get("evidence_tier") or claim.get("evidence_tier"),
+        "claim_check_status": claim.get("status"),
+        "claim_language": claim.get("safe_claim_language") or evidence.get("claim_language"),
+        "diagnostic_type": diagnostics.get("diagnostic_type") or diagnostics.get("mode"),
+        "diagnostics_present": sorted(diagnostics_dict),
+        "gap_status": gap_status.get("status") or ("planned" if gap_plan else "not_planned"),
+        "gap_complete_count": gap_status.get("complete_count"),
+        "gap_missing_count": gap_status.get("missing_count"),
+        "review_order": _bundle_review_order(run_dir),
+        "artifacts": artifacts,
+        "missing_html_artifacts": [name for name in expected if not (run_dir / name).exists()],
+        "boundary": (
+            "This index is a navigation aid. It does not add evidence beyond the linked "
+            "artifacts and does not prove scientific sufficiency."
+        ),
+    }
+
+
+def _read_optional_research_json(path: Path) -> JsonDict:
+    if not path.exists():
+        return {}
+    return read_json(path)
+
+
+def _bundle_status(
+    *,
+    evidence: JsonDict,
+    claim: JsonDict,
+    gap_status: JsonDict,
+    gap_plan: JsonDict,
+) -> str:
+    if claim.get("status") == "fail":
+        return "needs_review"
+    if gap_status.get("status") == "needs_work":
+        return "needs_work"
+    if gap_plan and not gap_status:
+        return "gap_status_not_checked"
+    if evidence.get("recommendation") == "supported" and claim.get("status") == "pass":
+        return "supported"
+    if evidence or claim:
+        return "review"
+    return "incomplete"
+
+
+def _bundle_review_order(run_dir: Path) -> list[JsonDict]:
+    candidates = [
+        (
+            "Start here",
+            "research_diagnostics.html",
+            "Paper-derived diagnostic coverage and missing evidence.",
+        ),
+        ("Evidence card", "evidence_card.html", "Compact prompt optimization evidence card."),
+        (
+            "Claim check",
+            "claim_check.html",
+            "Strongest claim currently supported by the artifact bundle.",
+        ),
+        (
+            "Gap plan",
+            "research_gap_plan.html",
+            "Commands and inputs needed to close missing paper diagnostics.",
+        ),
+        (
+            "Gap status",
+            "research_gap_status.html",
+            "Whether expected gap-closing artifacts currently exist.",
+        ),
+        ("Full report", "report.html", "Full run comparison report when available."),
+    ]
+    return [
+        {
+            "label": label,
+            "path": path,
+            "exists": (run_dir / path).exists(),
+            "explains": explains,
+        }
+        for label, path, explains in candidates
+    ]
+
+
+def _bundle_artifacts(run_dir: Path) -> list[JsonDict]:
+    names = [
+        "research_bundle.html",
+        "research_bundle.json",
+        "research_diagnostics.html",
+        "research_diagnostics.md",
+        "research_diagnostics.json",
+        "evidence_card.html",
+        "evidence_card.md",
+        "evidence_card.json",
+        "claim_check.html",
+        "claim_check.md",
+        "claim_check.json",
+        "research_gap_plan.html",
+        "research_gap_plan.md",
+        "research_gap_plan.json",
+        "research_gap_status.html",
+        "research_gap_status.md",
+        "research_gap_status.json",
+        "report.html",
+        "report.md",
+    ]
+    return [
+        {
+            "path": name,
+            "exists": (run_dir / name).exists()
+            or name in {"research_bundle.html", "research_bundle.json"},
+            "role": _artifact_role(name),
+        }
+        for name in names
+    ]
+
+
+def _artifact_role(name: str) -> str:
+    if name.endswith(".html"):
+        return "browser_review"
+    if name.endswith(".json"):
+        return "automation"
+    if name.endswith(".md"):
+        return "text_review"
+    return "artifact"
+
+
+def render_research_bundle_index_html(payload: JsonDict) -> str:
+    """Render the research bundle navigation page."""
+
+    review_order = payload.get("review_order")
+    review_rows = []
+    if isinstance(review_order, list):
+        for item in review_order:
+            if not isinstance(item, dict):
+                continue
+            path = str(item.get("path") or "")
+            exists = bool(item.get("exists"))
+            link = f'<a href="{_html_attr(path)}">{_html_text(path)}</a>' if exists else path
+            review_rows.append(
+                [
+                    item.get("label", ""),
+                    _badge("present" if exists else "missing"),
+                    link,
+                    item.get("explains", ""),
+                ]
+            )
+    artifacts = payload.get("artifacts")
+    artifact_rows = []
+    if isinstance(artifacts, list):
+        for item in artifacts:
+            if not isinstance(item, dict):
+                continue
+            path = str(item.get("path") or "")
+            exists = bool(item.get("exists"))
+            link = f'<a href="{_html_attr(path)}">{_html_text(path)}</a>' if exists else path
+            artifact_rows.append(
+                [
+                    item.get("role", ""),
+                    _badge("present" if exists else "missing"),
+                    link,
+                ]
+            )
+    return _html_page(
+        title="Research Evidence Bundle",
+        subtitle="One browser entry point for paper-derived prompt optimization evidence.",
+        body=[
+            _metric_grid(
+                [
+                    ("Status", _badge(str(payload.get("status", "")))),
+                    ("Evidence tier", payload.get("evidence_tier", "")),
+                    ("Claim check", _badge(str(payload.get("claim_check_status", "")))),
+                    ("Gap status", _badge(str(payload.get("gap_status", "")))),
+                    ("Diagnostic type", payload.get("diagnostic_type", "")),
+                ]
+            ),
+            _section(
+                "Review Order",
+                _table(["Step", "Status", "Open", "What it explains"], review_rows),
+            ),
+            _section(
+                "Artifact Inventory",
+                _table(["Role", "Status", "Artifact"], artifact_rows),
+            ),
+            _section("Safe Claim Language", _paragraph(payload.get("claim_language"))),
+            _section("Boundary", _paragraph(payload.get("boundary"))),
+        ],
+    )
 
 
 def _gap_status_row(*, run_dir: Path, action: JsonDict) -> JsonDict:
@@ -700,7 +933,7 @@ def render_research_gap_status_html(payload: JsonDict) -> str:
     return _html_page(
         title="Research Evidence Gap Status",
         subtitle=(
-            f"Status: {payload.get('status')} · "
+            f"Status: {payload.get('status')} - "
             f"{payload.get('complete_count')}/{payload.get('action_count')} complete"
         ),
         body=[
@@ -1664,7 +1897,9 @@ def _badge(value: str) -> str:
 
 
 def _is_safe_html(value: object) -> bool:
-    return isinstance(value, str) and value.startswith('<span class="badge ')
+    return isinstance(value, str) and (
+        value.startswith('<span class="badge ') or value.startswith('<a href="')
+    )
 
 
 def _format_value(value: object) -> str:
@@ -1677,6 +1912,10 @@ def _format_value(value: object) -> str:
 
 def _html_text(value: object) -> str:
     return html.escape(str(value or ""))
+
+
+def _html_attr(value: object) -> str:
+    return html.escape(str(value or ""), quote=True)
 
 
 def _research_input_summary(paths: ResearchPaths) -> JsonDict:

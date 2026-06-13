@@ -50,6 +50,7 @@ After importing an external baseline/candidate export, PCL writes:
 - `comparison/comparison_validity.json`: prompt-only comparison checks for
   prompt identity, model identity, split hash, metric identity, statistical
   evidence, and slice regressions.
+- `research_bundle.html/json`: the browser-first index for the linked research evidence.
 - `evidence_card.html/md/json`: a compact reviewer-facing evidence card.
 - `claim_check.html/md/json`: a direct answer to which claim scope the current
   evidence tier supports.
@@ -80,7 +81,8 @@ pcl ecosystem-demo --examples examples/external --out runs/ecosystem-demo
 
 This writes `runs/ecosystem-demo/README.md`, `ecosystem_demo.json`,
 `ecosystem_scorecard.html`, `ecosystem_scorecard.md`, `ecosystem_scorecard.json`,
-`research_diagnostics.html`, `research_diagnostics.md`, `research_diagnostics.json`, and one evidence bundle per
+`research_bundle.html`, `research_diagnostics.html`, `research_diagnostics.md`,
+`research_diagnostics.json`, and one evidence bundle per
 external tool:
 
 - `runs/ecosystem-demo/promptfoo/`
@@ -114,7 +116,8 @@ To regenerate that diagnosis after editing the bundle, run:
 pcl diagnose --run runs/ecosystem-demo
 ```
 
-This writes `research_diagnostics.json`, `research_diagnostics.md`, and `research_diagnostics.html` at the
+This writes `research_bundle.html`, `research_diagnostics.json`, `research_diagnostics.md`,
+and `research_diagnostics.html` at the
 root. For external-tool exports, `diagnose` reports evidence coverage and missing
 research diagnostics; it does not fabricate hidden-state, soft-hard, Riccati, or
 time-varying-control measurements.
@@ -205,6 +208,7 @@ claims. That is a feature, not a bug: PCL should make missing evidence visible
 instead of turning a small smoke test into a benchmark claim.
 
 Start with `bridge_summary.md` when explaining the ecosystem relationship to a
-teammate, open `claim_check.html` when deciding what you can safely say, then open
+teammate, open `research_bundle.html` for reviewer navigation, open
+`claim_check.html` when deciding what you can safely say, then open
 `evidence_card.html` when reviewing the actual prompt optimization evidence. The
 Markdown files remain available for plain-text review.

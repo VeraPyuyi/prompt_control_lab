@@ -105,7 +105,7 @@ research diagnostics layer on top:
 # Fast all-tools demo with bundled Promptfoo/DeepEval/Langfuse/LangSmith-style exports.
 pcl ecosystem-demo --examples examples/external --out runs/ecosystem-demo
 
-# Then open ecosystem_scorecard.html first, followed by research_diagnostics.html
+# Then open ecosystem_scorecard.html first, followed by research_bundle.html
 # and each tool-specific bridge_summary.md.
 
 # If you edit the bundle later, refresh the cross-tool scorecard directly.
@@ -159,11 +159,12 @@ pcl claim-check \
 
 `pcl evidence-from` writes a self-contained bridge directory: `imports/` keeps the external-tool
 baseline/candidate snapshots, `comparison/` keeps the PCL paired statistics and prompt-only
-validity audit, and the root directory exposes `bridge_summary.md`, `evidence_card.html`,
-`claim_check.html`, `research_diagnostics.html`, `research_gap_plan.html`, review-first command
+validity audit, and the root directory exposes `bridge_summary.md`, `research_bundle.html`,
+`evidence_card.html`, `claim_check.html`, `research_diagnostics.html`, `research_gap_plan.html`, review-first command
 scripts, `report.html`, and `evidence_from_result.json` for reviewers. Start with
 `bridge_summary.md` to see what the external tool supplied, what PCL added, and which evidence is
-still missing. Use `research_diagnostics.html` to see which paper-derived diagnostics are present
+still missing. Use `research_bundle.html` as the browser-first reviewer entry, then
+`research_diagnostics.html` to see which paper-derived diagnostics are present
 or still missing, and which copy-paste commands can close each missing gap, without fabricating
 hidden-state or Riccati evidence. Use `claim_check.html` or `.md` to see the strongest
 prompt-optimization claim supported. Use a

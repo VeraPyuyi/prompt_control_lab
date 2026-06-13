@@ -339,6 +339,7 @@ def test_external_evidence_workflow_preview_and_auto_modes(tmp_path: Path) -> No
     assert preview["status"] == "preview"
     assert "pcl evidence-from" in preview["command"]
     assert str(out_dir / "research_diagnostics.md") in preview["outputs"]
+    assert str(out_dir / "research_bundle.html") in preview["outputs"]
     assert str(out_dir / "research_diagnostics.html") in preview["outputs"]
     assert str(out_dir / "research_gap_plan.html") in preview["outputs"]
     assert not (out_dir / "evidence_from_result.json").exists()
@@ -365,6 +366,7 @@ def test_external_evidence_workflow_preview_and_auto_modes(tmp_path: Path) -> No
     assert (out_dir / "evidence_from_result.json").exists()
     assert (out_dir / "evidence_card.md").exists()
     assert (out_dir / "claim_check.md").exists()
+    assert (out_dir / "research_bundle.html").exists()
     assert (out_dir / "research_diagnostics.md").exists()
     assert (out_dir / "research_diagnostics.html").exists()
     assert (out_dir / "research_gap_plan.html").exists()
@@ -400,6 +402,8 @@ def test_cli_export_report_zip_contains_known_artifacts(tmp_path: Path) -> None:
     _write_json(run_dir / "claim_check.json", {"status": "pass"})
     _write(run_dir / "claim_check.md", "# claim\n")
     _write(run_dir / "claim_check.html", "<h1>claim</h1>\n")
+    _write_json(run_dir / "research_bundle.json", {"kind": "research_bundle_index"})
+    _write(run_dir / "research_bundle.html", "<h1>bundle</h1>\n")
     _write_json(run_dir / "research_gap_plan.json", {"kind": "research_gap_plan"})
     _write(run_dir / "research_gap_plan.md", "# gap plan\n")
     _write(run_dir / "research_gap_plan.html", "<h1>gap plan</h1>\n")
@@ -427,6 +431,8 @@ def test_cli_export_report_zip_contains_known_artifacts(tmp_path: Path) -> None:
         "claim_check.md",
         "claim_check.html",
         "manifest.json",
+        "research_bundle.json",
+        "research_bundle.html",
         "research_diagnostics.html",
         "research_gap_commands.ps1",
         "research_gap_commands.sh",

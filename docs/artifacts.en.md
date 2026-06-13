@@ -257,7 +257,8 @@ candidate export from Promptfoo, DeepEval, Langfuse, or LangSmith, snapshots the
 runs a PCL comparison under `comparison/`, copies the headline `evidence_card.md`,
 `evidence_card.html`, `claim_check.md`, `claim_check.html`, `report.html`, `stats.json`, and
 `comparison_validity.json` to the output root, and writes
-`research_diagnostics.html` / `.md` / `.json` for paper-evidence gap coverage.
+`research_bundle.html` / `.json` plus `research_diagnostics.html` / `.md` / `.json` for
+paper-evidence gap coverage.
 
 Important fields:
 
@@ -298,6 +299,17 @@ observability, and security-testing tools. Each row also links to the tool-speci
 summary, evidence card, claim check, HTML report, and gap artifacts when those files exist.
 The HTML version is the reviewer-facing dashboard artifact; the Markdown version is easier to
 review in plain text, and the JSON version is for automation.
+
+## `research_bundle.json` / `research_bundle.html`
+
+Written by `pcl research-demo`, `pcl diagnose`, `pcl evidence-from`, and refreshed by
+`pcl gap-status` when the target directory contains research artifacts.
+
+What it explains: the browser-first review order for the current research evidence bundle. It
+links to `research_diagnostics.html`, `evidence_card.html`, `claim_check.html`,
+`research_gap_plan.html`, `research_gap_status.html`, and `report.html` when those files exist. It
+also records missing HTML artifacts and a short status summary. This file is only a navigation aid:
+it does not add evidence beyond the linked artifacts.
 
 ## `research_gap_plan.json` / `research_gap_plan.md` / `research_gap_plan.html`
 

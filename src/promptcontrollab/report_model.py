@@ -143,6 +143,8 @@ def _existing_artifacts(run_dir: Path, diagnostics: dict[str, JsonDict]) -> list
         "history_index.json",
         "history_compare.json",
         "agent_run.json",
+        "research_bundle.json",
+        "research_bundle.html",
         "research_diagnostics.json",
         "research_diagnostics.md",
         "research_diagnostics.html",

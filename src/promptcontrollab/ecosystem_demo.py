@@ -150,6 +150,7 @@ def run_ecosystem_demo(
     payload["research_diagnostics_path"] = str(out_dir / "research_diagnostics.json")
     payload["research_diagnostics_md_path"] = str(out_dir / "research_diagnostics.md")
     payload["research_diagnostics_html_path"] = str(out_dir / "research_diagnostics.html")
+    payload["research_bundle_html_path"] = str(out_dir / "research_bundle.html")
     payload["research_diagnostic_type"] = diagnostics.get("diagnostic_type")
     scorecard = _write_scorecard(out_dir=out_dir, payload=payload, diagnostics=diagnostics)
     payload["ecosystem_scorecard_path"] = scorecard["json_path"]
@@ -295,6 +296,7 @@ def _scorecard_rows(*, out_dir: Path, payload: JsonDict, diagnostics: JsonDict) 
 def _scorecard_artifact_links(*, out_dir: Path, tool_dir: Path) -> list[JsonDict]:
     candidates = [
         ("Bridge summary", tool_dir / "bridge_summary.md"),
+        ("Research bundle", tool_dir / "research_bundle.html"),
         ("Evidence card", _preferred_artifact(tool_dir, "evidence_card", "html", "md")),
         ("Claim check", _preferred_artifact(tool_dir, "claim_check", "html", "md")),
         ("HTML report", tool_dir / "report.html"),
@@ -854,11 +856,12 @@ def _render_readme(payload: JsonDict) -> str:
             "## Suggested review order",
             "",
             "1. Read `bridge_summary.md` for each tool.",
-            "2. Check `evidence_card.html` for protocol and statistical evidence.",
-            "3. Check `claim_check.html` before making any prompt optimization claim.",
-            "4. Read `research_diagnostics.html` for paper-evidence gap coverage.",
-            "5. Run `pcl gap-status --run <tool-dir>` after closing diagnostic gaps.",
-            "6. Open `report.html` or `pcl ui --runs <this-dir>` for a visual review.",
+            "2. Open `research_bundle.html` for reviewer navigation.",
+            "3. Check `evidence_card.html` for protocol and statistical evidence.",
+            "4. Check `claim_check.html` before making any prompt optimization claim.",
+            "5. Read `research_diagnostics.html` for paper-evidence gap coverage.",
+            "6. Run `pcl gap-status --run <tool-dir>` after closing diagnostic gaps.",
+            "7. Open `report.html` or `pcl ui --runs <this-dir>` for a visual review.",
             "",
         ]
     )
