@@ -21,6 +21,7 @@ class ReportModel:
     splits: JsonDict
     explanation: JsonDict
     gate: JsonDict
+    comparison_validity: JsonDict
     model_drift: JsonDict
     audit: JsonDict
     history_index: JsonDict
@@ -52,6 +53,7 @@ class ReportModel:
             splits=_read_optional(run_dir / "splits.json"),
             explanation=_read_optional(run_dir / "explanation.json"),
             gate=_read_optional(run_dir / "gate_result.json"),
+            comparison_validity=_read_optional(run_dir / "comparison_validity.json"),
             model_drift=_read_optional(run_dir / "model_drift.json"),
             audit=_read_optional(run_dir / "audit_result.json"),
             history_index=_read_optional(run_dir / "history_index.json"),
@@ -116,6 +118,7 @@ def _existing_artifacts(run_dir: Path, diagnostics: dict[str, JsonDict]) -> list
         "stats.json",
         "splits.json",
         "gate_result.json",
+        "comparison_validity.json",
         "explanation.json",
         "model_drift.json",
         "audit_result.json",

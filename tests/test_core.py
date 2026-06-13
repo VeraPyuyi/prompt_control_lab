@@ -4,7 +4,7 @@ import json
 from pathlib import Path
 
 from promptcontrollab.evaluation import run_import_eval
-from promptcontrollab.files import read_json
+from promptcontrollab.files import read_json, write_json
 from promptcontrollab.reporting import generate_report
 from promptcontrollab.splitting import load_tasks, make_split, write_split
 from promptcontrollab.statistics import compare_prediction_files
@@ -89,6 +89,31 @@ def test_eval_stats_and_report_roundtrip(tmp_path: Path) -> None:
     assert "Test Report" in html_path.read_text(encoding="utf-8")
 
 
+def test_report_renders_comparison_validity(tmp_path: Path) -> None:
+    run = tmp_path / "runs" / "candidate"
+    write_json(run / "manifest.json", {"method": "candidate", "metric": "exact_match"})
+    write_json(
+        run / "comparison_validity.json",
+        {
+            "validity": "invalid",
+            "prompt_only_comparison": False,
+            "plain_summary": "The comparison is confounded by model change.",
+            "blocking_issues": ["Baseline and candidate used different model identities."],
+            "review_items": [],
+            "next_actions": ["Re-run with the same model."],
+        },
+    )
+
+    md_path, html_path = generate_report(run, title="Validity Report")
+    markdown = md_path.read_text(encoding="utf-8")
+    html = html_path.read_text(encoding="utf-8")
+
+    assert "## Comparison Validity" in markdown
+    assert "invalid" in markdown
+    assert "Baseline and candidate used different model identities." in markdown
+    assert "Prompt-only comparison validity" in html
+
+
 def test_metrics_json_is_plain_json(tmp_path: Path) -> None:
     data = tmp_path / "tasks.jsonl"
     predictions = tmp_path / "predictions.jsonl"
@@ -104,4 +129,3 @@ def test_metrics_json_is_plain_json(tmp_path: Path) -> None:
     payload = json.loads((tmp_path / "run" / "metrics.json").read_text(encoding="utf-8"))
     assert payload["count"] == 1
     assert payload["mean_score"] == 1.0
-

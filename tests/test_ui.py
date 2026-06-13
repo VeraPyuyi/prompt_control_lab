@@ -489,6 +489,16 @@ def test_ui_list_runs_keeps_current_run_when_it_has_manifest(tmp_path: Path) -> 
     assert rows == [{"name": "quick", "path": str(run)}]
 
 
+def test_ui_loads_comparison_validity_artifact(tmp_path: Path) -> None:
+    run = tmp_path / "runs" / "quick"
+    _write_json(run / "comparison_validity.json", {"validity": "clean"})
+
+    assert list_runs(tmp_path / "runs") == [{"name": "quick", "path": str(run)}]
+    detail = load_run_detail(run)
+    assert detail["comparison_validity"]["validity"] == "clean"
+    assert "comparison_validity.json" in detail["artifacts"]
+
+
 def test_ui_has_history_view_order_and_text() -> None:
     from promptcontrollab.ui import app
 
@@ -500,6 +510,10 @@ def test_ui_has_history_view_order_and_text() -> None:
     assert "tutorial" in app.TEXT["zh"]
     assert "workflows" in app.TEXT["en"]
     assert "workflows" in app.TEXT["zh"]
+    assert "comparison_validity" in app.TEXT["en"]
+    assert "comparison_validity" in app.TEXT["zh"]
+    assert "prompt_only" in app.TEXT["en"]
+    assert "prompt_only" in app.TEXT["zh"]
     assert app._ordered_views("research")[0] == "research"
     assert app._ordered_views("workflows")[0] == "workflows"
     assert app._ordered_views("history")[0] == "history"

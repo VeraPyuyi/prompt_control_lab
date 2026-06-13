@@ -138,6 +138,24 @@ def test_agent_run_build_and_report_model(tmp_path: Path) -> None:
     assert model.gate["status"] == "needs_review"
 
 
+def test_report_model_reads_comparison_validity(tmp_path: Path) -> None:
+    run = tmp_path / "runs" / "quick"
+    _write_json(
+        run / "comparison_validity.json",
+        {
+            "validity": "needs_review",
+            "prompt_only_comparison": "unknown",
+            "review_items": ["Prompt identity is missing."],
+            "blocking_issues": [],
+        },
+    )
+
+    model = ReportModel.from_run(run)
+
+    assert model.comparison_validity["validity"] == "needs_review"
+    assert "comparison_validity.json" in model.artifacts
+
+
 def test_agent_run_missing_policy_records_warning(tmp_path: Path) -> None:
     run = tmp_path / "runs" / "quick"
     out = tmp_path / "agent_run.json"

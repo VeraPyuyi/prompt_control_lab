@@ -157,6 +157,8 @@ TEXT = {
         "recommendation": "Recommendation",
         "gate": "Gate status",
         "candidate_score": "Candidate score",
+        "comparison_validity": "Comparison validity",
+        "prompt_only": "Prompt-only",
         "mean_delta": "Mean delta",
         "p_value": "p-value",
         "model_provenance": "Model provenance",
@@ -318,6 +320,8 @@ TEXT = {
         "recommendation": "部署建议",
         "gate": "门禁状态",
         "candidate_score": "候选分数",
+        "comparison_validity": "比较有效性",
+        "prompt_only": "Prompt-only",
         "mean_delta": "均值差异",
         "p_value": "p-value",
         "model_provenance": "模型来源",
@@ -775,6 +779,8 @@ TEXT["zh"].update(
         "recommendation": "部署建议",
         "gate": "门禁状态",
         "candidate_score": "候选分数",
+        "comparison_validity": "比较有效性",
+        "prompt_only": "Prompt-only",
         "mean_delta": "均值差异",
         "p_value": "p-value",
         "model_provenance": "模型来源",
@@ -1683,6 +1689,7 @@ def _render_report_tab(st: Any, text: dict[str, str], detail: JsonDict) -> None:
         return
     explanation = _dict(detail.get("explanation"))
     gate = _dict(detail.get("gate"))
+    validity = _dict(detail.get("comparison_validity"))
     comparison = _dict(detail.get("first_comparison")) or first_comparison(
         _dict(detail.get("stats"))
     )
@@ -1695,6 +1702,8 @@ def _render_report_tab(st: Any, text: dict[str, str], detail: JsonDict) -> None:
             ),
             (text["gate"], gate.get("status", "-")),
             (text["candidate_score"], detail.get("candidate_score")),
+            (text["comparison_validity"], validity.get("validity", "-")),
+            (text["prompt_only"], validity.get("prompt_only_comparison", "-")),
         ],
     )
     metric_cards(
@@ -1709,6 +1718,13 @@ def _render_report_tab(st: Any, text: dict[str, str], detail: JsonDict) -> None:
             score_delta_ci(comparison, title=text["score_ci"], mean_label=text["mean_delta"]),
             use_container_width=True,
         )
+    if validity:
+        issues = [
+            *_list(validity.get("blocking_issues")),
+            *_list(validity.get("review_items")),
+        ]
+        if issues:
+            st.warning("\n".join(str(issue) for issue in issues))
     rows = slice_rows(detail)
     if rows:
         st.plotly_chart(

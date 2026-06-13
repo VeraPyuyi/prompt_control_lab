@@ -21,6 +21,7 @@ def generate_report(run_dir: Path, *, title: str) -> tuple[Path, Path]:
         splits=model.splits,
         explanation=model.explanation,
         gate=model.gate,
+        comparison_validity=model.comparison_validity,
         diagnostics=model.diagnostics,
         first_comparison=model.first_comparison,
     )
@@ -40,6 +41,7 @@ def render_markdown(
     splits: JsonDict,
     explanation: JsonDict,
     gate: JsonDict,
+    comparison_validity: JsonDict,
     diagnostics: dict[str, JsonDict],
     first_comparison: JsonDict | None = None,
 ) -> str:
@@ -103,6 +105,8 @@ def render_markdown(
             "This section explains whether the run passed the configured policy thresholds.",
             "",
         ]
+    if comparison_validity:
+        lines += _comparison_validity_lines(comparison_validity)
     if metrics:
         lines += [
             "## Metrics",
@@ -244,6 +248,32 @@ def _model_identity_lines(manifest: JsonDict) -> list[str]:
     return lines
 
 
+def _comparison_validity_lines(payload: JsonDict) -> list[str]:
+    lines = [
+        "## Comparison Validity",
+        "",
+        f"- Validity: `{payload.get('validity', 'unknown')}`",
+        f"- Prompt-only comparison: `{payload.get('prompt_only_comparison', 'unknown')}`",
+        f"- Summary: {payload.get('plain_summary', '')}",
+    ]
+    lines += _issue_lines("Blocking issue", payload.get("blocking_issues"))
+    lines += _issue_lines("Review item", payload.get("review_items"))
+    lines += [
+        "",
+        "This section explains whether a baseline/candidate result can be interpreted "
+        "as clean prompt-only evidence, or whether model, split, metric, prompt identity, "
+        "or statistical evidence needs review.",
+        "",
+    ]
+    return lines
+
+
+def _issue_lines(label: str, value: object) -> list[str]:
+    if not isinstance(value, list) or not value:
+        return []
+    return [f"- {label}: {item}" for item in value]
+
+
 def _model_label(model: JsonDict) -> str:
     provider = model.get("provider", "unknown")
     model_id = model.get("model_id", "unknown")
@@ -382,6 +412,10 @@ def _html_dashboard_card(title: str, body: str) -> str:
 
 
 def _prompt_only_validity(markdown: str) -> str:
+    explicit = _markdown_field(markdown, "Validity")
+    prompt_only = _markdown_field(markdown, "Prompt-only comparison")
+    if explicit:
+        return f"{explicit}; prompt-only={prompt_only or 'unknown'}."
     warnings = _markdown_fields(markdown, "Model warning")
     if any("not a clean prompt-only comparison" in warning for warning in warnings):
         return "Needs review: baseline and candidate model ids differ."
