@@ -105,7 +105,7 @@ research diagnostics layer on top:
 # Fast all-tools demo with bundled Promptfoo/DeepEval/Langfuse/LangSmith-style exports.
 pcl ecosystem-demo --examples examples/external --out runs/ecosystem-demo
 
-# Then open ecosystem_scorecard.md first, followed by research_diagnostics.md
+# Then open ecosystem_scorecard.html or .md first, followed by research_diagnostics.md
 # and each tool-specific bridge_summary.md.
 
 # If you edit the bundle later, refresh the cross-tool scorecard directly.

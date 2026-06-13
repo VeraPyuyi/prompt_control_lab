@@ -280,7 +280,7 @@ commands, review items, and next actions. This is the recommended first file to 
 explaining why PCL complements Promptfoo, DeepEval, Langfuse, or LangSmith instead of replacing
 them.
 
-## `ecosystem_scorecard.json` / `ecosystem_scorecard.md`
+## `ecosystem_scorecard.json` / `ecosystem_scorecard.md` / `ecosystem_scorecard.html`
 
 Written by `pcl ecosystem-demo`; refreshed by `pcl ecosystem-scorecard --run <run>`.
 
@@ -290,6 +290,8 @@ evidence layer, the current validity/evidence tier, the current gap-status resul
 missing paper diagnostics, and the `pcl gap-status` command to run after closing those gaps.
 This is the recommended first file to open when showing why PCL complements existing eval,
 observability, and security-testing tools.
+The HTML version is the reviewer-facing dashboard artifact; the Markdown version is easier to
+review in plain text, and the JSON version is for automation.
 
 ## `research_gap_plan.json` / `research_gap_plan.md`
 

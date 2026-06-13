@@ -52,7 +52,7 @@
   <path d="M736 281 H792" class="arrow"/>
 
   <rect x="792" y="122" width="360" height="318" rx="16" class="score"/>
-  <text x="972" y="158" text-anchor="middle" class="h">ecosystem_scorecard.md</text>
+  <text x="972" y="158" text-anchor="middle" class="h">ecosystem_scorecard.html</text>
   <text x="820" y="190" class="small">Reviewer view: strengths, PCL additions, and gap closure.</text>
   <line x1="820" y1="218" x2="1124" y2="218" stroke="#bbf7d0" stroke-width="2"/>
   <text x="820" y="244" class="mono">Tool</text>

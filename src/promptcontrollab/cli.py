@@ -570,7 +570,7 @@ def build_parser() -> argparse.ArgumentParser:
 
     ecosystem_scorecard_parser = subcommands.add_parser(
         "ecosystem-scorecard",
-        help="Regenerate ecosystem_scorecard.json/md for an ecosystem bridge run.",
+        help="Regenerate ecosystem_scorecard.json/md/html for an ecosystem bridge run.",
     )
     ecosystem_scorecard_parser.add_argument(
         "--run",

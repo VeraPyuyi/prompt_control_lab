@@ -98,7 +98,7 @@ prompt-only 比较有效性、`evidence_card.json` / `evidence_card.md` 和 `cla
 # 一次性运行仓库自带的 Promptfoo / DeepEval / Langfuse / LangSmith 风格导出示例。
 pcl ecosystem-demo --examples examples/external --out runs/ecosystem-demo
 
-# 然后先打开 ecosystem_scorecard.md，再看 research_diagnostics.md
+# 然后先打开 ecosystem_scorecard.html 或 .md，再看 research_diagnostics.md
 # 和每个工具目录里的 bridge_summary.md。
 
 # 如果后续修改了 bundle，可以单独刷新跨工具定位表。

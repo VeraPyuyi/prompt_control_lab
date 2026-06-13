@@ -29,6 +29,7 @@ RUN_ARTIFACTS = [
     "bridge_summary.json",
     "ecosystem_demo.json",
     "ecosystem_scorecard.json",
+    "ecosystem_scorecard.html",
 ]
 
 RUN_LEVEL_ARTIFACTS = [
@@ -49,6 +50,7 @@ RUN_LEVEL_ARTIFACTS = [
     "bridge_summary.json",
     "ecosystem_demo.json",
     "ecosystem_scorecard.json",
+    "ecosystem_scorecard.html",
 ]
 
 

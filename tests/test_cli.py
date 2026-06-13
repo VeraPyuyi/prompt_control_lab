@@ -379,10 +379,12 @@ def test_cli_ecosystem_demo_runs_all_external_bridge_examples(tmp_path: Path) ->
     assert summary["research_diagnostic_type"] == "external_evidence_gap"
     assert summary["ecosystem_scorecard_path"] == str(out / "ecosystem_scorecard.json")
     assert summary["ecosystem_scorecard_md_path"] == str(out / "ecosystem_scorecard.md")
+    assert summary["ecosystem_scorecard_html_path"] == str(out / "ecosystem_scorecard.html")
     assert (out / "research_diagnostics.json").exists()
     assert (out / "research_diagnostics.md").exists()
     assert (out / "ecosystem_scorecard.json").exists()
     assert (out / "ecosystem_scorecard.md").exists()
+    assert (out / "ecosystem_scorecard.html").exists()
     scorecard = json.loads((out / "ecosystem_scorecard.json").read_text(encoding="utf-8"))
     assert scorecard["kind"] == "ecosystem_scorecard"
     assert [item["tool"] for item in scorecard["rows"]] == [
@@ -396,14 +398,20 @@ def test_cli_ecosystem_demo_runs_all_external_bridge_examples(tmp_path: Path) ->
     assert "research evidence layer" in scorecard_markdown
     assert "pcl gap-status" in scorecard_markdown
     assert "promptfoo/bridge_summary.md" in scorecard_markdown
+    scorecard_html = (out / "ecosystem_scorecard.html").read_text(encoding="utf-8")
+    assert "Ecosystem Scorecard" in scorecard_html
+    assert "DeepEval" in scorecard_html
+    assert "promptfoo/bridge_summary.md" in scorecard_html
     assert main(["gap-status", "--run", str(out / "promptfoo")]) == 0
     (out / "ecosystem_scorecard.json").unlink()
     (out / "ecosystem_scorecard.md").unlink()
+    (out / "ecosystem_scorecard.html").unlink()
     assert main(["ecosystem-scorecard", "--run", str(out)]) == 0
     refreshed = json.loads((out / "ecosystem_scorecard.json").read_text(encoding="utf-8"))
     assert refreshed["kind"] == "ecosystem_scorecard"
     assert refreshed["json_path"] == str(out / "ecosystem_scorecard.json")
     assert refreshed["markdown_path"] == str(out / "ecosystem_scorecard.md")
+    assert refreshed["html_path"] == str(out / "ecosystem_scorecard.html")
     promptfoo_row = next(item for item in refreshed["rows"] if item["tool"] == "promptfoo")
     assert promptfoo_row["gap_status"] == "needs_work"
     assert promptfoo_row["gap_missing_count"] > 0
@@ -412,10 +420,12 @@ def test_cli_ecosystem_demo_runs_all_external_bridge_examples(tmp_path: Path) ->
         encoding="utf-8"
     )
     assert "needs_work" in (out / "ecosystem_scorecard.md").read_text(encoding="utf-8")
+    assert "needs_work" in (out / "ecosystem_scorecard.html").read_text(encoding="utf-8")
     scorecard_dir = tmp_path / "scorecard-out"
     assert main(["ecosystem-scorecard", "--run", str(out), "--out", str(scorecard_dir)]) == 0
     assert (scorecard_dir / "ecosystem_scorecard.json").exists()
     assert (scorecard_dir / "ecosystem_scorecard.md").exists()
+    assert (scorecard_dir / "ecosystem_scorecard.html").exists()
     assert [item["tool"] for item in summary["runs"]] == [
         "promptfoo",
         "langfuse",

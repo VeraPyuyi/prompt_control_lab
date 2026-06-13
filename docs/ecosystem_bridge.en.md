@@ -79,17 +79,19 @@ pcl ecosystem-demo --examples examples/external --out runs/ecosystem-demo
 ```
 
 This writes `runs/ecosystem-demo/README.md`, `ecosystem_demo.json`,
-`ecosystem_scorecard.md`, `ecosystem_scorecard.json`, `research_diagnostics.md`,
-`research_diagnostics.json`, and one evidence bundle per external tool:
+`ecosystem_scorecard.html`, `ecosystem_scorecard.md`, `ecosystem_scorecard.json`,
+`research_diagnostics.md`, `research_diagnostics.json`, and one evidence bundle per
+external tool:
 
 - `runs/ecosystem-demo/promptfoo/`
 - `runs/ecosystem-demo/langfuse/`
 - `runs/ecosystem-demo/langsmith/`
 - `runs/ecosystem-demo/deepeval/`
 
-Open `ecosystem_scorecard.md` first when you need the cross-tool positioning table:
-what each external tool is good at, what PCL adds, and which paper diagnostics are
-still missing. Then open each `bridge_summary.md` for tool-specific provenance.
+Open `ecosystem_scorecard.html` first when you need a reviewer-facing cross-tool
+positioning table: what each external tool is good at, what PCL adds, and which paper
+diagnostics are still missing. Use `ecosystem_scorecard.md` for plain-text review.
+Then open each `bridge_summary.md` for tool-specific provenance.
 You can also open the root directory in the local UI with
 `pcl ui --runs runs/ecosystem-demo`; the Research Overview will show one row per
 external-tool evidence bundle.

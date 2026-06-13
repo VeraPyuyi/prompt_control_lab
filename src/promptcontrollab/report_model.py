@@ -161,6 +161,7 @@ def _existing_artifacts(run_dir: Path, diagnostics: dict[str, JsonDict]) -> list
         "ecosystem_demo.json",
         "ecosystem_scorecard.json",
         "ecosystem_scorecard.md",
+        "ecosystem_scorecard.html",
         "inputs/hidden_states.npz",
         "inputs/hidden_states.npz.metadata.json",
         "report.md",
