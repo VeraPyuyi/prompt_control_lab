@@ -157,6 +157,63 @@ def test_ingest_auto_detects_promptfoo_json(tmp_path: Path) -> None:
     assert manifest["source_tool"] == "promptfoo"
 
 
+def test_evidence_from_promptfoo_generates_comparison_bundle(tmp_path: Path) -> None:
+    source = tmp_path / "promptfoo-results.json"
+    out_dir = tmp_path / "runs" / "external-evidence"
+    source.write_text(json.dumps(_paired_promptfoo_payload(count=20)), encoding="utf-8")
+
+    assert (
+        main(
+            [
+                "evidence-from",
+                "--tool",
+                "promptfoo",
+                "--baseline-input",
+                str(source),
+                "--candidate-input",
+                str(source),
+                "--out",
+                str(out_dir),
+                "--baseline-prompt-id",
+                "baseline",
+                "--candidate-prompt-id",
+                "candidate",
+                "--provider",
+                "openai:gpt-4o-mini-20260601",
+                "--split-hash",
+                "split-demo-123",
+                "--bootstrap-samples",
+                "20",
+                "--permutation-samples",
+                "100",
+            ]
+        )
+        == 0
+    )
+
+    for relative_path in [
+        "imports/baseline/predictions.jsonl",
+        "imports/candidate/predictions.jsonl",
+        "comparison/stats.json",
+        "comparison/comparison_validity.json",
+        "comparison/evidence_card.json",
+        "comparison/report.html",
+        "evidence_card.md",
+        "report.html",
+        "evidence_from_result.json",
+    ]:
+        assert (out_dir / relative_path).exists()
+    stats = read_json(out_dir / "comparison" / "stats.json")
+    assert stats["comparisons"][0]["mean_delta"] == 1.0
+    validity = read_json(out_dir / "comparison" / "comparison_validity.json")
+    assert validity["validity"] == "clean"
+    evidence = read_json(out_dir / "evidence_card.json")
+    assert evidence["sections"]["comparison_validity"]["status"] == "clean"
+    result = read_json(out_dir / "evidence_from_result.json")
+    assert result["kind"] == "external_evidence"
+    assert result["tool"] == "promptfoo"
+
+
 def test_ingest_langfuse_observations_writes_pcl_run(tmp_path: Path) -> None:
     source = tmp_path / "langfuse-export.json"
     out_dir = tmp_path / "runs" / "from-langfuse"
@@ -499,6 +556,52 @@ def _promptfoo_v3_payload() -> dict[str, Any]:
             },
         ],
         "stats": {"successes": 1, "failures": 1, "errors": 0},
+    }
+
+
+def _paired_promptfoo_payload(*, count: int) -> dict[str, Any]:
+    provider = "openai:gpt-4o-mini-20260601"
+    results: list[dict[str, Any]] = []
+    for index in range(count):
+        expected = str(index + 1)
+        test_case = {
+            "vars": {"slice": "demo", "question": f"{index}+1"},
+            "assert": [{"type": "equals", "value": expected}],
+        }
+        results.append(
+            {
+                "promptId": "baseline",
+                "provider": {"id": provider, "label": "OpenAI mini pinned"},
+                "testIdx": index,
+                "testCase": test_case,
+                "response": {"output": "wrong"},
+                "success": False,
+                "score": 0,
+            }
+        )
+        results.append(
+            {
+                "promptId": "candidate",
+                "provider": {"id": provider, "label": "OpenAI mini pinned"},
+                "testIdx": index,
+                "testCase": test_case,
+                "response": {"output": expected},
+                "success": True,
+                "score": 1,
+            }
+        )
+    return {
+        "version": 3,
+        "timestamp": "2026-06-13T00:00:00Z",
+        "prompts": [
+            {"id": "baseline", "raw": "Answer the question.", "label": "Baseline"},
+            {
+                "id": "candidate",
+                "raw": "Answer with only the final result.",
+                "label": "Candidate",
+            },
+        ],
+        "results": results,
     }
 
 

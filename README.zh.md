@@ -92,6 +92,18 @@ comparison 流程会在证据足够时自动写出 `evidence_card.json` / `evide
 ```bash
 promptfoo eval --output results.json
 
+# 一条命令桥接：导入 baseline / candidate 导出，完成比较，
+# 并写出 stats、comparison validity、evidence card 和 report。
+pcl evidence-from \
+  --tool promptfoo \
+  --baseline-input results.json \
+  --candidate-input results.json \
+  --baseline-prompt-id baseline \
+  --candidate-prompt-id candidate \
+  --provider openai:gpt-4o-mini-20260601 \
+  --split-hash eval-split-2026-06 \
+  --out runs/from-promptfoo-evidence
+
 # 一般先用这个：PCL 会自动识别 Promptfoo、Langfuse 或 LangSmith 导出。
 pcl ingest auto --input results.json --out runs/from-external --score-name exact_match
 pcl report --run runs/from-external
@@ -115,6 +127,11 @@ pcl evidence-card \
   --run runs/from-promptfoo-comparison \
   --out runs/from-promptfoo-comparison/evidence_card.md
 ```
+
+`pcl evidence-from` 会写出一个自包含桥接目录：`imports/` 保存外部工具的 baseline /
+candidate 导入快照，`comparison/` 保存 PCL 的成对统计和 prompt-only 有效性审计，
+根目录会放置 `evidence_card.md`、`report.html` 和 `evidence_from_result.json` 方便审查。
+请使用新的或空的 `--out` 目录，避免旧 artifact 污染审计结果。
 
 导入后的 run 会包含 `predictions.jsonl`、`metrics.json` 和 `manifest.json`，因此可以继续接 `pcl compare-runs`、`pcl stats`、`pcl validity` 和后续报告。`compare-runs` 会写出一个独立比较目录，里面包含成对统计、prompt-only 比较有效性、candidate metrics 快照、源 run 快照以及 Markdown / HTML 报告。`evidence-card` 会继续把这条研究证据链压缩成一份 reviewer 更容易看的卡片。请使用新的或空的 `--out` 目录，避免旧 artifact 污染审计结果。这个能力的定位是桥接 Promptfoo / Langfuse / LangSmith 生态，而不是替代 Promptfoo 的 red-team / provider 生态、Langfuse 的 tracing 平台或 LangSmith 的观测/评测工作流。
 
@@ -219,6 +236,7 @@ pcl doctor
 | 内部轨迹诊断 | `pcl trajectory` | 分析 hidden-state drift、decay slope 和 turnpike-like signal。 |
 | Riccati 诊断 | `pcl riccati` | 检查有限维 surrogate 的 Riccati / DARE 稳定性。 |
 | time-varying control | `pcl tv-soft` | 比较 static、time-varying、shuffled、random control lane。 |
+| 一键外部证据包 | `pcl evidence-from` | 导入外部 baseline / candidate export，并一键生成 PCL evidence card。 |
 | 生态桥接 | `pcl ingest auto` / `promptfoo` / `langfuse` / `langsmith` | 导入外部 eval / trace artifact，再接 PCL 的比较有效性和研究诊断。 |
 | 一键 run 比较 | `pcl compare-runs` | 把两个导入 / 打分后的 run 变成 stats、comparison_validity 和报告。 |
 | 报告和解释 | `pcl report` / `pcl explain` / `pcl gate` | 把 artifact 转成可读结论和策略判断。 |

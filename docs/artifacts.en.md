@@ -223,6 +223,24 @@ What it explains: external tools remain the source of eval or trace data, while
 `prompt_control_lab` records the exact import filter before running comparison validity,
 statistics, reports, or paper-derived diagnostics on top.
 
+## `evidence_from_result.json`
+
+Written by `pcl evidence-from`. This one-command bridge imports a baseline export and a
+candidate export from Promptfoo, Langfuse, or LangSmith, snapshots them under `imports/`, runs a
+PCL comparison under `comparison/`, and copies the headline `evidence_card.md`, `report.html`,
+`stats.json`, and `comparison_validity.json` to the output root.
+
+Important fields:
+
+- `tool`: `auto`, `promptfoo`, `langfuse`, or `langsmith`
+- `baseline_import` / `candidate_import`: counts, mean scores, and selected filters from import
+- `comparison_dir`: the self-contained PCL comparison run
+- `comparison`: paths to stats, prompt-only validity, evidence card, and reports
+- `copied_artifacts`: headline artifacts copied to the output root
+
+What it explains: how an external eval or observability export was converted into a
+PromptControlLab prompt-optimization evidence bundle without replacing the external tool.
+
 ## `pcl guard --json` output
 
 Stores an input-layer prompt guard result when used by hooks, rules, or shell wrappers.

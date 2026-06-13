@@ -28,6 +28,7 @@ from promptcontrollab.errors import PromptControlLabError
 from promptcontrollab.evaluation import run_import_eval
 from promptcontrollab.evidence_card import write_evidence_card
 from promptcontrollab.explain import generate_explanation
+from promptcontrollab.external_evidence import build_external_evidence
 from promptcontrollab.files import JsonDict, ensure_dir, write_json
 from promptcontrollab.gate import run_gate
 from promptcontrollab.hf_hidden import extract_hidden_states
@@ -408,6 +409,99 @@ def build_parser() -> argparse.ArgumentParser:
     compare_runs_parser.add_argument("--bootstrap-samples", type=int, default=1000)
     compare_runs_parser.add_argument("--permutation-samples", type=int, default=1000)
     compare_runs_parser.set_defaults(func=_cmd_compare_runs)
+
+    evidence_from_parser = subcommands.add_parser(
+        "evidence-from",
+        help=(
+            "Import baseline/candidate exports from Promptfoo, Langfuse, or LangSmith "
+            "and generate a PCL evidence card."
+        ),
+    )
+    evidence_from_parser.add_argument(
+        "--tool",
+        choices=["auto", "promptfoo", "langfuse", "langsmith"],
+        default="auto",
+        help="External export type. Use auto to detect each input file.",
+    )
+    evidence_from_parser.add_argument(
+        "--baseline-input",
+        type=Path,
+        required=True,
+        help="Baseline external export file.",
+    )
+    evidence_from_parser.add_argument(
+        "--candidate-input",
+        type=Path,
+        required=True,
+        help="Candidate external export file.",
+    )
+    evidence_from_parser.add_argument(
+        "--out",
+        type=Path,
+        required=True,
+        help="Evidence bundle output directory.",
+    )
+    evidence_from_parser.add_argument(
+        "--score-name",
+        default=None,
+        help="Langfuse/LangSmith score name to import.",
+    )
+    evidence_from_parser.add_argument(
+        "--provider",
+        default=None,
+        help="Provider filter shared by baseline and candidate.",
+    )
+    evidence_from_parser.add_argument("--baseline-provider", default=None)
+    evidence_from_parser.add_argument("--candidate-provider", default=None)
+    evidence_from_parser.add_argument(
+        "--model",
+        default=None,
+        help="Model filter shared by baseline and candidate.",
+    )
+    evidence_from_parser.add_argument("--baseline-model", default=None)
+    evidence_from_parser.add_argument("--candidate-model", default=None)
+    evidence_from_parser.add_argument(
+        "--baseline-prompt-id",
+        default=None,
+        help="Baseline Promptfoo prompt id, or prompt identity to record.",
+    )
+    evidence_from_parser.add_argument(
+        "--candidate-prompt-id",
+        default=None,
+        help="Candidate Promptfoo prompt id, or prompt identity to record.",
+    )
+    evidence_from_parser.add_argument(
+        "--baseline-name",
+        default=None,
+        help="Baseline Langfuse observation/name filter.",
+    )
+    evidence_from_parser.add_argument(
+        "--candidate-name",
+        default=None,
+        help="Candidate Langfuse observation/name filter.",
+    )
+    evidence_from_parser.add_argument(
+        "--baseline-experiment",
+        default=None,
+        help="Baseline LangSmith experiment filter.",
+    )
+    evidence_from_parser.add_argument(
+        "--candidate-experiment",
+        default=None,
+        help="Candidate LangSmith experiment filter.",
+    )
+    evidence_from_parser.add_argument(
+        "--split-hash",
+        default=None,
+        help="Optional shared split hash to record on both imported runs.",
+    )
+    evidence_from_parser.add_argument("--baseline-method", default="baseline")
+    evidence_from_parser.add_argument("--candidate-method", default="candidate")
+    evidence_from_parser.add_argument("--title", default="PromptControlLab External Evidence")
+    evidence_from_parser.add_argument("--seed", type=int, default=0)
+    evidence_from_parser.add_argument("--bootstrap-samples", type=int, default=1000)
+    evidence_from_parser.add_argument("--permutation-samples", type=int, default=1000)
+    evidence_from_parser.set_defaults(func=_cmd_evidence_from)
 
     audit_parser = subcommands.add_parser(
         "audit-diff",
@@ -904,6 +998,36 @@ def _cmd_ingest_langsmith(args: argparse.Namespace) -> None:
         model=args.model,
         provider=args.provider,
         method=args.method,
+    )
+    print(json.dumps(payload, indent=2, ensure_ascii=False, sort_keys=True))
+
+
+def _cmd_evidence_from(args: argparse.Namespace) -> None:
+    payload = build_external_evidence(
+        tool=args.tool,
+        baseline_input=args.baseline_input,
+        candidate_input=args.candidate_input,
+        out_dir=args.out,
+        score_name=args.score_name,
+        provider=args.provider,
+        baseline_provider=args.baseline_provider,
+        candidate_provider=args.candidate_provider,
+        model=args.model,
+        baseline_model=args.baseline_model,
+        candidate_model=args.candidate_model,
+        baseline_prompt_id=args.baseline_prompt_id,
+        candidate_prompt_id=args.candidate_prompt_id,
+        baseline_name=args.baseline_name,
+        candidate_name=args.candidate_name,
+        baseline_experiment=args.baseline_experiment,
+        candidate_experiment=args.candidate_experiment,
+        split_hash=args.split_hash,
+        baseline_method=args.baseline_method,
+        candidate_method=args.candidate_method,
+        title=args.title,
+        seed=args.seed,
+        bootstrap_samples=args.bootstrap_samples,
+        permutation_samples=args.permutation_samples,
     )
     print(json.dumps(payload, indent=2, ensure_ascii=False, sort_keys=True))
 

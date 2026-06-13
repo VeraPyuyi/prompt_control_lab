@@ -171,6 +171,23 @@ gate decision、risk level、改动文件、测试、audit path、gate path，�
 
 说明什么问题：外部工具仍然负责原始 eval 或 trace 数据，`prompt_control_lab` 负责记录精确导入条件，然后在其上继续运行比较有效性、统计、报告或论文诊断。
 
+## `evidence_from_result.json`
+
+由 `pcl evidence-from` 写出。这个一键桥接命令会从 Promptfoo、Langfuse 或 LangSmith
+导入 baseline export 和 candidate export，把导入快照保存到 `imports/`，把 PCL 比较结果保存到
+`comparison/`，并把最常用的 `evidence_card.md`、`report.html`、`stats.json` 和
+`comparison_validity.json` 复制到输出根目录。
+
+重要字段：
+
+- `tool`：`auto`、`promptfoo`、`langfuse` 或 `langsmith`
+- `baseline_import` / `candidate_import`：导入数量、平均分和过滤条件
+- `comparison_dir`：自包含的 PCL 比较 run
+- `comparison`：stats、prompt-only validity、evidence card 和 report 路径
+- `copied_artifacts`：复制到输出根目录的重点 artifact
+
+说明什么问题：外部 eval / observability 工具仍然作为数据来源，`prompt_control_lab` 负责把这些导出转换成 prompt 优化证据包，而不是替代原工具。
+
 ## `pcl guard --json` 输出
 
 记录 hook、rules 或 shell wrapper 使用的输入层 prompt 守护结果。

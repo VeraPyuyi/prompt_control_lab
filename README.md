@@ -98,7 +98,19 @@ research diagnostics layer on top:
 ```bash
 promptfoo eval --output results.json
 
-# Usually start here: PCL detects Promptfoo, Langfuse, or LangSmith exports.
+# One-command bridge: import baseline/candidate exports, compare them,
+# then write stats, comparison validity, evidence card, and report artifacts.
+pcl evidence-from \
+  --tool promptfoo \
+  --baseline-input results.json \
+  --candidate-input results.json \
+  --baseline-prompt-id baseline \
+  --candidate-prompt-id candidate \
+  --provider openai:gpt-4o-mini-20260601 \
+  --split-hash eval-split-2026-06 \
+  --out runs/from-promptfoo-evidence
+
+# Lower-level import: PCL detects Promptfoo, Langfuse, or LangSmith exports.
 pcl ingest auto --input results.json --out runs/from-external --score-name exact_match
 pcl report --run runs/from-external
 
@@ -122,14 +134,17 @@ pcl evidence-card \
   --out runs/from-promptfoo-comparison/evidence_card.md
 ```
 
-The imported run contains `predictions.jsonl`, `metrics.json`, and `manifest.json`, so it can be
-used with `pcl compare-runs`, `pcl stats`, `pcl validity`, and downstream reports. `compare-runs`
-writes a self-contained comparison directory with paired statistics, prompt-only validity, a
-candidate metrics snapshot, source-run snapshots, and Markdown/HTML reports. `evidence-card`
-then compresses the resulting research trail into one reviewer-facing artifact. Use a new or empty
-`--out` directory so stale artifacts cannot contaminate the audit. This is intentionally a bridge, not a
-replacement for Promptfoo's red-team/provider ecosystem, Langfuse's tracing platform, or
-LangSmith's observability/evaluation workflows.
+`pcl evidence-from` writes a self-contained bridge directory: `imports/` keeps the external-tool
+baseline/candidate snapshots, `comparison/` keeps the PCL paired statistics and prompt-only
+validity audit, and the root directory exposes `evidence_card.md`, `report.html`, and
+`evidence_from_result.json` for reviewers. Use a new or empty `--out` directory so stale artifacts
+cannot contaminate the audit.
+
+The lower-level imported run still contains `predictions.jsonl`, `metrics.json`, and
+`manifest.json`, so it can be used with `pcl compare-runs`, `pcl stats`, `pcl validity`, and
+downstream reports. This is intentionally a bridge, not a replacement for Promptfoo's red-team /
+provider ecosystem, Langfuse's tracing platform, or LangSmith's observability/evaluation
+workflows.
 
 ## Applied Engineering Layer
 
@@ -192,10 +207,11 @@ The repository includes narrated 4K hands-on demo videos generated from real UI 
 8. `pcl trajectory`: hidden-state drift, decay slope, and turnpike-like signal.
 9. `pcl riccati`: fitted finite-dimensional Riccati/DARE surrogate diagnostics.
 10. `pcl tv-soft`: static/time-varying/shuffled/random soft-control comparison.
-11. `pcl ingest auto` / `promptfoo` / `langfuse` / `langsmith`: import external eval/trace artifacts into PCL research artifacts.
-12. `pcl compare-runs`: turn two imported/scored runs into stats, validity, and a report in one command.
-13. `pcl report` / `pcl explain` / `pcl gate`: turn artifacts into readable decisions.
-14. `pcl guard` / `pcl audit-diff`: applied AI coding agent preflight and post-run audit.
+11. `pcl evidence-from`: import external baseline/candidate exports and generate a PCL evidence card in one command.
+12. `pcl ingest auto` / `promptfoo` / `langfuse` / `langsmith`: import external eval/trace artifacts into PCL research artifacts.
+13. `pcl compare-runs`: turn two imported/scored runs into stats, validity, and a report in one command.
+14. `pcl report` / `pcl explain` / `pcl gate`: turn artifacts into readable decisions.
+15. `pcl guard` / `pcl audit-diff`: applied AI coding agent preflight and post-run audit.
 
 ## Install The CLI ⚙️
 
