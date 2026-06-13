@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from promptcontrollab.claim_check import run_claim_check
+from promptcontrollab.claim_check import render_claim_check_html, run_claim_check
 from promptcontrollab.cli import main
 from promptcontrollab.files import read_json
 
@@ -19,6 +19,10 @@ def test_claim_check_passes_full_research_when_all_diagnostics_exist(tmp_path: P
     assert payload["evidence_tier"] == "tier_4_full_research_diagnostics"
     assert "Recorded artifacts support" in payload["safe_claim"]
     assert payload["next_tier_missing"] == []
+    html = render_claim_check_html(payload)
+    assert "Prompt Optimization Claim Check" in html
+    assert "full-research" in html
+    assert "pass" in html
 
 
 def test_claim_check_rejects_full_research_for_paired_only_evidence(tmp_path: Path) -> None:
@@ -56,11 +60,15 @@ def test_cli_claim_check_writes_json_and_markdown(tmp_path: Path) -> None:
     payload = read_json(out)
     assert payload["status"] == "pass"
     assert payload["requested_claim"] == "paired"
+    assert payload["html_path"] == str(out.with_suffix(".html"))
     markdown = out.with_suffix(".md")
+    html = out.with_suffix(".html")
     assert markdown.exists()
+    assert html.exists()
     text = markdown.read_text(encoding="utf-8")
     assert "# Prompt Optimization Claim Check" in text
     assert "Safe claim" in text
+    assert "Prompt Optimization Claim Check" in html.read_text(encoding="utf-8")
 
 
 def _paired_only_run(tmp_path: Path) -> Path:

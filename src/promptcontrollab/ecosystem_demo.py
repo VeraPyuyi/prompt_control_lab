@@ -135,8 +135,8 @@ def run_ecosystem_demo(
         "runs": runs,
         "next_steps": [
             "Open each bridge_summary.md to see what the external tool supplied.",
-            "Open each evidence_card.md to inspect the prompt optimization evidence.",
-            "Open each claim_check.md to see the strongest supported claim.",
+            "Open each evidence_card.html to inspect the prompt optimization evidence.",
+            "Open each claim_check.html to see the strongest supported claim.",
             "Open report.html or the local UI Research Overview for reviewer-facing inspection.",
         ],
     }
@@ -210,7 +210,7 @@ def _write_scorecard(
             "Open ecosystem_scorecard.html for the cross-tool summary.",
             "Use ecosystem_scorecard.md for plain-text review.",
             "Open each bridge_summary.md for tool-specific provenance.",
-            "Open evidence_card.md and claim_check.md before making an optimization claim.",
+            "Open evidence_card.html and claim_check.html before making an optimization claim.",
             "Open research_gap_plan.md, run the reviewed commands, then run pcl gap-status.",
         ],
         "boundary": (
@@ -288,8 +288,8 @@ def _scorecard_rows(*, out_dir: Path, payload: JsonDict, diagnostics: JsonDict) 
 def _scorecard_artifact_links(*, out_dir: Path, tool_dir: Path) -> list[JsonDict]:
     candidates = [
         ("Bridge summary", tool_dir / "bridge_summary.md"),
-        ("Evidence card", tool_dir / "evidence_card.md"),
-        ("Claim check", tool_dir / "claim_check.md"),
+        ("Evidence card", _preferred_artifact(tool_dir, "evidence_card", "html", "md")),
+        ("Claim check", _preferred_artifact(tool_dir, "claim_check", "html", "md")),
         ("HTML report", tool_dir / "report.html"),
         ("Gap plan", tool_dir / "research_gap_plan.md"),
         ("Gap status", tool_dir / "research_gap_status.md"),
@@ -299,6 +299,14 @@ def _scorecard_artifact_links(*, out_dir: Path, tool_dir: Path) -> list[JsonDict
         for label, path in candidates
         if path.exists()
     ]
+
+
+def _preferred_artifact(tool_dir: Path, stem: str, *suffixes: str) -> Path:
+    for suffix in suffixes:
+        path = tool_dir / f"{stem}.{suffix}"
+        if path.exists():
+            return path
+    return tool_dir / f"{stem}.{suffixes[-1] if suffixes else 'md'}"
 
 
 def _gap_status_summary(tool_dir: Path) -> JsonDict:
@@ -839,8 +847,8 @@ def _render_readme(payload: JsonDict) -> str:
             "## Suggested review order",
             "",
             "1. Read `bridge_summary.md` for each tool.",
-            "2. Check `evidence_card.md` for protocol and statistical evidence.",
-            "3. Check `claim_check.md` before making any prompt optimization claim.",
+            "2. Check `evidence_card.html` for protocol and statistical evidence.",
+            "3. Check `claim_check.html` before making any prompt optimization claim.",
             "4. Read `research_diagnostics.md` for paper-evidence gap coverage.",
             "5. Run `pcl gap-status --run <tool-dir>` after closing diagnostic gaps.",
             "6. Open `report.html` or `pcl ui --runs <this-dir>` for a visual review.",

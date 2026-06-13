@@ -93,7 +93,7 @@ runs/candidate/comparison_validity.json` 写出。
 model identity、split hash、metric identity、成对统计证据和 slice 退化。`clean` 表示证据链较完整；
 `needs_review` 表示证据有用但不完整或不确定；`invalid` 表示发现了模型、指标或切分不一致等阻断性混淆。
 
-## `evidence_card.json` / `evidence_card.md`
+## `evidence_card.json` / `evidence_card.md` / `evidence_card.html`
 
 由 `pcl evidence-card --run runs/candidate` 写出。`pcl analyze`、`pcl compare-runs`、
 `pcl research-demo` 和 `pcl diagnose` 在有足够 artifact 时也会自动写出这两个文件。
@@ -105,9 +105,9 @@ Riccati surrogate 状态和 time-varying soft-control 证据。`supported` 表�
 
 证据卡还会记录 `evidence_tier`、`claim_scope`、`claim_language` 和
 `next_tier_missing`。这些字段用于约束可声明范围：从 Promptfoo、Langfuse 或
-LangSmith / DeepEval 导入的比较结果可能足以支持“成对比较”层面的结论，但仍然缺少完整论文诊断所需的 soft-hard、trajectory、Riccati 或 time-varying 证据。
+LangSmith / DeepEval 导入的比较结果可能足以支持“成对比较”层面的结论，但仍然缺少完整论文诊断所需的 soft-hard、trajectory、Riccati 或 time-varying 证据。HTML 版本适合浏览器审查，Markdown 版本适合文本审查，JSON 版本适合自动化读取。
 
-## `claim_check.json` / `claim_check.md`
+## `claim_check.json` / `claim_check.md` / `claim_check.html`
 
 由 `pcl claim-check --run runs/candidate --claim paired --out runs/candidate/claim_check.json` 写出。
 `pcl analyze`、`pcl compare-runs`、`pcl research-demo`、`pcl diagnose` 和
@@ -116,7 +116,7 @@ LangSmith / DeepEval 导入的比较结果可能足以支持“成对比较”�
 说明什么问题：当前 evidence tier 是否足以支持用户要求的 claim scope。支持的 scope 包括
 `paired`、`partial-research` 和 `full-research`。一个 run 可能通过 `paired` 检查，但因为缺少
 soft-hard、trajectory、Riccati 或 time-varying 诊断而无法通过 `full-research` 检查。这个 artifact
-会记录 `status`、`reason`、`safe_claim`、`evidence_tier`、`next_tier_missing`，以及和证据卡一致的解释边界。
+会记录 `status`、`reason`、`safe_claim`、`evidence_tier`、`next_tier_missing`，以及和证据卡一致的解释边界。HTML 版本适合快速判断论文、README 或 release note 里可以安全使用哪种说法。
 
 ## `compare_runs_result.json`
 
@@ -197,8 +197,8 @@ gate decision、risk level、改动文件、测试、audit path、gate path，�
 
 由 `pcl evidence-from` 写出。这个一键桥接命令会从 Promptfoo、DeepEval、Langfuse 或 LangSmith
 导入 baseline export 和 candidate export，把导入快照保存到 `imports/`，把 PCL 比较结果保存到
-`comparison/`，并把最常用的 `evidence_card.md`、`report.html`、`stats.json` 和
-`comparison_validity.json` 复制到输出根目录，同时写出 `research_diagnostics.md` /
+`comparison/`，并把最常用的 `evidence_card.md`、`claim_check.md` 及其 `.html` 版本、`report.html`、
+`stats.json` 和 `comparison_validity.json` 复制到输出根目录，同时写出 `research_diagnostics.md` /
 `research_diagnostics.json` 来说明论文证据缺口。
 
 重要字段：

@@ -179,8 +179,10 @@ def test_cli_quick_analyze_explain_and_report(tmp_path: Path) -> None:
         "explanation.json",
         "evidence_card.json",
         "evidence_card.md",
+        "evidence_card.html",
         "claim_check.json",
         "claim_check.md",
+        "claim_check.html",
         "report.md",
         "report.html",
     ]
@@ -321,8 +323,10 @@ def test_cli_compare_runs_generates_stats_validity_and_report(tmp_path: Path) ->
         "comparison_validity.md",
         "evidence_card.json",
         "evidence_card.md",
+        "evidence_card.html",
         "claim_check.json",
         "claim_check.md",
+        "claim_check.html",
         "report.md",
         "report.html",
     ]:
@@ -341,6 +345,9 @@ def test_cli_compare_runs_generates_stats_validity_and_report(tmp_path: Path) ->
     assert manifest["mode"] == "run_comparison"
     assert manifest["baseline_run"] == str(baseline)
     assert manifest["candidate_run"] == str(candidate)
+    compare_result = json.loads((out / "compare_runs_result.json").read_text(encoding="utf-8"))
+    assert compare_result["evidence_card_html_path"] == str(out / "evidence_card.html")
+    assert compare_result["claim_check_html_path"] == str(out / "claim_check.html")
     report = (out / "report.md").read_text(encoding="utf-8")
     assert "Imported Comparison" in report
     assert "Comparison Validity" in report
@@ -395,20 +402,21 @@ def test_cli_ecosystem_demo_runs_all_external_bridge_examples(tmp_path: Path) ->
     ]
     assert scorecard["rows"][0]["gap_status"] == "not_checked"
     promptfoo_links = scorecard["rows"][0]["artifact_links"]
-    assert {"label": "Evidence card", "path": "promptfoo/evidence_card.md"} in promptfoo_links
-    assert {"label": "Claim check", "path": "promptfoo/claim_check.md"} in promptfoo_links
+    assert {"label": "Evidence card", "path": "promptfoo/evidence_card.html"} in promptfoo_links
+    assert {"label": "Claim check", "path": "promptfoo/claim_check.html"} in promptfoo_links
     assert {"label": "HTML report", "path": "promptfoo/report.html"} in promptfoo_links
     scorecard_markdown = (out / "ecosystem_scorecard.md").read_text(encoding="utf-8")
     assert "research evidence layer" in scorecard_markdown
     assert "pcl gap-status" in scorecard_markdown
     assert "promptfoo/bridge_summary.md" in scorecard_markdown
-    assert "[Evidence card](promptfoo/evidence_card.md)" in scorecard_markdown
-    assert "[Claim check](promptfoo/claim_check.md)" in scorecard_markdown
+    assert "[Evidence card](promptfoo/evidence_card.html)" in scorecard_markdown
+    assert "[Claim check](promptfoo/claim_check.html)" in scorecard_markdown
     scorecard_html = (out / "ecosystem_scorecard.html").read_text(encoding="utf-8")
     assert "Ecosystem Scorecard" in scorecard_html
     assert "DeepEval" in scorecard_html
     assert "promptfoo/bridge_summary.md" in scorecard_html
-    assert "promptfoo/evidence_card.md" in scorecard_html
+    assert "promptfoo/evidence_card.html" in scorecard_html
+    assert "promptfoo/claim_check.html" in scorecard_html
     assert "promptfoo/report.html" in scorecard_html
     assert main(["gap-status", "--run", str(out / "promptfoo")]) == 0
     (out / "ecosystem_scorecard.json").unlink()
@@ -445,6 +453,8 @@ def test_cli_ecosystem_demo_runs_all_external_bridge_examples(tmp_path: Path) ->
         assert (tool_dir / "evidence_from_result.json").exists()
         assert (tool_dir / "bridge_summary.md").exists()
         assert (tool_dir / "claim_check.md").exists()
+        assert (tool_dir / "claim_check.html").exists()
+        assert (tool_dir / "evidence_card.html").exists()
         assert (tool_dir / "report.html").exists()
     assert "prompt optimization evidence auditor" in (out / "README.md").read_text(
         encoding="utf-8"

@@ -139,7 +139,7 @@ def build_external_evidence(
         "copied_artifacts": [str(path) for path in copied_artifacts],
         "next_actions": [
             "Open bridge_summary.md to see what the external tool supplied and what PCL added.",
-            "Open evidence_card.md for the compact prompt optimization evidence card.",
+            "Open evidence_card.html for the compact prompt optimization evidence card.",
             "Open report.html for the full comparison dashboard.",
             "Review imports/baseline and imports/candidate if provenance looks incomplete.",
         ],
@@ -337,8 +337,10 @@ def _copy_headline_artifacts(*, comparison_dir: Path, out_dir: Path) -> list[Pat
     names = [
         "evidence_card.json",
         "evidence_card.md",
+        "evidence_card.html",
         "claim_check.json",
         "claim_check.md",
+        "claim_check.html",
         "report.md",
         "report.html",
         "stats.json",
@@ -509,7 +511,10 @@ def _bridge_next_actions(
     missing_evidence: list[object],
 ) -> list[str]:
     actions = [
-        "Archive imports/, comparison/, evidence_card.md, and report.html together.",
+        (
+            "Archive imports/, comparison/, evidence_card.html, claim_check.html, "
+            "and report.html together."
+        ),
     ]
     if validity != "clean":
         actions.append(

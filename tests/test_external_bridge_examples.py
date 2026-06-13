@@ -95,6 +95,8 @@ def test_packaged_external_examples_run_evidence_from(
     assert stats["comparisons"][0]["n"] == 4
     assert stats["comparisons"][0]["mean_delta"] == 0.75
     assert (out_dir / "evidence_card.md").exists()
+    assert (out_dir / "evidence_card.html").exists()
+    assert (out_dir / "claim_check.html").exists()
     assert (out_dir / "report.html").exists()
     assert (out_dir / "bridge_summary.md").exists()
     bridge = read_json(out_dir / "bridge_summary.json")
@@ -303,6 +305,7 @@ def test_init_project_writes_external_bridge_examples(tmp_path: Path) -> None:
         == 0
     )
     assert (out_dir / "evidence_card.md").exists()
+    assert (out_dir / "evidence_card.html").exists()
 
 
 def _langfuse_paired_payload() -> dict[str, object]:

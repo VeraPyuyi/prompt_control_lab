@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import html
+from collections.abc import Sequence
 from pathlib import Path
 
 from promptcontrollab.files import JsonDict, ensure_dir, write_json
@@ -59,12 +61,15 @@ def write_evidence_card(
     card = build_evidence_card(run_dir)
     resolved_json = json_path or (run_dir / "evidence_card.json")
     resolved_markdown = markdown_path or (run_dir / "evidence_card.md")
+    resolved_html = resolved_markdown.with_suffix(".html")
     ensure_dir(resolved_json.parent)
     ensure_dir(resolved_markdown.parent)
-    write_json(resolved_json, card)
-    resolved_markdown.write_text(render_evidence_card_markdown(card), encoding="utf-8")
     card["json_path"] = str(resolved_json)
     card["markdown_path"] = str(resolved_markdown)
+    card["html_path"] = str(resolved_html)
+    write_json(resolved_json, card)
+    resolved_markdown.write_text(render_evidence_card_markdown(card), encoding="utf-8")
+    resolved_html.write_text(render_evidence_card_html(card), encoding="utf-8")
     return card
 
 
@@ -118,6 +123,187 @@ def render_evidence_card_markdown(card: JsonDict) -> str:
         "",
     ]
     return "\n".join(lines)
+
+
+def render_evidence_card_html(card: JsonDict) -> str:
+    """Render a browser-readable evidence card."""
+
+    sections = card.get("sections")
+    sections_dict = sections if isinstance(sections, dict) else {}
+    section_cards = "\n".join(
+        _section_html(title=title, section=_section(sections_dict, key))
+        for key, title in [
+            ("protocol_hygiene", "Protocol hygiene"),
+            ("statistical_evidence", "Statistical evidence"),
+            ("comparison_validity", "Prompt-only comparison validity"),
+            ("deployment_diagnostics", "Deployment diagnostics"),
+            ("hidden_state_diagnostics", "Hidden-state diagnostics"),
+            ("riccati_surrogate", "Riccati surrogate"),
+            ("time_varying_control", "Time-varying soft-control"),
+        ]
+    )
+    return f"""<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Prompt Optimization Evidence Card</title>
+  <style>
+    :root {{
+      --bg: #f6f8fb;
+      --panel: #ffffff;
+      --ink: #18212f;
+      --muted: #667085;
+      --line: #d9e1ec;
+      --blue: #2563eb;
+      --green-bg: #eaf8ef;
+      --green: #166534;
+      --amber-bg: #fff7df;
+      --amber: #92400e;
+      --red-bg: #feecec;
+      --red: #991b1b;
+    }}
+    * {{ box-sizing: border-box; }}
+    body {{
+      margin: 0;
+      background: var(--bg);
+      color: var(--ink);
+      font: 15px/1.55 Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
+        "Segoe UI", sans-serif;
+    }}
+    main {{ max-width: 1180px; margin: 0 auto; padding: 40px 24px 56px; }}
+    .hero {{
+      background: linear-gradient(135deg, #ffffff 0%, #eef5ff 100%);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 28px;
+      box-shadow: 0 14px 38px rgba(24, 33, 47, 0.08);
+    }}
+    h1 {{ margin: 0 0 10px; font-size: clamp(28px, 4vw, 44px); line-height: 1.05; }}
+    h2 {{ margin: 0 0 12px; font-size: 18px; }}
+    p {{ margin: 0; color: var(--muted); }}
+    .meta {{
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 14px;
+      margin-top: 22px;
+    }}
+    .card, .section {{
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 16px;
+    }}
+    .label {{ color: var(--muted); font-size: 12px; text-transform: uppercase; }}
+    .value {{ margin-top: 6px; font-weight: 700; overflow-wrap: anywhere; }}
+    .grid {{
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 14px;
+      margin-top: 24px;
+    }}
+    table {{ width: 100%; border-collapse: collapse; }}
+    td {{ border-top: 1px solid var(--line); padding: 8px 0; vertical-align: top; }}
+    td:first-child {{ width: 42%; color: var(--muted); padding-right: 12px; }}
+    code {{
+      display: inline-block;
+      max-width: 100%;
+      overflow-wrap: anywhere;
+      padding: 2px 6px;
+      border-radius: 6px;
+      background: #eef2f7;
+      color: #26364d;
+      font-size: 12px;
+    }}
+    .badge {{
+      display: inline-flex;
+      border-radius: 999px;
+      padding: 3px 9px;
+      font-size: 12px;
+      font-weight: 700;
+    }}
+    .pass, .supported {{ background: var(--green-bg); color: var(--green); }}
+    .review, .needs_review, .missing {{ background: var(--amber-bg); color: var(--amber); }}
+    .fail, .not_supported, .insufficient_evidence {{
+      background: var(--red-bg);
+      color: var(--red);
+    }}
+  </style>
+</head>
+<body>
+  <main>
+    <section class="hero">
+      <h1>Prompt Optimization Evidence Card</h1>
+      <p>{_html_text(card.get("summary", ""))}</p>
+      <div class="meta">
+        {_meta_card("Recommendation", _badge(card.get("recommendation")))}
+        {_meta_card("Evidence tier", _html_text(card.get("evidence_tier", "unknown")))}
+        {_meta_card("Run directory", _html_text(card.get("run_dir", "")))}
+      </div>
+    </section>
+    <section class="grid">
+      {_claim_scope_html(card)}
+      {section_cards}
+    </section>
+    <section class="section" style="margin-top: 24px;">
+      <h2>Boundary</h2>
+      <p>{_html_text(card.get("boundary", ""))}</p>
+    </section>
+  </main>
+</body>
+</html>
+"""
+
+
+def _claim_scope_html(card: JsonDict) -> str:
+    missing = card.get("next_tier_missing")
+    missing_text = ", ".join(str(item) for item in missing) if isinstance(missing, list) else ""
+    rows = [
+        ("Claim scope", card.get("claim_scope", "")),
+        ("Safe claim language", card.get("claim_language", "")),
+        ("Next tier missing", missing_text),
+    ]
+    return _table_section_html(title="Claim scope", rows=rows)
+
+
+def _section_html(*, title: str, section: JsonDict) -> str:
+    if not section:
+        return _table_section_html(title=title, rows=[("Status", "missing")])
+    return _table_section_html(title=title, rows=list(section.items()))
+
+
+def _table_section_html(*, title: str, rows: Sequence[tuple[object, object]]) -> str:
+    body = "\n".join(
+        "<tr>"
+        f"<td>{_html_text(_title(str(key)))}</td>"
+        f"<td>{_html_value(value)}</td>"
+        "</tr>"
+        for key, value in rows
+    )
+    return f'<section class="section"><h2>{_html_text(title)}</h2><table>{body}</table></section>'
+
+
+def _meta_card(label: str, value_html: str) -> str:
+    return (
+        '<div class="card">'
+        f'<div class="label">{_html_text(label)}</div>'
+        f'<div class="value">{value_html}</div>'
+        "</div>"
+    )
+
+
+def _badge(value: object) -> str:
+    text = str(value or "")
+    css = text.replace("-", "_")
+    return f'<span class="badge {html.escape(css, quote=True)}">{_html_text(text)}</span>'
+
+
+def _html_value(value: object) -> str:
+    return f"<code>{_html_text(_format_value(value))}</code>"
+
+
+def _html_text(value: object) -> str:
+    return html.escape(str(value or ""))
 
 
 def _protocol_hygiene(model: ReportModel) -> JsonDict:

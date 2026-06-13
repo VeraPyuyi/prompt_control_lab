@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import html
 from pathlib import Path
 
 from promptcontrollab.evidence_card import build_evidence_card
@@ -68,11 +69,14 @@ def run_claim_check(
     }
     if out_path is not None:
         ensure_dir(out_path.parent)
-        write_json(out_path, payload)
         markdown_path = out_path.with_suffix(".md")
-        markdown_path.write_text(render_claim_check_markdown(payload), encoding="utf-8")
+        html_path = out_path.with_suffix(".html")
         payload["json_path"] = str(out_path)
         payload["markdown_path"] = str(markdown_path)
+        payload["html_path"] = str(html_path)
+        write_json(out_path, payload)
+        markdown_path.write_text(render_claim_check_markdown(payload), encoding="utf-8")
+        html_path.write_text(render_claim_check_html(payload), encoding="utf-8")
     return payload
 
 
@@ -97,6 +101,140 @@ def render_claim_check_markdown(payload: JsonDict) -> str:
         "",
     ]
     return "\n".join(lines)
+
+
+def render_claim_check_html(payload: JsonDict) -> str:
+    """Render a browser-readable claim-check result."""
+
+    rows = [
+        ("Requested claim", payload.get("requested_claim", "")),
+        ("Status", _badge(payload.get("status"))),
+        ("Evidence tier", payload.get("evidence_tier", "unknown")),
+        ("Claim scope", payload.get("claim_scope", "")),
+        ("Reason", payload.get("reason", "")),
+        ("Safe claim", payload.get("safe_claim", "")),
+        ("Next tier missing", _joined(payload.get("next_tier_missing"))),
+        ("Run directory", payload.get("run_dir", "")),
+    ]
+    table = "\n".join(
+        "<tr>"
+        f"<td>{_html_text(label)}</td>"
+        f"<td>{value if _is_html_value(value) else _code(value)}</td>"
+        "</tr>"
+        for label, value in rows
+    )
+    return f"""<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Prompt Optimization Claim Check</title>
+  <style>
+    :root {{
+      --bg: #f6f8fb;
+      --panel: #ffffff;
+      --ink: #18212f;
+      --muted: #667085;
+      --line: #d9e1ec;
+      --green-bg: #eaf8ef;
+      --green: #166534;
+      --amber-bg: #fff7df;
+      --amber: #92400e;
+      --red-bg: #feecec;
+      --red: #991b1b;
+    }}
+    * {{ box-sizing: border-box; }}
+    body {{
+      margin: 0;
+      background: var(--bg);
+      color: var(--ink);
+      font: 15px/1.55 Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
+        "Segoe UI", sans-serif;
+    }}
+    main {{ max-width: 980px; margin: 0 auto; padding: 40px 24px 56px; }}
+    .hero {{
+      background: linear-gradient(135deg, #ffffff 0%, #eef5ff 100%);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 28px;
+      box-shadow: 0 14px 38px rgba(24, 33, 47, 0.08);
+    }}
+    h1 {{ margin: 0 0 10px; font-size: clamp(28px, 4vw, 44px); line-height: 1.05; }}
+    h2 {{ margin: 28px 0 12px; font-size: 20px; }}
+    p {{ margin: 0; color: var(--muted); }}
+    .panel {{
+      margin-top: 22px;
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 18px;
+    }}
+    table {{ width: 100%; border-collapse: collapse; }}
+    td {{ border-top: 1px solid var(--line); padding: 12px 0; vertical-align: top; }}
+    td:first-child {{ width: 26%; color: var(--muted); padding-right: 18px; }}
+    code {{
+      display: inline-block;
+      max-width: 100%;
+      overflow-wrap: anywhere;
+      padding: 2px 6px;
+      border-radius: 6px;
+      background: #eef2f7;
+      color: #26364d;
+      font-size: 12px;
+    }}
+    .badge {{
+      display: inline-flex;
+      border-radius: 999px;
+      padding: 3px 9px;
+      font-size: 12px;
+      font-weight: 700;
+    }}
+    .pass {{ background: var(--green-bg); color: var(--green); }}
+    .needs_review {{ background: var(--amber-bg); color: var(--amber); }}
+    .fail {{ background: var(--red-bg); color: var(--red); }}
+  </style>
+</head>
+<body>
+  <main>
+    <section class="hero">
+      <h1>Prompt Optimization Claim Check</h1>
+      <p>{_html_text(payload.get("reason", ""))}</p>
+    </section>
+    <section class="panel">
+      <table>{table}</table>
+    </section>
+    <section class="panel">
+      <h2>Boundary</h2>
+      <p>{_html_text(payload.get("boundary", ""))}</p>
+    </section>
+  </main>
+</body>
+</html>
+"""
+
+
+def _is_html_value(value: object) -> bool:
+    return isinstance(value, str) and value.startswith("<span ")
+
+
+def _badge(value: object) -> str:
+    text = str(value or "")
+    css = text.replace("-", "_")
+    return f'<span class="badge {html.escape(css, quote=True)}">{_html_text(text)}</span>'
+
+
+def _code(value: object) -> str:
+    return f"<code>{_html_text(value)}</code>"
+
+
+def _joined(value: object) -> str:
+    if isinstance(value, list):
+        return ", ".join(str(item) for item in value)
+    return str(value or "")
+
+
+def _html_text(value: object) -> str:
+    return html.escape(str(value or ""))
 
 
 def _normalize_claim(claim: str) -> str:

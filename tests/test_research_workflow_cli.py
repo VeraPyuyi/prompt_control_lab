@@ -47,10 +47,12 @@ def test_research_demo_generates_paper_diagnostics(tmp_path: Path) -> None:
     assert evidence["kind"] == "prompt_optimization_evidence_card"
     assert evidence["sections"]["hidden_state_diagnostics"]["input_source"] == "synthetic_demo"
     assert (run_dir / "evidence_card.md").exists()
+    assert (run_dir / "evidence_card.html").exists()
     claim_check = read_json(run_dir / "claim_check.json")
     assert claim_check["requested_claim"] == "full-research"
     assert claim_check["status"] == "pass"
     assert (run_dir / "claim_check.md").exists()
+    assert (run_dir / "claim_check.html").exists()
 
 
 def test_research_demo_generates_complete_evidence_chain(tmp_path: Path) -> None:
@@ -107,7 +109,9 @@ def test_diagnose_reuses_research_demo_inputs(tmp_path: Path) -> None:
     assert (run_dir / "diagnostics" / "soft_hard.json").exists()
     assert (run_dir / "diagnostics" / "tv_soft.json").exists()
     assert (run_dir / "evidence_card.json").exists()
+    assert (run_dir / "evidence_card.html").exists()
     assert (run_dir / "claim_check.json").exists()
+    assert (run_dir / "claim_check.html").exists()
 
 
 def test_diagnose_summarizes_ecosystem_demo_evidence_gaps(tmp_path: Path) -> None:

@@ -977,7 +977,7 @@ def build_parser() -> argparse.ArgumentParser:
         "--out",
         type=Path,
         default=None,
-        help="Markdown output path. Defaults to RUN/evidence_card.md.",
+        help="Markdown output path. A sibling HTML file is also written.",
     )
     evidence_parser.add_argument(
         "--json-out",
@@ -1002,7 +1002,7 @@ def build_parser() -> argparse.ArgumentParser:
         "--out",
         type=Path,
         default=None,
-        help="Optional JSON output path. A sibling Markdown file is also written.",
+        help="Optional JSON output path. Sibling Markdown and HTML files are also written.",
     )
     claim_parser.set_defaults(func=_cmd_claim_check)
 

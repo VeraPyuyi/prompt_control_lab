@@ -73,8 +73,8 @@ These are the paper-derived capabilities that drive the project:
 | Tri-split withheld protocol | `pcl split`, `pcl analyze`, `splits.json` | Whether prompt evaluation avoided train/validation/withheld leakage. |
 | Paired statistical comparison | `pcl stats`, `stats.json` | Whether a prompt change is reliable under bootstrap CI, permutation p-value, and Holm correction. |
 | Prompt-only comparison validity | `pcl validity`, `comparison_validity.json` | Whether a baseline/candidate result is clean prompt-only evidence rather than a model, split, or metric confound. |
-| Prompt optimization evidence card | `pcl evidence-card`, `evidence_card.md/json` | One compact audit card for protocol hygiene, paired stats, comparison validity, deployment risk, hidden-state diagnostics, Riccati, and time-varying control evidence. |
-| Prompt optimization claim check | `pcl claim-check`, `claim_check.md/json` | Whether the recorded evidence supports a paired, partial-research, or full-research claim. |
+| Prompt optimization evidence card | `pcl evidence-card`, `evidence_card.json/md/html` | One compact audit card for protocol hygiene, paired stats, comparison validity, deployment risk, hidden-state diagnostics, Riccati, and time-varying control evidence. |
+| Prompt optimization claim check | `pcl claim-check`, `claim_check.json/md/html` | Whether the recorded evidence supports a paired, partial-research, or full-research claim. |
 | Soft-to-hard deployment gap | `pcl soft-hard`, `diagnostics/soft_hard.json` | Whether soft prompt gains survive nearest-token hard projection. |
 | HuggingFace hidden-state extraction | `pcl extract-hidden`, `hidden_states.npz` | Turns open-model prompts into trajectory-ready hidden-state artifacts. |
 | Hidden-state trajectory diagnostic | `pcl trajectory`, `diagnostics/trajectory.json` | Whether internal trajectories show drift, decay, or turnpike-like signals. |
@@ -85,8 +85,8 @@ To experience the whole research stack without preparing model artifacts first, 
 `pcl research-demo --out runs/research-demo`. To apply the same unified diagnostic report to your
 own soft prompts, hidden states, matrices, and method predictions, use `pcl diagnose`. Research
 demo now also writes a synthetic tri-split, baseline/candidate scored runs, paired statistics,
-prompt-only comparison validity, `evidence_card.json` / `evidence_card.md`, and
-`claim_check.json`. The local UI surfaces a research evidence map, the evidence card, and a claim
+prompt-only comparison validity, `evidence_card.json` / `.md` / `.html`, and
+`claim_check.json` / `.md` / `.html`. The local UI surfaces a research evidence map, the evidence card, and a claim
 evidence ladder in the Research Overview, so reviewers can see whether the bundle has protocol
 evidence, diagnostics, and claim support for paired, partial-research, or full-research claims.
 
@@ -159,13 +159,13 @@ pcl claim-check \
 
 `pcl evidence-from` writes a self-contained bridge directory: `imports/` keeps the external-tool
 baseline/candidate snapshots, `comparison/` keeps the PCL paired statistics and prompt-only
-validity audit, and the root directory exposes `bridge_summary.md`, `evidence_card.md`,
-`claim_check.md`, `research_diagnostics.md`, `research_gap_plan.md`, review-first command
+validity audit, and the root directory exposes `bridge_summary.md`, `evidence_card.html`,
+`claim_check.html`, `research_diagnostics.md`, `research_gap_plan.md`, review-first command
 scripts, `report.html`, and `evidence_from_result.json` for reviewers. Start with
 `bridge_summary.md` to see what the external tool supplied, what PCL added, and which evidence is
 still missing. Use `research_diagnostics.md` to see which paper-derived diagnostics are present
 or still missing, and which copy-paste commands can close each missing gap, without fabricating
-hidden-state or Riccati evidence. Use `claim_check.md` to see the strongest
+hidden-state or Riccati evidence. Use `claim_check.html` or `.md` to see the strongest
 prompt-optimization claim supported. Use a
 new or empty `--out` directory so stale artifacts cannot contaminate the audit. The local UI also
 surfaces the bridge in Research Overview, including detected external tools, PCL-added evidence,

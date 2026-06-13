@@ -4,7 +4,11 @@ import json
 from pathlib import Path
 
 from promptcontrollab.cli import main
-from promptcontrollab.evidence_card import build_evidence_card, render_evidence_card_markdown
+from promptcontrollab.evidence_card import (
+    build_evidence_card,
+    render_evidence_card_html,
+    render_evidence_card_markdown,
+)
 from promptcontrollab.files import read_json
 
 
@@ -95,6 +99,10 @@ def test_evidence_card_summarizes_research_and_validity_artifacts(tmp_path: Path
     assert "Evidence tier: `tier_4_full_research_diagnostics`" in markdown
     assert "Hidden-state diagnostics" in markdown
     assert "Riccati surrogate" in markdown
+    html = render_evidence_card_html(card)
+    assert "Prompt Optimization Evidence Card" in html
+    assert "tier_4_full_research_diagnostics" in html
+    assert "Hidden-state diagnostics" in html
 
 
 def test_cli_evidence_card_writes_json_and_markdown(tmp_path: Path) -> None:
@@ -123,8 +131,12 @@ def test_cli_evidence_card_writes_json_and_markdown(tmp_path: Path) -> None:
     assert payload["recommendation"] == "needs_review"
     assert payload["evidence_tier"] == "tier_1_incomplete_comparison"
     assert "not as evidence" in payload["claim_language"]
+    assert payload["html_path"] == str(markdown_out.with_suffix(".html"))
     assert markdown_out.exists()
+    html_out = markdown_out.with_suffix(".html")
+    assert html_out.exists()
     assert "Statistical evidence" in markdown_out.read_text(encoding="utf-8")
+    assert "Prompt Optimization Evidence Card" in html_out.read_text(encoding="utf-8")
 
 
 def _write_json(path: Path, payload: object) -> None:

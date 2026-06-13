@@ -70,8 +70,8 @@ comparison-validity 审计、explanation、gate 结果、报告 artifact 和本�
 | 三段切分 withheld protocol | `pcl split`、`pcl analyze`、`splits.json` | 评测是否避免了 train / validation / withheld 泄漏。 |
 | 成对统计比较 | `pcl stats`、`stats.json` | prompt 改动是否在 bootstrap CI、permutation p-value 和 Holm correction 下仍然可靠。 |
 | prompt-only 比较有效性 | `pcl validity`、`comparison_validity.json` | baseline / candidate 的结果是否真的是干净的 prompt-only 证据，而不是模型、切分或指标变化导致。 |
-| prompt 优化证据卡 | `pcl evidence-card`、`evidence_card.md/json` | 把协议卫生、成对统计、比较有效性、部署风险、hidden-state 诊断、Riccati 和 time-varying 证据压缩成一张可审查卡片。 |
-| prompt 优化主张检查 | `pcl claim-check`、`claim_check.md/json` | 判断当前证据最多能支持 paired、partial-research 还是 full-research 层级的主张。 |
+| prompt 优化证据卡 | `pcl evidence-card`、`evidence_card.json/md/html` | 把协议卫生、成对统计、比较有效性、部署风险、hidden-state 诊断、Riccati 和 time-varying 证据压缩成一张可审查卡片。 |
+| prompt 优化主张检查 | `pcl claim-check`、`claim_check.json/md/html` | 判断当前证据最多能支持 paired、partial-research 还是 full-research 层级的主张。 |
 | soft-to-hard 部署 gap | `pcl soft-hard`、`diagnostics/soft_hard.json` | soft prompt 的收益转成 hard token 后损失多大。 |
 | HuggingFace hidden-state 提取 | `pcl extract-hidden`、`hidden_states.npz` | 把开源模型 prompt 转成 trajectory 可直接读取的 hidden-state artifact。 |
 | hidden-state trajectory 诊断 | `pcl trajectory`、`diagnostics/trajectory.json` | 内部轨迹是否出现 drift、decay 或 turnpike-like signal。 |
@@ -82,7 +82,7 @@ comparison-validity 审计、explanation、gate 结果、报告 artifact 和本�
 `pcl research-demo --out runs/research-demo`。如果已经有自己的 soft prompt、hidden states、
 surrogate matrices 或 method predictions，可以用 `pcl diagnose` 统一生成诊断报告。现在
 research-demo 还会写出 synthetic tri-split、baseline / candidate scored runs、成对统计、
-prompt-only 比较有效性、`evidence_card.json` / `evidence_card.md` 和 `claim_check.json`，
+prompt-only 比较有效性、`evidence_card.json` / `.md` / `.html` 和 `claim_check.json` / `.md` / `.html`，
 本地 UI 的研究总览页也会直接展示研究证据地图、证据卡和主张证据阶梯，方便 reviewer 判断当前证据链
 是否覆盖协议、诊断和 paired、partial-research、full-research 等主张层级。
 
@@ -152,12 +152,12 @@ pcl claim-check \
 
 `pcl evidence-from` 会写出一个自包含桥接目录：`imports/` 保存外部工具的 baseline /
 candidate 导入快照，`comparison/` 保存 PCL 的成对统计和 prompt-only 有效性审计，
-根目录会放置 `bridge_summary.md`、`evidence_card.md`、`claim_check.md`、
+根目录会放置 `bridge_summary.md`、`evidence_card.html`、`claim_check.html`、
 `research_diagnostics.md`、`research_gap_plan.md`、review-first 命令脚本、`report.html`
 和 `evidence_from_result.json` 方便审查。建议先看
 `bridge_summary.md`，它会说明外部工具提供了什么、PCL 补了什么、还缺哪些证据；再看
 `research_diagnostics.md`，确认哪些论文诊断已经存在、哪些仍然缺失，以及可以复制哪些命令
-来补齐缺口，而且不会伪造 hidden-state 或 Riccati 证据；最后看 `claim_check.md`，确认当前证据最多能支持哪一层
+来补齐缺口，而且不会伪造 hidden-state 或 Riccati 证据；最后看 `claim_check.html` 或 `.md`，确认当前证据最多能支持哪一层
 prompt optimization 主张。请使用新的或空的 `--out` 目录，避免旧 artifact 污染审计结果。
 本地 UI 的研究总览页也会展示这条桥接链路，包括识别到的外部工具、PCL 补充的证据、比较有效性、主张检查状态和缺失证据。
 

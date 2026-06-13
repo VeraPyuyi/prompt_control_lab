@@ -12,7 +12,8 @@ paper-derived diagnostic stack below.
 | tri-split withheld protocol | `pcl split`, `pcl analyze` | `splits.json`, `manifest.json` | Checks protocol hygiene; it does not make a small task pool representative. |
 | paired statistical comparison | `pcl stats` | `stats.json` | Reports mean delta, bootstrap CI, permutation p-value, and Holm-adjusted p-value. |
 | prompt-only comparison validity | `pcl validity` | `comparison_validity.json`, `comparison_validity.md` | Checks whether a baseline/candidate result is confounded by model, split, metric, or missing prompt identity. |
-| prompt optimization evidence card | `pcl evidence-card` | `evidence_card.json`, `evidence_card.md` | Summarizes protocol, statistics, validity, deployment, trajectory, Riccati, and time-varying evidence in one reviewer-facing artifact. |
+| prompt optimization evidence card | `pcl evidence-card` | `evidence_card.json`, `evidence_card.md`, `evidence_card.html` | Summarizes protocol, statistics, validity, deployment, trajectory, Riccati, and time-varying evidence in one reviewer-facing artifact. |
+| prompt optimization claim check | `pcl claim-check` | `claim_check.json`, `claim_check.md`, `claim_check.html` | Checks whether the current artifact bundle supports paired, partial-research, or full-research claim tiers. |
 | soft-to-hard projection gap | `pcl soft-hard` | `diagnostics/soft_hard.json` | Measures nearest-token projection risk; it is not a proof of optimal hard prompting. |
 | HuggingFace hidden-state extraction | `pcl extract-hidden` | `hidden_states.npz`, `hidden_states.npz.metadata.json` | Generates trajectory-ready hidden states from an open/local HuggingFace model. |
 | hidden-state trajectory | `pcl trajectory` | `diagnostics/trajectory.json` | Reports drift, log-decay slope, fit quality, and turnpike-like signal. |
@@ -32,8 +33,8 @@ pcl diagnose --run runs/research-demo
 This writes synthetic soft prompt vectors, vocabulary embeddings, hidden-state
 trajectories, Riccati matrices, and method predictions under `runs/research-demo/inputs`.
 It also writes a small synthetic `tasks.jsonl`, baseline/candidate scored runs,
-`splits.json`, `stats.json`, `comparison_validity.json`, `evidence_card.json`, and
-`evidence_card.md`. The demo is for learning the workflow and artifact relationships, not for
+`splits.json`, `stats.json`, `comparison_validity.json`, `evidence_card.json` / `.md` / `.html`,
+and `claim_check.json` / `.md` / `.html`. The demo is for learning the workflow and artifact relationships, not for
 claiming benchmark performance.
 
 ## 2. Tri-Split Withheld Protocol

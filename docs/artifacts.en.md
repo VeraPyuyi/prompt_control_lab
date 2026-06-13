@@ -119,7 +119,7 @@ slice regressions. `clean` means the comparison is well supported by artifacts; 
 means evidence is incomplete or uncertain; `invalid` means a blocking confound such as model,
 metric, or split mismatch was found.
 
-## `evidence_card.json` / `evidence_card.md`
+## `evidence_card.json` / `evidence_card.md` / `evidence_card.html`
 
 Written by `pcl evidence-card --run runs/candidate`. It is also written automatically by
 `pcl analyze`, `pcl compare-runs`, `pcl research-demo`, and `pcl diagnose` when those workflows
@@ -135,8 +135,10 @@ The card also records `evidence_tier`, `claim_scope`, `claim_language`, and
 `next_tier_missing`. These fields keep the claim honest: an imported
 Promptfoo/DeepEval/Langfuse/LangSmith comparison may support a paired-comparison claim while still
 missing the full paper-derived soft-hard, trajectory, Riccati, or time-varying diagnostic stack.
+The HTML version is for browser review, the Markdown version is for text review, and the JSON
+version is for automation.
 
-## `claim_check.json` / `claim_check.md`
+## `claim_check.json` / `claim_check.md` / `claim_check.html`
 
 Written by `pcl claim-check --run runs/candidate --claim paired --out
 runs/candidate/claim_check.json`. It is also written automatically by `pcl analyze`,
@@ -148,6 +150,8 @@ failing `full-research` if it has clean paired statistics but lacks soft-hard, t
 Riccati, or time-varying diagnostics. The artifact includes `status`, `reason`, `safe_claim`,
 `evidence_tier`, `next_tier_missing`, and the same interpretation boundary used by the evidence
 card.
+The HTML version is the quickest artifact to open when deciding what language is safe to use in a
+paper, README, or release note.
 
 ## `compare_runs_result.json`
 
@@ -250,8 +254,9 @@ statistics, reports, or paper-derived diagnostics on top.
 
 Written by `pcl evidence-from`. This one-command bridge imports a baseline export and a
 candidate export from Promptfoo, DeepEval, Langfuse, or LangSmith, snapshots them under `imports/`,
-runs a PCL comparison under `comparison/`, copies the headline `evidence_card.md`, `report.html`,
-`stats.json`, and `comparison_validity.json` to the output root, and writes
+runs a PCL comparison under `comparison/`, copies the headline `evidence_card.md`,
+`evidence_card.html`, `claim_check.md`, `claim_check.html`, `report.html`, `stats.json`, and
+`comparison_validity.json` to the output root, and writes
 `research_diagnostics.md` / `research_diagnostics.json` for paper-evidence gap coverage.
 
 Important fields:

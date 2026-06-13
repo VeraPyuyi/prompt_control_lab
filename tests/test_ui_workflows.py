@@ -144,7 +144,9 @@ def test_analyze_gate_agent_pr_and_zip_workflows(tmp_path: Path) -> None:
     assert detail["candidate_score"] == 1.0
     assert (run_dir / "evidence_card.json").exists()
     assert (run_dir / "evidence_card.md").exists()
+    assert (run_dir / "evidence_card.html").exists()
     assert (run_dir / "claim_check.json").exists()
+    assert (run_dir / "claim_check.html").exists()
     assert (run_dir / "report.html").exists()
 
     gate = run_gate_workflow(
@@ -218,7 +220,9 @@ def test_analyze_gate_agent_pr_and_zip_workflows(tmp_path: Path) -> None:
     assert "agent_run.json" in names
     assert "evidence_card.json" in names
     assert "evidence_card.md" in names
+    assert "evidence_card.html" in names
     assert "claim_check.json" in names
+    assert "claim_check.html" in names
     assert "src.py" not in names
 
 
@@ -388,8 +392,10 @@ def test_cli_export_report_zip_contains_known_artifacts(tmp_path: Path) -> None:
     _write_json(run_dir / "manifest.json", {"mode": "quick"})
     _write_json(run_dir / "evidence_card.json", {"recommendation": "needs_review"})
     _write(run_dir / "evidence_card.md", "# evidence\n")
+    _write(run_dir / "evidence_card.html", "<h1>evidence</h1>\n")
     _write_json(run_dir / "claim_check.json", {"status": "pass"})
     _write(run_dir / "claim_check.md", "# claim\n")
+    _write(run_dir / "claim_check.html", "<h1>claim</h1>\n")
     _write_json(run_dir / "research_gap_plan.json", {"kind": "research_gap_plan"})
     _write(run_dir / "research_gap_plan.md", "# gap plan\n")
     _write(run_dir / "research_gap_commands.ps1", "exit 1\n")
@@ -409,8 +415,10 @@ def test_cli_export_report_zip_contains_known_artifacts(tmp_path: Path) -> None:
         "diagnostics/trajectory.json",
         "evidence_card.json",
         "evidence_card.md",
+        "evidence_card.html",
         "claim_check.json",
         "claim_check.md",
+        "claim_check.html",
         "manifest.json",
         "research_gap_commands.ps1",
         "research_gap_commands.sh",
