@@ -26,6 +26,9 @@ each item.
 
 What it explains: which exact examples passed or failed.
 
+When written by `pcl ingest promptfoo`, `score` comes from Promptfoo's exported result score or
+pass/fail value. That run can then be used with `pcl stats`, `pcl validity`, and `pcl report`.
+
 ## `pcl model-detect` output
 
 Stores `provider`, `model_id`, `source`, `confidence`, optional public metadata such as

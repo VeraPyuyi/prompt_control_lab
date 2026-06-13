@@ -85,6 +85,21 @@ own soft prompts, hidden states, matrices, and method predictions, use `pcl diag
 See [Research From The Paper](docs/research_from_paper.en.md) for the direct mapping from paper
 ideas to commands, inputs, outputs, and interpretation boundaries.
 
+## Ecosystem Bridge
+
+If you already use Promptfoo for prompt/model evaluation, keep it. `prompt_control_lab` can import
+Promptfoo JSON results and add the research diagnostics layer on top:
+
+```bash
+promptfoo eval --output results.json
+pcl ingest promptfoo --input results.json --out runs/from-promptfoo --prompt-id candidate
+pcl report --run runs/from-promptfoo
+```
+
+The imported run contains `predictions.jsonl`, `metrics.json`, and `manifest.json`, so it can be
+used with `pcl stats`, `pcl validity`, and downstream reports. This is intentionally a bridge, not a
+replacement for Promptfoo's red-team or provider ecosystem.
+
 ## Applied Engineering Layer
 
 The agent guard, model provenance, diff audit, GitHub Action, plugins, and UI are practical
@@ -145,8 +160,9 @@ The repository includes narrated 4K hands-on demo videos generated from real UI 
 7. `pcl trajectory`: hidden-state drift, decay slope, and turnpike-like signal.
 8. `pcl riccati`: fitted finite-dimensional Riccati/DARE surrogate diagnostics.
 9. `pcl tv-soft`: static/time-varying/shuffled/random soft-control comparison.
-10. `pcl report` / `pcl explain` / `pcl gate`: turn artifacts into readable decisions.
-11. `pcl guard` / `pcl audit-diff`: applied AI coding agent preflight and post-run audit.
+10. `pcl ingest promptfoo`: import Promptfoo eval JSON into PCL research artifacts.
+11. `pcl report` / `pcl explain` / `pcl gate`: turn artifacts into readable decisions.
+12. `pcl guard` / `pcl audit-diff`: applied AI coding agent preflight and post-run audit.
 
 ## Install The CLI ⚙️
 

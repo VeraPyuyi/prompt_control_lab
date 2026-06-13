@@ -81,6 +81,18 @@ surrogate matrices 或 method predictions，可以用 `pcl diagnose` 统一生�
 
 完整对应关系见 [论文功能映射](docs/research_from_paper.zh.md)。
 
+## 生态桥接
+
+如果你已经在使用 Promptfoo 做 prompt / model 评测，不需要替换它。`prompt_control_lab` 可以导入 Promptfoo 的 JSON 结果，并在其上增加研究诊断层：
+
+```bash
+promptfoo eval --output results.json
+pcl ingest promptfoo --input results.json --out runs/from-promptfoo --prompt-id candidate
+pcl report --run runs/from-promptfoo
+```
+
+导入后的 run 会包含 `predictions.jsonl`、`metrics.json` 和 `manifest.json`，因此可以继续接 `pcl stats`、`pcl validity` 和后续报告。这个能力的定位是桥接 Promptfoo 生态，而不是替代它的 red-team 或 provider 生态。
+
 ## 工程应用层
 
 Agent guard、模型溯源、diff audit、GitHub Action、插件和 UI 是围绕研究内核做出的工程应用。

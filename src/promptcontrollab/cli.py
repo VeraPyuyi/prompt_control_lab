@@ -30,6 +30,7 @@ from promptcontrollab.explain import generate_explanation
 from promptcontrollab.files import JsonDict, ensure_dir, write_json
 from promptcontrollab.gate import run_gate
 from promptcontrollab.history import compare_history, index_history
+from promptcontrollab.ingest import ingest_promptfoo_results
 from promptcontrollab.model_drift import run_model_drift
 from promptcontrollab.model_identity import detect_model_identity
 from promptcontrollab.plugin_installer import install_plugin
@@ -112,6 +113,34 @@ def build_parser() -> argparse.ArgumentParser:
     init_parser = subcommands.add_parser("init", help="Create an example project.")
     init_parser.add_argument("--path", type=Path, default=Path("."), help="Project directory.")
     init_parser.set_defaults(func=_cmd_init)
+
+    ingest_parser = subcommands.add_parser(
+        "ingest",
+        help="Import external eval-tool results into PromptControlLab artifacts.",
+    )
+    ingest_subcommands = ingest_parser.add_subparsers(dest="ingest_command", required=True)
+    promptfoo_ingest = ingest_subcommands.add_parser(
+        "promptfoo",
+        help="Import `promptfoo eval --output results.json` output.",
+    )
+    promptfoo_ingest.add_argument("--input", type=Path, required=True, help="Promptfoo JSON file.")
+    promptfoo_ingest.add_argument("--out", type=Path, required=True, help="PCL run directory.")
+    promptfoo_ingest.add_argument(
+        "--prompt-id",
+        default=None,
+        help="Promptfoo prompt id/label to import when the file contains multiple prompts.",
+    )
+    promptfoo_ingest.add_argument(
+        "--provider",
+        default=None,
+        help="Promptfoo provider id to import when the file contains multiple providers.",
+    )
+    promptfoo_ingest.add_argument(
+        "--method",
+        default=None,
+        help="Method name written to PCL predictions. Defaults to the prompt id.",
+    )
+    promptfoo_ingest.set_defaults(func=_cmd_ingest_promptfoo)
 
     improve_parser = subcommands.add_parser(
         "improve",
@@ -658,6 +687,17 @@ def build_parser() -> argparse.ArgumentParser:
 def _cmd_init(args: argparse.Namespace) -> None:
     write_example_project(args.path)
     print(f"Created PromptControlLab example at {args.path}")
+
+
+def _cmd_ingest_promptfoo(args: argparse.Namespace) -> None:
+    payload = ingest_promptfoo_results(
+        source_path=args.input,
+        out_dir=args.out,
+        prompt_id=args.prompt_id,
+        provider=args.provider,
+        method=args.method,
+    )
+    print(json.dumps(payload, indent=2, ensure_ascii=False, sort_keys=True))
 
 
 def _cmd_start(args: argparse.Namespace) -> None:

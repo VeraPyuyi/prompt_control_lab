@@ -23,6 +23,8 @@ Quick Mode 做成对 prompt 实验时，顶层 manifest 还可以包含 `baselin
 每一行是一条样本的输出、期望答案、score、slice、method、错误信息，以及可选的模型来源信息。
 
 说明什么问题：不是只看平均分，而是能回到每条样本检查失败原因。
+如果由 `pcl ingest promptfoo` 写出，`score` 来自 Promptfoo 导出的 result score 或 pass/fail
+结果；这个 run 之后可以继续接 `pcl stats`、`pcl validity` 和 `pcl report`。
 
 ## `pcl model-detect` 输出
 
