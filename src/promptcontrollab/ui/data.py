@@ -410,6 +410,37 @@ def ecosystem_demo_rows(detail: JsonDict) -> list[JsonDict]:
     return rows
 
 
+def ecosystem_scorecard_rows(detail: JsonDict) -> list[JsonDict]:
+    """Return cross-tool scorecard rows for ecosystem demo runs."""
+
+    payload = detail.get("ecosystem_scorecard")
+    if not isinstance(payload, dict):
+        return []
+    raw_rows = payload.get("rows")
+    if not isinstance(raw_rows, list):
+        return []
+    rows: list[JsonDict] = []
+    for item in raw_rows:
+        if not isinstance(item, dict):
+            continue
+        missing = item.get("missing_paper_diagnostics")
+        rows.append(
+            {
+                "tool": item.get("display_name") or item.get("tool", ""),
+                "external_strength": item.get("external_strength", ""),
+                "pcl_adds": item.get("pcl_adds", ""),
+                "validity": item.get("validity", ""),
+                "evidence_tier": item.get("evidence_tier", ""),
+                "missing_paper_diagnostics": ", ".join(str(part) for part in missing)
+                if isinstance(missing, list)
+                else str(missing or ""),
+                "open_first": item.get("open_first", ""),
+                "gap_status_command": item.get("gap_status_command", ""),
+            }
+        )
+    return rows
+
+
 def evidence_gap_rows(detail: JsonDict) -> list[JsonDict]:
     """Return paper-evidence gap rows from ``pcl diagnose`` external bridge output."""
 

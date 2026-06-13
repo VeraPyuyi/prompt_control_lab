@@ -23,6 +23,7 @@ from promptcontrollab.ui.data import (
     claim_check_summary,
     claim_evidence_ladder,
     ecosystem_demo_rows,
+    ecosystem_scorecard_rows,
     evidence_card_rows,
     evidence_gap_action_rows,
     evidence_gap_rows,
@@ -438,11 +439,18 @@ def test_ui_recognizes_ecosystem_demo_root_and_summarizes_tools(tmp_path: Path) 
         demo / "ecosystem_scorecard.json",
         {
             "kind": "ecosystem_scorecard",
+            "positioning": "PCL adds the research evidence layer.",
             "rows": [
                 {
                     "tool": "promptfoo",
+                    "display_name": "Promptfoo",
                     "external_strength": "LLM evals",
                     "pcl_adds": "research evidence layer",
+                    "validity": "needs_review",
+                    "evidence_tier": "tier_2_paired_comparison",
+                    "missing_paper_diagnostics": ["hidden-state trajectory"],
+                    "open_first": "promptfoo/bridge_summary.md",
+                    "gap_status_command": "pcl gap-status --run promptfoo",
                 }
             ],
         },
@@ -452,11 +460,24 @@ def test_ui_recognizes_ecosystem_demo_root_and_summarizes_tools(tmp_path: Path) 
     assert list_runs(root) == [{"name": "ecosystem-demo", "path": str(demo)}]
     detail = load_run_detail(demo)
     rows = ecosystem_demo_rows(detail)
+    scorecard_rows = ecosystem_scorecard_rows(detail)
 
     assert "ecosystem_demo.json" in detail["artifacts"]
     assert "ecosystem_scorecard.json" in detail["artifacts"]
     assert "ecosystem_scorecard.md" in detail["artifacts"]
     assert detail["ecosystem_scorecard"]["kind"] == "ecosystem_scorecard"
+    assert scorecard_rows == [
+        {
+            "tool": "Promptfoo",
+            "external_strength": "LLM evals",
+            "pcl_adds": "research evidence layer",
+            "validity": "needs_review",
+            "evidence_tier": "tier_2_paired_comparison",
+            "missing_paper_diagnostics": "hidden-state trajectory",
+            "open_first": "promptfoo/bridge_summary.md",
+            "gap_status_command": "pcl gap-status --run promptfoo",
+        }
+    ]
     assert [row["tool"] for row in rows] == ["promptfoo", "langfuse", "langsmith"]
     assert rows[0]["open_first"] == "promptfoo/bridge_summary.md"
 
