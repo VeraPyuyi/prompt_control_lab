@@ -449,6 +449,10 @@ def test_ui_recognizes_ecosystem_demo_root_and_summarizes_tools(tmp_path: Path) 
                     "validity": "needs_review",
                     "evidence_tier": "tier_2_paired_comparison",
                     "missing_paper_diagnostics": ["hidden-state trajectory"],
+                    "gap_status": "needs_work",
+                    "gap_complete_count": 1,
+                    "gap_missing_count": 3,
+                    "gap_status_path": "promptfoo/research_gap_status.md",
                     "open_first": "promptfoo/bridge_summary.md",
                     "gap_status_command": "pcl gap-status --run promptfoo",
                 }
@@ -474,6 +478,10 @@ def test_ui_recognizes_ecosystem_demo_root_and_summarizes_tools(tmp_path: Path) 
             "validity": "needs_review",
             "evidence_tier": "tier_2_paired_comparison",
             "missing_paper_diagnostics": "hidden-state trajectory",
+            "gap_status": "needs_work",
+            "gap_complete_count": 1,
+            "gap_missing_count": 3,
+            "gap_status_path": "promptfoo/research_gap_status.md",
             "open_first": "promptfoo/bridge_summary.md",
             "gap_status_command": "pcl gap-status --run promptfoo",
         }

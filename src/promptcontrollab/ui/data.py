@@ -434,6 +434,10 @@ def ecosystem_scorecard_rows(detail: JsonDict) -> list[JsonDict]:
                 "missing_paper_diagnostics": ", ".join(str(part) for part in missing)
                 if isinstance(missing, list)
                 else str(missing or ""),
+                "gap_status": item.get("gap_status", ""),
+                "gap_complete_count": item.get("gap_complete_count", ""),
+                "gap_missing_count": item.get("gap_missing_count", ""),
+                "gap_status_path": item.get("gap_status_path", ""),
                 "open_first": item.get("open_first", ""),
                 "gap_status_command": item.get("gap_status_command", ""),
             }
