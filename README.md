@@ -74,6 +74,7 @@ These are the paper-derived capabilities that drive the project:
 | Paired statistical comparison | `pcl stats`, `stats.json` | Whether a prompt change is reliable under bootstrap CI, permutation p-value, and Holm correction. |
 | Prompt-only comparison validity | `pcl validity`, `comparison_validity.json` | Whether a baseline/candidate result is clean prompt-only evidence rather than a model, split, or metric confound. |
 | Prompt optimization evidence card | `pcl evidence-card`, `evidence_card.md/json` | One compact audit card for protocol hygiene, paired stats, comparison validity, deployment risk, hidden-state diagnostics, Riccati, and time-varying control evidence. |
+| Prompt optimization claim check | `pcl claim-check`, `claim_check.md/json` | Whether the recorded evidence supports a paired, partial-research, or full-research claim. |
 | Soft-to-hard deployment gap | `pcl soft-hard`, `diagnostics/soft_hard.json` | Whether soft prompt gains survive nearest-token hard projection. |
 | HuggingFace hidden-state extraction | `pcl extract-hidden`, `hidden_states.npz` | Turns open-model prompts into trajectory-ready hidden-state artifacts. |
 | Hidden-state trajectory diagnostic | `pcl trajectory`, `diagnostics/trajectory.json` | Whether internal trajectories show drift, decay, or turnpike-like signals. |
@@ -133,6 +134,11 @@ pcl compare-runs \
 pcl evidence-card \
   --run runs/from-promptfoo-comparison \
   --out runs/from-promptfoo-comparison/evidence_card.md
+
+pcl claim-check \
+  --run runs/from-promptfoo-comparison \
+  --claim paired \
+  --out runs/from-promptfoo-comparison/claim_check.json
 ```
 
 `pcl evidence-from` writes a self-contained bridge directory: `imports/` keeps the external-tool
@@ -216,8 +222,9 @@ The repository includes narrated 4K hands-on demo videos generated from real UI 
 11. `pcl evidence-from`: import external baseline/candidate exports and generate a PCL evidence card in one command.
 12. `pcl ingest auto` / `promptfoo` / `langfuse` / `langsmith`: import external eval/trace artifacts into PCL research artifacts.
 13. `pcl compare-runs`: turn two imported/scored runs into stats, validity, and a report in one command.
-14. `pcl report` / `pcl explain` / `pcl gate`: turn artifacts into readable decisions.
-15. `pcl guard` / `pcl audit-diff`: applied AI coding agent preflight and post-run audit.
+14. `pcl claim-check`: say what claim the current evidence tier can safely support.
+15. `pcl report` / `pcl explain` / `pcl gate`: turn artifacts into readable decisions.
+16. `pcl guard` / `pcl audit-diff`: applied AI coding agent preflight and post-run audit.
 
 ## Install The CLI ⚙️
 

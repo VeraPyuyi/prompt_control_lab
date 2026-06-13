@@ -14,6 +14,7 @@ from pathlib import Path
 from promptcontrollab.agent_run import build_agent_run_manifest
 from promptcontrollab.artifact_export import export_report_zip
 from promptcontrollab.audit_diff import run_audit_diff
+from promptcontrollab.claim_check import run_claim_check
 from promptcontrollab.config import (
     get_config_bool,
     get_config_float,
@@ -888,6 +889,25 @@ def build_parser() -> argparse.ArgumentParser:
     )
     evidence_parser.set_defaults(func=_cmd_evidence_card)
 
+    claim_parser = subcommands.add_parser(
+        "claim-check",
+        help="Check what prompt-optimization claim the run artifacts support.",
+    )
+    claim_parser.add_argument("--run", type=Path, required=True, help="Run directory.")
+    claim_parser.add_argument(
+        "--claim",
+        choices=["paired", "partial-research", "full-research"],
+        default="paired",
+        help="Claim scope to check against recorded artifacts.",
+    )
+    claim_parser.add_argument(
+        "--out",
+        type=Path,
+        default=None,
+        help="Optional JSON output path. A sibling Markdown file is also written.",
+    )
+    claim_parser.set_defaults(func=_cmd_claim_check)
+
     explain_parser = subcommands.add_parser(
         "explain",
         help="Generate plain or technical explanation.json for a run.",
@@ -1591,6 +1611,11 @@ def _cmd_report(args: argparse.Namespace) -> None:
 
 def _cmd_evidence_card(args: argparse.Namespace) -> None:
     payload = write_evidence_card(args.run, markdown_path=args.out, json_path=args.json_out)
+    print(json.dumps(payload, indent=2, ensure_ascii=False, sort_keys=True))
+
+
+def _cmd_claim_check(args: argparse.Namespace) -> None:
+    payload = run_claim_check(args.run, claim=args.claim, out_path=args.out)
     print(json.dumps(payload, indent=2, ensure_ascii=False, sort_keys=True))
 
 

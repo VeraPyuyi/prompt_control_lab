@@ -136,6 +136,18 @@ The card also records `evidence_tier`, `claim_scope`, `claim_language`, and
 comparison may support a paired-comparison claim while still missing the full paper-derived
 soft-hard, trajectory, Riccati, or time-varying diagnostic stack.
 
+## `claim_check.json` / `claim_check.md`
+
+Written by `pcl claim-check --run runs/candidate --claim paired --out
+runs/candidate/claim_check.json`.
+
+What it explains: whether the recorded evidence tier supports a requested claim scope. Supported
+claim scopes are `paired`, `partial-research`, and `full-research`. A run can pass `paired` while
+failing `full-research` if it has clean paired statistics but lacks soft-hard, trajectory,
+Riccati, or time-varying diagnostics. The artifact includes `status`, `reason`, `safe_claim`,
+`evidence_tier`, `next_tier_missing`, and the same interpretation boundary used by the evidence
+card.
+
 ## `compare_runs_result.json`
 
 Written by `pcl compare-runs --baseline runs/baseline --candidate runs/candidate --out

@@ -12,6 +12,7 @@ Agent guard 和 audit 很有用，但它们是应用层；项目的研究内核�
 | 成对统计比较 | `pcl stats` | `stats.json` | 报告 mean delta、bootstrap CI、permutation p-value 和 Holm-adjusted p-value。 |
 | prompt-only 比较有效性 | `pcl validity` | `comparison_validity.json`、`comparison_validity.md` | 检查 baseline / candidate 结果是否被模型、切分、指标或缺失 prompt identity 混淆。 |
 | prompt 优化证据卡 | `pcl evidence-card` | `evidence_card.json`、`evidence_card.md` | 把协议、统计、有效性、部署风险、trajectory、Riccati 和 time-varying 证据汇总成一份可审查 artifact。 |
+| prompt 优化主张检查 | `pcl claim-check` | `claim_check.json`、`claim_check.md` | 检查当前 artifact bundle 是否足以支持 paired、partial-research 或 full-research 层级的主张。 |
 | 软转硬 soft-to-hard projection gap | `pcl soft-hard` | `diagnostics/soft_hard.json` | 衡量 nearest-token projection 风险；不是 hard prompt 最优性证明。 |
 | HuggingFace hidden-state 提取 | `pcl extract-hidden` | `hidden_states.npz`、`hidden_states.npz.metadata.json` | 从开源或本地 HuggingFace 模型生成 trajectory 可直接读取的 hidden states。 |
 | hidden-state trajectory | `pcl trajectory` | `diagnostics/trajectory.json` | 报告 drift、log-decay slope、fit quality 和 turnpike-like signal。 |
@@ -109,7 +110,18 @@ pcl evidence-card --run runs/candidate --out runs/candidate/evidence_card.md
 
 证据卡还会给出 evidence tier。`tier_2_paired_comparison` 表示分数比较已经成对且可审计，但还不是完整论文诊断结论。`tier_4_full_research_diagnostics` 表示 artifact bundle 同时包含 soft-hard、trajectory、Riccati 和 time-varying 等论文诊断。
 
-## 6. soft-to-hard 部署 gap
+## 6. 主张检查
+
+当你想知道当前 run 最多能安全声称什么时，运行：
+
+```bash
+pcl claim-check --run runs/candidate --claim paired
+pcl claim-check --run runs/candidate --claim full-research --out runs/candidate/claim_check.json
+```
+
+这个命令会读取 evidence tier，并回答一个很直接的问题：当前 artifact 是否支持你要求的 claim scope？例如，从 Promptfoo、Langfuse 或 LangSmith 导入的结果可能足以支持 `paired` 层级的成对比较主张，但如果缺少 soft-hard、trajectory、Riccati 和 time-varying 诊断，就不应该被说成 `full-research` 层级的完整 prompt-control 分析。这个失败结果是有价值的：它能阻止把一个小型 eval 导出过度包装成论文级结论。
+
+## 7. soft-to-hard 部署 gap
 
 soft prompt 在优化时可能表现很好，但投影成 hard token 后损失明显。`soft-hard` 诊断用于量化这个风险：
 
@@ -122,7 +134,7 @@ pcl soft-hard \
 
 它会输出 projection distance 和风险信号。这个结果应该被理解为部署风险诊断，而不是 hard prompt optimizer。
 
-## 7. hidden-state trajectory 诊断
+## 8. hidden-state trajectory 诊断
 
 如果你还没有 `hidden_states.npz`，可以先从开源或本地 HuggingFace 模型提取：
 
@@ -155,7 +167,7 @@ pcl trajectory \
 如果 log-decay slope 为负且拟合质量尚可，可以说明这条 trace 上存在稳定性风格的信号；
 异质任务 trace 可能削弱这种信号。
 
-## 8. Riccati surrogate 诊断
+## 9. Riccati surrogate 诊断
 
 Riccati 命令检查用户提供或从 trajectory 拟合出来的有限维 surrogate：
 
@@ -174,7 +186,7 @@ pcl riccati \
 输出会报告 closed-loop spectral radius，以及这个 surrogate 在诊断里是否稳定。
 这个边界必须说清楚：它不证明真实运行的完整语言模型满足这些控制论假设。
 
-## 9. time-varying soft-control lane
+## 10. time-varying soft-control lane
 
 time-varying lane 用来比较不同方法组：
 
@@ -185,7 +197,7 @@ pcl tv-soft --predictions method_predictions.jsonl --out runs/candidate/diagnost
 它比较 static、time-varying、shuffled time-varying 和 random controls。
 关键问题是：收益更像来自时序结构，还是只是来自更多参数容量。
 
-## 10. 统一 diagnose 命令
+## 11. 统一 diagnose 命令
 
 如果你已经有自己的 artifacts，可以直接运行统一诊断：
 

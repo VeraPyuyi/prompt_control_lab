@@ -103,6 +103,15 @@ Riccati surrogate 状态和 time-varying soft-control 证据。`supported` 表�
 `next_tier_missing`。这些字段用于约束可声明范围：从 Promptfoo、Langfuse 或
 LangSmith 导入的比较结果可能足以支持“成对比较”层面的结论，但仍然缺少完整论文诊断所需的 soft-hard、trajectory、Riccati 或 time-varying 证据。
 
+## `claim_check.json` / `claim_check.md`
+
+由 `pcl claim-check --run runs/candidate --claim paired --out runs/candidate/claim_check.json` 写出。
+
+说明什么问题：当前 evidence tier 是否足以支持用户要求的 claim scope。支持的 scope 包括
+`paired`、`partial-research` 和 `full-research`。一个 run 可能通过 `paired` 检查，但因为缺少
+soft-hard、trajectory、Riccati 或 time-varying 诊断而无法通过 `full-research` 检查。这个 artifact
+会记录 `status`、`reason`、`safe_claim`、`evidence_tier`、`next_tier_missing`，以及和证据卡一致的解释边界。
+
 ## `compare_runs_result.json`
 
 由 `pcl compare-runs --baseline runs/baseline --candidate runs/candidate --out

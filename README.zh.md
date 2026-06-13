@@ -71,6 +71,7 @@ comparison-validity 审计、explanation、gate 结果、报告 artifact 和本�
 | 成对统计比较 | `pcl stats`、`stats.json` | prompt 改动是否在 bootstrap CI、permutation p-value 和 Holm correction 下仍然可靠。 |
 | prompt-only 比较有效性 | `pcl validity`、`comparison_validity.json` | baseline / candidate 的结果是否真的是干净的 prompt-only 证据，而不是模型、切分或指标变化导致。 |
 | prompt 优化证据卡 | `pcl evidence-card`、`evidence_card.md/json` | 把协议卫生、成对统计、比较有效性、部署风险、hidden-state 诊断、Riccati 和 time-varying 证据压缩成一张可审查卡片。 |
+| prompt 优化主张检查 | `pcl claim-check`、`claim_check.md/json` | 判断当前证据最多能支持 paired、partial-research 还是 full-research 层级的主张。 |
 | soft-to-hard 部署 gap | `pcl soft-hard`、`diagnostics/soft_hard.json` | soft prompt 的收益转成 hard token 后损失多大。 |
 | HuggingFace hidden-state 提取 | `pcl extract-hidden`、`hidden_states.npz` | 把开源模型 prompt 转成 trajectory 可直接读取的 hidden-state artifact。 |
 | hidden-state trajectory 诊断 | `pcl trajectory`、`diagnostics/trajectory.json` | 内部轨迹是否出现 drift、decay 或 turnpike-like signal。 |
@@ -126,6 +127,11 @@ pcl compare-runs \
 pcl evidence-card \
   --run runs/from-promptfoo-comparison \
   --out runs/from-promptfoo-comparison/evidence_card.md
+
+pcl claim-check \
+  --run runs/from-promptfoo-comparison \
+  --claim paired \
+  --out runs/from-promptfoo-comparison/claim_check.json
 ```
 
 `pcl evidence-from` 会写出一个自包含桥接目录：`imports/` 保存外部工具的 baseline /

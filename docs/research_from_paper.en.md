@@ -120,7 +120,24 @@ diagnostic claim. `tier_4_full_research_diagnostics` means the artifact bundle
 also contains the paper-derived soft-hard, trajectory, Riccati, and time-varying
 diagnostics.
 
-## 6. Soft-To-Hard Deployment Gap
+## 6. Claim Check
+
+Use `claim-check` when you want the tool to say what the current artifacts can
+safely support:
+
+```bash
+pcl claim-check --run runs/candidate --claim paired
+pcl claim-check --run runs/candidate --claim full-research --out runs/candidate/claim_check.json
+```
+
+The command reads the evidence tier from the recorded artifacts and answers one
+question: does this run support the requested claim scope? A Promptfoo,
+Langfuse, or LangSmith import may pass a `paired` claim while failing a
+`full-research` claim because the paper-derived soft-hard, trajectory, Riccati,
+and time-varying diagnostics are missing. That failure is useful: it prevents a
+small eval export from being overstated as a complete prompt-control analysis.
+
+## 7. Soft-To-Hard Deployment Gap
 
 Soft prompts can look good during optimization but fail when projected to hard
 tokens. The soft-to-hard diagnostic quantifies that gap:
@@ -135,7 +152,7 @@ pcl soft-hard \
 This reports projection distances and risk signals. It should be interpreted as
 a deployment-risk diagnostic, not as a hard-prompt optimizer.
 
-## 7. Hidden-State Trajectory Diagnostics
+## 8. Hidden-State Trajectory Diagnostics
 
 If you do not already have hidden states, extract them from a local or open
 HuggingFace model first:
@@ -172,7 +189,7 @@ turnpike-like signal. A negative decay slope with reasonable fit can suggest
 stability-like behavior on that trace; heterogeneous traces may weaken the
 signature.
 
-## 8. Riccati Surrogate Diagnostics
+## 9. Riccati Surrogate Diagnostics
 
 The Riccati command checks a fitted or supplied finite-dimensional surrogate:
 
@@ -192,7 +209,7 @@ The result reports closed-loop spectral radius and whether the surrogate looks
 stable under the fitted diagnostic. This is intentionally limited: it does not
 prove that the operational language model satisfies the surrogate assumptions.
 
-## 9. Time-Varying Soft-Control Lane
+## 10. Time-Varying Soft-Control Lane
 
 The time-varying lane compares method groups:
 
@@ -204,7 +221,7 @@ Use this to compare static, time-varying, shuffled time-varying, and random
 controls. The key question is whether gains are consistent with temporal
 structure or merely with extra parameter capacity.
 
-## 10. Unified Diagnose Command
+## 11. Unified Diagnose Command
 
 For user-provided artifacts, run the same diagnostic stack directly:
 
