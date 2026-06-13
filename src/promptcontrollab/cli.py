@@ -33,6 +33,7 @@ from promptcontrollab.explain import generate_explanation
 from promptcontrollab.external_evidence import (
     build_external_evidence,
     build_external_evidence_audit,
+    verify_source_inputs,
 )
 from promptcontrollab.files import JsonDict, ensure_dir, write_json
 from promptcontrollab.gate import run_gate
@@ -641,6 +642,24 @@ def build_parser() -> argparse.ArgumentParser:
     evidence_audit_parser.add_argument("--bootstrap-samples", type=int, default=1000)
     evidence_audit_parser.add_argument("--permutation-samples", type=int, default=1000)
     evidence_audit_parser.set_defaults(func=_cmd_evidence_audit)
+
+    source_verify_parser = subcommands.add_parser(
+        "source-verify",
+        help="Verify original external export files against recorded source-input hashes.",
+    )
+    source_verify_parser.add_argument(
+        "--run",
+        type=Path,
+        required=True,
+        help="Run directory containing source_inputs provenance.",
+    )
+    source_verify_parser.add_argument(
+        "--out",
+        type=Path,
+        default=None,
+        help="Optional JSON output path. Markdown/HTML siblings are written next to it.",
+    )
+    source_verify_parser.set_defaults(func=_cmd_source_verify)
 
     ecosystem_demo_parser = subcommands.add_parser(
         "ecosystem-demo",
@@ -1302,6 +1321,11 @@ def _cmd_evidence_audit(args: argparse.Namespace) -> None:
         bootstrap_samples=args.bootstrap_samples,
         permutation_samples=args.permutation_samples,
     )
+    print(json.dumps(payload, indent=2, ensure_ascii=False, sort_keys=True))
+
+
+def _cmd_source_verify(args: argparse.Namespace) -> None:
+    payload = verify_source_inputs(run_dir=args.run, out_path=args.out)
     print(json.dumps(payload, indent=2, ensure_ascii=False, sort_keys=True))
 
 

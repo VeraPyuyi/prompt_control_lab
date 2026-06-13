@@ -133,6 +133,15 @@ full evidence trail.
 The audit also records source input provenance for the external baseline and candidate exports:
 path, byte size, SHA-256 hash, detected tool, and imported row count. This lets reviewers verify
 which external export files the PCL evidence bundle was built from.
+To re-check those original exports later, run:
+
+```bash
+pcl source-verify --run runs/from-promptfoo-audit
+```
+
+This writes `source_input_verification.json`, `.md`, and `.html`. It checks the external source
+exports themselves; `pcl research-bundle --verify` checks the PCL evidence artifacts created from
+those exports.
 
 The demo automatically audits the bundle against the paper-derived evidence map.
 To regenerate that diagnosis after editing the bundle, run:

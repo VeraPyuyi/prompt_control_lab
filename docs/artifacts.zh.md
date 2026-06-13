@@ -178,6 +178,24 @@ artifact 是否已经存在。它适合用来确认“证据缺口是否真的�
 人工审查时建议先打开 `evidence_audit_result.html`；自动化流程读取
 `evidence_audit_result.json`。
 
+## `source_input_verification.json` / `.md` / `.html`
+
+由 `pcl source-verify --run <run>` 写出。
+
+说明什么问题：原始外部 baseline / candidate 导出文件是否仍然匹配
+`pcl evidence-from` 或 `pcl evidence-audit` 记录在 `source_inputs` 里的 SHA-256 哈希。
+
+重要字段：
+
+- `status`：`pass`、`fail`、`needs_review` 或 `missing_source_inputs`。
+- `source_artifact`：这次验证读取的是哪一个 PCL artifact 里的 `source_inputs`。
+- `checked_count` / `ok_count` / `mismatch_count` / `missing_count` / `unchecked_count`。
+- `results`：每个外部源文件的 expected / actual SHA-256 对比。
+
+它和 `research_bundle_verification.*` 是互补关系。`source-verify` 验证原始 Promptfoo /
+DeepEval / Langfuse / LangSmith 导出文件；`research-bundle --verify` 验证由这些导出生成的
+PCL 证据 artifact。
+
 ## `bridge_summary.json` / `bridge_summary.md` / `bridge_summary.html`
 
 由 `pcl evidence-from` 写出，并会被 `pcl evidence-audit` 刷新。

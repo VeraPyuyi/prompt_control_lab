@@ -300,6 +300,24 @@ linked evidence package has passed the latest local hash verification.
 Open `evidence_audit_result.html` first when a human reviewer wants the whole
 one-command audit in a browser. Use `evidence_audit_result.json` for automation.
 
+## `source_input_verification.json` / `.md` / `.html`
+
+Written by `pcl source-verify --run <run>`.
+
+What it explains: whether the original external baseline/candidate export files still match the
+`source_inputs` hashes recorded by `pcl evidence-from` or `pcl evidence-audit`.
+
+Important fields:
+
+- `status`: `pass`, `fail`, `needs_review`, or `missing_source_inputs`
+- `source_artifact`: which PCL artifact supplied the recorded `source_inputs`
+- `checked_count` / `ok_count` / `mismatch_count` / `missing_count` / `unchecked_count`
+- `results`: one row per external source export with expected and actual SHA-256 values
+
+This complements `research_bundle_verification.*`. Source verification checks the original
+Promptfoo, DeepEval, Langfuse, or LangSmith export files; bundle verification checks the PCL
+evidence artifacts created from those exports.
+
 ## `bridge_summary.json` / `bridge_summary.md` / `bridge_summary.html`
 
 Written by `pcl evidence-from` and updated by `pcl evidence-audit`.

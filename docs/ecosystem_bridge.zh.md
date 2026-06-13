@@ -73,6 +73,14 @@ pcl evidence-audit \
 审计结果还会记录外部 baseline 和 candidate 导出文件的 source input provenance：
 路径、字节数、SHA-256 哈希、检测到的工具名和导入行数。这样 reviewer 可以确认
 PCL 证据包到底基于哪两个外部导出文件生成。
+如果后续需要重新确认这些原始导出文件没有被替换或改动，可以运行：
+
+```bash
+pcl source-verify --run runs/from-promptfoo-audit
+```
+
+它会写出 `source_input_verification.json`、`.md` 和 `.html`。这个命令检查外部源文件本身；
+`pcl research-bundle --verify` 检查由这些源文件生成的 PCL 证据 artifact。
 
 ## 更低层的桥接命令
 

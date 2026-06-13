@@ -360,6 +360,57 @@ def build_external_evidence_audit(
     return payload
 
 
+def verify_source_inputs(*, run_dir: Path, out_path: Path | None = None) -> JsonDict:
+    """Verify external source export files against recorded ``source_inputs`` hashes."""
+
+    source_inputs, source_artifact = _load_source_inputs(run_dir)
+    results = [
+        _verify_source_input(run_dir=run_dir, item=item)
+        for item in source_inputs
+        if isinstance(item, dict)
+    ]
+    checked = [item for item in results if item.get("status") in {"ok", "mismatch", "missing"}]
+    mismatches = [item for item in results if item.get("status") == "mismatch"]
+    missing = [item for item in results if item.get("status") == "missing"]
+    unchecked = [item for item in results if item.get("status") == "unchecked"]
+    if not source_inputs:
+        status = "missing_source_inputs"
+    elif mismatches or missing:
+        status = "fail"
+    elif unchecked:
+        status = "needs_review"
+    else:
+        status = "pass"
+
+    json_path = out_path or (run_dir / "source_input_verification.json")
+    markdown_path = json_path.with_suffix(".md")
+    html_path = json_path.with_suffix(".html")
+    payload: JsonDict = {
+        "kind": "source_input_verification",
+        "run_dir": str(run_dir),
+        "source_artifact": source_artifact,
+        "json_path": str(json_path),
+        "markdown_path": str(markdown_path),
+        "html_path": str(html_path),
+        "status": status,
+        "checked_count": len(checked),
+        "ok_count": sum(1 for item in results if item.get("status") == "ok"),
+        "mismatch_count": len(mismatches),
+        "missing_count": len(missing),
+        "unchecked_count": len(unchecked),
+        "results": results,
+        "boundary": (
+            "This check verifies recorded SHA-256 values for original external export files. "
+            "It is tamper-evidence for local source inputs, not proof of provider-side logs "
+            "or hidden model internals."
+        ),
+    }
+    write_json(json_path, payload)
+    markdown_path.write_text(_render_source_input_verification_markdown(payload), encoding="utf-8")
+    html_path.write_text(render_source_input_verification_html(payload), encoding="utf-8")
+    return payload
+
+
 def _write_evidence_audit_artifacts(out_dir: Path, payload: JsonDict) -> None:
     write_json(out_dir / "evidence_audit_result.json", payload)
     (out_dir / "evidence_audit_result.md").write_text(
@@ -387,6 +438,62 @@ def _refresh_bridge_integrity_after_verification(out_dir: Path) -> JsonDict:
         encoding="utf-8",
     )
     return payload
+
+
+def _load_source_inputs(run_dir: Path) -> tuple[list[object], str | None]:
+    for name in ["evidence_audit_result.json", "evidence_from_result.json", "bridge_summary.json"]:
+        path = run_dir / name
+        if not path.exists():
+            continue
+        payload = read_json(path)
+        source_inputs = payload.get("source_inputs")
+        if isinstance(source_inputs, list):
+            return source_inputs, str(path)
+    return [], None
+
+
+def _verify_source_input(*, run_dir: Path, item: JsonDict) -> JsonDict:
+    role = item.get("role")
+    path_text = str(item.get("path") or "")
+    expected = item.get("sha256")
+    base: JsonDict = {
+        "role": role,
+        "source_tool": item.get("source_tool"),
+        "path": path_text,
+        "expected_sha256": expected,
+        "import_count": item.get("import_count"),
+    }
+    if not path_text:
+        return {**base, "status": "unchecked", "reason": "no source path recorded"}
+    if not isinstance(expected, str) or not expected:
+        return {**base, "status": "unchecked", "reason": "no recorded sha256"}
+    path = _resolve_source_path(path_text=path_text, run_dir=run_dir)
+    if not path.exists() or not path.is_file():
+        return {
+            **base,
+            "status": "missing",
+            "actual_sha256": None,
+            "resolved_path": str(path),
+        }
+    actual = f"sha256:{_sha256_file(path)}"
+    return {
+        **base,
+        "status": "ok" if actual == expected else "mismatch",
+        "actual_sha256": actual,
+        "resolved_path": str(path),
+        "bytes": path.stat().st_size,
+    }
+
+
+def _resolve_source_path(*, path_text: str, run_dir: Path) -> Path:
+    path = Path(path_text)
+    if path.is_absolute() or path.exists():
+        return path
+    candidates = [run_dir / path, run_dir.parent / path]
+    for candidate in candidates:
+        if candidate.exists():
+            return candidate
+    return path
 
 
 def _attach_research_diagnostics_to_bridge_summary(
@@ -1088,6 +1195,70 @@ def render_evidence_audit_html(payload: JsonDict) -> str:
     return _html_page(title="External Evidence Audit Summary", body=body)
 
 
+def _render_source_input_verification_markdown(payload: JsonDict) -> str:
+    lines = [
+        "# Source Input Verification",
+        "",
+        f"- Status: `{payload.get('status')}`",
+        f"- Source artifact: `{payload.get('source_artifact')}`",
+        f"- Checked: `{payload.get('checked_count')}`",
+        f"- OK: `{payload.get('ok_count')}`",
+        f"- Mismatch: `{payload.get('mismatch_count')}`",
+        f"- Missing: `{payload.get('missing_count')}`",
+        f"- Unchecked: `{payload.get('unchecked_count')}`",
+        "",
+        "## Results",
+        "",
+        "| Role | Tool | Status | Path | Expected SHA-256 | Actual SHA-256 | Bytes |",
+        "|---|---|---|---|---|---|---:|",
+        *_source_verification_markdown_rows(payload.get("results")),
+        "",
+        "## Boundary",
+        "",
+        str(payload.get("boundary", "")),
+        "",
+    ]
+    return "\n".join(lines)
+
+
+def render_source_input_verification_html(payload: JsonDict) -> str:
+    """Render source input hash verification as a reviewer-facing HTML page."""
+
+    cards = "\n".join(
+        [
+            _html_card("Status", payload.get("status")),
+            _html_card("Checked", payload.get("checked_count")),
+            _html_card("OK", payload.get("ok_count")),
+            _html_card("Mismatch", payload.get("mismatch_count")),
+            _html_card("Missing", payload.get("missing_count")),
+            _html_card("Unchecked", payload.get("unchecked_count")),
+        ]
+    )
+    rows = _source_verification_html_rows(payload.get("results"))
+    table = _html_table(
+        ["Role", "Tool", "Status", "Path", "Expected SHA-256", "Actual SHA-256", "Bytes"],
+        rows,
+        empty="No source input verification rows recorded.",
+    )
+    body = f"""
+    <section class="hero">
+      <p class="eyebrow">prompt_control_lab source input verification</p>
+      <h1>Source Input Verification</h1>
+      <p>Verifies whether original external export files still match recorded SHA-256 values.</p>
+    </section>
+    <section class="cards">{cards}</section>
+    <section>
+      <h2>Results</h2>
+      {table}
+    </section>
+    <section>
+      <h2>Boundary</h2>
+      <p>{_html_text(payload.get("boundary"))}</p>
+    </section>
+    """
+    return _html_page(title="Source Input Verification", body=body)
+
+
 def render_bridge_summary_html(payload: JsonDict) -> str:
     """Render a reviewer-facing HTML summary for an external evidence bridge."""
 
@@ -1382,6 +1553,47 @@ def _source_input_html_rows(value: object) -> list[str]:
             f"<td>{_html_text(item.get('bytes'))}</td>"
             f"<td><code>{_html_text(item.get('sha256'))}</code></td>"
             f"<td>{_html_text(item.get('import_count'))}</td>"
+            "</tr>"
+        )
+    return rows
+
+
+def _source_verification_markdown_rows(value: object) -> list[str]:
+    if not isinstance(value, list):
+        return ["| _missing_ |  |  |  |  |  |  |"]
+    rows: list[str] = []
+    for item in value:
+        if not isinstance(item, dict):
+            continue
+        rows.append(
+            "| "
+            f"{_markdown_cell(item.get('role'))} | "
+            f"{_markdown_cell(item.get('source_tool'))} | "
+            f"{_markdown_cell(item.get('status'))} | "
+            f"`{_markdown_cell(item.get('path'))}` | "
+            f"`{_markdown_cell(item.get('expected_sha256'))}` | "
+            f"`{_markdown_cell(item.get('actual_sha256'))}` | "
+            f"{_markdown_cell(item.get('bytes'))} |"
+        )
+    return rows or ["| _missing_ |  |  |  |  |  |  |"]
+
+
+def _source_verification_html_rows(value: object) -> list[str]:
+    if not isinstance(value, list):
+        return []
+    rows: list[str] = []
+    for item in value:
+        if not isinstance(item, dict):
+            continue
+        rows.append(
+            "<tr>"
+            f"<td>{_html_text(item.get('role'))}</td>"
+            f"<td>{_html_text(item.get('source_tool'))}</td>"
+            f"<td><strong>{_html_text(item.get('status'))}</strong></td>"
+            f"<td><code>{_html_text(item.get('path'))}</code></td>"
+            f"<td><code>{_html_text(item.get('expected_sha256'))}</code></td>"
+            f"<td><code>{_html_text(item.get('actual_sha256'))}</code></td>"
+            f"<td>{_html_text(item.get('bytes'))}</td>"
             "</tr>"
         )
     return rows

@@ -181,6 +181,63 @@ def test_packaged_promptfoo_example_runs_evidence_audit(tmp_path: Path) -> None:
     assert "Research bundle" in bridge_html
 
 
+def test_source_verify_detects_changed_external_export(tmp_path: Path) -> None:
+    source = tmp_path / "promptfoo_results.json"
+    source.write_text(
+        (Path("examples") / "external" / "promptfoo_results.json").read_text(encoding="utf-8"),
+        encoding="utf-8",
+    )
+    out_dir = tmp_path / "runs" / "from-promptfoo-audit"
+
+    assert (
+        main(
+            [
+                "evidence-audit",
+                "--tool",
+                "promptfoo",
+                "--baseline-input",
+                str(source),
+                "--candidate-input",
+                str(source),
+                "--baseline-prompt-id",
+                "baseline",
+                "--candidate-prompt-id",
+                "candidate",
+                "--provider",
+                "openai:gpt-4o-mini-20260601",
+                "--split-hash",
+                "external-demo-split",
+                "--bootstrap-samples",
+                "20",
+                "--permutation-samples",
+                "100",
+                "--out",
+                str(out_dir),
+            ]
+        )
+        == 0
+    )
+
+    assert main(["source-verify", "--run", str(out_dir)]) == 0
+    verification = read_json(out_dir / "source_input_verification.json")
+    assert verification["kind"] == "source_input_verification"
+    assert verification["status"] == "pass"
+    assert verification["ok_count"] == 2
+    assert verification["mismatch_count"] == 0
+    assert (out_dir / "source_input_verification.html").exists()
+
+    source.write_text(source.read_text(encoding="utf-8") + "\n", encoding="utf-8")
+
+    assert main(["source-verify", "--run", str(out_dir)]) == 0
+    verification = read_json(out_dir / "source_input_verification.json")
+    assert verification["status"] == "fail"
+    assert verification["mismatch_count"] == 2
+    assert {row["status"] for row in verification["results"]} == {"mismatch"}
+    markdown = (out_dir / "source_input_verification.md").read_text(encoding="utf-8")
+    assert "Source Input Verification" in markdown
+    assert "mismatch" in markdown
+
+
 def test_evidence_from_langfuse_pairs_by_example_id(tmp_path: Path) -> None:
     source = tmp_path / "langfuse-export.json"
     source.write_text(json.dumps(_langfuse_paired_payload()), encoding="utf-8")

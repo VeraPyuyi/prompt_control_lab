@@ -203,6 +203,17 @@ whether the last verification passed.
 Use `pcl evidence-audit` when you want this bridge in one pass: it runs the external import,
 paired comparison, research diagnostics, gap-status check, bundle index, and bundle verification,
 then writes `evidence_audit_result.html` / `.md` / `.json` as the reviewer-facing audit summary.
+If you need to prove that the original external export files still match the recorded source-input
+hashes, run:
+
+```bash
+pcl source-verify --run runs/from-promptfoo-audit
+```
+
+This writes `source_input_verification.json/md/html`. It complements
+`research-bundle --verify`: source verification checks the original Promptfoo / DeepEval /
+Langfuse / LangSmith exports, while bundle verification checks the PCL evidence artifacts created
+from those exports.
 
 After running the suggested diagnostic commands, check closure with:
 

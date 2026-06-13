@@ -197,6 +197,17 @@ pcl gap-status --run runs/from-promptfoo-evidence
 
 如果希望一条命令完成整个闭环，可以用 `pcl evidence-audit`：它会依次运行外部导入、成对比较、研究诊断、gap-status、bundle index 和 bundle verification，并写出 `evidence_audit_result.html` / `.md` / `.json` 作为 reviewer 优先的审计摘要。
 
+如果还需要确认原始外部导出文件本身没有被替换或改动，可以运行：
+
+```bash
+pcl source-verify --run runs/from-promptfoo-audit
+```
+
+它会写出 `source_input_verification.json/md/html`。这个检查和
+`research-bundle --verify` 是互补关系：`source-verify` 验证原始 Promptfoo /
+DeepEval / Langfuse / LangSmith 导出文件，`research-bundle --verify` 验证由这些导出生成的
+PCL 证据 artifact。
+
 竞争切口：Promptfoo、DeepEval、LangSmith 和 Langfuse 已经在 security testing、本地 eval、tracing、observability、prompt management 和生产工作流上形成很强能力。PCL 更应该赢在它们通常不覆盖的 **研究证据层**：成对不确定性、prompt-only 有效性、evidence card、claim check、soft-hard gap、hidden-state trajectory、Riccati surrogate、time-varying control evidence，以及现在用 `pcl gap-status` 检查导入之后的论文诊断缺口是否真正补齐。
 
 如果想直接复制示例命令，请看 [生态桥接教程](docs/ecosystem_bridge.zh.md) 和
