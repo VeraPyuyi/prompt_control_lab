@@ -226,11 +226,14 @@ def test_report_model_preserves_zero_candidate_score(tmp_path: Path) -> None:
 def test_report_model_lists_diagnostic_artifacts(tmp_path: Path) -> None:
     run = tmp_path / "runs" / "quick"
     _write_json(run / "manifest.json", {"mode": "quick"})
+    _write_json(run / "research_diagnostics.json", {"inputs": {"hidden_states": {"source": "hf"}}})
     _write_json(run / "diagnostics" / "trajectory.json", {"drift": 0.1})
 
     detail = load_run_detail(run)
 
+    assert detail["research_diagnostics"]["inputs"]["hidden_states"]["source"] == "hf"
     assert "diagnostics/trajectory.json" in detail["artifacts"]
+    assert "research_diagnostics.json" in detail["artifacts"]
     assert detail["diagnostics"]["trajectory"]["drift"] == 0.1
 
 
@@ -255,12 +258,13 @@ def test_research_diagnostic_rows_summarize_paper_artifacts(tmp_path: Path) -> N
 
     assert [row["diagnostic"] for row in rows] == [
         "soft-hard gap",
+        "hidden-state input",
         "trajectory",
         "Riccati surrogate",
         "tv-soft lane",
     ]
     assert all(row["status"] == "available" for row in rows)
-    assert research_status_counts(detail) == {"available": 4}
+    assert research_status_counts(detail) == {"available": 5}
 
 
 def test_research_diagnostic_chart_and_design_tokens(monkeypatch: pytest.MonkeyPatch) -> None:

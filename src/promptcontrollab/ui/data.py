@@ -75,6 +75,7 @@ def load_run_detail(run_dir: Path) -> JsonDict:
         "history_index": model.history_index,
         "history_compare": model.history_compare,
         "agent_run": model.agent_run,
+        "research_diagnostics": model.research_diagnostics,
         "diagnostics": model.diagnostics,
         "baseline_metrics": model.baseline_metrics,
         "candidate_metrics": model.candidate_metrics,
@@ -131,6 +132,12 @@ def research_diagnostic_rows(detail: JsonDict) -> list[JsonDict]:
             _soft_hard_signal,
         ),
         (
+            "hidden_states",
+            "hidden-state input",
+            "HF/local activation source",
+            _hidden_state_signal,
+        ),
+        (
             "trajectory",
             "trajectory",
             "Hidden-state stability",
@@ -151,7 +158,11 @@ def research_diagnostic_rows(detail: JsonDict) -> list[JsonDict]:
     ]
     rows: list[JsonDict] = []
     for key, label, meaning, signal_fn in specs:
-        payload = diagnostics_dict.get(key)
+        payload = (
+            _hidden_state_payload(detail)
+            if key == "hidden_states"
+            else diagnostics_dict.get(key)
+        )
         payload_dict = payload if isinstance(payload, dict) else {}
         available = bool(payload_dict)
         rows.append(
@@ -217,6 +228,15 @@ def _soft_hard_signal(payload: JsonDict) -> str:
     return f"risk={risk}; mean distance={distance}"
 
 
+def _hidden_state_signal(payload: JsonDict) -> str:
+    source = payload.get("source", "unknown")
+    model_id = payload.get("model_id")
+    shape = payload.get("states_shape")
+    if model_id:
+        return f"source={source}; model={model_id}; shape={shape}"
+    return f"source={source}; shape={shape}"
+
+
 def _trajectory_signal(payload: JsonDict) -> str:
     signal = payload.get("turnpike_like_signal")
     slope = payload.get("log_decay_slope")
@@ -236,6 +256,23 @@ def _tv_soft_signal(payload: JsonDict) -> str:
         return f"best delta={best_key}:{deltas.get(best_key)}"
     means = payload.get("method_means")
     return f"method means={len(means) if isinstance(means, dict) else 0}"
+
+
+def _hidden_state_payload(detail: JsonDict) -> JsonDict:
+    research = detail.get("research_diagnostics")
+    if isinstance(research, dict):
+        inputs = research.get("inputs")
+        if isinstance(inputs, dict):
+            hidden = inputs.get("hidden_states")
+            if isinstance(hidden, dict) and hidden:
+                return hidden
+    artifacts = detail.get("artifacts")
+    if isinstance(artifacts, list) and "inputs/hidden_states.npz" in artifacts:
+        return {"source": "provided_npz", "path": "inputs/hidden_states.npz"}
+    diagnostics = detail.get("diagnostics")
+    if isinstance(diagnostics, dict) and isinstance(diagnostics.get("trajectory"), dict):
+        return {"source": "inferred_from_trajectory", "path": None}
+    return {}
 
 
 def filter_history_rows(

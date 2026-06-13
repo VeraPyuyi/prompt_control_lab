@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, cast
 
-from promptcontrollab.files import JsonDict, ensure_dir, write_json, write_jsonl
+from promptcontrollab.files import JsonDict, ensure_dir, read_json, write_json, write_jsonl
 from promptcontrollab.optional import require_module
 from promptcontrollab.riccati import analyze_riccati
 from promptcontrollab.soft_hard import analyze_soft_hard
@@ -36,6 +36,15 @@ PAPER_MAPPING: list[JsonDict] = [
         "meaning": (
             "Measures whether learned soft vectors are close to deployable "
             "token embeddings."
+        ),
+    },
+    {
+        "concept": "HuggingFace hidden-state extraction",
+        "commands": ["pcl extract-hidden"],
+        "artifact": "inputs/hidden_states.npz",
+        "meaning": (
+            "Prepares trajectory-ready hidden states from an open/local model, or records "
+            "the provided hidden-state source."
         ),
     },
     {
@@ -103,6 +112,23 @@ def write_research_demo(*, out_dir: Path, seed: int = 0) -> JsonDict:
     np.savez(soft_path, soft=soft)
     np.savez(vocab_path, embeddings=embeddings)
     np.savez(states_path, states=states)
+    write_json(
+        Path(str(states_path) + ".metadata.json"),
+        {
+            "kind": "research_demo_hidden_states",
+            "source": "synthetic_demo",
+            "model_id": "synthetic_control_trace",
+            "out_path": str(states_path),
+            "states_shape": [int(states.shape[0]), int(states.shape[1])],
+            "prompt_count": int(states.shape[0]),
+            "layer": None,
+            "pool": "synthetic_trajectory",
+            "boundary": (
+                "Synthetic hidden states for demonstrating trajectory/Riccati diagnostics; "
+                "not activations from an operational language model."
+            ),
+        },
+    )
     np.savez(matrices_path, **matrices)
     write_jsonl(predictions_path, _demo_method_predictions())
     write_json(
@@ -173,6 +199,10 @@ def run_research_diagnostics(
         artifacts["soft_hard"] = str(paths.diagnostics_dir / "soft_hard.json")
 
     if paths.states_path is not None:
+        artifacts["hidden_states"] = str(paths.states_path)
+        metadata_path = Path(str(paths.states_path) + ".metadata.json")
+        if metadata_path.exists():
+            artifacts["hidden_state_metadata"] = str(metadata_path)
         diagnostics["trajectory"] = analyze_trajectory(
             states_path=paths.states_path,
             out_dir=paths.diagnostics_dir,
@@ -207,6 +237,7 @@ def run_research_diagnostics(
         "run_dir": str(run_dir) if run_dir is not None else None,
         "diagnostics_dir": str(paths.diagnostics_dir),
         "summary_dir": str(paths.summary_dir),
+        "inputs": _research_input_summary(paths),
         "diagnostics": diagnostics,
         "artifacts": artifacts,
         "paper_mapping": PAPER_MAPPING,
@@ -252,6 +283,22 @@ def render_research_diagnostics_markdown(payload: JsonDict) -> str:
             )
         )
     lines.extend(["", "## Diagnostic Results", ""])
+    inputs = payload.get("inputs", {})
+    inputs_dict = inputs if isinstance(inputs, dict) else {}
+    hidden_input = inputs_dict.get("hidden_states")
+    if isinstance(hidden_input, dict):
+        lines.extend(
+            [
+                "### Hidden-state input",
+                "",
+                f"- Source: `{hidden_input.get('source')}`",
+                f"- Path: `{hidden_input.get('path')}`",
+                f"- Model id: `{hidden_input.get('model_id')}`",
+                f"- States shape: `{hidden_input.get('states_shape')}`",
+                f"- Pool: `{hidden_input.get('pool')}`",
+                "",
+            ]
+        )
     soft = diagnostics.get("soft_hard", {})
     if isinstance(soft, dict):
         lines.extend(
@@ -307,6 +354,67 @@ def render_research_diagnostics_markdown(payload: JsonDict) -> str:
         ]
     )
     return "\n".join(lines)
+
+
+def _research_input_summary(paths: ResearchPaths) -> JsonDict:
+    inputs: JsonDict = {}
+    if paths.states_path is not None:
+        inputs["hidden_states"] = _hidden_state_input_summary(paths.states_path)
+    return inputs
+
+
+def _hidden_state_input_summary(states_path: Path) -> JsonDict:
+    metadata_path = Path(str(states_path) + ".metadata.json")
+    if metadata_path.exists():
+        metadata = read_json(metadata_path)
+        return {
+            "path": str(states_path),
+            "metadata_path": str(metadata_path),
+            "source": _hidden_source(metadata),
+            "kind": metadata.get("kind"),
+            "model_id": metadata.get("model_id"),
+            "states_shape": metadata.get("states_shape"),
+            "layer": metadata.get("layer"),
+            "pool": metadata.get("pool"),
+            "prompt_count": metadata.get("prompt_count"),
+            "boundary": metadata.get("boundary"),
+        }
+    return {
+        "path": str(states_path),
+        "metadata_path": None,
+        "source": "provided_npz",
+        "kind": "hidden_states_npz",
+        "model_id": None,
+        "states_shape": _npz_states_shape(states_path),
+        "layer": None,
+        "pool": "unknown",
+        "prompt_count": None,
+        "boundary": (
+            "Hidden states were provided without extraction metadata. Trajectory/Riccati "
+            "diagnostics can run, but model id, layer, and pooling provenance are unknown."
+        ),
+    }
+
+
+def _hidden_source(metadata: JsonDict) -> str:
+    source = metadata.get("source")
+    if isinstance(source, str) and source:
+        return source
+    kind = metadata.get("kind")
+    if kind == "hidden_state_extraction":
+        return "huggingface_extraction"
+    if isinstance(kind, str) and kind:
+        return kind
+    return "metadata"
+
+
+def _npz_states_shape(states_path: Path) -> list[int] | None:
+    np = cast(Any, require_module("numpy", feature="research diagnostics", extra="research"))
+    with np.load(states_path) as data:
+        if "states" not in data:
+            return None
+        states = data["states"]
+        return [int(value) for value in states.shape]
 
 
 def _resolve_research_paths(

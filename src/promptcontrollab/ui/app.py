@@ -76,6 +76,7 @@ TEXT = {
         "paper_protocol": "Protocol hygiene",
         "diagnostic_coverage": "Diagnostics ready",
         "artifact_evidence": "Evidence artifacts",
+        "hidden_state_input": "Hidden-state input",
         "research_boundary": (
             "These diagnostics make prompt experiments easier to inspect. They are not "
             "a proof of full language-model stability or universal prompt improvement."
@@ -239,6 +240,7 @@ TEXT = {
         "paper_protocol": "协议洁净度",
         "diagnostic_coverage": "已完成诊断",
         "artifact_evidence": "证据 artifact",
+        "hidden_state_input": "hidden-state 输入",
         "research_boundary": (
             "这些诊断让 prompt 实验更容易被检查和复现，但它们不是完整语言模型稳定性"
             "或通用 prompt 提升的数学证明。"
@@ -1223,7 +1225,11 @@ def _render_research_overview_tab(st: Any, text: dict[str, str], detail: JsonDic
     st.markdown(
         '<div class="pcl-grid">'
         + stat_card_html(text["paper_protocol"], protocol_ready, text["tri_split"])
-        + stat_card_html(text["diagnostic_coverage"], f"{available}/4", text["research_diagnostics"])
+        + stat_card_html(
+            text["diagnostic_coverage"],
+            f"{available}/{len(rows)}",
+            text["research_diagnostics"],
+        )
         + stat_card_html(text["artifact_evidence"], artifact_count, "JSON / HTML / Markdown")
         + stat_card_html(text["paired_stats"], stats_ready, "bootstrap CI / p-value")
         + "</div>",
@@ -1241,6 +1247,7 @@ def _render_research_overview_tab(st: Any, text: dict[str, str], detail: JsonDic
     st.markdown(
         '<div class="pcl-grid">'
         + paper_card_html(text["soft_hard"], "soft prompt -> hard token projection risk")
+        + paper_card_html(text["hidden_state_input"], "HuggingFace/local hidden-state artifact source")
         + paper_card_html(text["trajectory_diag"], "hidden-state drift, decay, and turnpike-like signal")
         + paper_card_html(text["riccati_diag"], "finite-dimensional surrogate stability check")
         + paper_card_html(text["tv_soft_diag"], "static / time-varying / shuffled / random comparison")
@@ -1255,6 +1262,7 @@ def _render_research_pipeline(st: Any, text: dict[str, str]) -> None:
         (text["tri_split"], "train / validation / withheld"),
         (text["paired_stats"], "paired CI + permutation test"),
         (text["soft_hard"], "projection gap"),
+        (text["hidden_state_input"], "HF/local states"),
         (text["trajectory_diag"], "state trajectory"),
         (text["riccati_diag"], "surrogate stability"),
         (text["tv_soft_diag"], "control lane"),
