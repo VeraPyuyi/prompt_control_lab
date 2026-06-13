@@ -11,6 +11,7 @@ paper-derived diagnostic stack below.
 | one-command research workflow | `pcl research-demo`, `pcl diagnose` | `research_diagnostics.json`, `research_diagnostics.md` | Runs synthetic fixtures or user-provided artifacts; demo outputs are not benchmark results. |
 | tri-split withheld protocol | `pcl split`, `pcl analyze` | `splits.json`, `manifest.json` | Checks protocol hygiene; it does not make a small task pool representative. |
 | paired statistical comparison | `pcl stats` | `stats.json` | Reports mean delta, bootstrap CI, permutation p-value, and Holm-adjusted p-value. |
+| prompt-only comparison validity | `pcl validity` | `comparison_validity.json`, `comparison_validity.md` | Checks whether a baseline/candidate result is confounded by model, split, metric, or missing prompt identity. |
 | soft-to-hard projection gap | `pcl soft-hard` | `diagnostics/soft_hard.json` | Measures nearest-token projection risk; it is not a proof of optimal hard prompting. |
 | hidden-state trajectory | `pcl trajectory` | `diagnostics/trajectory.json` | Reports drift, log-decay slope, fit quality, and turnpike-like signal. |
 | Riccati surrogate | `pcl riccati` | `diagnostics/riccati.json` | Checks a fitted finite-dimensional surrogate, not the full language model. |
@@ -60,7 +61,25 @@ The output records paired mean delta, bootstrap confidence interval, permutation
 p-value, and Holm-adjusted p-value. If the interval crosses zero, the evidence is
 weaker even when the candidate mean is higher.
 
-## 4. Soft-To-Hard Deployment Gap
+## 4. Prompt-Only Comparison Validity
+
+A higher candidate score is not enough if the model, data split, metric, or
+prompt identity changed at the same time. The validity command turns that
+question into a small auditable artifact:
+
+```bash
+pcl validity \
+  --baseline runs/baseline \
+  --candidate runs/candidate \
+  --out runs/candidate/comparison_validity.json
+```
+
+It writes `comparison_validity.json` and `comparison_validity.md`. A `clean`
+result means the recorded artifacts support a prompt-only comparison. An
+`invalid` result means a blocking confound was found, such as model or split
+mismatch. A `needs_review` result means the evidence is useful but incomplete.
+
+## 5. Soft-To-Hard Deployment Gap
 
 Soft prompts can look good during optimization but fail when projected to hard
 tokens. The soft-to-hard diagnostic quantifies that gap:
@@ -75,7 +94,7 @@ pcl soft-hard \
 This reports projection distances and risk signals. It should be interpreted as
 a deployment-risk diagnostic, not as a hard-prompt optimizer.
 
-## 5. Hidden-State Trajectory Diagnostics
+## 6. Hidden-State Trajectory Diagnostics
 
 The trajectory command imports hidden states and estimates drift and decay:
 
@@ -88,7 +107,7 @@ turnpike-like signal. A negative decay slope with reasonable fit can suggest
 stability-like behavior on that trace; heterogeneous traces may weaken the
 signature.
 
-## 6. Riccati Surrogate Diagnostics
+## 7. Riccati Surrogate Diagnostics
 
 The Riccati command checks a fitted or supplied finite-dimensional surrogate:
 
@@ -106,7 +125,7 @@ The result reports closed-loop spectral radius and whether the surrogate looks
 stable under the fitted diagnostic. This is intentionally limited: it does not
 prove that the operational language model satisfies the surrogate assumptions.
 
-## 7. Time-Varying Soft-Control Lane
+## 8. Time-Varying Soft-Control Lane
 
 The time-varying lane compares method groups:
 
@@ -118,7 +137,7 @@ Use this to compare static, time-varying, shuffled time-varying, and random
 controls. The key question is whether gains are consistent with temporal
 structure or merely with extra parameter capacity.
 
-## 8. Unified Diagnose Command
+## 9. Unified Diagnose Command
 
 For user-provided artifacts, run the same diagnostic stack directly:
 

@@ -72,6 +72,7 @@ These are the paper-derived capabilities that drive the project:
 |---|---|---|
 | Tri-split withheld protocol | `pcl split`, `pcl analyze`, `splits.json` | Whether prompt evaluation avoided train/validation/withheld leakage. |
 | Paired statistical comparison | `pcl stats`, `stats.json` | Whether a prompt change is reliable under bootstrap CI, permutation p-value, and Holm correction. |
+| Prompt-only comparison validity | `pcl validity`, `comparison_validity.json` | Whether a baseline/candidate result is clean prompt-only evidence rather than a model, split, or metric confound. |
 | Soft-to-hard deployment gap | `pcl soft-hard`, `diagnostics/soft_hard.json` | Whether soft prompt gains survive nearest-token hard projection. |
 | Hidden-state trajectory diagnostic | `pcl trajectory`, `diagnostics/trajectory.json` | Whether internal trajectories show drift, decay, or turnpike-like signals. |
 | Riccati surrogate diagnostic | `pcl riccati`, `diagnostics/riccati.json` | Whether a fitted finite-dimensional surrogate is self-consistent and stable. |
@@ -139,12 +140,13 @@ The repository includes narrated 4K hands-on demo videos generated from real UI 
 2. `pcl diagnose`: run soft-hard, trajectory, Riccati, and tv-soft as one diagnostic workflow.
 3. `pcl split` / `pcl analyze`: tri-split prompt evaluation and report generation.
 4. `pcl stats`: paired bootstrap CI, permutation p-value, and Holm correction.
-5. `pcl soft-hard`: soft-to-hard projection gap and deployment risk.
-6. `pcl trajectory`: hidden-state drift, decay slope, and turnpike-like signal.
-7. `pcl riccati`: fitted finite-dimensional Riccati/DARE surrogate diagnostics.
-8. `pcl tv-soft`: static/time-varying/shuffled/random soft-control comparison.
-9. `pcl report` / `pcl explain` / `pcl gate`: turn artifacts into readable decisions.
-10. `pcl guard` / `pcl audit-diff`: applied AI coding agent preflight and post-run audit.
+5. `pcl validity`: check whether a baseline/candidate comparison is clean prompt-only evidence.
+6. `pcl soft-hard`: soft-to-hard projection gap and deployment risk.
+7. `pcl trajectory`: hidden-state drift, decay slope, and turnpike-like signal.
+8. `pcl riccati`: fitted finite-dimensional Riccati/DARE surrogate diagnostics.
+9. `pcl tv-soft`: static/time-varying/shuffled/random soft-control comparison.
+10. `pcl report` / `pcl explain` / `pcl gate`: turn artifacts into readable decisions.
+11. `pcl guard` / `pcl audit-diff`: applied AI coding agent preflight and post-run audit.
 
 ## Install The CLI ⚙️
 

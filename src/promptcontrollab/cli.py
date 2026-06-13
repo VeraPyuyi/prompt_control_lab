@@ -47,6 +47,7 @@ from promptcontrollab.statistics import compare_prediction_files
 from promptcontrollab.templates import write_example_project
 from promptcontrollab.trajectory import analyze_trajectory
 from promptcontrollab.tv_soft import summarize_tv_soft
+from promptcontrollab.validity import run_comparison_validity
 from promptcontrollab.workflow import (
     config_metric,
     load_analyze_config,
@@ -235,6 +236,30 @@ def build_parser() -> argparse.ArgumentParser:
     drift_parser.add_argument("--history", type=Path, required=True, help="Previous run directory.")
     drift_parser.add_argument("--out", type=Path, required=True, help="model_drift.json output.")
     drift_parser.set_defaults(func=_cmd_model_drift)
+
+    validity_parser = subcommands.add_parser(
+        "validity",
+        help="Audit whether a baseline/candidate run comparison is clean prompt-only evidence.",
+    )
+    validity_parser.add_argument(
+        "--baseline",
+        type=Path,
+        required=True,
+        help="Baseline run directory.",
+    )
+    validity_parser.add_argument(
+        "--candidate",
+        type=Path,
+        required=True,
+        help="Candidate run directory.",
+    )
+    validity_parser.add_argument(
+        "--out",
+        type=Path,
+        required=True,
+        help="comparison_validity.json output path. A sibling .md report is also written.",
+    )
+    validity_parser.set_defaults(func=_cmd_validity)
 
     audit_parser = subcommands.add_parser(
         "audit-diff",
@@ -783,6 +808,15 @@ def _cmd_model_detect(args: argparse.Namespace) -> None:
 
 def _cmd_model_drift(args: argparse.Namespace) -> None:
     payload = run_model_drift(run_dir=args.run, history_dir=args.history, out_path=args.out)
+    print(json.dumps(payload, indent=2, ensure_ascii=False, sort_keys=True))
+
+
+def _cmd_validity(args: argparse.Namespace) -> None:
+    payload = run_comparison_validity(
+        baseline_dir=args.baseline,
+        candidate_dir=args.candidate,
+        out_path=args.out,
+    )
     print(json.dumps(payload, indent=2, ensure_ascii=False, sort_keys=True))
 
 

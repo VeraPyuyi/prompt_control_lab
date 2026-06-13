@@ -93,6 +93,17 @@ gate status change, slice regressions, and new or resolved risk categories.
 What it explains: whether a newer run changed the prompt, model, score, gate result, or risk
 profile compared with an older run.
 
+## `comparison_validity.json` / `comparison_validity.md`
+
+Written by `pcl validity --baseline runs/baseline --candidate runs/candidate --out
+runs/candidate/comparison_validity.json`.
+
+What it explains: whether the recorded artifacts support a clean prompt-only comparison. It checks
+prompt identity, model identity, split hash, metric identity, paired statistical evidence, and
+slice regressions. `clean` means the comparison is well supported by artifacts; `needs_review`
+means evidence is incomplete or uncertain; `invalid` means a blocking confound such as model,
+metric, or split mismatch was found.
+
 ## `agent_run.json`
 
 Stores a compact agent execution manifest: prompt identity, agent name, provider/model, policy,

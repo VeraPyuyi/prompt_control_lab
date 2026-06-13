@@ -67,6 +67,15 @@ dependency / lockfile / workflow 改动、删除的测试、generated 文件、�
 
 说明什么问题：新 run 相比旧 run 是否改了 prompt、模型、分数、门禁结果或风险画像。
 
+## `comparison_validity.json` / `comparison_validity.md`
+
+由 `pcl validity --baseline runs/baseline --candidate runs/candidate --out
+runs/candidate/comparison_validity.json` 写出。
+
+说明什么问题：当前 artifacts 是否支持一次干净的 prompt-only 比较。它会检查 prompt identity、
+model identity、split hash、metric identity、成对统计证据和 slice 退化。`clean` 表示证据链较完整；
+`needs_review` 表示证据有用但不完整或不确定；`invalid` 表示发现了模型、指标或切分不一致等阻断性混淆。
+
 ## `agent_run.json`
 
 记录一个紧凑的 agent 执行 manifest：prompt identity、agent 名称、provider/model、policy、
