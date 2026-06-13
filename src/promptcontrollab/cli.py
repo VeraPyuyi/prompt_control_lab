@@ -1526,7 +1526,7 @@ def _cmd_research_demo(args: argparse.Namespace) -> None:
     diagnostic_names = sorted(diagnostics) if isinstance(diagnostics, dict) else []
     print(f"Wrote research demo to {args.out}")
     print(f"Diagnostics: {', '.join(diagnostic_names)}")
-    print(f"Report: {args.out / 'research_diagnostics.md'}")
+    print(f"Report: {args.out / 'research_diagnostics.html'}")
 
 
 def _cmd_diagnose(args: argparse.Namespace) -> None:
@@ -1546,7 +1546,7 @@ def _cmd_diagnose(args: argparse.Namespace) -> None:
         iterations=args.iterations,
     )
     print(f"Wrote research diagnostics to {payload['diagnostics_dir']}")
-    print(f"Report: {Path(str(payload['summary_dir'])) / 'research_diagnostics.md'}")
+    print(f"Report: {Path(str(payload['summary_dir'])) / 'research_diagnostics.html'}")
 
 
 def _cmd_gap_status(args: argparse.Namespace) -> None:

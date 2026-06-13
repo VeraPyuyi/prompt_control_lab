@@ -7,12 +7,12 @@ Agent guard 和 audit 很有用，但它们是应用层；项目的研究内核�
 
 | 论文概念 | 命令 | 主要输出 | 解释边界 |
 |---|---|---|---|
-| 一键研究流程 | `pcl research-demo`、`pcl diagnose` | `research_diagnostics.json`、`research_diagnostics.md` | 运行 synthetic fixtures 或用户自己的 artifacts；demo 结果不是 benchmark。 |
+| 一键研究流程 | `pcl research-demo`、`pcl diagnose` | `research_diagnostics.json`、`research_diagnostics.md`、`research_diagnostics.html` | 运行 synthetic fixtures 或用户自己的 artifacts；demo 结果不是 benchmark。 |
 | 三段切分 withheld protocol | `pcl split`、`pcl analyze` | `splits.json`、`manifest.json` | 检查协议是否干净；不保证小任务池天然具有代表性。 |
 | 成对统计比较 | `pcl stats` | `stats.json` | 报告 mean delta、bootstrap CI、permutation p-value 和 Holm-adjusted p-value。 |
 | prompt-only 比较有效性 | `pcl validity` | `comparison_validity.json`、`comparison_validity.md` | 检查 baseline / candidate 结果是否被模型、切分、指标或缺失 prompt identity 混淆。 |
-| prompt 优化证据卡 | `pcl evidence-card` | `evidence_card.json`、`evidence_card.md` | 把协议、统计、有效性、部署风险、trajectory、Riccati 和 time-varying 证据汇总成一份可审查 artifact。 |
-| prompt 优化主张检查 | `pcl claim-check` | `claim_check.json`、`claim_check.md` | 检查当前 artifact bundle 是否足以支持 paired、partial-research 或 full-research 层级的主张。 |
+| prompt 优化证据卡 | `pcl evidence-card` | `evidence_card.json`、`evidence_card.md`、`evidence_card.html` | 把协议、统计、有效性、部署风险、trajectory、Riccati 和 time-varying 证据汇总成一份可审查 artifact。 |
+| prompt 优化主张检查 | `pcl claim-check` | `claim_check.json`、`claim_check.md`、`claim_check.html` | 检查当前 artifact bundle 是否足以支持 paired、partial-research 或 full-research 层级的主张。 |
 | 软转硬 soft-to-hard projection gap | `pcl soft-hard` | `diagnostics/soft_hard.json` | 衡量 nearest-token projection 风险；不是 hard prompt 最优性证明。 |
 | HuggingFace hidden-state 提取 | `pcl extract-hidden` | `hidden_states.npz`、`hidden_states.npz.metadata.json` | 从开源或本地 HuggingFace 模型生成 trajectory 可直接读取的 hidden states。 |
 | hidden-state trajectory | `pcl trajectory` | `diagnostics/trajectory.json` | 报告 drift、log-decay slope、fit quality 和 turnpike-like signal。 |
@@ -31,7 +31,7 @@ pcl diagnose --run runs/research-demo
 这个命令会在 `runs/research-demo/inputs` 下写出 synthetic soft prompt vectors、
 vocabulary embeddings、hidden-state trajectories、Riccati matrices 和 method predictions。
 它还会生成小型 synthetic `tasks.jsonl`、baseline / candidate scored runs、`splits.json`、
-`stats.json`、`comparison_validity.json`、`evidence_card.json` 和 `evidence_card.md`。
+`stats.json`、`comparison_validity.json`、`research_diagnostics.html`、`evidence_card.json`、`evidence_card.md` 和 `evidence_card.html`。
 它用于学习流程和 artifact 关系，不是 benchmark 结果。
 
 ## 2. 三段切分 withheld protocol

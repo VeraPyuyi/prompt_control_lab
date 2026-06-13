@@ -198,8 +198,7 @@ gate decision、risk level、改动文件、测试、audit path、gate path，�
 由 `pcl evidence-from` 写出。这个一键桥接命令会从 Promptfoo、DeepEval、Langfuse 或 LangSmith
 导入 baseline export 和 candidate export，把导入快照保存到 `imports/`，把 PCL 比较结果保存到
 `comparison/`，并把最常用的 `evidence_card.md`、`claim_check.md` 及其 `.html` 版本、`report.html`、
-`stats.json` 和 `comparison_validity.json` 复制到输出根目录，同时写出 `research_diagnostics.md` /
-`research_diagnostics.json` 来说明论文证据缺口。
+`stats.json` 和 `comparison_validity.json` 复制到输出根目录，同时写出 `research_diagnostics.html` / `.md` / `.json` 来说明论文证据缺口。
 
 重要字段：
 
@@ -227,7 +226,7 @@ gate decision、risk level、改动文件、测试、audit path、gate path，�
 
 说明什么问题：Promptfoo、DeepEval、Langfuse 和 LangSmith 这类外部工具各自擅长什么，PCL 在其上补了什么研究证据层，当前比较的 validity / evidence tier 是什么，已经运行过的 gap-status 结果是什么，还缺哪些论文诊断，以及补齐之后应该运行哪条 `pcl gap-status` 命令。它适合作为解释 PCL 生态定位和 prompt optimization 证据缺口的第一份文件。每一行还会在对应文件存在时链接到该工具的 bridge summary、evidence card、claim check、HTML report 和 gap artifact。HTML 版本适合给 reviewer 或团队成员直接打开查看，Markdown 版本适合纯文本审查，JSON 版本适合自动化读取。
 
-## `research_gap_plan.json` / `research_gap_plan.md`
+## `research_gap_plan.json` / `research_gap_plan.md` / `research_gap_plan.html`
 
 当缺失的论文诊断有明确补齐动作时，由 `pcl diagnose` 写出。`pcl evidence-from`
 导入外部工具 bundle 时也会自动生成这些文件。
@@ -240,7 +239,7 @@ gate decision、risk level、改动文件、测试、audit path、gate path，�
 配套的 `research_gap_commands.ps1` 和 `research_gap_commands.sh` 是 review-first 脚本。
 它们会先停止执行，要求用户确认路径并替换占位符，避免把示例命令误当成已验证命令直接运行。
 
-## `research_gap_status.json` / `research_gap_status.md`
+## `research_gap_status.json` / `research_gap_status.md` / `research_gap_status.html`
 
 由 `pcl gap-status --run <run>` 写出。
 

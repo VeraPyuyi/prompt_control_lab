@@ -149,6 +149,7 @@ def run_ecosystem_demo(
     )
     payload["research_diagnostics_path"] = str(out_dir / "research_diagnostics.json")
     payload["research_diagnostics_md_path"] = str(out_dir / "research_diagnostics.md")
+    payload["research_diagnostics_html_path"] = str(out_dir / "research_diagnostics.html")
     payload["research_diagnostic_type"] = diagnostics.get("diagnostic_type")
     scorecard = _write_scorecard(out_dir=out_dir, payload=payload, diagnostics=diagnostics)
     payload["ecosystem_scorecard_path"] = scorecard["json_path"]
@@ -211,7 +212,7 @@ def _write_scorecard(
             "Use ecosystem_scorecard.md for plain-text review.",
             "Open each bridge_summary.md for tool-specific provenance.",
             "Open evidence_card.html and claim_check.html before making an optimization claim.",
-            "Open research_gap_plan.md, run the reviewed commands, then run pcl gap-status.",
+            "Open research_gap_plan.html, run the reviewed commands, then run pcl gap-status.",
         ],
         "boundary": (
             "This scorecard summarizes evidence coverage. It does not claim that PCL "
@@ -268,15 +269,21 @@ def _scorecard_rows(*, out_dir: Path, payload: JsonDict, diagnostics: JsonDict) 
                     "missing_paper_diagnostics",
                     bridge.get("missing_paper_diagnostics", []),
                 ),
-                "research_gap_plan": _relative_to(out_dir, tool_dir / "research_gap_plan.md")
-                if (tool_dir / "research_gap_plan.md").exists()
+                "research_gap_plan": _relative_to(
+                    out_dir,
+                    _preferred_artifact(tool_dir, "research_gap_plan", "html", "md"),
+                )
+                if _preferred_artifact(tool_dir, "research_gap_plan", "html", "md").exists()
                 else "",
                 "gap_status_command": f"pcl gap-status --run {_relative_to(out_dir, tool_dir)}",
                 "gap_status": gap_status.get("status"),
                 "gap_complete_count": gap_status.get("complete_count"),
                 "gap_missing_count": gap_status.get("missing_count"),
-                "gap_status_path": _relative_to(out_dir, tool_dir / "research_gap_status.md")
-                if (tool_dir / "research_gap_status.md").exists()
+                "gap_status_path": _relative_to(
+                    out_dir,
+                    _preferred_artifact(tool_dir, "research_gap_status", "html", "md"),
+                )
+                if _preferred_artifact(tool_dir, "research_gap_status", "html", "md").exists()
                 else "",
                 "open_first": _relative_to(out_dir, tool_dir / "bridge_summary.md"),
                 "artifact_links": artifact_links,
@@ -291,8 +298,8 @@ def _scorecard_artifact_links(*, out_dir: Path, tool_dir: Path) -> list[JsonDict
         ("Evidence card", _preferred_artifact(tool_dir, "evidence_card", "html", "md")),
         ("Claim check", _preferred_artifact(tool_dir, "claim_check", "html", "md")),
         ("HTML report", tool_dir / "report.html"),
-        ("Gap plan", tool_dir / "research_gap_plan.md"),
-        ("Gap status", tool_dir / "research_gap_status.md"),
+        ("Gap plan", _preferred_artifact(tool_dir, "research_gap_plan", "html", "md")),
+        ("Gap status", _preferred_artifact(tool_dir, "research_gap_status", "html", "md")),
     ]
     return [
         {"label": label, "path": _relative_to(out_dir, path)}
@@ -849,7 +856,7 @@ def _render_readme(payload: JsonDict) -> str:
             "1. Read `bridge_summary.md` for each tool.",
             "2. Check `evidence_card.html` for protocol and statistical evidence.",
             "3. Check `claim_check.html` before making any prompt optimization claim.",
-            "4. Read `research_diagnostics.md` for paper-evidence gap coverage.",
+            "4. Read `research_diagnostics.html` for paper-evidence gap coverage.",
             "5. Run `pcl gap-status --run <tool-dir>` after closing diagnostic gaps.",
             "6. Open `report.html` or `pcl ui --runs <this-dir>` for a visual review.",
             "",

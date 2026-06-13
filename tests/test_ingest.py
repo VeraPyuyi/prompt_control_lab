@@ -318,6 +318,8 @@ def test_evidence_from_promptfoo_generates_comparison_bundle(tmp_path: Path) -> 
         "evidence_from_result.json",
         "research_diagnostics.json",
         "research_diagnostics.md",
+        "research_diagnostics.html",
+        "research_gap_plan.html",
     ]:
         assert (out_dir / relative_path).exists()
     stats = read_json(out_dir / "comparison" / "stats.json")
@@ -335,8 +337,9 @@ def test_evidence_from_promptfoo_generates_comparison_bundle(tmp_path: Path) -> 
     assert result["bridge_summary"]["recommendation"] == "supported"
     assert result["bridge_summary"]["evidence_tier"] == "tier_2_paired_comparison"
     assert result["research_diagnostic_type"] == "external_evidence_gap"
-    assert "research_diagnostics.md" in result["next_actions"][3]
+    assert "research_diagnostics.html" in result["next_actions"][3]
     assert result["research_gap_plan_md_path"] == str(out_dir / "research_gap_plan.md")
+    assert result["research_gap_plan_html_path"] == str(out_dir / "research_gap_plan.html")
     assert (out_dir / "research_gap_commands.ps1").exists()
     research = read_json(out_dir / "research_diagnostics.json")
     assert research["diagnostics"]["external_bridge"]["tool"] == "promptfoo"
@@ -352,7 +355,9 @@ def test_evidence_from_promptfoo_generates_comparison_bundle(tmp_path: Path) -> 
     assert "paper_evidence_gap_diagnosis" in bridge["pcl_added_evidence"]
     assert bridge["research_diagnostic_type"] == "external_evidence_gap"
     assert bridge["research_diagnostics_md_path"] == str(out_dir / "research_diagnostics.md")
+    assert bridge["research_diagnostics_html_path"] == str(out_dir / "research_diagnostics.html")
     assert bridge["research_gap_plan_md_path"] == str(out_dir / "research_gap_plan.md")
+    assert bridge["research_gap_plan_html_path"] == str(out_dir / "research_gap_plan.html")
     assert "soft-to-hard projection gap" in bridge["missing_paper_diagnostics"]
     assert any("pcl soft-hard" in row["command"] for row in bridge["paper_gap_remediation"])
     assert bridge["validity"] == "clean"
@@ -365,8 +370,8 @@ def test_evidence_from_promptfoo_generates_comparison_bundle(tmp_path: Path) -> 
     bridge_markdown = (out_dir / "bridge_summary.md").read_text(encoding="utf-8")
     assert "Promptfoo" in bridge_markdown
     assert "Research diagnostics" in bridge_markdown
-    assert "research_diagnostics.md" in bridge_markdown
-    assert "research_gap_plan.md" in bridge_markdown
+    assert "research_diagnostics.html" in bridge_markdown
+    assert "research_gap_plan.html" in bridge_markdown
     assert "pcl soft-hard" in bridge_markdown
 
 

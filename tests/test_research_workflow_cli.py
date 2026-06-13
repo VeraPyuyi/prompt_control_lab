@@ -43,6 +43,9 @@ def test_research_demo_generates_paper_diagnostics(tmp_path: Path) -> None:
     assert "Hidden-state input" in report
     assert "soft-to-hard projection gap" in report
     assert "Riccati surrogate" in report
+    report_html = (run_dir / "research_diagnostics.html").read_text(encoding="utf-8")
+    assert "Research Diagnostics Report" in report_html
+    assert "Hidden-state Trajectory" in report_html
     evidence = read_json(run_dir / "evidence_card.json")
     assert evidence["kind"] == "prompt_optimization_evidence_card"
     assert evidence["sections"]["hidden_state_diagnostics"]["input_source"] == "synthetic_demo"
@@ -112,6 +115,7 @@ def test_diagnose_reuses_research_demo_inputs(tmp_path: Path) -> None:
     assert (run_dir / "evidence_card.html").exists()
     assert (run_dir / "claim_check.json").exists()
     assert (run_dir / "claim_check.html").exists()
+    assert (run_dir / "research_diagnostics.html").exists()
 
 
 def test_diagnose_summarizes_ecosystem_demo_evidence_gaps(tmp_path: Path) -> None:
@@ -158,6 +162,12 @@ def test_diagnose_summarizes_ecosystem_demo_evidence_gaps(tmp_path: Path) -> Non
     assert gap_plan["kind"] == "research_gap_plan"
     assert any("pcl trajectory" in item["command"] for item in gap_plan["actions"])
     assert "pcl extract-hidden" in (out / "research_gap_plan.md").read_text(encoding="utf-8")
+    assert "Research Evidence Gap Plan" in (out / "research_gap_plan.html").read_text(
+        encoding="utf-8"
+    )
+    assert "Research Diagnostics Report" in (out / "research_diagnostics.html").read_text(
+        encoding="utf-8"
+    )
     assert "exit 1" in (out / "research_gap_commands.ps1").read_text(encoding="utf-8")
     assert "Promptfoo" in report
     assert "Risk: `None`" not in report
@@ -194,6 +204,7 @@ def test_diagnose_summarizes_single_external_evidence_bundle(tmp_path: Path) -> 
     assert "soft-to-hard projection gap" in bridge["missing_paper_diagnostics"]
     assert bridge["paper_gap_remediation"][0]["command"]
     assert (out / "promptfoo" / "research_gap_plan.md").exists()
+    assert (out / "promptfoo" / "research_gap_plan.html").exists()
 
 
 def test_gap_status_checks_expected_research_artifacts(tmp_path: Path) -> None:
@@ -233,6 +244,12 @@ def test_gap_status_checks_expected_research_artifacts(tmp_path: Path) -> None:
     assert status["actions"][1]["status"] == "missing"
     assert "hidden-state trajectory" in (run / "research_gap_status.md").read_text(
         encoding="utf-8"
+    )
+    assert "Research Evidence Gap Status" in (run / "research_gap_status.html").read_text(
+        encoding="utf-8"
+    )
+    assert read_json(run / "research_gap_status.json")["html_path"] == str(
+        run / "research_gap_status.html"
     )
 
 

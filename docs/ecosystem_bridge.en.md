@@ -80,7 +80,7 @@ pcl ecosystem-demo --examples examples/external --out runs/ecosystem-demo
 
 This writes `runs/ecosystem-demo/README.md`, `ecosystem_demo.json`,
 `ecosystem_scorecard.html`, `ecosystem_scorecard.md`, `ecosystem_scorecard.json`,
-`research_diagnostics.md`, `research_diagnostics.json`, and one evidence bundle per
+`research_diagnostics.html`, `research_diagnostics.md`, `research_diagnostics.json`, and one evidence bundle per
 external tool:
 
 - `runs/ecosystem-demo/promptfoo/`
@@ -114,14 +114,14 @@ To regenerate that diagnosis after editing the bundle, run:
 pcl diagnose --run runs/ecosystem-demo
 ```
 
-This writes `research_diagnostics.json` and `research_diagnostics.md` at the
+This writes `research_diagnostics.json`, `research_diagnostics.md`, and `research_diagnostics.html` at the
 root. For external-tool exports, `diagnose` reports evidence coverage and missing
 research diagnostics; it does not fabricate hidden-state, soft-hard, Riccati, or
 time-varying-control measurements.
 After this step, `pcl ui --runs runs/ecosystem-demo` also shows a paper-evidence
 gap table in Research Overview. The same report includes a remediation table with
 the required inputs, copy-paste `pcl` command, expected artifact, and what that
-artifact would explain. For handoff, open `research_gap_plan.md`; the paired
+artifact would explain. For browser review, open `research_gap_plan.html`; the paired
 `research_gap_commands.ps1` and `.sh` files are review-first command scripts.
 The UI shows the same plan and script list as first-class Research Overview
 sections.

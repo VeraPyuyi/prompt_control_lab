@@ -64,7 +64,7 @@ pcl ecosystem-demo --examples examples/external --out runs/ecosystem-demo
 
 这个命令会写出 `runs/ecosystem-demo/README.md`、`ecosystem_demo.json`、
 `ecosystem_scorecard.html`、`ecosystem_scorecard.md`、`ecosystem_scorecard.json`、
-`research_diagnostics.md`、`research_diagnostics.json`，并为每个外部工具生成一套
+`research_diagnostics.html`、`research_diagnostics.md`、`research_diagnostics.json`，并为每个外部工具生成一套
 evidence bundle：
 
 - `runs/ecosystem-demo/promptfoo/`
@@ -94,13 +94,13 @@ demo 会自动按论文证据地图审计整套 bundle。如果之后手动改�
 pcl diagnose --run runs/ecosystem-demo
 ```
 
-这会在根目录写出 `research_diagnostics.json` 和 `research_diagnostics.md`。
+这会在根目录写出 `research_diagnostics.json`、`research_diagnostics.md` 和 `research_diagnostics.html`。
 对于外部工具导出，`diagnose` 会报告已有证据和缺失的研究诊断；它不会伪造
 hidden-state、soft-hard、Riccati 或 time-varying-control 测量结果。
 完成这一步后，`pcl ui --runs runs/ecosystem-demo` 的 Research Overview 也会显示
 论文证据缺口表。报告还会给出一张补齐表，写明需要准备哪些输入、可以复制哪条
 `pcl` 命令、会生成哪个 artifact，以及这个 artifact 能说明什么问题。需要交接给团队成员
-时，可以直接打开 `research_gap_plan.md`；配套的 `research_gap_commands.ps1` 和 `.sh`
+时，可以直接打开 `research_gap_plan.html`；配套的 `research_gap_commands.ps1` 和 `.sh`
 是 review-first 命令脚本。UI 会把同一份计划和脚本列表作为研究总览里的独立区域展示。
 
 Promptfoo：

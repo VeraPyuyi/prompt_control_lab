@@ -153,6 +153,7 @@ def build_external_evidence(
     )
     payload["research_diagnostics_path"] = str(out_dir / "research_diagnostics.json")
     payload["research_diagnostics_md_path"] = str(out_dir / "research_diagnostics.md")
+    payload["research_diagnostics_html_path"] = str(out_dir / "research_diagnostics.html")
     payload["research_diagnostic_type"] = diagnostics.get("diagnostic_type")
     _attach_gap_plan_paths(payload, diagnostics)
     bridge_summary = _attach_research_diagnostics_to_bridge_summary(
@@ -162,6 +163,9 @@ def build_external_evidence(
     )
     payload["bridge_summary"]["research_diagnostics_path"] = bridge_summary.get(
         "research_diagnostics_path"
+    )
+    payload["bridge_summary"]["research_diagnostics_html_path"] = bridge_summary.get(
+        "research_diagnostics_html_path"
     )
     payload["bridge_summary"]["research_diagnostic_type"] = bridge_summary.get(
         "research_diagnostic_type"
@@ -178,9 +182,12 @@ def build_external_evidence(
     payload["bridge_summary"]["research_gap_plan_md_path"] = bridge_summary.get(
         "research_gap_plan_md_path"
     )
+    payload["bridge_summary"]["research_gap_plan_html_path"] = bridge_summary.get(
+        "research_gap_plan_html_path"
+    )
     payload["next_actions"].insert(
         3,
-        "Open research_diagnostics.md for paper-evidence gap coverage.",
+        "Open research_diagnostics.html for paper-evidence gap coverage.",
     )
     write_json(out_dir / "evidence_from_result.json", payload)
     return payload
@@ -202,6 +209,7 @@ def _attach_research_diagnostics_to_bridge_summary(
     payload = dict(bridge_summary)
     payload["research_diagnostics_path"] = str(out_dir / "research_diagnostics.json")
     payload["research_diagnostics_md_path"] = str(out_dir / "research_diagnostics.md")
+    payload["research_diagnostics_html_path"] = str(out_dir / "research_diagnostics.html")
     payload["research_diagnostic_type"] = diagnostics.get("diagnostic_type")
     payload["missing_paper_diagnostics"] = missing_list
     payload["paper_gap_remediation"] = remediation_list
@@ -213,7 +221,7 @@ def _attach_research_diagnostics_to_bridge_summary(
     payload["pcl_added_evidence"] = added_list
     next_actions = payload.get("next_actions")
     next_action_list = list(next_actions) if isinstance(next_actions, list) else []
-    action = "Open research_diagnostics.md for paper-evidence gap coverage."
+    action = "Open research_diagnostics.html for paper-evidence gap coverage."
     if action not in next_action_list:
         next_action_list.insert(1, action)
     payload["next_actions"] = next_action_list
@@ -227,12 +235,15 @@ def _attach_gap_plan_paths(payload: JsonDict, diagnostics: JsonDict) -> None:
     artifacts_dict = artifacts if isinstance(artifacts, dict) else {}
     plan_path = artifacts_dict.get("research_gap_plan")
     plan_md_path = artifacts_dict.get("research_gap_plan_markdown")
+    plan_html_path = artifacts_dict.get("research_gap_plan_html")
     commands_ps1 = artifacts_dict.get("research_gap_commands_ps1")
     commands_sh = artifacts_dict.get("research_gap_commands_sh")
     if plan_path:
         payload["research_gap_plan_path"] = plan_path
     if plan_md_path:
         payload["research_gap_plan_md_path"] = plan_md_path
+    if plan_html_path:
+        payload["research_gap_plan_html_path"] = plan_html_path
     if commands_ps1:
         payload["research_gap_commands_ps1_path"] = commands_ps1
     if commands_sh:
@@ -575,14 +586,20 @@ def _render_bridge_summary(payload: JsonDict) -> str:
             "",
         ]
     )
-    research_path = payload.get("research_diagnostics_md_path")
+    research_path = payload.get("research_diagnostics_html_path") or payload.get(
+        "research_diagnostics_md_path"
+    )
     if research_path:
+        gap_plan_path = payload.get("research_gap_plan_html_path") or payload.get(
+            "research_gap_plan_md_path",
+            "",
+        )
         lines.extend(
             [
                 f"- Report: `{research_path}`",
                 f"- Diagnostic type: `{payload.get('research_diagnostic_type')}`",
                 f"- Missing paper diagnostics: `{payload.get('missing_paper_diagnostics', [])}`",
-                f"- Gap plan: `{payload.get('research_gap_plan_md_path', '')}`",
+                f"- Gap plan: `{gap_plan_path}`",
                 f"- Commands: `{payload.get('research_gap_commands_ps1_path', '')}`",
                 "",
             ]

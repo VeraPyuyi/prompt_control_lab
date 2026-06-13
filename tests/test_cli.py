@@ -431,7 +431,7 @@ def test_cli_ecosystem_demo_runs_all_external_bridge_examples(tmp_path: Path) ->
     promptfoo_row = next(item for item in refreshed["rows"] if item["tool"] == "promptfoo")
     assert promptfoo_row["gap_status"] == "needs_work"
     assert promptfoo_row["gap_missing_count"] > 0
-    assert promptfoo_row["gap_status_path"] == "promptfoo/research_gap_status.md"
+    assert promptfoo_row["gap_status_path"] == "promptfoo/research_gap_status.html"
     assert "promptfoo/bridge_summary.md" in (out / "ecosystem_scorecard.md").read_text(
         encoding="utf-8"
     )
@@ -459,7 +459,7 @@ def test_cli_ecosystem_demo_runs_all_external_bridge_examples(tmp_path: Path) ->
     assert "prompt optimization evidence auditor" in (out / "README.md").read_text(
         encoding="utf-8"
     )
-    assert "research_diagnostics.md" in (out / "README.md").read_text(encoding="utf-8")
+    assert "research_diagnostics.html" in (out / "README.md").read_text(encoding="utf-8")
 
 
 def test_cli_compare_runs_rejects_output_inside_source_run(tmp_path: Path) -> None:

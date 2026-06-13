@@ -8,7 +8,7 @@ paper-derived diagnostic stack below.
 
 | Paper concept | Command | Main output | Interpretation boundary |
 |---|---|---|---|
-| one-command research workflow | `pcl research-demo`, `pcl diagnose` | `research_diagnostics.json`, `research_diagnostics.md` | Runs synthetic fixtures or user-provided artifacts; demo outputs are not benchmark results. |
+| one-command research workflow | `pcl research-demo`, `pcl diagnose` | `research_diagnostics.json`, `research_diagnostics.md`, `research_diagnostics.html` | Runs synthetic fixtures or user-provided artifacts; demo outputs are not benchmark results. |
 | tri-split withheld protocol | `pcl split`, `pcl analyze` | `splits.json`, `manifest.json` | Checks protocol hygiene; it does not make a small task pool representative. |
 | paired statistical comparison | `pcl stats` | `stats.json` | Reports mean delta, bootstrap CI, permutation p-value, and Holm-adjusted p-value. |
 | prompt-only comparison validity | `pcl validity` | `comparison_validity.json`, `comparison_validity.md` | Checks whether a baseline/candidate result is confounded by model, split, metric, or missing prompt identity. |
@@ -33,8 +33,8 @@ pcl diagnose --run runs/research-demo
 This writes synthetic soft prompt vectors, vocabulary embeddings, hidden-state
 trajectories, Riccati matrices, and method predictions under `runs/research-demo/inputs`.
 It also writes a small synthetic `tasks.jsonl`, baseline/candidate scored runs,
-`splits.json`, `stats.json`, `comparison_validity.json`, `evidence_card.json` / `.md` / `.html`,
-and `claim_check.json` / `.md` / `.html`. The demo is for learning the workflow and artifact relationships, not for
+`splits.json`, `stats.json`, `comparison_validity.json`, `research_diagnostics.html`,
+`evidence_card.json` / `.md` / `.html`, and `claim_check.json` / `.md` / `.html`. The demo is for learning the workflow and artifact relationships, not for
 claiming benchmark performance.
 
 ## 2. Tri-Split Withheld Protocol

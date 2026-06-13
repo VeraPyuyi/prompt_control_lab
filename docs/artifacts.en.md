@@ -257,7 +257,7 @@ candidate export from Promptfoo, DeepEval, Langfuse, or LangSmith, snapshots the
 runs a PCL comparison under `comparison/`, copies the headline `evidence_card.md`,
 `evidence_card.html`, `claim_check.md`, `claim_check.html`, `report.html`, `stats.json`, and
 `comparison_validity.json` to the output root, and writes
-`research_diagnostics.md` / `research_diagnostics.json` for paper-evidence gap coverage.
+`research_diagnostics.html` / `.md` / `.json` for paper-evidence gap coverage.
 
 Important fields:
 
@@ -299,7 +299,7 @@ summary, evidence card, claim check, HTML report, and gap artifacts when those f
 The HTML version is the reviewer-facing dashboard artifact; the Markdown version is easier to
 review in plain text, and the JSON version is for automation.
 
-## `research_gap_plan.json` / `research_gap_plan.md`
+## `research_gap_plan.json` / `research_gap_plan.md` / `research_gap_plan.html`
 
 Written by `pcl diagnose` when missing paper-derived diagnostics have actionable follow-up
 commands. `pcl evidence-from` also creates these files automatically for imported external-tool
@@ -316,7 +316,7 @@ The companion `research_gap_commands.ps1` and `research_gap_commands.sh` files a
 scripts. They intentionally stop before running any command so users can replace placeholders and
 confirm paths.
 
-## `research_gap_status.json` / `research_gap_status.md`
+## `research_gap_status.json` / `research_gap_status.md` / `research_gap_status.html`
 
 Written by `pcl gap-status --run <run>`.
 

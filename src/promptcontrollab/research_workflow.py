@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import hashlib
+import html
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, cast
@@ -554,10 +555,12 @@ def _write_research_outputs(*, summary_dir: Path, payload: JsonDict) -> None:
     if gap_plan["actions"]:
         plan_json = summary_dir / "research_gap_plan.json"
         plan_md = summary_dir / "research_gap_plan.md"
+        plan_html = summary_dir / "research_gap_plan.html"
         commands_ps1 = summary_dir / "research_gap_commands.ps1"
         commands_sh = summary_dir / "research_gap_commands.sh"
         write_json(plan_json, gap_plan)
         plan_md.write_text(_render_research_gap_plan_markdown(gap_plan), encoding="utf-8")
+        plan_html.write_text(render_research_gap_plan_html(gap_plan), encoding="utf-8")
         commands_ps1.write_text(_render_gap_commands_ps1(gap_plan), encoding="utf-8")
         commands_sh.write_text(_render_gap_commands_sh(gap_plan), encoding="utf-8")
         artifacts = payload.get("artifacts")
@@ -566,16 +569,23 @@ def _write_research_outputs(*, summary_dir: Path, payload: JsonDict) -> None:
             {
                 "research_gap_plan": str(plan_json),
                 "research_gap_plan_markdown": str(plan_md),
+                "research_gap_plan_html": str(plan_html),
                 "research_gap_commands_ps1": str(commands_ps1),
                 "research_gap_commands_sh": str(commands_sh),
             }
         )
         payload["artifacts"] = artifacts_dict
+    diagnostics_html = summary_dir / "research_diagnostics.html"
+    artifacts = payload.get("artifacts")
+    artifacts_dict = artifacts if isinstance(artifacts, dict) else {}
+    artifacts_dict["research_diagnostics_html"] = str(diagnostics_html)
+    payload["artifacts"] = artifacts_dict
     write_json(summary_dir / "research_diagnostics.json", payload)
     (summary_dir / "research_diagnostics.md").write_text(
         render_research_diagnostics_markdown(payload),
         encoding="utf-8",
     )
+    diagnostics_html.write_text(render_research_diagnostics_html(payload), encoding="utf-8")
 
 
 def write_research_gap_status(*, run_dir: Path, out_path: Path | None = None) -> JsonDict:
@@ -605,9 +615,14 @@ def write_research_gap_status(*, run_dir: Path, out_path: Path | None = None) ->
     }
     json_path = _gap_status_json_path(run_dir=run_dir, out_path=out_path)
     md_path = json_path.with_suffix(".md")
+    html_path = json_path.with_suffix(".html")
+    payload["json_path"] = str(json_path)
+    payload["markdown_path"] = str(md_path)
+    payload["html_path"] = str(html_path)
     ensure_dir(json_path.parent)
     write_json(json_path, payload)
     md_path.write_text(_render_research_gap_status_markdown(payload), encoding="utf-8")
+    html_path.write_text(render_research_gap_status_html(payload), encoding="utf-8")
     return payload
 
 
@@ -666,6 +681,40 @@ def _render_research_gap_status_markdown(payload: JsonDict) -> str:
         )
     lines.append("")
     return "\n".join(lines)
+
+
+def render_research_gap_status_html(payload: JsonDict) -> str:
+    """Render research gap closure status as browser-friendly HTML."""
+
+    actions = _remediation_list(payload.get("actions"))
+    rows = [
+        [
+            action.get("step", ""),
+            action.get("concept", ""),
+            _badge(str(action.get("status", ""))),
+            action.get("artifact", ""),
+            action.get("command", ""),
+        ]
+        for action in actions
+    ]
+    return _html_page(
+        title="Research Evidence Gap Status",
+        subtitle=(
+            f"Status: {payload.get('status')} · "
+            f"{payload.get('complete_count')}/{payload.get('action_count')} complete"
+        ),
+        body=[
+            _metric_grid(
+                [
+                    ("Status", _badge(str(payload.get("status", "")))),
+                    ("Complete", f"{payload.get('complete_count')}/{payload.get('action_count')}"),
+                    ("Missing", payload.get("missing_count", "")),
+                ]
+            ),
+            _paragraph(payload.get("boundary")),
+            _table(["Step", "Diagnostic", "Status", "Artifact", "Command"], rows),
+        ],
+    )
 
 
 def _build_research_gap_plan(payload: JsonDict) -> JsonDict:
@@ -777,6 +826,55 @@ def _render_research_gap_plan_markdown(plan: JsonDict) -> str:
         ]
     )
     return "\n".join(lines)
+
+
+def render_research_gap_plan_html(plan: JsonDict) -> str:
+    """Render the research gap plan as browser-friendly HTML."""
+
+    actions = _remediation_list(plan.get("actions"))
+    if actions:
+        rows = []
+        for action in actions:
+            required = action.get("required_inputs")
+            required_inputs = (
+                ", ".join(str(item) for item in required) if isinstance(required, list) else ""
+            )
+            rows.append(
+                [
+                    action.get("step", ""),
+                    action.get("concept", ""),
+                    required_inputs,
+                    action.get("command", ""),
+                    action.get("artifact", ""),
+                    action.get("explains", ""),
+                ]
+            )
+        table = _table(
+            [
+                "Step",
+                "Missing diagnostic",
+                "Required inputs",
+                "Command",
+                "Artifact",
+                "What it explains",
+            ],
+            rows,
+        )
+    else:
+        table = '<div class="empty">No missing paper-derived diagnostic actions were found.</div>'
+    return _html_page(
+        title="Research Evidence Gap Plan",
+        subtitle="Copy-paste guide for collecting missing paper-derived evidence.",
+        body=[
+            _paragraph(plan.get("boundary")),
+            table,
+            _paragraph(
+                "The companion research_gap_commands.ps1 and research_gap_commands.sh files are "
+                "review-first scripts. They stop before running commands so placeholders and paths "
+                "can be checked."
+            ),
+        ],
+    )
 
 
 def _render_gap_commands_ps1(plan: JsonDict) -> str:
@@ -1170,6 +1268,174 @@ def render_research_diagnostics_markdown(payload: JsonDict) -> str:
     return "\n".join(lines)
 
 
+def render_research_diagnostics_html(payload: JsonDict) -> str:
+    """Render the paper-derived diagnostics summary as browser-friendly HTML."""
+
+    diagnostics = payload.get("diagnostics", {})
+    if not isinstance(diagnostics, dict):
+        diagnostics = {}
+    body: list[str] = [
+        _paragraph("This report summarizes paper-derived PromptControlLab diagnostics."),
+        _section(
+            "Paper Concept Map",
+            _table(
+                ["Concept", "Commands", "Artifact", "Meaning"],
+                [
+                    [
+                        item["concept"],
+                        ", ".join(str(command) for command in item["commands"]),
+                        item["artifact"],
+                        item["meaning"],
+                    ]
+                    for item in PAPER_MAPPING
+                ],
+            ),
+        ),
+    ]
+    ecosystem = diagnostics.get("ecosystem_bridge", {})
+    if isinstance(ecosystem, dict) and ecosystem:
+        rows = []
+        raw_rows = ecosystem.get("runs")
+        if isinstance(raw_rows, list):
+            for row in raw_rows:
+                if not isinstance(row, dict):
+                    continue
+                missing = row.get("missing_paper_diagnostics", [])
+                rows.append(
+                    [
+                        row.get("display_name") or row.get("tool", ""),
+                        row.get("validity", ""),
+                        row.get("evidence_tier", ""),
+                        row.get("claim_check_status", ""),
+                        ", ".join(str(item) for item in missing)
+                        if isinstance(missing, list)
+                        else str(missing),
+                        row.get("bridge_summary_path", ""),
+                    ]
+                )
+        body.append(
+            _section(
+                "Ecosystem Evidence Gap Diagnosis",
+                _table(
+                    [
+                        "Tool",
+                        "Validity",
+                        "Evidence tier",
+                        "Claim check",
+                        "Missing paper diagnostics",
+                        "Open first",
+                    ],
+                    rows,
+                )
+                + _render_remediation_html(ecosystem.get("paper_gap_remediation")),
+            )
+        )
+    external = diagnostics.get("external_bridge", {})
+    if isinstance(external, dict) and external:
+        body.append(
+            _section(
+                "External Evidence Gap Diagnosis",
+                _metric_grid(
+                    [
+                        ("Tool", external.get("display_name") or external.get("tool", "")),
+                        ("Validity", external.get("validity", "")),
+                        ("Evidence tier", external.get("evidence_tier", "")),
+                        ("Claim check", external.get("claim_check_status", "")),
+                        (
+                            "Missing diagnostics",
+                            ", ".join(
+                                str(item)
+                                for item in external.get("missing_paper_diagnostics", [])
+                            ),
+                        ),
+                    ]
+                )
+                + _render_remediation_html(external.get("paper_gap_remediation")),
+            )
+        )
+    inputs = payload.get("inputs", {})
+    inputs_dict = inputs if isinstance(inputs, dict) else {}
+    hidden_input = inputs_dict.get("hidden_states")
+    if isinstance(hidden_input, dict):
+        body.append(
+            _section(
+                "Hidden-state Input",
+                _metric_grid(
+                    [
+                        ("Source", hidden_input.get("source", "")),
+                        ("Path", hidden_input.get("path", "")),
+                        ("Model id", hidden_input.get("model_id", "")),
+                        ("States shape", hidden_input.get("states_shape", "")),
+                        ("Pool", hidden_input.get("pool", "")),
+                    ]
+                ),
+            )
+        )
+    soft = diagnostics.get("soft_hard", {})
+    if isinstance(soft, dict) and soft:
+        body.append(
+            _section(
+                "Soft-to-hard Projection Gap",
+                _metric_grid(
+                    [
+                        ("Risk", _badge(str(soft.get("risk", "")))),
+                        ("Mean projection distance", soft.get("mean_projection_distance", "")),
+                        ("Max projection distance", soft.get("max_projection_distance", "")),
+                    ]
+                ),
+            )
+        )
+    trajectory = diagnostics.get("trajectory", {})
+    if isinstance(trajectory, dict) and trajectory:
+        body.append(
+            _section(
+                "Hidden-state Trajectory",
+                _metric_grid(
+                    [
+                        ("Turnpike-like signal", trajectory.get("turnpike_like_signal", "")),
+                        ("Log-decay slope", trajectory.get("log_decay_slope", "")),
+                        ("Decay fit R2", trajectory.get("decay_r2", "")),
+                    ]
+                ),
+            )
+        )
+    riccati = diagnostics.get("riccati", {})
+    if isinstance(riccati, dict) and riccati:
+        body.append(
+            _section(
+                "Riccati Surrogate",
+                _metric_grid(
+                    [
+                        ("Stable surrogate", riccati.get("stable_surrogate", "")),
+                        (
+                            "Closed-loop spectral radius",
+                            riccati.get("closed_loop_spectral_radius", ""),
+                        ),
+                    ]
+                ),
+            )
+        )
+    tv_soft = diagnostics.get("tv_soft", {})
+    if isinstance(tv_soft, dict) and tv_soft:
+        body.append(
+            _section(
+                "Time-varying Soft-control Lane",
+                _metric_grid(
+                    [
+                        ("Method means", tv_soft.get("method_means", "")),
+                        ("Delta vs baseline", tv_soft.get("delta_vs_baseline", "")),
+                    ]
+                ),
+            )
+        )
+    body.append(_section("Boundary", _paragraph(payload.get("boundary"))))
+    return _html_page(
+        title="Research Diagnostics Report",
+        subtitle="Paper-derived prompt optimization diagnostics.",
+        body=body,
+    )
+
+
 def _render_remediation_table(value: object) -> list[str]:
     rows = _remediation_list(value)
     if not rows:
@@ -1200,6 +1466,217 @@ def _render_remediation_table(value: object) -> list[str]:
             + " |"
         )
     return lines
+
+
+def _render_remediation_html(value: object) -> str:
+    rows = _remediation_list(value)
+    if not rows:
+        return ""
+    table_rows = []
+    for row in rows:
+        required = row.get("required_inputs")
+        required_inputs = (
+            ", ".join(str(item) for item in required) if isinstance(required, list) else ""
+        )
+        table_rows.append(
+            [
+                row.get("concept", ""),
+                required_inputs,
+                row.get("command", ""),
+                row.get("artifact", ""),
+                row.get("explains", ""),
+            ]
+        )
+    return (
+        '<h3 class="subhead">How to close these gaps</h3>'
+        + _table(
+            ["Missing diagnostic", "Required inputs", "Command", "Artifact", "What it explains"],
+            table_rows,
+        )
+    )
+
+
+def _html_page(*, title: str, subtitle: str, body: list[str]) -> str:
+    return f"""<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{_html_text(title)}</title>
+  <style>
+    :root {{
+      color-scheme: light;
+      --ink: #172033;
+      --muted: #61708a;
+      --line: #d8e0ec;
+      --panel: #ffffff;
+      --bg: #f6f8fb;
+      --accent: #2463eb;
+      --good-bg: #dcfce7;
+      --good: #166534;
+      --warn-bg: #fef3c7;
+      --warn: #92400e;
+      --bad-bg: #fee2e2;
+      --bad: #991b1b;
+    }}
+    body {{
+      margin: 0;
+      background: var(--bg);
+      color: var(--ink);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system,
+        BlinkMacSystemFont, "Segoe UI", sans-serif;
+      line-height: 1.55;
+    }}
+    main {{ max-width: 1180px; margin: 0 auto; padding: 40px 24px 56px; }}
+    .hero {{
+      background: linear-gradient(135deg, #ffffff, #edf4ff);
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      padding: 28px 30px;
+      box-shadow: 0 14px 40px rgba(25, 42, 70, 0.08);
+    }}
+    h1 {{ margin: 0 0 8px; font-size: 34px; letter-spacing: 0; }}
+    h2 {{ margin: 0 0 16px; font-size: 22px; }}
+    .subtitle {{ color: var(--muted); font-size: 16px; }}
+    section {{
+      margin-top: 22px;
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 22px;
+      overflow: hidden;
+    }}
+    .subhead {{ margin: 18px 0 10px; font-size: 17px; }}
+    .grid {{
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+      gap: 12px;
+    }}
+    .metric {{
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 14px;
+      background: #fbfdff;
+    }}
+    .metric .label {{ color: var(--muted); font-size: 13px; margin-bottom: 6px; }}
+    .metric .value {{ font-weight: 700; overflow-wrap: anywhere; }}
+    table {{ width: 100%; border-collapse: collapse; font-size: 14px; }}
+    th, td {{
+      padding: 11px 10px;
+      border-bottom: 1px solid var(--line);
+      text-align: left;
+      vertical-align: top;
+    }}
+    th {{
+      background: #f1f5fb;
+      font-size: 12px;
+      text-transform: uppercase;
+      color: #44536a;
+      letter-spacing: .04em;
+    }}
+    code {{ background: #eef2f7; border-radius: 6px; padding: 2px 5px; overflow-wrap: anywhere; }}
+    .badge {{
+      display: inline-block;
+      border-radius: 999px;
+      padding: 3px 9px;
+      font-weight: 700;
+      font-size: 12px;
+    }}
+    .good {{ background: var(--good-bg); color: var(--good); }}
+    .warn {{ background: var(--warn-bg); color: var(--warn); }}
+    .bad {{ background: var(--bad-bg); color: var(--bad); }}
+    .neutral {{ background: #e2e8f0; color: #334155; }}
+    .empty {{
+      color: var(--muted);
+      border: 1px dashed var(--line);
+      border-radius: 12px;
+      padding: 16px;
+    }}
+    p {{ margin: 0 0 10px; }}
+  </style>
+</head>
+<body>
+<main>
+  <div class="hero">
+    <h1>{_html_text(title)}</h1>
+    <div class="subtitle">{_html_text(subtitle)}</div>
+  </div>
+  {''.join(body)}
+</main>
+</body>
+</html>
+"""
+
+
+def _section(title: str, body: str) -> str:
+    return f"<section><h2>{_html_text(title)}</h2>{body}</section>"
+
+
+def _metric_grid(items: list[tuple[str, object]]) -> str:
+    cells = []
+    for label, value in items:
+        rendered = str(value) if _is_safe_html(value) else _html_text(_format_value(value))
+        cells.append(
+            '<div class="metric">'
+            f'<div class="label">{_html_text(label)}</div>'
+            f'<div class="value">{rendered}</div>'
+            "</div>"
+        )
+    return '<div class="grid">' + "".join(cells) + "</div>"
+
+
+def _table(headers: list[str], rows: list[list[object]]) -> str:
+    if not rows:
+        return '<div class="empty">No rows recorded.</div>'
+    header_html = "".join(f"<th>{_html_text(header)}</th>" for header in headers)
+    row_html = []
+    for row in rows:
+        cells = []
+        for value in row:
+            rendered = str(value) if _is_safe_html(value) else _html_text(_format_value(value))
+            cells.append(f"<td>{rendered}</td>")
+        row_html.append("<tr>" + "".join(cells) + "</tr>")
+    return (
+        '<div style="overflow-x:auto"><table><thead><tr>'
+        + header_html
+        + "</tr></thead><tbody>"
+        + "".join(row_html)
+        + "</tbody></table></div>"
+    )
+
+
+def _paragraph(value: object) -> str:
+    text = _format_value(value)
+    return f"<p>{_html_text(text)}</p>" if text else ""
+
+
+def _badge(value: str) -> str:
+    lower = value.lower()
+    if lower in {"pass", "passed", "present", "complete", "clean", "low", "supported", "true"}:
+        css = "good"
+    elif lower in {"fail", "failed", "missing", "high", "needs_work", "blocked", "false"}:
+        css = "bad"
+    elif lower in {"needs_review", "medium", "warning", "not_checked", "unknown"}:
+        css = "warn"
+    else:
+        css = "neutral"
+    return f'<span class="badge {css}">{_html_text(value)}</span>'
+
+
+def _is_safe_html(value: object) -> bool:
+    return isinstance(value, str) and value.startswith('<span class="badge ')
+
+
+def _format_value(value: object) -> str:
+    if isinstance(value, dict):
+        return ", ".join(f"{key}: {item}" for key, item in value.items())
+    if isinstance(value, list):
+        return ", ".join(str(item) for item in value)
+    return str(value or "")
+
+
+def _html_text(value: object) -> str:
+    return html.escape(str(value or ""))
 
 
 def _research_input_summary(paths: ResearchPaths) -> JsonDict:
