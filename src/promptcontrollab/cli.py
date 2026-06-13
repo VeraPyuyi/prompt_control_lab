@@ -485,6 +485,38 @@ def build_parser() -> argparse.ArgumentParser:
     analyze_parser.add_argument("--prompt-file", type=Path, default=None, help="Prompt text file.")
     analyze_parser.add_argument("--prompt-version", default=None, help="Prompt version string.")
     analyze_parser.add_argument(
+        "--baseline-prompt-id",
+        default=None,
+        help="Stable baseline prompt id for prompt-only validity checks.",
+    )
+    analyze_parser.add_argument(
+        "--baseline-prompt-file",
+        type=Path,
+        default=None,
+        help="Baseline prompt text file for prompt-only validity checks.",
+    )
+    analyze_parser.add_argument(
+        "--baseline-prompt-version",
+        default=None,
+        help="Baseline prompt version string.",
+    )
+    analyze_parser.add_argument(
+        "--candidate-prompt-id",
+        default=None,
+        help="Stable candidate prompt id for prompt-only validity checks.",
+    )
+    analyze_parser.add_argument(
+        "--candidate-prompt-file",
+        type=Path,
+        default=None,
+        help="Candidate prompt text file for prompt-only validity checks.",
+    )
+    analyze_parser.add_argument(
+        "--candidate-prompt-version",
+        default=None,
+        help="Candidate prompt version string.",
+    )
+    analyze_parser.add_argument(
         "--verify-model",
         action="store_true",
         help="Verify public model metadata for supported providers.",
@@ -704,6 +736,12 @@ def _cmd_start(args: argparse.Namespace) -> None:
             prompt_id=None,
             prompt_file=None,
             prompt_version=None,
+            baseline_prompt_id=None,
+            baseline_prompt_file=None,
+            baseline_prompt_version=None,
+            candidate_prompt_id=None,
+            candidate_prompt_file=None,
+            candidate_prompt_version=None,
         )
         _cmd_analyze(analyze_args)
         return
@@ -1047,6 +1085,33 @@ def _cmd_analyze(args: argparse.Namespace) -> None:
         config_prompt_file = paths.get("prompt_file")
     prompt_file = args.prompt_file if args.prompt_file is not None else config_prompt_file
     prompt_version = args.prompt_version or get_config_str(config, "prompt_version", "")
+    baseline_prompt_id = args.baseline_prompt_id or get_config_str(
+        config,
+        "baseline_prompt_id",
+        "",
+    )
+    candidate_prompt_id = args.candidate_prompt_id or get_config_str(
+        config,
+        "candidate_prompt_id",
+        "",
+    )
+    baseline_prompt_file = args.baseline_prompt_file
+    candidate_prompt_file = args.candidate_prompt_file
+    if args.config is not None:
+        if baseline_prompt_file is None:
+            baseline_prompt_file = paths.get("baseline_prompt_file")
+        if candidate_prompt_file is None:
+            candidate_prompt_file = paths.get("candidate_prompt_file")
+    baseline_prompt_version = args.baseline_prompt_version or get_config_str(
+        config,
+        "baseline_prompt_version",
+        "",
+    )
+    candidate_prompt_version = args.candidate_prompt_version or get_config_str(
+        config,
+        "candidate_prompt_version",
+        "",
+    )
     run_quick_analysis(
         data_path=data_path,
         baseline_predictions_path=baseline_path,
@@ -1070,6 +1135,12 @@ def _cmd_analyze(args: argparse.Namespace) -> None:
         prompt_id=prompt_id or None,
         prompt_file=prompt_file,
         prompt_version=prompt_version or None,
+        baseline_prompt_id=baseline_prompt_id or None,
+        baseline_prompt_file=baseline_prompt_file,
+        baseline_prompt_version=baseline_prompt_version or None,
+        candidate_prompt_id=candidate_prompt_id or None,
+        candidate_prompt_file=candidate_prompt_file,
+        candidate_prompt_version=candidate_prompt_version or None,
     )
     print(f"Wrote quick analysis artifacts to {out_dir}")
 

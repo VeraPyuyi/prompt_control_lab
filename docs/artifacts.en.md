@@ -9,6 +9,9 @@ model identity, and optional prompt identity (`prompt_hash`, `prompt_id`, `promp
 `prompt_version`).
 
 What it explains: how the score was produced and which public model id was recorded.
+For Quick Mode paired prompt experiments, the top-level manifest may also include
+`baseline_prompt` and `candidate_prompt`, while each child run manifest stores its own `prompt`
+identity for `pcl validity`.
 
 ## `splits.json`
 

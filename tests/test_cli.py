@@ -207,6 +207,100 @@ def test_cli_gate_reviews_uncertain_validity_even_when_thresholds_pass(tmp_path:
     assert gate["checks"]["comparison_validity"]["severity"] == "review"
 
 
+def test_cli_analyze_accepts_paired_prompt_identity_for_clean_validity(
+    tmp_path: Path,
+) -> None:
+    data = tmp_path / "tasks.jsonl"
+    baseline_predictions = tmp_path / "baseline.jsonl"
+    candidate_predictions = tmp_path / "candidate.jsonl"
+    baseline_prompt = tmp_path / "baseline_prompt.txt"
+    candidate_prompt = tmp_path / "candidate_prompt.txt"
+    run = tmp_path / "runs" / "quick"
+    records = [
+        {"id": "arith-1", "input": "1 + 1", "expected": "2", "slice": "arith"},
+        {"id": "arith-2", "input": "2 + 2", "expected": "4", "slice": "arith"},
+        {"id": "arith-3", "input": "3 + 3", "expected": "6", "slice": "arith"},
+        {"id": "arith-4", "input": "4 + 4", "expected": "8", "slice": "arith"},
+        {"id": "logic-1", "input": "yes or no?", "expected": "yes", "slice": "logic"},
+        {"id": "logic-2", "input": "true?", "expected": "yes", "slice": "logic"},
+        {"id": "format-1", "input": "label A", "expected": "A", "slice": "format"},
+        {"id": "format-2", "input": "label B", "expected": "B", "slice": "format"},
+    ]
+    write_jsonl(data, records)
+    write_jsonl(
+        baseline_predictions,
+        [
+            {"id": item["id"], "output": "wrong"}
+            for item in records
+        ],
+    )
+    write_jsonl(
+        candidate_predictions,
+        [
+            {"id": item["id"], "output": item["expected"]}
+            for item in records
+        ],
+    )
+    baseline_prompt.write_text("Answer briefly.\n", encoding="utf-8")
+    candidate_prompt.write_text("Answer exactly with the expected label.\n", encoding="utf-8")
+
+    assert (
+        main(
+            [
+                "analyze",
+                "--data",
+                str(data),
+                "--baseline-predictions",
+                str(baseline_predictions),
+                "--candidate-predictions",
+                str(candidate_predictions),
+                "--out",
+                str(run),
+                "--baseline-provider",
+                "anthropic",
+                "--candidate-provider",
+                "anthropic",
+                "--baseline-model",
+                "claude-sonnet-4-20250514",
+                "--candidate-model",
+                "claude-sonnet-4-20250514",
+                "--baseline-prompt-id",
+                "baseline-v1",
+                "--baseline-prompt-file",
+                str(baseline_prompt),
+                "--baseline-prompt-version",
+                "v1",
+                "--candidate-prompt-id",
+                "candidate-v2",
+                "--candidate-prompt-file",
+                str(candidate_prompt),
+                "--candidate-prompt-version",
+                "v2",
+                "--bootstrap-samples",
+                "10",
+                "--permutation-samples",
+                "1000",
+            ]
+        )
+        == 0
+    )
+
+    validity = json.loads((run / "comparison_validity.json").read_text(encoding="utf-8"))
+    assert validity["validity"] == "clean"
+    assert validity["prompt_only_comparison"] is True
+    assert validity["checks"]["prompt_identity"]["status"] == "pass"
+    assert validity["checks"]["model_identity"]["status"] == "pass"
+    baseline_manifest = json.loads((run / "baseline" / "manifest.json").read_text(encoding="utf-8"))
+    candidate_manifest = json.loads(
+        (run / "candidate" / "manifest.json").read_text(encoding="utf-8")
+    )
+    assert baseline_manifest["prompt"]["prompt_id"] == "baseline-v1"
+    assert candidate_manifest["prompt"]["prompt_id"] == "candidate-v2"
+    top_manifest = json.loads((run / "manifest.json").read_text(encoding="utf-8"))
+    assert top_manifest["baseline_prompt"]["prompt_id"] == "baseline-v1"
+    assert top_manifest["candidate_prompt"]["prompt_id"] == "candidate-v2"
+
+
 def test_cli_gate_passes_clean_comparison_validity(tmp_path: Path) -> None:
     run = tmp_path / "run"
     _write_json(run / "metrics.json", {"count": 1, "mean_score": 1.0})

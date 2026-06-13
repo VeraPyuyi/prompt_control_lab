@@ -8,6 +8,9 @@ prompt_control_lab 的核心思路是：每次运行都应该留下可复查的�
 以及可选的 prompt identity：`prompt_hash`、`prompt_id`、`prompt_file`、`prompt_version`。
 
 说明什么问题：以后看到一个分数时，可以知道它是怎么来的，也能知道记录中的公开 model id 是什么。
+Quick Mode 做成对 prompt 实验时，顶层 manifest 还可以包含 `baseline_prompt` 和
+`candidate_prompt`；两个子 run 的 manifest 会分别保存自己的 `prompt` identity，供
+`pcl validity` 检查 prompt-only 比较是否成立。
 
 ## `splits.json`
 

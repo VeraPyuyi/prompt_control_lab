@@ -42,6 +42,12 @@ def run_quick_analysis(
     prompt_id: str | None = None,
     prompt_file: Path | None = None,
     prompt_version: str | None = None,
+    baseline_prompt_id: str | None = None,
+    baseline_prompt_file: Path | None = None,
+    baseline_prompt_version: str | None = None,
+    candidate_prompt_id: str | None = None,
+    candidate_prompt_file: Path | None = None,
+    candidate_prompt_version: str | None = None,
 ) -> None:
     """Run split, import-eval, stats, explanation, optional gate, and report."""
 
@@ -83,6 +89,20 @@ def run_quick_analysis(
     candidate_manifest = read_json(out_dir / "candidate" / "manifest.json")
     baseline_manifest["split_hash"] = split.split_hash
     candidate_manifest["split_hash"] = split.split_hash
+    baseline_prompt_identity = build_prompt_identity(
+        prompt_id=baseline_prompt_id,
+        prompt_file=baseline_prompt_file,
+        prompt_version=baseline_prompt_version,
+    )
+    candidate_prompt_identity = build_prompt_identity(
+        prompt_id=candidate_prompt_id,
+        prompt_file=candidate_prompt_file,
+        prompt_version=candidate_prompt_version,
+    )
+    if baseline_prompt_identity:
+        baseline_manifest["prompt"] = baseline_prompt_identity
+    if candidate_prompt_identity:
+        candidate_manifest["prompt"] = candidate_prompt_identity
     write_json(out_dir / "baseline" / "manifest.json", baseline_manifest)
     write_json(out_dir / "candidate" / "manifest.json", candidate_manifest)
     baseline_identity = baseline_manifest.get("model", {})
@@ -113,6 +133,10 @@ def run_quick_analysis(
     )
     if prompt_identity:
         manifest["prompt"] = prompt_identity
+    if baseline_prompt_identity:
+        manifest["baseline_prompt"] = baseline_prompt_identity
+    if candidate_prompt_identity:
+        manifest["candidate_prompt"] = candidate_prompt_identity
     write_json(out_dir / "manifest.json", manifest)
     generate_explanation(out_dir, level=explain_level)
     run_comparison_validity(
@@ -145,6 +169,16 @@ def resolve_analyze_paths(config: JsonDict, *, config_path: Path) -> dict[str, P
         ),
         "gate_policy": get_config_path(config, "gate_policy", base_dir=base_dir),
         "prompt_file": get_config_path(config, "prompt_file", base_dir=base_dir),
+        "baseline_prompt_file": get_config_path(
+            config,
+            "baseline_prompt_file",
+            base_dir=base_dir,
+        ),
+        "candidate_prompt_file": get_config_path(
+            config,
+            "candidate_prompt_file",
+            base_dir=base_dir,
+        ),
     }
 
 

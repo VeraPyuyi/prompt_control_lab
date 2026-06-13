@@ -79,6 +79,24 @@ result means the recorded artifacts support a prompt-only comparison. An
 `invalid` result means a blocking confound was found, such as model or split
 mismatch. A `needs_review` result means the evidence is useful but incomplete.
 
+For Quick Mode A/B prompt experiments, record the two prompt identities directly:
+
+```bash
+pcl analyze \
+  --data examples/tasks.jsonl \
+  --baseline-predictions examples/baseline.jsonl \
+  --candidate-predictions examples/candidate.jsonl \
+  --baseline-prompt-file prompts/baseline.txt \
+  --candidate-prompt-file prompts/candidate.txt \
+  --baseline-model claude-sonnet-4-20250514 \
+  --candidate-model claude-sonnet-4-20250514 \
+  --out runs/quick
+```
+
+This writes prompt hashes into `runs/quick/baseline/manifest.json` and
+`runs/quick/candidate/manifest.json`, so `comparison_validity.json` can tell
+whether the result is really a prompt-only comparison.
+
 ## 5. Soft-To-Hard Deployment Gap
 
 Soft prompts can look good during optimization but fail when projected to hard

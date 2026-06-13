@@ -74,6 +74,25 @@ pcl validity \
 支持 prompt-only 比较；`invalid` 表示发现了模型、切分或指标不一致等阻断问题；
 `needs_review` 表示证据有用但还不完整，需要补充 prompt identity、split hash 或统计结果。
 
+如果使用 Quick Mode 做 baseline / candidate 两个 prompt 的 A/B 对比，可以直接记录两侧
+prompt identity：
+
+```bash
+pcl analyze \
+  --data examples/tasks.jsonl \
+  --baseline-predictions examples/baseline.jsonl \
+  --candidate-predictions examples/candidate.jsonl \
+  --baseline-prompt-file prompts/baseline.txt \
+  --candidate-prompt-file prompts/candidate.txt \
+  --baseline-model claude-sonnet-4-20250514 \
+  --candidate-model claude-sonnet-4-20250514 \
+  --out runs/quick
+```
+
+这样会把两份 prompt 的 hash 分别写入 `runs/quick/baseline/manifest.json` 和
+`runs/quick/candidate/manifest.json`。之后 `comparison_validity.json` 就可以判断这次结果
+是否真的支持 prompt-only 比较。
+
 ## 5. soft-to-hard 部署 gap
 
 soft prompt 在优化时可能表现很好，但投影成 hard token 后损失明显。`soft-hard` 诊断用于量化这个风险：
