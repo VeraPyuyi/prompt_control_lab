@@ -24,6 +24,7 @@ from promptcontrollab.ui.data import (
     claim_evidence_ladder,
     ecosystem_demo_rows,
     evidence_card_rows,
+    evidence_gap_action_rows,
     evidence_gap_rows,
     external_bridge_summary,
     filter_history_rows,
@@ -417,6 +418,18 @@ def test_ui_summarizes_external_evidence_gap_diagnostics(tmp_path: Path) -> None
                             "bridge_summary_path": "langsmith/bridge_summary.md",
                         },
                     ],
+                    "paper_gap_remediation": [
+                        {
+                            "concept": "hidden-state trajectory",
+                            "required_inputs": ["inputs/hidden_states.npz"],
+                            "command": (
+                                "pcl trajectory --states inputs/hidden_states.npz "
+                                "--out diagnostics"
+                            ),
+                            "artifact": "diagnostics/trajectory.json",
+                            "explains": "Whether traces drift.",
+                        }
+                    ],
                 }
             },
         },
@@ -430,6 +443,9 @@ def test_ui_summarizes_external_evidence_gap_diagnostics(tmp_path: Path) -> None
         "soft-to-hard projection gap, hidden-state trajectory"
     )
     assert rows[1]["open_first"] == "langsmith/bridge_summary.md"
+    action_rows = evidence_gap_action_rows(load_run_detail(run))
+    assert action_rows[0]["missing_diagnostic"] == "hidden-state trajectory"
+    assert "pcl trajectory" in action_rows[0]["command"]
 
 
 def test_ui_summarizes_single_external_evidence_gap_diagnostic(tmp_path: Path) -> None:
@@ -447,6 +463,18 @@ def test_ui_summarizes_single_external_evidence_gap_diagnostic(tmp_path: Path) -
                     "evidence_tier": "tier_2_paired_comparison",
                     "claim_check_status": "needs_review",
                     "missing_paper_diagnostics": ["time-varying soft-control lane"],
+                    "paper_gap_remediation": [
+                        {
+                            "concept": "time-varying soft-control lane",
+                            "required_inputs": ["inputs/method_predictions.jsonl"],
+                            "command": (
+                                "pcl tv-soft --predictions inputs/method_predictions.jsonl "
+                                "--out diagnostics"
+                            ),
+                            "artifact": "diagnostics/tv_soft.json",
+                            "explains": "Whether gains come from time structure.",
+                        }
+                    ],
                     "bridge_summary_path": "bridge_summary.md",
                 }
             },
@@ -467,6 +495,8 @@ def test_ui_summarizes_single_external_evidence_gap_diagnostic(tmp_path: Path) -
             "report_html": "",
         }
     ]
+    action_rows = evidence_gap_action_rows(load_run_detail(run))
+    assert action_rows[0]["artifact"] == "diagnostics/tv_soft.json"
 
 
 def test_research_diagnostic_rows_summarize_paper_artifacts(tmp_path: Path) -> None:

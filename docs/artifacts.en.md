@@ -258,6 +258,8 @@ Important fields:
 - `copied_artifacts`: headline artifacts copied to the output root
 - `research_diagnostic_type`: usually `external_evidence_gap`, meaning PCL audited which
   paper-derived diagnostics are present or missing for this external export
+- `paper_gap_remediation`: copy-paste commands and required inputs for closing missing
+  paper-derived diagnostics such as soft-hard, trajectory, Riccati, or tv-soft
 
 What it explains: how an external eval or observability export was converted into a
 PromptControlLab prompt-optimization evidence bundle without replacing the external tool.
@@ -268,9 +270,9 @@ Written by `pcl evidence-from`.
 
 What it explains: the division of labor between the external source tool and PCL. It records which
 tool supplied the eval or trace export, what PCL added on top, the main paired statistics,
-prompt-only comparison validity, paper-evidence gap diagnostics, missing evidence, review items,
-and next actions. This is the recommended first file to open when explaining why PCL complements
-Promptfoo, Langfuse, or LangSmith instead of replacing them.
+prompt-only comparison validity, paper-evidence gap diagnostics, missing evidence, remediation
+commands, review items, and next actions. This is the recommended first file to open when
+explaining why PCL complements Promptfoo, Langfuse, or LangSmith instead of replacing them.
 
 ## `pcl guard --json` output
 

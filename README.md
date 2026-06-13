@@ -156,8 +156,9 @@ validity audit, and the root directory exposes `bridge_summary.md`, `evidence_ca
 for reviewers. Start with
 `bridge_summary.md` to see what the external tool supplied, what PCL added, and which evidence is
 still missing. Use `research_diagnostics.md` to see which paper-derived diagnostics are present
-or still missing, without fabricating hidden-state or Riccati evidence. Use `claim_check.md` to
-see the strongest prompt-optimization claim supported. Use a
+or still missing, and which copy-paste commands can close each missing gap, without fabricating
+hidden-state or Riccati evidence. Use `claim_check.md` to see the strongest
+prompt-optimization claim supported. Use a
 new or empty `--out` directory so stale artifacts cannot contaminate the audit. The local UI also
 surfaces the bridge in Research Overview, including detected external tools, PCL-added evidence,
 comparison validity, claim-check status, and missing evidence.

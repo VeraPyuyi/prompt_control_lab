@@ -41,6 +41,7 @@ from promptcontrollab.ui.data import (
     claim_evidence_ladder,
     ecosystem_demo_rows,
     evidence_card_rows,
+    evidence_gap_action_rows,
     evidence_gap_rows,
     external_bridge_summary,
     filter_history_rows,
@@ -104,6 +105,7 @@ TEXT = {
         "ecosystem_bridge": "Ecosystem bridge",
         "ecosystem_demo": "Ecosystem demo bundles",
         "evidence_gap_diagnosis": "Paper evidence gap diagnosis",
+        "evidence_gap_actions": "How to close these gaps",
         "ecosystem_bridge_missing": "No external evidence bridge artifact found.",
         "external_tools": "External tools",
         "pcl_added_evidence": "PCL-added evidence",
@@ -310,6 +312,7 @@ TEXT = {
         "ecosystem_bridge": "生态桥接",
         "ecosystem_demo": "生态 demo 证据包",
         "evidence_gap_diagnosis": "论文证据缺口诊断",
+        "evidence_gap_actions": "如何补齐这些缺口",
         "ecosystem_bridge_missing": "当前还没有外部证据桥接 artifact。",
         "external_tools": "外部工具",
         "pcl_added_evidence": "PCL 补充证据",
@@ -1337,6 +1340,7 @@ def _render_research_overview_tab(st: Any, text: dict[str, str], detail: JsonDic
     bridge = external_bridge_summary(detail)
     ecosystem_rows = ecosystem_demo_rows(detail)
     gap_rows = evidence_gap_rows(detail)
+    gap_action_rows = evidence_gap_action_rows(detail)
     evidence_map = research_evidence_map(detail)
 
     st.markdown(
@@ -1389,6 +1393,12 @@ def _render_research_overview_tab(st: Any, text: dict[str, str], detail: JsonDic
             unsafe_allow_html=True,
         )
         st.dataframe(gap_rows, use_container_width=True)
+    if gap_action_rows:
+        st.markdown(
+            f'<div class="pcl-section-title">{html.escape(text["evidence_gap_actions"])}</div>',
+            unsafe_allow_html=True,
+        )
+        st.dataframe(gap_action_rows, use_container_width=True)
 
     _render_external_bridge_section(st, text, bridge)
 

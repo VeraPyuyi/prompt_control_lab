@@ -142,8 +142,13 @@ def test_diagnose_summarizes_ecosystem_demo_evidence_gaps(tmp_path: Path) -> Non
         "langsmith",
     ]
     assert "hidden-state trajectory" in ecosystem["runs"][0]["missing_paper_diagnostics"]
+    remediation = ecosystem["paper_gap_remediation"]
+    assert any(item["concept"] == "hidden-state trajectory" for item in remediation)
+    assert any("pcl trajectory" in item["command"] for item in remediation)
     report = (out / "research_diagnostics.md").read_text(encoding="utf-8")
     assert "Ecosystem evidence gap diagnosis" in report
+    assert "How to close these gaps" in report
+    assert "pcl extract-hidden" in report
     assert "Promptfoo" in report
     assert "Risk: `None`" not in report
     assert "Turnpike-like signal: `None`" not in report
@@ -177,6 +182,7 @@ def test_diagnose_summarizes_single_external_evidence_bundle(tmp_path: Path) -> 
     assert bridge["tool"] == "promptfoo"
     assert bridge["validity"] == "needs_review"
     assert "soft-to-hard projection gap" in bridge["missing_paper_diagnostics"]
+    assert bridge["paper_gap_remediation"][0]["command"]
 
 
 def test_diagnose_requires_enough_inputs(tmp_path: Path) -> None:

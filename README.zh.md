@@ -147,8 +147,8 @@ candidate 导入快照，`comparison/` 保存 PCL 的成对统计和 prompt-only
 根目录会放置 `bridge_summary.md`、`evidence_card.md`、`claim_check.md`、
 `research_diagnostics.md`、`report.html` 和 `evidence_from_result.json` 方便审查。建议先看
 `bridge_summary.md`，它会说明外部工具提供了什么、PCL 补了什么、还缺哪些证据；再看
-`research_diagnostics.md`，确认哪些论文诊断已经存在，哪些仍然缺失，而且不会伪造
-hidden-state 或 Riccati 证据；最后看 `claim_check.md`，确认当前证据最多能支持哪一层
+`research_diagnostics.md`，确认哪些论文诊断已经存在、哪些仍然缺失，以及可以复制哪些命令
+来补齐缺口，而且不会伪造 hidden-state 或 Riccati 证据；最后看 `claim_check.md`，确认当前证据最多能支持哪一层
 prompt optimization 主张。请使用新的或空的 `--out` 目录，避免旧 artifact 污染审计结果。
 本地 UI 的研究总览页也会展示这条桥接链路，包括识别到的外部工具、PCL 补充的证据、比较有效性、主张检查状态和缺失证据。
 

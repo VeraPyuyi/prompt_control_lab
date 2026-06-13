@@ -81,6 +81,62 @@ PAPER_MAPPING: list[JsonDict] = [
     },
 ]
 
+PAPER_REMEDIATION: dict[str, JsonDict] = {
+    "soft-to-hard projection gap": {
+        "required_inputs": ["inputs/soft_prompt.npz", "inputs/vocab_embeddings.npz"],
+        "command": (
+            "pcl soft-hard --soft inputs/soft_prompt.npz "
+            "--vocab inputs/vocab_embeddings.npz --out diagnostics"
+        ),
+        "artifact": "diagnostics/soft_hard.json",
+        "explains": (
+            "Whether the optimized soft vectors remain close enough to deployable hard tokens."
+        ),
+    },
+    "HuggingFace hidden-state extraction": {
+        "required_inputs": ["inputs/prompts.jsonl", "HuggingFace model id or local model path"],
+        "command": (
+            "pcl extract-hidden --model <model-id-or-path> "
+            "--prompts inputs/prompts.jsonl --out inputs/hidden_states.npz"
+        ),
+        "artifact": "inputs/hidden_states.npz",
+        "explains": (
+            "Creates the hidden-state artifact needed by trajectory and Riccati diagnostics."
+        ),
+    },
+    "hidden-state trajectory": {
+        "required_inputs": ["inputs/hidden_states.npz"],
+        "command": "pcl trajectory --states inputs/hidden_states.npz --out diagnostics",
+        "artifact": "diagnostics/trajectory.json",
+        "explains": (
+            "Whether internal hidden-state traces show drift, decay, or turnpike-like behavior."
+        ),
+    },
+    "Riccati surrogate": {
+        "required_inputs": [
+            "inputs/surrogate_mats.npz or inputs/hidden_states.npz",
+        ],
+        "command": "pcl riccati --trajectory inputs/hidden_states.npz --out diagnostics",
+        "artifact": "diagnostics/riccati.json",
+        "explains": (
+            "Whether a fitted finite-dimensional control surrogate is self-consistent and stable."
+        ),
+    },
+    "time-varying soft-control lane": {
+        "required_inputs": [
+            "inputs/method_predictions.jsonl with static/tv/shuffled/random methods",
+        ],
+        "command": (
+            "pcl tv-soft --predictions inputs/method_predictions.jsonl "
+            "--out diagnostics --baseline-method static"
+        ),
+        "artifact": "diagnostics/tv_soft.json",
+        "explains": (
+            "Whether time-varying gains look tied to temporal structure rather than capacity."
+        ),
+    },
+}
+
 
 @dataclass(frozen=True)
 class ResearchPaths:
@@ -510,6 +566,10 @@ def _summarize_ecosystem_bundle(*, run_dir: Path, payload: JsonDict) -> JsonDict
                 continue
             tool_dir = _ecosystem_tool_dir(run_dir=run_dir, item=item)
             rows.append(_summarize_external_bundle(run_dir=tool_dir, fallback=item))
+    remediation_items: list[JsonDict] = []
+    for row in rows:
+        remediation_items.extend(_remediation_list(row.get("paper_gap_remediation")))
+    remediation = _dedupe_remediation(remediation_items)
     return {
         "tool_count": len(rows),
         "runs": rows,
@@ -520,6 +580,7 @@ def _summarize_ecosystem_bundle(*, run_dir: Path, payload: JsonDict) -> JsonDict
                 for missing in row.get("missing_paper_diagnostics", [])
             }
         ),
+        "paper_gap_remediation": remediation,
         "review_first": [
             str(row.get("bridge_summary_path"))
             for row in rows
@@ -553,6 +614,13 @@ def _summarize_external_bundle(*, run_dir: Path, fallback: JsonDict) -> JsonDict
         for row in coverage
         if row["category"] == "research_diagnostic" and row["status"] == "missing"
     ]
+    paper_gap_remediation = [
+        row["remediation"]
+        for row in coverage
+        if row["category"] in {"research_diagnostic", "research_input"}
+        and row["status"] == "missing"
+        and isinstance(row.get("remediation"), dict)
+    ]
     return {
         "tool": tool,
         "display_name": _display_tool_name(tool),
@@ -570,6 +638,7 @@ def _summarize_external_bundle(*, run_dir: Path, fallback: JsonDict) -> JsonDict
         or _first_stats_comparison(stats).get("permutation_p_value"),
         "paper_coverage": coverage,
         "missing_paper_diagnostics": missing_paper_diagnostics,
+        "paper_gap_remediation": paper_gap_remediation,
         "missing_evidence": bridge.get("missing_evidence", fallback.get("missing_evidence", [])),
         "next_actions": bridge.get("next_actions", fallback.get("next_actions", [])),
         "bridge_summary_path": str(run_dir / "bridge_summary.md")
@@ -592,6 +661,25 @@ def _first_stats_comparison(stats: JsonDict) -> JsonDict:
     if isinstance(comparisons, list) and comparisons and isinstance(comparisons[0], dict):
         return comparisons[0]
     return stats
+
+
+def _remediation_list(value: object) -> list[JsonDict]:
+    if not isinstance(value, list):
+        return []
+    return [item for item in value if isinstance(item, dict)]
+
+
+def _dedupe_remediation(items: list[JsonDict]) -> list[JsonDict]:
+    rows = _remediation_list(items)
+    seen: set[str] = set()
+    deduped: list[JsonDict] = []
+    for row in rows:
+        concept = str(row.get("concept") or "")
+        if not concept or concept in seen:
+            continue
+        seen.add(concept)
+        deduped.append(row)
+    return deduped
 
 
 def _external_tool_name(*, bridge: JsonDict, fallback: JsonDict) -> str:
@@ -624,14 +712,19 @@ def _paper_coverage_rows(run_dir: Path) -> list[JsonDict]:
         artifact = str(item["artifact"])
         present = (run_dir / artifact).exists()
         concept = str(item["concept"])
-        rows.append(
-            {
-                "concept": concept,
-                "artifact": artifact,
-                "status": "present" if present else "missing",
-                "category": _paper_concept_category(concept),
-            }
-        )
+        row: JsonDict = {
+            "concept": concept,
+            "artifact": artifact,
+            "status": "present" if present else "missing",
+            "category": _paper_concept_category(concept),
+            "commands": item.get("commands", []),
+            "meaning": item.get("meaning", ""),
+        }
+        if not present:
+            remediation = _paper_remediation_for(concept)
+            if remediation:
+                row["remediation"] = remediation
+        rows.append(row)
     return rows
 
 
@@ -646,6 +739,13 @@ def _paper_concept_category(concept: str) -> str:
     if concept == "HuggingFace hidden-state extraction":
         return "research_input"
     return "evidence_protocol"
+
+
+def _paper_remediation_for(concept: str) -> JsonDict:
+    remediation = PAPER_REMEDIATION.get(concept)
+    if not isinstance(remediation, dict):
+        return {}
+    return {"concept": concept, **remediation}
 
 
 def render_research_diagnostics_markdown(payload: JsonDict) -> str:
@@ -709,6 +809,8 @@ def render_research_diagnostics_markdown(payload: JsonDict) -> str:
                     )
                     + " |"
                 )
+        remediation = ecosystem.get("paper_gap_remediation")
+        lines.extend(_render_remediation_table(remediation))
         lines.extend([""])
     external = diagnostics.get("external_bridge", {})
     if isinstance(external, dict) and external:
@@ -724,6 +826,7 @@ def render_research_diagnostics_markdown(payload: JsonDict) -> str:
                 "",
             ]
         )
+        lines.extend(_render_remediation_table(external.get("paper_gap_remediation")))
     inputs = payload.get("inputs", {})
     inputs_dict = inputs if isinstance(inputs, dict) else {}
     hidden_input = inputs_dict.get("hidden_states")
@@ -795,6 +898,38 @@ def render_research_diagnostics_markdown(payload: JsonDict) -> str:
         ]
     )
     return "\n".join(lines)
+
+
+def _render_remediation_table(value: object) -> list[str]:
+    rows = _remediation_list(value)
+    if not rows:
+        return []
+    lines = [
+        "",
+        "#### How to close these gaps",
+        "",
+        "| Missing diagnostic | Required inputs | Command | Artifact | What it explains |",
+        "|---|---|---|---|---|",
+    ]
+    for row in rows:
+        required = row.get("required_inputs")
+        required_inputs = (
+            ", ".join(str(item) for item in required) if isinstance(required, list) else ""
+        )
+        lines.append(
+            "| "
+            + " | ".join(
+                [
+                    str(row.get("concept", "")),
+                    required_inputs,
+                    f"`{row.get('command', '')}`",
+                    f"`{row.get('artifact', '')}`",
+                    str(row.get("explains", "")),
+                ]
+            )
+            + " |"
+        )
+    return lines
 
 
 def _research_input_summary(paths: ResearchPaths) -> JsonDict:

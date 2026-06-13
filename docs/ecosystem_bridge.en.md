@@ -77,7 +77,9 @@ root. For external-tool exports, `diagnose` reports evidence coverage and missin
 research diagnostics; it does not fabricate hidden-state, soft-hard, Riccati, or
 time-varying-control measurements.
 After this step, `pcl ui --runs runs/ecosystem-demo` also shows a paper-evidence
-gap table in Research Overview.
+gap table in Research Overview. The same report includes a remediation table with
+the required inputs, copy-paste `pcl` command, expected artifact, and what that
+artifact would explain.
 
 Promptfoo:
 

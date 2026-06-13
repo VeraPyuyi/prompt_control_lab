@@ -203,6 +203,8 @@ gate decision、risk level、改动文件、测试、audit path、gate path，�
 - `copied_artifacts`：复制到输出根目录的重点 artifact
 - `research_diagnostic_type`：通常是 `external_evidence_gap`，表示 PCL 审计了这个外部导出中
   哪些论文诊断已经存在、哪些仍然缺失
+- `paper_gap_remediation`：用于补齐缺失论文诊断的可复制命令和所需输入，例如
+  soft-hard、trajectory、Riccati 或 tv-soft
 
 说明什么问题：外部 eval / observability 工具仍然作为数据来源，`prompt_control_lab` 负责把这些导出转换成 prompt 优化证据包，而不是替代原工具。
 
@@ -210,7 +212,7 @@ gate decision、risk level、改动文件、测试、audit path、gate path，�
 
 由 `pcl evidence-from` 写出。
 
-说明什么问题：外部工具和 PCL 的分工。它会记录哪个工具提供 eval 或 trace export、PCL 在其上补了哪些证据、主要成对统计、prompt-only 比较有效性、论文证据缺口诊断、缺失证据、需要复查的项目和下一步动作。当你要解释 PCL 为什么是 Promptfoo、Langfuse 或 LangSmith 的补充层，而不是替代品时，建议先打开这个文件。
+说明什么问题：外部工具和 PCL 的分工。它会记录哪个工具提供 eval 或 trace export、PCL 在其上补了哪些证据、主要成对统计、prompt-only 比较有效性、论文证据缺口诊断、缺失证据、补齐命令、需要复查的项目和下一步动作。当你要解释 PCL 为什么是 Promptfoo、Langfuse 或 LangSmith 的补充层，而不是替代品时，建议先打开这个文件。
 
 ## `pcl guard --json` 输出
 

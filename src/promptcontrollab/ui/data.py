@@ -421,6 +421,47 @@ def evidence_gap_rows(detail: JsonDict) -> list[JsonDict]:
     return []
 
 
+def evidence_gap_action_rows(detail: JsonDict) -> list[JsonDict]:
+    """Return copy-paste remediation commands for missing paper diagnostics."""
+
+    research = detail.get("research_diagnostics")
+    if not isinstance(research, dict):
+        return []
+    diagnostics = research.get("diagnostics")
+    if not isinstance(diagnostics, dict):
+        return []
+    ecosystem = diagnostics.get("ecosystem_bridge")
+    if isinstance(ecosystem, dict):
+        return _action_rows(ecosystem.get("paper_gap_remediation"))
+    external = diagnostics.get("external_bridge")
+    if isinstance(external, dict):
+        return _action_rows(external.get("paper_gap_remediation"))
+    return []
+
+
+def _action_rows(value: object) -> list[JsonDict]:
+    if not isinstance(value, list):
+        return []
+    rows: list[JsonDict] = []
+    for item in value:
+        if not isinstance(item, dict):
+            continue
+        required = item.get("required_inputs")
+        required_inputs = (
+            ", ".join(str(part) for part in required) if isinstance(required, list) else ""
+        )
+        rows.append(
+            {
+                "missing_diagnostic": item.get("concept", ""),
+                "required_inputs": required_inputs,
+                "command": item.get("command", ""),
+                "artifact": item.get("artifact", ""),
+                "explains": item.get("explains", ""),
+            }
+        )
+    return rows
+
+
 def _evidence_gap_row(item: JsonDict) -> JsonDict:
     missing = item.get("missing_paper_diagnostics")
     missing_list = [str(value) for value in missing] if isinstance(missing, list) else []

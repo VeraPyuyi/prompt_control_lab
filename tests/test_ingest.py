@@ -240,6 +240,7 @@ def test_evidence_from_promptfoo_generates_comparison_bundle(tmp_path: Path) -> 
     assert bridge["research_diagnostic_type"] == "external_evidence_gap"
     assert bridge["research_diagnostics_md_path"] == str(out_dir / "research_diagnostics.md")
     assert "soft-to-hard projection gap" in bridge["missing_paper_diagnostics"]
+    assert any("pcl soft-hard" in row["command"] for row in bridge["paper_gap_remediation"])
     assert bridge["validity"] == "clean"
     assert bridge["evidence_tier"] == "tier_2_paired_comparison"
     assert bridge["claim_check_status"] == "pass"
@@ -251,6 +252,7 @@ def test_evidence_from_promptfoo_generates_comparison_bundle(tmp_path: Path) -> 
     assert "Promptfoo" in bridge_markdown
     assert "Research diagnostics" in bridge_markdown
     assert "research_diagnostics.md" in bridge_markdown
+    assert "pcl soft-hard" in bridge_markdown
 
 
 def test_ingest_langfuse_observations_writes_pcl_run(tmp_path: Path) -> None:

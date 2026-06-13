@@ -167,6 +167,9 @@ def build_external_evidence(
     payload["bridge_summary"]["missing_paper_diagnostics"] = bridge_summary.get(
         "missing_paper_diagnostics", []
     )
+    payload["bridge_summary"]["paper_gap_remediation"] = bridge_summary.get(
+        "paper_gap_remediation", []
+    )
     payload["next_actions"].insert(
         3,
         "Open research_diagnostics.md for paper-evidence gap coverage.",
@@ -186,11 +189,14 @@ def _attach_research_diagnostics_to_bridge_summary(
     external = _external_diagnostic_payload(diagnostics)
     missing = external.get("missing_paper_diagnostics")
     missing_list = missing if isinstance(missing, list) else []
+    remediation = external.get("paper_gap_remediation")
+    remediation_list = remediation if isinstance(remediation, list) else []
     payload = dict(bridge_summary)
     payload["research_diagnostics_path"] = str(out_dir / "research_diagnostics.json")
     payload["research_diagnostics_md_path"] = str(out_dir / "research_diagnostics.md")
     payload["research_diagnostic_type"] = diagnostics.get("diagnostic_type")
     payload["missing_paper_diagnostics"] = missing_list
+    payload["paper_gap_remediation"] = remediation_list
     added = payload.get("pcl_added_evidence")
     added_list = list(added) if isinstance(added, list) else []
     if "paper_evidence_gap_diagnosis" not in added_list:
@@ -530,6 +536,18 @@ def _render_bridge_summary(payload: JsonDict) -> str:
                 "",
             ]
         )
+        remediation_rows = _remediation_rows(payload.get("paper_gap_remediation"))
+        if remediation_rows:
+            lines.extend(
+                [
+                    "### How to close paper-evidence gaps",
+                    "",
+                    "| Missing diagnostic | Command | Artifact |",
+                    "|---|---|---|",
+                    *remediation_rows,
+                    "",
+                ]
+            )
     else:
         lines.extend(
             [
@@ -563,3 +581,24 @@ def _string_list(value: object) -> list[str]:
     if not isinstance(value, list):
         return []
     return [str(item) for item in value]
+
+
+def _remediation_rows(value: object) -> list[str]:
+    if not isinstance(value, list):
+        return []
+    rows: list[str] = []
+    for item in value:
+        if not isinstance(item, dict):
+            continue
+        rows.append(
+            "| "
+            + " | ".join(
+                [
+                    str(item.get("concept", "")),
+                    f"`{item.get('command', '')}`",
+                    f"`{item.get('artifact', '')}`",
+                ]
+            )
+            + " |"
+        )
+    return rows

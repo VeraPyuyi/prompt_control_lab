@@ -63,7 +63,8 @@ pcl diagnose --run runs/ecosystem-demo
 对于外部工具导出，`diagnose` 会报告已有证据和缺失的研究诊断；它不会伪造
 hidden-state、soft-hard、Riccati 或 time-varying-control 测量结果。
 完成这一步后，`pcl ui --runs runs/ecosystem-demo` 的 Research Overview 也会显示
-论文证据缺口表。
+论文证据缺口表。报告还会给出一张补齐表，写明需要准备哪些输入、可以复制哪条
+`pcl` 命令、会生成哪个 artifact，以及这个 artifact 能说明什么问题。
 
 Promptfoo：
 
