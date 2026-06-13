@@ -28,6 +28,7 @@ class ReportModel:
     history_compare: JsonDict
     agent_run: JsonDict
     research_diagnostics: JsonDict
+    research_gap_plan: JsonDict
     evidence_card: JsonDict
     claim_check: JsonDict
     external_evidence: JsonDict
@@ -66,6 +67,7 @@ class ReportModel:
             history_compare=_read_optional(run_dir / "history_compare.json"),
             agent_run=_read_optional(run_dir / "agent_run.json"),
             research_diagnostics=_read_optional(run_dir / "research_diagnostics.json"),
+            research_gap_plan=_read_optional(run_dir / "research_gap_plan.json"),
             evidence_card=_read_optional(run_dir / "evidence_card.json"),
             claim_check=_read_optional(run_dir / "claim_check.json"),
             external_evidence=_read_optional(run_dir / "evidence_from_result.json"),
@@ -139,6 +141,10 @@ def _existing_artifacts(run_dir: Path, diagnostics: dict[str, JsonDict]) -> list
         "agent_run.json",
         "research_diagnostics.json",
         "research_diagnostics.md",
+        "research_gap_plan.json",
+        "research_gap_plan.md",
+        "research_gap_commands.ps1",
+        "research_gap_commands.sh",
         "evidence_card.json",
         "evidence_card.md",
         "claim_check.json",

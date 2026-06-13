@@ -66,7 +66,7 @@ hidden-state、soft-hard、Riccati 或 time-varying-control 测量结果。
 论文证据缺口表。报告还会给出一张补齐表，写明需要准备哪些输入、可以复制哪条
 `pcl` 命令、会生成哪个 artifact，以及这个 artifact 能说明什么问题。需要交接给团队成员
 时，可以直接打开 `research_gap_plan.md`；配套的 `research_gap_commands.ps1` 和 `.sh`
-是 review-first 命令脚本。
+是 review-first 命令脚本。UI 会把同一份计划和脚本列表作为研究总览里的独立区域展示。
 
 Promptfoo：
 

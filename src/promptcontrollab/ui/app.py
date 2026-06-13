@@ -53,6 +53,8 @@ from promptcontrollab.ui.data import (
     model_rows,
     research_diagnostic_rows,
     research_evidence_map,
+    research_gap_plan_rows,
+    research_gap_script_rows,
     research_status_counts,
     slice_rows,
 )
@@ -106,6 +108,8 @@ TEXT = {
         "ecosystem_demo": "Ecosystem demo bundles",
         "evidence_gap_diagnosis": "Paper evidence gap diagnosis",
         "evidence_gap_actions": "How to close these gaps",
+        "research_gap_plan": "Research gap plan",
+        "research_gap_scripts": "Review-first command scripts",
         "ecosystem_bridge_missing": "No external evidence bridge artifact found.",
         "external_tools": "External tools",
         "pcl_added_evidence": "PCL-added evidence",
@@ -313,6 +317,8 @@ TEXT = {
         "ecosystem_demo": "生态 demo 证据包",
         "evidence_gap_diagnosis": "论文证据缺口诊断",
         "evidence_gap_actions": "如何补齐这些缺口",
+        "research_gap_plan": "研究证据缺口计划",
+        "research_gap_scripts": "Review-first 命令脚本",
         "ecosystem_bridge_missing": "当前还没有外部证据桥接 artifact。",
         "external_tools": "外部工具",
         "pcl_added_evidence": "PCL 补充证据",
@@ -1341,6 +1347,8 @@ def _render_research_overview_tab(st: Any, text: dict[str, str], detail: JsonDic
     ecosystem_rows = ecosystem_demo_rows(detail)
     gap_rows = evidence_gap_rows(detail)
     gap_action_rows = evidence_gap_action_rows(detail)
+    gap_plan_rows = research_gap_plan_rows(detail)
+    gap_script_rows = research_gap_script_rows(detail)
     evidence_map = research_evidence_map(detail)
 
     st.markdown(
@@ -1399,6 +1407,21 @@ def _render_research_overview_tab(st: Any, text: dict[str, str], detail: JsonDic
             unsafe_allow_html=True,
         )
         st.dataframe(gap_action_rows, use_container_width=True)
+    if gap_plan_rows:
+        st.markdown(
+            f'<div class="pcl-section-title">{html.escape(text["research_gap_plan"])}</div>',
+            unsafe_allow_html=True,
+        )
+        plan = detail.get("research_gap_plan")
+        plan_dict = plan if isinstance(plan, dict) else {}
+        st.caption(str(plan_dict.get("boundary", "")))
+        st.dataframe(gap_plan_rows, use_container_width=True)
+    if gap_script_rows:
+        st.markdown(
+            f'<div class="pcl-section-title">{html.escape(text["research_gap_scripts"])}</div>',
+            unsafe_allow_html=True,
+        )
+        st.dataframe(gap_script_rows, use_container_width=True)
 
     _render_external_bridge_section(st, text, bridge)
 

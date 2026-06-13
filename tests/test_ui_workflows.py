@@ -390,6 +390,10 @@ def test_cli_export_report_zip_contains_known_artifacts(tmp_path: Path) -> None:
     _write(run_dir / "evidence_card.md", "# evidence\n")
     _write_json(run_dir / "claim_check.json", {"status": "pass"})
     _write(run_dir / "claim_check.md", "# claim\n")
+    _write_json(run_dir / "research_gap_plan.json", {"kind": "research_gap_plan"})
+    _write(run_dir / "research_gap_plan.md", "# gap plan\n")
+    _write(run_dir / "research_gap_commands.ps1", "exit 1\n")
+    _write(run_dir / "research_gap_commands.sh", "exit 1\n")
     _write(run_dir / "report.md", "# report\n")
     _write_json(run_dir / "diagnostics" / "trajectory.json", {"drift": 0.2})
     _write(run_dir / "src.py", "print('not an artifact')\n")
@@ -406,6 +410,10 @@ def test_cli_export_report_zip_contains_known_artifacts(tmp_path: Path) -> None:
         "claim_check.json",
         "claim_check.md",
         "manifest.json",
+        "research_gap_commands.ps1",
+        "research_gap_commands.sh",
+        "research_gap_plan.json",
+        "research_gap_plan.md",
         "report.md",
     }
 

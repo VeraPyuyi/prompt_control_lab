@@ -35,6 +35,8 @@ from promptcontrollab.ui.data import (
     load_run_detail,
     research_diagnostic_rows,
     research_evidence_map,
+    research_gap_plan_rows,
+    research_gap_script_rows,
     research_status_counts,
 )
 
@@ -240,14 +242,45 @@ def test_report_model_lists_diagnostic_artifacts(tmp_path: Path) -> None:
     run = tmp_path / "runs" / "quick"
     _write_json(run / "manifest.json", {"mode": "quick"})
     _write_json(run / "research_diagnostics.json", {"inputs": {"hidden_states": {"source": "hf"}}})
+    _write_json(
+        run / "research_gap_plan.json",
+        {
+            "kind": "research_gap_plan",
+            "actions": [
+                {
+                    "step": 1,
+                    "concept": "hidden-state trajectory",
+                    "required_inputs": ["inputs/hidden_states.npz"],
+                    "command": "pcl trajectory --states inputs/hidden_states.npz --out diagnostics",
+                    "artifact": "diagnostics/trajectory.json",
+                    "explains": "Whether traces drift.",
+                }
+            ],
+            "boundary": "Review commands before running.",
+        },
+    )
+    (run / "research_gap_plan.md").write_text("# plan\n", encoding="utf-8")
+    (run / "research_gap_commands.ps1").write_text("exit 1\n", encoding="utf-8")
+    (run / "research_gap_commands.sh").write_text("exit 1\n", encoding="utf-8")
     _write_json(run / "diagnostics" / "trajectory.json", {"drift": 0.1})
 
     detail = load_run_detail(run)
 
     assert detail["research_diagnostics"]["inputs"]["hidden_states"]["source"] == "hf"
+    assert detail["research_gap_plan"]["kind"] == "research_gap_plan"
     assert "diagnostics/trajectory.json" in detail["artifacts"]
     assert "research_diagnostics.json" in detail["artifacts"]
+    assert "research_gap_plan.json" in detail["artifacts"]
+    assert "research_gap_commands.ps1" in detail["artifacts"]
     assert detail["diagnostics"]["trajectory"]["drift"] == 0.1
+    plan_rows = research_gap_plan_rows(detail)
+    assert plan_rows[0]["missing_diagnostic"] == "hidden-state trajectory"
+    script_rows = research_gap_script_rows(detail)
+    assert [row["artifact"] for row in script_rows] == [
+        "research_gap_plan.md",
+        "research_gap_commands.ps1",
+        "research_gap_commands.sh",
+    ]
 
 
 def test_report_model_and_ui_detail_read_evidence_card(tmp_path: Path) -> None:

@@ -81,6 +81,8 @@ gap table in Research Overview. The same report includes a remediation table wit
 the required inputs, copy-paste `pcl` command, expected artifact, and what that
 artifact would explain. For handoff, open `research_gap_plan.md`; the paired
 `research_gap_commands.ps1` and `.sh` files are review-first command scripts.
+The UI shows the same plan and script list as first-class Research Overview
+sections.
 
 Promptfoo:
 

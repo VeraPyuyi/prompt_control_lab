@@ -21,6 +21,7 @@ RUN_ARTIFACTS = [
     "history_compare.json",
     "agent_run.json",
     "research_diagnostics.json",
+    "research_gap_plan.json",
     "evidence_card.json",
     "claim_check.json",
     "evidence_from_result.json",
@@ -38,6 +39,7 @@ RUN_LEVEL_ARTIFACTS = [
     "audit_result.json",
     "agent_run.json",
     "research_diagnostics.json",
+    "research_gap_plan.json",
     "evidence_card.json",
     "claim_check.json",
     "evidence_from_result.json",
@@ -88,6 +90,7 @@ def load_run_detail(run_dir: Path) -> JsonDict:
         "history_compare": model.history_compare,
         "agent_run": model.agent_run,
         "research_diagnostics": model.research_diagnostics,
+        "research_gap_plan": model.research_gap_plan,
         "evidence_card": model.evidence_card,
         "claim_check": model.claim_check,
         "external_evidence": model.external_evidence,
@@ -437,6 +440,33 @@ def evidence_gap_action_rows(detail: JsonDict) -> list[JsonDict]:
     if isinstance(external, dict):
         return _action_rows(external.get("paper_gap_remediation"))
     return []
+
+
+def research_gap_plan_rows(detail: JsonDict) -> list[JsonDict]:
+    """Return rows from a standalone research gap plan artifact."""
+
+    plan = detail.get("research_gap_plan")
+    if not isinstance(plan, dict):
+        return []
+    return _action_rows(plan.get("actions"))
+
+
+def research_gap_script_rows(detail: JsonDict) -> list[JsonDict]:
+    """Return review-first gap command script artifacts for display."""
+
+    artifacts = detail.get("artifacts")
+    artifact_list = [str(item) for item in artifacts] if isinstance(artifacts, list) else []
+    rows: list[JsonDict] = []
+    for name in ["research_gap_plan.md", "research_gap_commands.ps1", "research_gap_commands.sh"]:
+        if name in artifact_list:
+            rows.append({"artifact": name, "purpose": _gap_script_purpose(name)})
+    return rows
+
+
+def _gap_script_purpose(name: str) -> str:
+    if name.endswith(".md"):
+        return "reviewable evidence-gap handoff plan"
+    return "review-first command script; edit placeholders before use"
 
 
 def _action_rows(value: object) -> list[JsonDict]:
