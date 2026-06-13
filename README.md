@@ -85,8 +85,9 @@ To experience the whole research stack without preparing model artifacts first, 
 `pcl research-demo --out runs/research-demo`. To apply the same unified diagnostic report to your
 own soft prompts, hidden states, matrices, and method predictions, use `pcl diagnose`. Research
 demo now also writes a synthetic tri-split, baseline/candidate scored runs, paired statistics,
-prompt-only comparison validity, and `evidence_card.json` / `evidence_card.md`. The local UI
-surfaces that card in the Research Overview.
+prompt-only comparison validity, `evidence_card.json` / `evidence_card.md`, and
+`claim_check.json`. The local UI surfaces both the evidence card and the claim-check boundary in
+the Research Overview.
 
 See [Research From The Paper](docs/research_from_paper.en.md) for the direct mapping from paper
 ideas to commands, inputs, outputs, and interpretation boundaries.
@@ -144,8 +145,9 @@ pcl claim-check \
 `pcl evidence-from` writes a self-contained bridge directory: `imports/` keeps the external-tool
 baseline/candidate snapshots, `comparison/` keeps the PCL paired statistics and prompt-only
 validity audit, and the root directory exposes `bridge_summary.md`, `evidence_card.md`,
-`report.html`, and `evidence_from_result.json` for reviewers. Start with `bridge_summary.md` to
-see what the external tool supplied, what PCL added, and which evidence is still missing. Use a
+`claim_check.md`, `report.html`, and `evidence_from_result.json` for reviewers. Start with
+`bridge_summary.md` to see what the external tool supplied, what PCL added, and which evidence is
+still missing. Use `claim_check.md` to see the strongest prompt-optimization claim supported. Use a
 new or empty `--out` directory so stale artifacts cannot contaminate the audit.
 
 The lower-level imported run still contains `predictions.jsonl`, `metrics.json`, and

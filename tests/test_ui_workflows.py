@@ -144,6 +144,7 @@ def test_analyze_gate_agent_pr_and_zip_workflows(tmp_path: Path) -> None:
     assert detail["candidate_score"] == 1.0
     assert (run_dir / "evidence_card.json").exists()
     assert (run_dir / "evidence_card.md").exists()
+    assert (run_dir / "claim_check.json").exists()
     assert (run_dir / "report.html").exists()
 
     gate = run_gate_workflow(
@@ -217,6 +218,7 @@ def test_analyze_gate_agent_pr_and_zip_workflows(tmp_path: Path) -> None:
     assert "agent_run.json" in names
     assert "evidence_card.json" in names
     assert "evidence_card.md" in names
+    assert "claim_check.json" in names
     assert "src.py" not in names
 
 
@@ -355,6 +357,7 @@ def test_external_evidence_workflow_preview_and_auto_modes(tmp_path: Path) -> No
     assert result["external_evidence"]["kind"] == "external_evidence"
     assert (out_dir / "evidence_from_result.json").exists()
     assert (out_dir / "evidence_card.md").exists()
+    assert (out_dir / "claim_check.md").exists()
     assert (out_dir / "report.html").exists()
     validity = read_json(out_dir / "comparison" / "comparison_validity.json")
     assert validity["validity"] == "clean"
@@ -373,6 +376,7 @@ def test_create_demo_artifacts_workflow_generates_demo_run(tmp_path: Path) -> No
     assert result["status"] == "completed"
     assert (runs_dir / "demo" / "manifest.json").exists()
     assert (runs_dir / "demo" / "evidence_card.json").exists()
+    assert (runs_dir / "demo" / "claim_check.json").exists()
     assert (runs_dir / "demo" / "report.html").exists()
     assert (runs_dir / "_demo_project" / "promptcontrol.example.yaml").exists()
 
@@ -382,6 +386,8 @@ def test_cli_export_report_zip_contains_known_artifacts(tmp_path: Path) -> None:
     _write_json(run_dir / "manifest.json", {"mode": "quick"})
     _write_json(run_dir / "evidence_card.json", {"recommendation": "needs_review"})
     _write(run_dir / "evidence_card.md", "# evidence\n")
+    _write_json(run_dir / "claim_check.json", {"status": "pass"})
+    _write(run_dir / "claim_check.md", "# claim\n")
     _write(run_dir / "report.md", "# report\n")
     _write_json(run_dir / "diagnostics" / "trajectory.json", {"drift": 0.2})
     _write(run_dir / "src.py", "print('not an artifact')\n")
@@ -395,6 +401,8 @@ def test_cli_export_report_zip_contains_known_artifacts(tmp_path: Path) -> None:
         "diagnostics/trajectory.json",
         "evidence_card.json",
         "evidence_card.md",
+        "claim_check.json",
+        "claim_check.md",
         "manifest.json",
         "report.md",
     }

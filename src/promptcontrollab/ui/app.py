@@ -35,6 +35,7 @@ from promptcontrollab.ui.components import (
 from promptcontrollab.ui.data import (
     audit_detail_sections,
     changed_line_rows,
+    claim_check_summary,
     evidence_card_rows,
     filter_history_rows,
     first_comparison,
@@ -82,6 +83,15 @@ TEXT = {
         "evidence_card": "Evidence card",
         "evidence_card_missing": "No evidence_card.json found yet.",
         "evidence_card_command": "pcl evidence-card --run <selected-run>",
+        "claim_check": "Claim check",
+        "claim_check_missing": "No claim_check.json found yet.",
+        "claim_check_command": "pcl claim-check --run <selected-run> --claim full-research",
+        "claim_check_status": "Claim status",
+        "claim_check_requested": "Requested claim",
+        "claim_check_tier": "Evidence tier",
+        "claim_check_safe": "Safe claim",
+        "claim_check_reason": "Reason",
+        "claim_check_next_missing": "Missing for next tier",
         "evidence_recommendation": "Evidence recommendation",
         "evidence_summary": "Evidence summary",
         "evidence_sections": "Evidence card sections",
@@ -269,6 +279,15 @@ TEXT = {
         "evidence_card": "证据卡",
         "evidence_card_missing": "当前还没有 evidence_card.json。",
         "evidence_card_command": "pcl evidence-card --run <选中的 run>",
+        "claim_check": "主张检查",
+        "claim_check_missing": "当前还没有 claim_check.json。",
+        "claim_check_command": "pcl claim-check --run <选中的 run> --claim full-research",
+        "claim_check_status": "主张状态",
+        "claim_check_requested": "请求主张",
+        "claim_check_tier": "证据层级",
+        "claim_check_safe": "安全主张",
+        "claim_check_reason": "原因",
+        "claim_check_next_missing": "下一层级缺失证据",
         "evidence_recommendation": "证据推荐",
         "evidence_summary": "证据摘要",
         "evidence_sections": "证据卡分段",
@@ -1285,6 +1304,8 @@ def _render_research_overview_tab(st: Any, text: dict[str, str], detail: JsonDic
     evidence_card = detail.get("evidence_card")
     evidence_dict = evidence_card if isinstance(evidence_card, dict) else {}
     evidence_recommendation = evidence_dict.get("recommendation", "missing")
+    claim_check = claim_check_summary(detail)
+    claim_status = claim_check.get("status", "missing")
 
     st.markdown(
         '<div class="pcl-grid">'
@@ -1300,6 +1321,11 @@ def _render_research_overview_tab(st: Any, text: dict[str, str], detail: JsonDic
             text["evidence_recommendation"],
             evidence_recommendation,
             text["evidence_card"],
+        )
+        + stat_card_html(
+            text["claim_check_status"],
+            str(claim_status),
+            str(claim_check.get("requested_claim") or text["claim_check"]),
         )
         + "</div>",
         unsafe_allow_html=True,
@@ -1317,6 +1343,26 @@ def _render_research_overview_tab(st: Any, text: dict[str, str], detail: JsonDic
             st.dataframe(evidence_rows, use_container_width=True)
     else:
         empty_state(st, text["evidence_card_missing"], text["evidence_card_command"])
+
+    st.markdown(
+        f'<div class="pcl-section-title">{html.escape(text["claim_check"])}</div>',
+        unsafe_allow_html=True,
+    )
+    if claim_check:
+        claim_rows = [
+            {"field": text["claim_check_requested"], "value": claim_check.get("requested_claim", "")},
+            {"field": text["claim_check_status"], "value": claim_check.get("status", "")},
+            {"field": text["claim_check_tier"], "value": claim_check.get("evidence_tier", "")},
+            {"field": text["claim_check_safe"], "value": claim_check.get("safe_claim", "")},
+            {"field": text["claim_check_reason"], "value": claim_check.get("reason", "")},
+            {
+                "field": text["claim_check_next_missing"],
+                "value": ", ".join(str(item) for item in claim_check.get("next_tier_missing", [])),
+            },
+        ]
+        st.dataframe(claim_rows, use_container_width=True)
+    else:
+        empty_state(st, text["claim_check_missing"], text["claim_check_command"])
 
     st.markdown(f'<div class="pcl-section-title">{html.escape(text["research_diagnostics"])}</div>', unsafe_allow_html=True)
     st.plotly_chart(

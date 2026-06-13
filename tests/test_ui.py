@@ -15,6 +15,7 @@ from promptcontrollab.ui.components import dashboard_css, stat_card_html
 from promptcontrollab.ui.data import (
     audit_detail_sections,
     changed_line_rows,
+    claim_check_summary,
     evidence_card_rows,
     filter_history_rows,
     first_comparison,
@@ -252,16 +253,34 @@ def test_report_model_and_ui_detail_read_evidence_card(tmp_path: Path) -> None:
             },
         },
     )
+    _write_json(
+        run / "claim_check.json",
+        {
+            "kind": "prompt_optimization_claim_check",
+            "requested_claim": "full-research",
+            "status": "pass",
+            "evidence_tier": "tier_4_full_research_diagnostics",
+            "safe_claim": "Full research diagnostic claim is supported.",
+            "reason": "All paper-derived diagnostics are present.",
+            "next_tier_missing": [],
+        },
+    )
 
     model = ReportModel.from_run(run)
     detail = load_run_detail(run)
     rows = evidence_card_rows(detail)
+    claim = claim_check_summary(detail)
 
     assert model.evidence_card["recommendation"] == "supported"
+    assert model.claim_check["status"] == "pass"
     assert "evidence_card.json" in model.artifacts
+    assert "claim_check.json" in model.artifacts
     assert detail["evidence_card"]["summary"] == "Recorded artifacts support the candidate."
+    assert detail["claim_check"]["requested_claim"] == "full-research"
     assert {row["section"] for row in rows} == {"statistical evidence", "riccati surrogate"}
     assert rows[0]["status"] == "pass"
+    assert claim["status"] == "pass"
+    assert claim["safe_claim"] == "Full research diagnostic claim is supported."
 
 
 def test_research_diagnostic_rows_summarize_paper_artifacts(tmp_path: Path) -> None:
@@ -507,6 +526,17 @@ def test_ui_list_runs_prefers_child_runs_when_root_has_history_index(tmp_path: P
     rows = list_runs(runs)
 
     assert [row["name"] for row in rows] == ["audit", "quick"]
+
+
+def test_ui_list_runs_prefers_child_runs_when_root_has_claim_check(tmp_path: Path) -> None:
+    runs = tmp_path / "runs"
+    _write_json(runs / "claim_check.json", {"status": "pass"})
+    _write_json(runs / "quick" / "manifest.json", {"mode": "quick"})
+    _write_json(runs / "research-demo" / "claim_check.json", {"status": "pass"})
+
+    rows = list_runs(runs)
+
+    assert [row["name"] for row in rows] == ["quick", "research-demo"]
 
 
 def test_ui_list_runs_keeps_current_run_when_it_has_manifest(tmp_path: Path) -> None:

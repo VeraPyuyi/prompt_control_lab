@@ -21,6 +21,7 @@ RUN_ARTIFACTS = [
     "agent_run.json",
     "research_diagnostics.json",
     "evidence_card.json",
+    "claim_check.json",
 ]
 
 RUN_LEVEL_ARTIFACTS = [
@@ -34,6 +35,7 @@ RUN_LEVEL_ARTIFACTS = [
     "agent_run.json",
     "research_diagnostics.json",
     "evidence_card.json",
+    "claim_check.json",
 ]
 
 
@@ -42,14 +44,14 @@ def list_runs(runs_dir: Path) -> list[JsonDict]:
 
     if not runs_dir.exists():
         return []
-    if _has_run_level_artifact(runs_dir):
-        return [{"name": runs_dir.name, "path": str(runs_dir)}]
     runs: list[JsonDict] = []
     for child in sorted(runs_dir.iterdir(), key=lambda path: path.name):
         if child.is_dir() and _has_any_artifact(child):
             runs.append({"name": child.name, "path": str(child)})
     if runs:
         return runs
+    if _has_run_level_artifact(runs_dir):
+        return [{"name": runs_dir.name, "path": str(runs_dir)}]
     if _has_any_artifact(runs_dir):
         return [{"name": runs_dir.name, "path": str(runs_dir)}]
     for child in sorted(runs_dir.iterdir(), key=lambda path: path.name):
@@ -79,6 +81,7 @@ def load_run_detail(run_dir: Path) -> JsonDict:
         "agent_run": model.agent_run,
         "research_diagnostics": model.research_diagnostics,
         "evidence_card": model.evidence_card,
+        "claim_check": model.claim_check,
         "diagnostics": model.diagnostics,
         "baseline_metrics": model.baseline_metrics,
         "candidate_metrics": model.candidate_metrics,
@@ -212,6 +215,23 @@ def evidence_card_rows(detail: JsonDict) -> list[JsonDict]:
             }
         )
     return rows
+
+
+def claim_check_summary(detail: JsonDict) -> JsonDict:
+    """Return the reviewer-facing claim-check summary for the research overview."""
+
+    payload = detail.get("claim_check")
+    if not isinstance(payload, dict) or not payload:
+        return {}
+    missing = payload.get("next_tier_missing")
+    return {
+        "requested_claim": payload.get("requested_claim"),
+        "status": payload.get("status"),
+        "evidence_tier": payload.get("evidence_tier"),
+        "safe_claim": payload.get("safe_claim"),
+        "reason": payload.get("reason"),
+        "next_tier_missing": missing if isinstance(missing, list) else [],
+    }
 
 
 def history_rows(detail: JsonDict) -> list[JsonDict]:
