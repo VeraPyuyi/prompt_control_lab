@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import html
 import shutil
 from pathlib import Path
@@ -87,6 +88,18 @@ def build_external_evidence(
         experiment=candidate_experiment,
         method=candidate_method,
     )
+    source_inputs = [
+        _source_input_provenance(
+            role="baseline",
+            source_path=baseline_input,
+            import_payload=baseline_payload,
+        ),
+        _source_input_provenance(
+            role="candidate",
+            source_path=candidate_input,
+            import_payload=candidate_payload,
+        ),
+    ]
     _patch_manifest(
         baseline_dir,
         split_hash=split_hash,
@@ -115,11 +128,13 @@ def build_external_evidence(
         baseline_payload=baseline_payload,
         candidate_payload=candidate_payload,
         comparison_dir=comparison_dir,
+        source_inputs=source_inputs,
     )
     payload: JsonDict = {
         "kind": "external_evidence",
         "tool": tool,
         "detected_tools": bridge_summary.get("detected_tools", []),
+        "source_inputs": source_inputs,
         "out_dir": str(out_dir),
         "imports_dir": str(imports_dir),
         "baseline_import": baseline_payload,
@@ -287,6 +302,7 @@ def build_external_evidence_audit(
             out_dir / "research_bundle_verification.html"
         ),
         "detected_tools": evidence.get("detected_tools", []),
+        "source_inputs": evidence.get("source_inputs", []),
         "claim_scope": bridge_summary.get("claim_scope"),
         "evidence_tier": bridge_summary.get("evidence_tier"),
         "validity": bridge_summary.get("validity"),
@@ -558,6 +574,39 @@ def _ingest_one(
     raise ValueError(msg)
 
 
+def _source_input_provenance(
+    *,
+    role: str,
+    source_path: Path,
+    import_payload: JsonDict,
+) -> JsonDict:
+    """Record immutable provenance for an external source export."""
+
+    payload: JsonDict = {
+        "role": role,
+        "path": str(source_path),
+        "bytes": source_path.stat().st_size,
+        "sha256": f"sha256:{_sha256_file(source_path)}",
+    }
+    if isinstance(import_payload.get("source_tool"), str):
+        payload["source_tool"] = import_payload["source_tool"]
+    if isinstance(import_payload.get("count"), int):
+        payload["import_count"] = import_payload["count"]
+    for key in ["prompt_id", "name", "experiment", "score_name", "model", "provider"]:
+        value = import_payload.get(key)
+        if isinstance(value, str) and value:
+            payload[key] = value
+    return payload
+
+
+def _sha256_file(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
 def _patch_manifest(
     run_dir: Path,
     *,
@@ -608,6 +657,7 @@ def _write_bridge_summary(
     baseline_payload: JsonDict,
     candidate_payload: JsonDict,
     comparison_dir: Path,
+    source_inputs: list[JsonDict],
 ) -> JsonDict:
     evidence_card = _read_optional_json(comparison_dir / "evidence_card.json")
     claim_check = _read_optional_json(comparison_dir / "claim_check.json")
@@ -622,6 +672,7 @@ def _write_bridge_summary(
         "html_path": str(out_dir / "bridge_summary.html"),
         "requested_tool": requested_tool,
         "detected_tools": detected_tools,
+        "source_inputs": source_inputs,
         "source_tool_roles": [_tool_role(tool) for tool in detected_tools],
         "pcl_role": (
             "PCL converts external eval/observability exports into a paired prompt "
@@ -796,6 +847,12 @@ def _render_bridge_summary(payload: JsonDict) -> str:
         f"- Permutation p-value: `{payload.get('permutation_p_value')}`",
         f"- Holm-adjusted p-value: `{payload.get('holm_adjusted_p_value')}`",
         "",
+        "## Source input provenance",
+        "",
+        "| Role | Tool | Path | Bytes | SHA-256 | Imported rows |",
+        "|---|---|---|---:|---|---:|",
+        *_source_input_markdown_rows(payload.get("source_inputs")),
+        "",
         "## Tool roles",
         "",
     ]
@@ -907,6 +964,12 @@ def _render_evidence_audit_markdown(payload: JsonDict) -> str:
             f"missing `{verification_summary.get('missing_count')}`"
         ),
         "",
+        "## Source input provenance",
+        "",
+        "| Role | Tool | Path | Bytes | SHA-256 | Imported rows |",
+        "|---|---|---|---:|---|---:|",
+        *_source_input_markdown_rows(payload.get("source_inputs")),
+        "",
         "## Reviewer links",
         "",
         f"- Evidence audit HTML: `{payload.get('html_path')}`",
@@ -967,6 +1030,11 @@ def render_evidence_audit_html(payload: JsonDict) -> str:
         ]
         if item
     )
+    source_table = _html_table(
+        ["Role", "Tool", "Path", "Bytes", "SHA-256", "Imported rows"],
+        _source_input_html_rows(payload.get("source_inputs")),
+        empty="No source input provenance recorded.",
+    )
     audit_steps = [
         "Imported external baseline and candidate exports.",
         "Built paired prompt-optimization comparison evidence.",
@@ -991,6 +1059,10 @@ def render_evidence_audit_html(payload: JsonDict) -> str:
       <p>{_html_text(payload.get("claim_scope"))}</p>
     </section>
     <section class="cards">{cards}</section>
+    <section>
+      <h2>Source Input Provenance</h2>
+      {source_table}
+    </section>
     <section>
       <h2>Reviewer Links</h2>
       <p>{reviewer_links}</p>
@@ -1038,6 +1110,11 @@ def render_bridge_summary_html(payload: JsonDict) -> str:
         role_rows,
         empty="No external tool roles recorded.",
     )
+    source_table = _html_table(
+        ["Role", "Tool", "Path", "Bytes", "SHA-256", "Imported rows"],
+        _source_input_html_rows(payload.get("source_inputs")),
+        empty="No source input provenance recorded.",
+    )
     evidence_items = "".join(
         f"<li><code>{_html_text(item)}</code></li>"
         for item in _string_list(payload.get("pcl_added_evidence"))
@@ -1082,6 +1159,10 @@ def render_bridge_summary_html(payload: JsonDict) -> str:
       <p>{_html_text(payload.get("claim_scope"))}</p>
     </section>
     <section class="cards">{cards}</section>
+    <section>
+      <h2>Source Input Provenance</h2>
+      {source_table}
+    </section>
     <section>
       <h2>Tool Roles</h2>
       {role_table}
@@ -1265,6 +1346,50 @@ def _remediation_html_rows(value: object) -> list[str]:
             "</tr>"
         )
     return rows
+
+
+def _source_input_markdown_rows(value: object) -> list[str]:
+    if not isinstance(value, list):
+        return ["| _missing_ |  |  |  |  |  |"]
+    rows: list[str] = []
+    for item in value:
+        if not isinstance(item, dict):
+            continue
+        rows.append(
+            "| "
+            f"{_markdown_cell(item.get('role'))} | "
+            f"{_markdown_cell(item.get('source_tool'))} | "
+            f"`{_markdown_cell(item.get('path'))}` | "
+            f"{_markdown_cell(item.get('bytes'))} | "
+            f"`{_markdown_cell(item.get('sha256'))}` | "
+            f"{_markdown_cell(item.get('import_count'))} |"
+        )
+    return rows or ["| _missing_ |  |  |  |  |  |"]
+
+
+def _source_input_html_rows(value: object) -> list[str]:
+    if not isinstance(value, list):
+        return []
+    rows: list[str] = []
+    for item in value:
+        if not isinstance(item, dict):
+            continue
+        rows.append(
+            "<tr>"
+            f"<td>{_html_text(item.get('role'))}</td>"
+            f"<td>{_html_text(item.get('source_tool'))}</td>"
+            f"<td><code>{_html_text(item.get('path'))}</code></td>"
+            f"<td>{_html_text(item.get('bytes'))}</td>"
+            f"<td><code>{_html_text(item.get('sha256'))}</code></td>"
+            f"<td>{_html_text(item.get('import_count'))}</td>"
+            "</tr>"
+        )
+    return rows
+
+
+def _markdown_cell(value: object) -> str:
+    text = str(value or "")
+    return text.replace("|", "\\|").replace("\n", " ")
 
 
 def _bridge_bundle_integrity_lines(value: object) -> list[str]:

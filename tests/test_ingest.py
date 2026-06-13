@@ -337,6 +337,10 @@ def test_evidence_from_promptfoo_generates_comparison_bundle(tmp_path: Path) -> 
     result = read_json(out_dir / "evidence_from_result.json")
     assert result["kind"] == "external_evidence"
     assert result["tool"] == "promptfoo"
+    assert len(result["source_inputs"]) == 2
+    assert result["source_inputs"][0]["role"] == "baseline"
+    assert result["source_inputs"][0]["sha256"].startswith("sha256:")
+    assert result["source_inputs"][0]["bytes"] > 0
     assert result["bridge_summary"]["recommendation"] == "supported"
     assert result["bridge_summary"]["evidence_tier"] == "tier_2_paired_comparison"
     assert result["research_diagnostic_type"] == "external_evidence_gap"
@@ -355,6 +359,7 @@ def test_evidence_from_promptfoo_generates_comparison_bundle(tmp_path: Path) -> 
     bridge = read_json(out_dir / "bridge_summary.json")
     assert bridge["kind"] == "external_bridge_summary"
     assert bridge["detected_tools"] == ["promptfoo"]
+    assert bridge["source_inputs"][0]["sha256"] == result["source_inputs"][0]["sha256"]
     assert "paired_bootstrap_confidence_interval" in bridge["pcl_added_evidence"]
     assert "claim_scope_check" in bridge["pcl_added_evidence"]
     assert "paper_evidence_gap_diagnosis" in bridge["pcl_added_evidence"]
@@ -375,6 +380,8 @@ def test_evidence_from_promptfoo_generates_comparison_bundle(tmp_path: Path) -> 
     assert bridge["paired_n"] == 20
     bridge_markdown = (out_dir / "bridge_summary.md").read_text(encoding="utf-8")
     assert "Promptfoo" in bridge_markdown
+    assert "Source input provenance" in bridge_markdown
+    assert "sha256:" in bridge_markdown
     assert "Research diagnostics" in bridge_markdown
     assert "research_bundle.html" in bridge_markdown
     assert "research_diagnostics.html" in bridge_markdown
@@ -383,6 +390,7 @@ def test_evidence_from_promptfoo_generates_comparison_bundle(tmp_path: Path) -> 
     bridge_html = (out_dir / "bridge_summary.html").read_text(encoding="utf-8")
     assert "External Evidence Bridge Summary" in bridge_html
     assert "Promptfoo" in bridge_html
+    assert "Source Input Provenance" in bridge_html
     assert "research_bundle.html" in bridge_html
 
 

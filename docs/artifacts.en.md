@@ -263,6 +263,8 @@ paper-evidence gap coverage.
 Important fields:
 
 - `tool`: `auto`, `promptfoo`, `deepeval`, `langfuse`, or `langsmith`
+- `source_inputs`: baseline and candidate export paths, byte sizes, SHA-256 hashes,
+  detected tool names, and imported row counts
 - `baseline_import` / `candidate_import`: counts, mean scores, and selected filters from import
 - `comparison_dir`: the self-contained PCL comparison run
 - `comparison`: paths to stats, prompt-only validity, evidence card, and reports
@@ -283,6 +285,8 @@ Written by `pcl evidence-audit`. It runs the same import and comparison workflow
 Important fields:
 
 - `detected_tools`: external export source detected during import
+- `source_inputs`: baseline and candidate export paths, byte sizes, SHA-256 hashes,
+  detected tool names, and imported row counts
 - `claim_scope` / `evidence_tier` / `validity`: the prompt-optimization claim boundary
 - `gap_status`: whether paper-derived diagnostics are present or still missing
 - `bundle_verification`: whether linked evidence artifacts still match the recorded hashes

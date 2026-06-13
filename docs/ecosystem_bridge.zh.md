@@ -70,6 +70,10 @@ pcl evidence-audit \
 人工审查建议先打开 `evidence_audit_result.html`；自动化流程读取
 `evidence_audit_result.json`。
 
+审计结果还会记录外部 baseline 和 candidate 导出文件的 source input provenance：
+路径、字节数、SHA-256 哈希、检测到的工具名和导入行数。这样 reviewer 可以确认
+PCL 证据包到底基于哪两个外部导出文件生成。
+
 ## 更低层的桥接命令
 
 如果你希望分步骤控制，可以先导入外部结果：

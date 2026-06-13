@@ -148,6 +148,14 @@ artifact 是否已经存在。它适合用来确认“证据缺口是否真的�
 说明什么问题：记录外部工具导入、baseline/candidate 比较、PCL 证据补充和下一步建议。
 它适合自动化读取；人工审查通常先看 `bridge_summary.html`。
 
+重要字段：
+
+- `source_inputs`：baseline 和 candidate 外部导出文件的路径、字节数、SHA-256 哈希、
+  检测到的工具名和导入行数。
+- `baseline_import` / `candidate_import`：导入计数、均值和筛选条件。
+- `comparison`：stats、comparison validity、evidence card 和 report 的路径。
+- `bridge_summary`：推荐结论、evidence tier、claim scope、validity 和缺失证据。
+
 ## `evidence_audit_result.json` / `evidence_audit_result.md` / `evidence_audit_result.html`
 
 由 `pcl evidence-audit` 写出。它会先运行和 `pcl evidence-from` 相同的导入与比较流程，
@@ -156,6 +164,8 @@ artifact 是否已经存在。它适合用来确认“证据缺口是否真的�
 重要字段：
 
 - `detected_tools`：导入时识别到的外部工具来源。
+- `source_inputs`：baseline 和 candidate 外部导出文件的路径、字节数、SHA-256 哈希、
+  检测到的工具名和导入行数。
 - `claim_scope` / `evidence_tier` / `validity`：当前 prompt optimization 证据能支持的主张边界。
 - `gap_status`：论文诊断是已经存在，还是仍有缺口。
 - `bundle_verification`：被链接的证据 artifact 是否仍然匹配已记录哈希。

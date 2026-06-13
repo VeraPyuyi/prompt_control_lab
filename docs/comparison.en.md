@@ -40,6 +40,7 @@ PCL should answer questions that broad eval/observability tools usually leave im
 
 - Is the baseline/candidate comparison paired by the same examples?
 - Did the model, provider, metric, split, or prompt identity change?
+- Which exact external export files, hashes, and import filters produced the evidence?
 - Is the candidate improvement reliable under paired uncertainty?
 - What is the strongest prompt-optimization claim this evidence can support?
 - Which paper-derived diagnostics are missing before claiming a full research result?

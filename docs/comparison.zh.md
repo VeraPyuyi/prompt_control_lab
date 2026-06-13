@@ -44,6 +44,7 @@ PCL 应该回答大多数 eval / observability 工具不会直接回答的问题
 
 - baseline / candidate 是否按同一批样本成对比较？
 - model、provider、metric、split 或 prompt identity 有没有变化？
+- 这份证据到底来自哪两个外部导出文件、哪些哈希和哪些导入筛选条件？
 - candidate 的提升在成对不确定性下是否可靠？
 - 当前证据最多能支持哪一层 prompt optimization claim？
 - 在声称完整研究结果之前，还缺哪些论文诊断？

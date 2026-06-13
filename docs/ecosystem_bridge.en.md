@@ -130,6 +130,10 @@ summary. Use `evidence_audit_result.json` when automation needs the same status.
 `bridge_summary.html`, `research_gap_status.html`, and `research_bundle_verification.html` for the
 full evidence trail.
 
+The audit also records source input provenance for the external baseline and candidate exports:
+path, byte size, SHA-256 hash, detected tool, and imported row count. This lets reviewers verify
+which external export files the PCL evidence bundle was built from.
+
 The demo automatically audits the bundle against the paper-derived evidence map.
 To regenerate that diagnosis after editing the bundle, run:
 
