@@ -23,6 +23,8 @@ RUN_ARTIFACTS = [
     "research_diagnostics.json",
     "evidence_card.json",
     "claim_check.json",
+    "evidence_from_result.json",
+    "bridge_summary.json",
 ]
 
 RUN_LEVEL_ARTIFACTS = [
@@ -37,6 +39,8 @@ RUN_LEVEL_ARTIFACTS = [
     "research_diagnostics.json",
     "evidence_card.json",
     "claim_check.json",
+    "evidence_from_result.json",
+    "bridge_summary.json",
 ]
 
 
@@ -83,6 +87,8 @@ def load_run_detail(run_dir: Path) -> JsonDict:
         "research_diagnostics": model.research_diagnostics,
         "evidence_card": model.evidence_card,
         "claim_check": model.claim_check,
+        "external_evidence": model.external_evidence,
+        "bridge_summary": model.bridge_summary,
         "diagnostics": model.diagnostics,
         "baseline_metrics": model.baseline_metrics,
         "candidate_metrics": model.candidate_metrics,
@@ -272,6 +278,34 @@ def claim_evidence_ladder(detail: JsonDict) -> list[JsonDict]:
             }
         )
     return rows
+
+
+def external_bridge_summary(detail: JsonDict) -> JsonDict:
+    """Return a compact external-tool bridge summary for the research overview."""
+
+    bridge = detail.get("bridge_summary")
+    bridge_dict = bridge if isinstance(bridge, dict) else {}
+    external = detail.get("external_evidence")
+    external_dict = external if isinstance(external, dict) else {}
+    if not bridge_dict and not external_dict:
+        return {}
+    detected = bridge_dict.get("detected_tools") or external_dict.get("detected_tools") or []
+    added = bridge_dict.get("pcl_added_evidence") or []
+    missing = bridge_dict.get("missing_evidence") or bridge_dict.get("next_tier_missing") or []
+    next_actions = bridge_dict.get("next_actions") or external_dict.get("next_actions") or []
+    return {
+        "tool": external_dict.get("tool") or bridge_dict.get("requested_tool") or "external",
+        "detected_tools": detected if isinstance(detected, list) else [],
+        "recommendation": bridge_dict.get("recommendation", ""),
+        "evidence_tier": bridge_dict.get("evidence_tier", ""),
+        "validity": bridge_dict.get("validity", ""),
+        "claim_check_status": bridge_dict.get("claim_check_status", ""),
+        "claim_check_requested_claim": bridge_dict.get("claim_check_requested_claim", ""),
+        "pcl_added_evidence": added if isinstance(added, list) else [],
+        "pcl_added_count": len(added) if isinstance(added, list) else 0,
+        "missing_evidence": missing if isinstance(missing, list) else [],
+        "next_actions": next_actions if isinstance(next_actions, list) else [],
+    }
 
 
 def history_rows(detail: JsonDict) -> list[JsonDict]:

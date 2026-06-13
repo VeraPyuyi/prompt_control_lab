@@ -39,6 +39,7 @@ from promptcontrollab.ui.data import (
     claim_check_summary,
     claim_evidence_ladder,
     evidence_card_rows,
+    external_bridge_summary,
     filter_history_rows,
     first_comparison,
     guard_download_payloads,
@@ -95,6 +96,12 @@ TEXT = {
         "claim_check_safe": "Safe claim",
         "claim_check_reason": "Reason",
         "claim_check_next_missing": "Missing for next tier",
+        "ecosystem_bridge": "Ecosystem bridge",
+        "ecosystem_bridge_missing": "No external evidence bridge artifact found.",
+        "external_tools": "External tools",
+        "pcl_added_evidence": "PCL-added evidence",
+        "missing_evidence": "Missing evidence",
+        "bridge_next_actions": "Bridge next actions",
         "evidence_recommendation": "Evidence recommendation",
         "evidence_summary": "Evidence summary",
         "evidence_sections": "Evidence card sections",
@@ -292,6 +299,12 @@ TEXT = {
         "claim_check_safe": "安全主张",
         "claim_check_reason": "原因",
         "claim_check_next_missing": "下一层级缺失证据",
+        "ecosystem_bridge": "生态桥接",
+        "ecosystem_bridge_missing": "当前还没有外部证据桥接 artifact。",
+        "external_tools": "外部工具",
+        "pcl_added_evidence": "PCL 补充证据",
+        "missing_evidence": "缺失证据",
+        "bridge_next_actions": "桥接后下一步",
         "evidence_recommendation": "证据推荐",
         "evidence_summary": "证据摘要",
         "evidence_sections": "证据卡分段",
@@ -1311,6 +1324,7 @@ def _render_research_overview_tab(st: Any, text: dict[str, str], detail: JsonDic
     claim_check = claim_check_summary(detail)
     claim_status = claim_check.get("status", "missing")
     claim_ladder = claim_evidence_ladder(detail)
+    bridge = external_bridge_summary(detail)
 
     st.markdown(
         '<div class="pcl-grid">'
@@ -1332,10 +1346,17 @@ def _render_research_overview_tab(st: Any, text: dict[str, str], detail: JsonDic
             str(claim_status),
             str(claim_check.get("requested_claim") or text["claim_check"]),
         )
+        + stat_card_html(
+            text["ecosystem_bridge"],
+            str(bridge.get("tool") or "none"),
+            f"{bridge.get('pcl_added_count', 0)} {text['pcl_added_evidence']}",
+        )
         + "</div>",
         unsafe_allow_html=True,
     )
     _render_research_pipeline(st, text)
+
+    _render_external_bridge_section(st, text, bridge)
 
     st.markdown(
         f'<div class="pcl-section-title">{html.escape(text["evidence_card"])}</div>',
@@ -1420,6 +1441,43 @@ def _render_research_pipeline(st: Any, text: dict[str, str]) -> None:
         f'<div class="pcl-pipeline">{html_steps}</div>',
         unsafe_allow_html=True,
     )
+
+
+def _render_external_bridge_section(
+    st: Any,
+    text: dict[str, str],
+    bridge: JsonDict,
+) -> None:
+    st.markdown(
+        f'<div class="pcl-section-title">{html.escape(text["ecosystem_bridge"])}</div>',
+        unsafe_allow_html=True,
+    )
+    if not bridge:
+        empty_state(st, text["ecosystem_bridge_missing"], "pcl evidence-from --help")
+        return
+    rows = [
+        {"field": text["external_tools"], "value": ", ".join(_strings(bridge.get("detected_tools")))},
+        {"field": text["recommendation"], "value": bridge.get("recommendation", "")},
+        {"field": text["comparison_validity"], "value": bridge.get("validity", "")},
+        {"field": text["claim_check_status"], "value": bridge.get("claim_check_status", "")},
+        {
+            "field": text["claim_check_requested"],
+            "value": bridge.get("claim_check_requested_claim", ""),
+        },
+        {
+            "field": text["pcl_added_evidence"],
+            "value": ", ".join(_strings(bridge.get("pcl_added_evidence"))),
+        },
+        {
+            "field": text["missing_evidence"],
+            "value": ", ".join(_strings(bridge.get("missing_evidence"))),
+        },
+        {
+            "field": text["bridge_next_actions"],
+            "value": " | ".join(_strings(bridge.get("next_actions"))),
+        },
+    ]
+    st.dataframe(rows, use_container_width=True)
 
 
 def _render_tutorial_tab(st: Any, text: dict[str, str], language: str) -> None:

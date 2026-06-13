@@ -18,6 +18,7 @@ from promptcontrollab.ui.data import (
     claim_check_summary,
     claim_evidence_ladder,
     evidence_card_rows,
+    external_bridge_summary,
     filter_history_rows,
     first_comparison,
     guard_download_payloads,
@@ -286,6 +287,51 @@ def test_report_model_and_ui_detail_read_evidence_card(tmp_path: Path) -> None:
     assert [row["claim"] for row in ladder] == ["paired", "partial-research", "full-research"]
     assert all(row["status"] == "supported" for row in ladder)
     assert ladder[-1]["requested"] is True
+
+
+def test_report_model_and_ui_detail_read_external_bridge_artifacts(tmp_path: Path) -> None:
+    run = tmp_path / "runs" / "from-promptfoo-evidence"
+    _write_json(
+        run / "evidence_from_result.json",
+        {
+            "kind": "external_evidence",
+            "tool": "promptfoo",
+            "detected_tools": ["promptfoo"],
+        },
+    )
+    _write_json(
+        run / "bridge_summary.json",
+        {
+            "kind": "external_bridge_summary",
+            "detected_tools": ["promptfoo"],
+            "pcl_added_evidence": [
+                "paired_bootstrap_confidence_interval",
+                "prompt_only_comparison_validity",
+                "claim_scope_check",
+            ],
+            "recommendation": "supported",
+            "evidence_tier": "tier_2_paired_comparison",
+            "validity": "clean",
+            "claim_check_status": "pass",
+            "claim_check_requested_claim": "paired",
+            "missing_evidence": ["hidden_state_diagnostics"],
+            "next_actions": ["Run diagnose with hidden states for full research diagnostics."],
+        },
+    )
+    (run / "bridge_summary.md").write_text("# bridge\n", encoding="utf-8")
+
+    model = ReportModel.from_run(run)
+    detail = load_run_detail(run)
+    bridge = external_bridge_summary(detail)
+
+    assert "evidence_from_result.json" in model.artifacts
+    assert "bridge_summary.json" in model.artifacts
+    assert "bridge_summary.md" in model.artifacts
+    assert model.external_evidence["tool"] == "promptfoo"
+    assert detail["bridge_summary"]["validity"] == "clean"
+    assert bridge["detected_tools"] == ["promptfoo"]
+    assert bridge["pcl_added_count"] == 3
+    assert bridge["missing_evidence"] == ["hidden_state_diagnostics"]
 
 
 def test_research_diagnostic_rows_summarize_paper_artifacts(tmp_path: Path) -> None:

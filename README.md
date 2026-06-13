@@ -149,7 +149,9 @@ validity audit, and the root directory exposes `bridge_summary.md`, `evidence_ca
 `claim_check.md`, `report.html`, and `evidence_from_result.json` for reviewers. Start with
 `bridge_summary.md` to see what the external tool supplied, what PCL added, and which evidence is
 still missing. Use `claim_check.md` to see the strongest prompt-optimization claim supported. Use a
-new or empty `--out` directory so stale artifacts cannot contaminate the audit.
+new or empty `--out` directory so stale artifacts cannot contaminate the audit. The local UI also
+surfaces the bridge in Research Overview, including detected external tools, PCL-added evidence,
+comparison validity, claim-check status, and missing evidence.
 
 The lower-level imported run still contains `predictions.jsonl`, `metrics.json`, and
 `manifest.json`, so it can be used with `pcl compare-runs`, `pcl stats`, `pcl validity`, and
