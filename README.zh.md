@@ -90,9 +90,14 @@ prompt-only 比较有效性、`evidence_card.json` / `evidence_card.md` 和 `cla
 
 ## 生态桥接
 
-如果你已经在使用 Promptfoo 做 prompt / model 评测，不需要替换它。`prompt_control_lab` 可以导入 Promptfoo 的 JSON 结果，并在其上增加研究诊断层：
+如果你已经在使用 Promptfoo、Langfuse 或 LangSmith 做 prompt / model 评测和观测，不需要替换它们。`prompt_control_lab` 可以导入这些工具的导出结果，并在其上增加研究诊断层：
 
 ```bash
+# 一次性运行仓库自带的 Promptfoo / Langfuse / LangSmith 风格导出示例。
+pcl ecosystem-demo --examples examples/external --out runs/ecosystem-demo
+
+# 然后先打开 runs/ecosystem-demo/README.md 和每个 bridge_summary.md。
+
 promptfoo eval --output results.json
 
 # 一条命令桥接：导入 baseline / candidate 导出，完成比较，
@@ -250,6 +255,7 @@ pcl doctor
 | 内部轨迹诊断 | `pcl trajectory` | 分析 hidden-state drift、decay slope 和 turnpike-like signal。 |
 | Riccati 诊断 | `pcl riccati` | 检查有限维 surrogate 的 Riccati / DARE 稳定性。 |
 | time-varying control | `pcl tv-soft` | 比较 static、time-varying、shuffled、random control lane。 |
+| 三工具桥接 demo | `pcl ecosystem-demo` | 一次性跑完 Promptfoo、Langfuse、LangSmith 样例，并生成三套 PCL evidence bundle。 |
 | 一键外部证据包 | `pcl evidence-from` | 导入外部 baseline / candidate export，并一键生成 PCL evidence card。 |
 | 生态桥接 | `pcl ingest auto` / `promptfoo` / `langfuse` / `langsmith` | 导入外部 eval / trace artifact，再接 PCL 的比较有效性和研究诊断。 |
 | 一键 run 比较 | `pcl compare-runs` | 把两个导入 / 打分后的 run 变成 stats、comparison_validity 和报告。 |

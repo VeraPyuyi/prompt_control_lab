@@ -25,6 +25,7 @@ from promptcontrollab.config import (
     load_project_config,
 )
 from promptcontrollab.doctor import format_doctor, run_doctor
+from promptcontrollab.ecosystem_demo import run_ecosystem_demo
 from promptcontrollab.errors import PromptControlLabError
 from promptcontrollab.evaluation import run_import_eval
 from promptcontrollab.evidence_card import write_evidence_card
@@ -503,6 +504,33 @@ def build_parser() -> argparse.ArgumentParser:
     evidence_from_parser.add_argument("--bootstrap-samples", type=int, default=1000)
     evidence_from_parser.add_argument("--permutation-samples", type=int, default=1000)
     evidence_from_parser.set_defaults(func=_cmd_evidence_from)
+
+    ecosystem_demo_parser = subcommands.add_parser(
+        "ecosystem-demo",
+        help="Run bundled Promptfoo/Langfuse/LangSmith bridge examples.",
+    )
+    ecosystem_demo_parser.add_argument(
+        "--examples",
+        type=Path,
+        default=Path("examples/external"),
+        help="Directory containing external export examples.",
+    )
+    ecosystem_demo_parser.add_argument(
+        "--out",
+        type=Path,
+        default=Path("runs/ecosystem-demo"),
+        help="Output directory for all bridge bundles.",
+    )
+    ecosystem_demo_parser.add_argument(
+        "--split-hash",
+        default="external-demo-split",
+        help="Stable split hash recorded into imported manifests.",
+    )
+    ecosystem_demo_parser.add_argument("--provider", default="openai")
+    ecosystem_demo_parser.add_argument("--model", default="gpt-4o-mini-20260601")
+    ecosystem_demo_parser.add_argument("--bootstrap-samples", type=int, default=1000)
+    ecosystem_demo_parser.add_argument("--permutation-samples", type=int, default=1000)
+    ecosystem_demo_parser.set_defaults(func=_cmd_ecosystem_demo)
 
     audit_parser = subcommands.add_parser(
         "audit-diff",
@@ -1046,6 +1074,19 @@ def _cmd_evidence_from(args: argparse.Namespace) -> None:
         candidate_method=args.candidate_method,
         title=args.title,
         seed=args.seed,
+        bootstrap_samples=args.bootstrap_samples,
+        permutation_samples=args.permutation_samples,
+    )
+    print(json.dumps(payload, indent=2, ensure_ascii=False, sort_keys=True))
+
+
+def _cmd_ecosystem_demo(args: argparse.Namespace) -> None:
+    payload = run_ecosystem_demo(
+        examples_dir=args.examples,
+        out_dir=args.out,
+        split_hash=args.split_hash,
+        provider=args.provider,
+        model=args.model,
         bootstrap_samples=args.bootstrap_samples,
         permutation_samples=args.permutation_samples,
     )

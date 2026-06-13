@@ -352,6 +352,42 @@ def test_cli_compare_runs_generates_stats_validity_and_report(tmp_path: Path) ->
     assert "Full Markdown Audit" in html
 
 
+def test_cli_ecosystem_demo_runs_all_external_bridge_examples(tmp_path: Path) -> None:
+    demo = tmp_path / "demo"
+    out = demo / "runs" / "ecosystem-demo"
+    assert main(["init", "--path", str(demo)]) == 0
+
+    assert (
+        main(
+            [
+                "ecosystem-demo",
+                "--examples",
+                str(demo / "examples" / "external"),
+                "--out",
+                str(out),
+                "--bootstrap-samples",
+                "10",
+                "--permutation-samples",
+                "20",
+            ]
+        )
+        == 0
+    )
+
+    summary = json.loads((out / "ecosystem_demo.json").read_text(encoding="utf-8"))
+    assert summary["kind"] == "ecosystem_demo"
+    assert [item["tool"] for item in summary["runs"]] == ["promptfoo", "langfuse", "langsmith"]
+    for tool in ["promptfoo", "langfuse", "langsmith"]:
+        tool_dir = out / tool
+        assert (tool_dir / "evidence_from_result.json").exists()
+        assert (tool_dir / "bridge_summary.md").exists()
+        assert (tool_dir / "claim_check.md").exists()
+        assert (tool_dir / "report.html").exists()
+    assert "prompt optimization evidence auditor" in (out / "README.md").read_text(
+        encoding="utf-8"
+    )
+
+
 def test_cli_compare_runs_rejects_output_inside_source_run(tmp_path: Path) -> None:
     baseline = tmp_path / "runs" / "baseline"
     candidate = tmp_path / "runs" / "candidate"

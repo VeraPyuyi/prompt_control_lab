@@ -45,6 +45,22 @@ project created with `pcl init --path demo` also writes the same files under
 `demo/examples/external/`, so wheel or `pipx` users can try the bridge without
 cloning the source tree.
 
+Run all bundled bridge examples at once:
+
+```bash
+pcl ecosystem-demo --examples examples/external --out runs/ecosystem-demo
+```
+
+This writes `runs/ecosystem-demo/README.md`, `ecosystem_demo.json`, and one
+evidence bundle per external tool:
+
+- `runs/ecosystem-demo/promptfoo/`
+- `runs/ecosystem-demo/langfuse/`
+- `runs/ecosystem-demo/langsmith/`
+
+Open each `bridge_summary.md` first. It explains what the external tool supplied,
+what PCL added, and what evidence remains missing.
+
 Promptfoo:
 
 ```bash

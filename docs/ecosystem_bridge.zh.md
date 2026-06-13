@@ -34,6 +34,22 @@ Promptfoo、LangSmith 和 Langfuse 分别擅长 LLM 工程流程里的不同部�
 `demo/examples/external/` 写出同样的样例，所以 wheel 或 `pipx`
 用户不需要 clone 源码，也能直接试用这条桥接链路。
 
+一次性运行三种外部工具的桥接示例：
+
+```bash
+pcl ecosystem-demo --examples examples/external --out runs/ecosystem-demo
+```
+
+这个命令会写出 `runs/ecosystem-demo/README.md`、`ecosystem_demo.json`，
+并为每个外部工具生成一套 evidence bundle：
+
+- `runs/ecosystem-demo/promptfoo/`
+- `runs/ecosystem-demo/langfuse/`
+- `runs/ecosystem-demo/langsmith/`
+
+建议先打开每个目录里的 `bridge_summary.md`。它会说明外部工具提供了什么、
+PCL 补充了什么证据，以及当前还缺哪些证据。
+
 Promptfoo：
 
 ```bash
