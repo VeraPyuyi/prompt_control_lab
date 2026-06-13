@@ -162,6 +162,15 @@ candidate 导入快照，`comparison/` 保存 PCL 的成对统计和 prompt-only
 prompt optimization 主张。请使用新的或空的 `--out` 目录，避免旧 artifact 污染审计结果。
 本地 UI 的研究总览页也会展示这条桥接链路，包括识别到的外部工具、PCL 补充的证据、比较有效性、主张检查状态和缺失证据。
 
+补齐诊断或导入外部结果后，可以刷新浏览器优先的证据索引：
+
+```bash
+pcl research-bundle --run runs/from-promptfoo-evidence
+```
+
+刷新后的 `research_bundle.json` 会记录 artifact 清单，并为已存在的证据文件写入 `bytes`
+和 `sha256`，方便 reviewer 判断共享之后证据包是否发生过变化。
+
 运行建议的诊断命令之后，可以用下面的命令检查缺口是否真的补齐：
 
 ```bash

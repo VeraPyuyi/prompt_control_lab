@@ -303,13 +303,21 @@ review in plain text, and the JSON version is for automation.
 ## `research_bundle.json` / `research_bundle.html`
 
 Written by `pcl research-demo`, `pcl diagnose`, `pcl evidence-from`, and refreshed by
-`pcl gap-status` when the target directory contains research artifacts.
+`pcl gap-status` when the target directory contains research artifacts. You can also refresh the
+bundle index directly with:
+
+```bash
+pcl research-bundle --run runs/from-promptfoo-evidence
+```
 
 What it explains: the browser-first review order for the current research evidence bundle. It
 links to `research_diagnostics.html`, `evidence_card.html`, `claim_check.html`,
 `research_gap_plan.html`, `research_gap_status.html`, and `report.html` when those files exist. It
-also records missing HTML artifacts and a short status summary. This file is only a navigation aid:
-it does not add evidence beyond the linked artifacts.
+also records missing HTML artifacts, a short status summary, and the artifact inventory. Existing
+linked evidence files include `bytes` and `sha256` fields so reviewers can audit whether the bundle
+changed after it was shared. The self-generated `research_bundle.html/json` files are marked as
+generated index artifacts instead of being self-hashed. This file is only a navigation aid: it does
+not add evidence beyond the linked artifacts.
 
 ## `research_gap_plan.json` / `research_gap_plan.md` / `research_gap_plan.html`
 

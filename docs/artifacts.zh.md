@@ -228,9 +228,13 @@ gate decision、risk level、改动文件、测试、audit path、gate path，�
 
 ## `research_bundle.json` / `research_bundle.html`
 
-由 `pcl research-demo`、`pcl diagnose`、`pcl evidence-from` 写出；当目标目录包含研究 artifact 时，`pcl gap-status` 也会刷新它。
+由 `pcl research-demo`、`pcl diagnose`、`pcl evidence-from` 写出；当目标目录包含研究 artifact 时，`pcl gap-status` 也会刷新它。也可以直接刷新 bundle 索引：
 
-说明什么问题：当前研究证据包应该按什么顺序审查。它会在文件存在时链接到 `research_diagnostics.html`、`evidence_card.html`、`claim_check.html`、`research_gap_plan.html`、`research_gap_status.html` 和 `report.html`，并记录仍然缺失的 HTML artifact。这个文件只是浏览器导航入口，不会在被链接的 artifact 之外新增证据。
+```bash
+pcl research-bundle --run runs/from-promptfoo-evidence
+```
+
+说明什么问题：当前研究证据包应该按什么顺序审查。它会在文件存在时链接到 `research_diagnostics.html`、`evidence_card.html`、`claim_check.html`、`research_gap_plan.html`、`research_gap_status.html` 和 `report.html`，并记录仍然缺失的 HTML artifact、简短状态和 artifact 清单。已存在的证据文件会包含 `bytes` 和 `sha256` 字段，方便 reviewer 判断证据包在共享之后是否变化过。`research_bundle.html/json` 自身会标记为生成索引文件，不做自引用哈希。这个文件只是浏览器导航入口，不会在被链接的 artifact 之外新增证据。
 
 ## `research_gap_plan.json` / `research_gap_plan.md` / `research_gap_plan.html`
 

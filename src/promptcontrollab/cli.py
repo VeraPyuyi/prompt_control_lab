@@ -53,6 +53,7 @@ from promptcontrollab.prompt_improver import improve_prompt
 from promptcontrollab.reporting import generate_report
 from promptcontrollab.research_workflow import (
     run_research_diagnostics,
+    write_research_bundle_index,
     write_research_demo,
     write_research_gap_status,
 )
@@ -742,6 +743,13 @@ def build_parser() -> argparse.ArgumentParser:
     research_demo_parser.add_argument("--out", type=Path, required=True, help="Demo run directory.")
     research_demo_parser.add_argument("--seed", type=int, default=0, help="Synthetic fixture seed.")
     research_demo_parser.set_defaults(func=_cmd_research_demo)
+
+    research_bundle_parser = subcommands.add_parser(
+        "research-bundle",
+        help="Refresh research_bundle.json/html for a run directory.",
+    )
+    research_bundle_parser.add_argument("--run", type=Path, required=True, help="Run directory.")
+    research_bundle_parser.set_defaults(func=_cmd_research_bundle)
 
     diagnose_parser = subcommands.add_parser(
         "diagnose",
@@ -1527,6 +1535,11 @@ def _cmd_research_demo(args: argparse.Namespace) -> None:
     print(f"Wrote research demo to {args.out}")
     print(f"Diagnostics: {', '.join(diagnostic_names)}")
     print(f"Report: {args.out / 'research_diagnostics.html'}")
+
+
+def _cmd_research_bundle(args: argparse.Namespace) -> None:
+    payload = write_research_bundle_index(args.run)
+    print(json.dumps(payload, indent=2, ensure_ascii=False, sort_keys=True))
 
 
 def _cmd_diagnose(args: argparse.Namespace) -> None:

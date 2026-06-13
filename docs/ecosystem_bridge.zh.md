@@ -103,6 +103,15 @@ hidden-state、soft-hard、Riccati 或 time-varying-control 测量结果。
 时，可以直接打开 `research_gap_plan.html`；配套的 `research_gap_commands.ps1` 和 `.sh`
 是 review-first 命令脚本。UI 会把同一份计划和脚本列表作为研究总览里的独立区域展示。
 
+如果你手动补充了诊断，或者重新导入了外部工具证据，可以刷新浏览器优先的 bundle 索引：
+
+```bash
+pcl research-bundle --run runs/ecosystem-demo
+```
+
+这会重写 `research_bundle.html` 和 `research_bundle.json`。JSON 清单会为已链接的证据文件记录
+`bytes` 和 `sha256`；`research_bundle.html/json` 自身会被标记为生成索引文件，避免产生不稳定的自引用哈希。
+
 Promptfoo：
 
 ```bash

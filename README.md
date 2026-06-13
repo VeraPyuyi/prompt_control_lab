@@ -172,6 +172,16 @@ new or empty `--out` directory so stale artifacts cannot contaminate the audit. 
 surfaces the bridge in Research Overview, including detected external tools, PCL-added evidence,
 comparison validity, claim-check status, and missing evidence.
 
+Refresh the browser-first evidence index after adding diagnostics or importing external results:
+
+```bash
+pcl research-bundle --run runs/from-promptfoo-evidence
+```
+
+The refreshed `research_bundle.json` records the visible artifact inventory plus `bytes` and
+`sha256` for linked evidence files, so a reviewer can tell whether the bundle changed after it was
+shared.
+
 After running the suggested diagnostic commands, check closure with:
 
 ```bash

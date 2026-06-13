@@ -49,10 +49,18 @@ def test_research_demo_generates_paper_diagnostics(tmp_path: Path) -> None:
     bundle = read_json(run_dir / "research_bundle.json")
     assert bundle["kind"] == "research_bundle_index"
     assert bundle["status"] == "supported"
+    assert bundle["present_artifact_count"] > 0
+    assert bundle["hashed_artifact_count"] > 0
+    diagnostics_artifact = _artifact(bundle, "research_diagnostics.html")
+    assert diagnostics_artifact["bytes"] > 0
+    assert diagnostics_artifact["sha256"].startswith("sha256:")
     assert (run_dir / "research_bundle.html").exists()
     assert "Research Evidence Bundle" in (run_dir / "research_bundle.html").read_text(
         encoding="utf-8"
     )
+    assert main(["research-bundle", "--run", str(run_dir)]) == 0
+    refreshed_bundle = read_json(run_dir / "research_bundle.json")
+    assert refreshed_bundle["hashed_artifact_count"] >= bundle["hashed_artifact_count"]
     evidence = read_json(run_dir / "evidence_card.json")
     assert evidence["kind"] == "prompt_optimization_evidence_card"
     assert evidence["sections"]["hidden_state_diagnostics"]["input_source"] == "synthetic_demo"
@@ -100,6 +108,30 @@ def test_research_demo_generates_complete_evidence_chain(tmp_path: Path) -> None
     candidate_manifest = read_json(run_dir / "candidate" / "manifest.json")
     assert len(baseline_manifest["prompt"]["prompt_hash"]) == len("sha256:") + 64
     assert len(candidate_manifest["prompt"]["prompt_hash"]) == len("sha256:") + 64
+
+
+def test_research_bundle_refresh_writes_hashes(tmp_path: Path) -> None:
+    run_dir = tmp_path / "run"
+    run_dir.mkdir()
+    (run_dir / "research_diagnostics.html").write_text("<h1>diagnostics</h1>", encoding="utf-8")
+    (run_dir / "evidence_card.json").write_text('{"recommendation": "review"}', encoding="utf-8")
+
+    assert main(["research-bundle", "--run", str(run_dir)]) == 0
+
+    bundle = read_json(run_dir / "research_bundle.json")
+    assert bundle["kind"] == "research_bundle_index"
+    assert bundle["artifact_count"] >= bundle["present_artifact_count"]
+    assert bundle["hashed_artifact_count"] == 2
+    diagnostics_artifact = _artifact(bundle, "research_diagnostics.html")
+    assert diagnostics_artifact["bytes"] == len("<h1>diagnostics</h1>")
+    assert diagnostics_artifact["sha256"].startswith("sha256:")
+    self_artifact = _artifact(bundle, "research_bundle.json")
+    assert self_artifact["generated_index_artifact"] is True
+    assert self_artifact["hash_status"] in {
+        "generated_during_refresh",
+        "self_index_not_hashed",
+    }
+    assert (run_dir / "research_bundle.html").exists()
 
 
 def test_diagnose_reuses_research_demo_inputs(tmp_path: Path) -> None:
@@ -275,3 +307,12 @@ def _mapping(summary: dict[str, Any]) -> list[dict[str, str]]:
     value = summary["paper_mapping"]
     assert isinstance(value, list)
     return value
+
+
+def _artifact(bundle: dict[str, Any], path: str) -> dict[str, Any]:
+    artifacts = bundle.get("artifacts")
+    assert isinstance(artifacts, list)
+    for artifact in artifacts:
+        if isinstance(artifact, dict) and artifact.get("path") == path:
+            return artifact
+    raise AssertionError(f"missing artifact {path}")

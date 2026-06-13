@@ -656,6 +656,8 @@ def build_research_bundle_index(run_dir: Path) -> JsonDict:
     """Collect known research artifacts into one navigable index payload."""
 
     artifacts = _bundle_artifacts(run_dir)
+    present_artifacts = [item for item in artifacts if item.get("exists")]
+    hashed_artifacts = [item for item in present_artifacts if item.get("sha256")]
     diagnostics = _read_optional_research_json(run_dir / "research_diagnostics.json")
     evidence = _read_optional_research_json(run_dir / "evidence_card.json")
     claim = _read_optional_research_json(run_dir / "claim_check.json")
@@ -691,6 +693,9 @@ def build_research_bundle_index(run_dir: Path) -> JsonDict:
         "gap_missing_count": gap_status.get("missing_count"),
         "review_order": _bundle_review_order(run_dir),
         "artifacts": artifacts,
+        "artifact_count": len(artifacts),
+        "present_artifact_count": len(present_artifacts),
+        "hashed_artifact_count": len(hashed_artifacts),
         "missing_html_artifacts": [name for name in expected if not (run_dir / name).exists()],
         "boundary": (
             "This index is a navigation aid. It does not add evidence beyond the linked "
@@ -783,15 +788,38 @@ def _bundle_artifacts(run_dir: Path) -> list[JsonDict]:
         "report.html",
         "report.md",
     ]
-    return [
-        {
-            "path": name,
-            "exists": (run_dir / name).exists()
-            or name in {"research_bundle.html", "research_bundle.json"},
-            "role": _artifact_role(name),
-        }
-        for name in names
-    ]
+    return [_bundle_artifact_row(run_dir=run_dir, name=name) for name in names]
+
+
+def _bundle_artifact_row(*, run_dir: Path, name: str) -> JsonDict:
+    path = run_dir / name
+    self_generated = name in {"research_bundle.html", "research_bundle.json"}
+    exists = path.exists() or self_generated
+    row: JsonDict = {
+        "path": name,
+        "exists": exists,
+        "role": _artifact_role(name),
+    }
+    if self_generated:
+        row["generated_index_artifact"] = True
+        if not path.exists():
+            row["hash_status"] = "generated_during_refresh"
+            return row
+        row["hash_status"] = "self_index_not_hashed"
+        return row
+    if path.exists() and path.is_file():
+        row["bytes"] = path.stat().st_size
+        row["sha256"] = _sha256_file(path)
+        row["hash_status"] = "hashed"
+    return row
+
+
+def _sha256_file(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return f"sha256:{digest.hexdigest()}"
 
 
 def _artifact_role(name: str) -> str:
@@ -838,6 +866,8 @@ def render_research_bundle_index_html(payload: JsonDict) -> str:
                     item.get("role", ""),
                     _badge("present" if exists else "missing"),
                     link,
+                    item.get("bytes", ""),
+                    item.get("sha256") or item.get("hash_status", ""),
                 ]
             )
     return _html_page(
@@ -859,7 +889,10 @@ def render_research_bundle_index_html(payload: JsonDict) -> str:
             ),
             _section(
                 "Artifact Inventory",
-                _table(["Role", "Status", "Artifact"], artifact_rows),
+                _table(
+                    ["Role", "Status", "Artifact", "Bytes", "SHA-256 / hash status"],
+                    artifact_rows,
+                ),
             ),
             _section("Safe Claim Language", _paragraph(payload.get("claim_language"))),
             _section("Boundary", _paragraph(payload.get("boundary"))),

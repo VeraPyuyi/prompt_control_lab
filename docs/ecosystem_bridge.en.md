@@ -129,6 +129,17 @@ artifact would explain. For browser review, open `research_gap_plan.html`; the p
 The UI shows the same plan and script list as first-class Research Overview
 sections.
 
+If you add diagnostics manually or import fresh external-tool evidence, refresh the browser-first
+bundle index with:
+
+```bash
+pcl research-bundle --run runs/ecosystem-demo
+```
+
+This rewrites `research_bundle.html` and `research_bundle.json`. The JSON inventory includes
+`bytes` and `sha256` for linked evidence files, while the self-generated bundle index files are
+marked as generated index artifacts to avoid unstable self-referential hashes.
+
 Promptfoo:
 
 ```bash
