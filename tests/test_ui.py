@@ -1074,6 +1074,25 @@ def test_tutorial_svg_assets_exist_and_use_prompt_control_lab() -> None:
         assert 'viewBox="0 0 ' in text
 
 
+def test_ecosystem_scorecard_svg_assets_exist_and_are_linked() -> None:
+    readme = Path("README.md").read_text(encoding="utf-8")
+    readme_zh = Path("README.zh.md").read_text(encoding="utf-8")
+    assert "docs/assets/ecosystem_scorecard.svg" in readme
+    assert "docs/assets/ecosystem_scorecard.zh.svg" in readme_zh
+    assets = [
+        ("ecosystem_scorecard.svg", "Ecosystem Evidence Closure"),
+        ("ecosystem_scorecard.zh.svg", "生态证据闭环"),
+    ]
+    for name, expected in assets:
+        path = Path("docs") / "assets" / name
+        assert path.exists(), name
+        text = path.read_text(encoding="utf-8")
+        assert expected in text
+        assert "prompt_control_lab" in text
+        assert "promptcontrollab" not in text
+        assert 'viewBox="0 0 1200 560"' in text
+
+
 def test_tutorial_svg_renderer_reads_utf8_svg(tmp_path: Path) -> None:
     from promptcontrollab.ui import app
 

@@ -92,6 +92,8 @@ prompt-only 比较有效性、`evidence_card.json` / `evidence_card.md` 和 `cla
 
 如果你已经在使用 Promptfoo、Langfuse 或 LangSmith 做 prompt / model 评测和观测，不需要替换它们。`prompt_control_lab` 可以导入这些工具的导出结果，并在其上增加研究诊断层：
 
+![prompt_control_lab 生态证据闭环](docs/assets/ecosystem_scorecard.zh.svg)
+
 ```bash
 # 一次性运行仓库自带的 Promptfoo / Langfuse / LangSmith 风格导出示例。
 pcl ecosystem-demo --examples examples/external --out runs/ecosystem-demo

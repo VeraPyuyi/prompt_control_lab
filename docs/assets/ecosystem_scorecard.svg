@@ -1,0 +1,78 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="560" viewBox="0 0 1200 560" role="img" aria-labelledby="title desc">
+  <title id="title">prompt_control_lab ecosystem scorecard flow</title>
+  <desc id="desc">External eval and observability exports flow into prompt_control_lab, which adds evidence cards, claim checks, research diagnostics, and gap closure status.</desc>
+  <defs>
+    <style>
+      .bg{fill:#f8fafc}.title{font:700 31px Arial,sans-serif;fill:#102033}.sub{font:400 16px Arial,sans-serif;fill:#52616f}
+      .card{fill:#fff;stroke:#cbd5e1;stroke-width:2}.source{fill:#eef2ff;stroke:#4f46e5;stroke-width:2}.pcl{fill:#ecfeff;stroke:#0e7490;stroke-width:3}
+      .score{fill:#f0fdf4;stroke:#16a34a;stroke-width:2}.h{font:700 17px Arial,sans-serif;fill:#102033}.t{font:400 13px Arial,sans-serif;fill:#405160}
+      .small{font:400 12px Arial,sans-serif;fill:#52616f}.mono{font:700 12px Consolas,monospace;fill:#102033}.pillText{font:700 12px Arial,sans-serif;fill:#fff}
+      .ok{fill:#16a34a}.warn{fill:#f59e0b}.neutral{fill:#64748b}.arrow{stroke:#64748b;stroke-width:2.5;fill:none;marker-end:url(#arrow)}
+    </style>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto">
+      <path d="M0,0 L0,6 L9,3 z" fill="#64748b"/>
+    </marker>
+  </defs>
+  <rect class="bg" width="1200" height="560"/>
+  <text x="44" y="48" class="title">Ecosystem Evidence Closure</text>
+  <text x="44" y="78" class="sub">Keep Promptfoo, Langfuse, and LangSmith for their strengths. Add prompt_control_lab as the research evidence closure layer.</text>
+
+  <rect x="44" y="126" width="225" height="86" rx="12" class="source"/>
+  <text x="68" y="158" class="h">Promptfoo</text>
+  <text x="68" y="184" class="t">Evals, red-team tests,</text>
+  <text x="68" y="204" class="t">provider matrices, CI</text>
+
+  <rect x="44" y="236" width="225" height="86" rx="12" class="source"/>
+  <text x="68" y="268" class="h">Langfuse</text>
+  <text x="68" y="294" class="t">Open traces, scores,</text>
+  <text x="68" y="314" class="t">costs, prompt versions</text>
+
+  <rect x="44" y="346" width="225" height="86" rx="12" class="source"/>
+  <text x="68" y="378" class="h">LangSmith</text>
+  <text x="68" y="404" class="t">Agent traces, datasets,</text>
+  <text x="68" y="424" class="t">experiments, debugging</text>
+
+  <path d="M270 169 C330 169 344 230 404 230" class="arrow"/>
+  <path d="M270 279 H404" class="arrow"/>
+  <path d="M270 389 C330 389 344 328 404 328" class="arrow"/>
+
+  <rect x="404" y="122" width="332" height="318" rx="16" class="pcl"/>
+  <text x="570" y="158" text-anchor="middle" class="h">prompt_control_lab Evidence Layer</text>
+  <rect x="432" y="184" width="276" height="38" rx="8" class="card"/>
+  <text x="452" y="208" class="t">Import paired baseline/candidate exports</text>
+  <rect x="432" y="238" width="276" height="38" rx="8" class="card"/>
+  <text x="452" y="262" class="t">Run prompt-only validity and paired stats</text>
+  <rect x="432" y="292" width="276" height="38" rx="8" class="card"/>
+  <text x="452" y="316" class="t">Write evidence_card and claim_check</text>
+  <rect x="432" y="346" width="276" height="38" rx="8" class="card"/>
+  <text x="452" y="370" class="t">Diagnose paper-derived missing evidence</text>
+  <rect x="432" y="400" width="276" height="28" rx="14" fill="#0e7490"/>
+  <text x="570" y="419" text-anchor="middle" class="pillText">not a replacement, an audit layer</text>
+
+  <path d="M736 281 H792" class="arrow"/>
+
+  <rect x="792" y="122" width="360" height="318" rx="16" class="score"/>
+  <text x="972" y="158" text-anchor="middle" class="h">ecosystem_scorecard.md</text>
+  <text x="820" y="190" class="small">Reviewer view: strengths, PCL additions, and gap closure.</text>
+  <line x1="820" y1="218" x2="1124" y2="218" stroke="#bbf7d0" stroke-width="2"/>
+  <text x="820" y="244" class="mono">Tool</text>
+  <text x="962" y="244" class="mono">Gap status</text>
+  <text x="1068" y="244" class="mono">Next</text>
+  <circle cx="830" cy="276" r="7" class="warn"/>
+  <text x="848" y="281" class="t">Promptfoo</text>
+  <text x="962" y="281" class="t">needs_work</text>
+  <text x="1068" y="281" class="t">run diagnostics</text>
+  <circle cx="830" cy="314" r="7" class="neutral"/>
+  <text x="848" y="319" class="t">Langfuse</text>
+  <text x="962" y="319" class="t">not_checked</text>
+  <text x="1068" y="319" class="t">gap-status</text>
+  <circle cx="830" cy="352" r="7" class="ok"/>
+  <text x="848" y="357" class="t">LangSmith</text>
+  <text x="962" y="357" class="t">complete</text>
+  <text x="1068" y="357" class="t">claim scope</text>
+  <rect x="820" y="386" width="304" height="34" rx="8" fill="#dcfce7" stroke="#86efac"/>
+  <text x="842" y="408" class="mono">pcl ecosystem-scorecard --run ...</text>
+
+  <path d="M976 440 C976 500 478 500 478 440" class="arrow"/>
+  <text x="596" y="506" class="sub">Close a missing diagnostic, run `pcl gap-status`, refresh the scorecard, then review the supported claim.</text>
+</svg>

@@ -1,0 +1,78 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="560" viewBox="0 0 1200 560" role="img" aria-labelledby="title desc">
+  <title id="title">prompt_control_lab 生态证据闭环</title>
+  <desc id="desc">外部评测和观测工具导出结果后，prompt_control_lab 补充证据卡、主张检查、研究诊断和缺口关闭状态。</desc>
+  <defs>
+    <style>
+      .bg{fill:#f8fafc}.title{font:700 31px "Microsoft YaHei","Noto Sans CJK SC",Arial,sans-serif;fill:#102033}.sub{font:400 16px "Microsoft YaHei","Noto Sans CJK SC",Arial,sans-serif;fill:#52616f}
+      .card{fill:#fff;stroke:#cbd5e1;stroke-width:2}.source{fill:#eef2ff;stroke:#4f46e5;stroke-width:2}.pcl{fill:#ecfeff;stroke:#0e7490;stroke-width:3}
+      .score{fill:#f0fdf4;stroke:#16a34a;stroke-width:2}.h{font:700 17px "Microsoft YaHei","Noto Sans CJK SC",Arial,sans-serif;fill:#102033}.t{font:400 13px "Microsoft YaHei","Noto Sans CJK SC",Arial,sans-serif;fill:#405160}
+      .small{font:400 12px "Microsoft YaHei","Noto Sans CJK SC",Arial,sans-serif;fill:#52616f}.mono{font:700 12px Consolas,"Microsoft YaHei",monospace;fill:#102033}.pillText{font:700 12px "Microsoft YaHei","Noto Sans CJK SC",Arial,sans-serif;fill:#fff}
+      .ok{fill:#16a34a}.warn{fill:#f59e0b}.neutral{fill:#64748b}.arrow{stroke:#64748b;stroke-width:2.5;fill:none;marker-end:url(#arrow)}
+    </style>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto">
+      <path d="M0,0 L0,6 L9,3 z" fill="#64748b"/>
+    </marker>
+  </defs>
+  <rect class="bg" width="1200" height="560"/>
+  <text x="44" y="48" class="title">生态证据闭环</text>
+  <text x="44" y="78" class="sub">继续使用 Promptfoo、Langfuse、LangSmith 的强项；用 prompt_control_lab 补上研究证据闭环。</text>
+
+  <rect x="44" y="126" width="225" height="86" rx="12" class="source"/>
+  <text x="68" y="158" class="h">Promptfoo</text>
+  <text x="68" y="184" class="t">评测、红队测试、</text>
+  <text x="68" y="204" class="t">provider 矩阵、CI</text>
+
+  <rect x="44" y="236" width="225" height="86" rx="12" class="source"/>
+  <text x="68" y="268" class="h">Langfuse</text>
+  <text x="68" y="294" class="t">Trace、分数、成本、</text>
+  <text x="68" y="314" class="t">prompt 版本记录</text>
+
+  <rect x="44" y="346" width="225" height="86" rx="12" class="source"/>
+  <text x="68" y="378" class="h">LangSmith</text>
+  <text x="68" y="404" class="t">Agent trace、数据集、</text>
+  <text x="68" y="424" class="t">实验和调试</text>
+
+  <path d="M270 169 C330 169 344 230 404 230" class="arrow"/>
+  <path d="M270 279 H404" class="arrow"/>
+  <path d="M270 389 C330 389 344 328 404 328" class="arrow"/>
+
+  <rect x="404" y="122" width="332" height="318" rx="16" class="pcl"/>
+  <text x="570" y="158" text-anchor="middle" class="h">prompt_control_lab 证据层</text>
+  <rect x="432" y="184" width="276" height="38" rx="8" class="card"/>
+  <text x="452" y="208" class="t">导入成对 baseline / candidate 导出</text>
+  <rect x="432" y="238" width="276" height="38" rx="8" class="card"/>
+  <text x="452" y="262" class="t">检查 prompt-only 有效性和成对统计</text>
+  <rect x="432" y="292" width="276" height="38" rx="8" class="card"/>
+  <text x="452" y="316" class="t">写出 evidence_card 和 claim_check</text>
+  <rect x="432" y="346" width="276" height="38" rx="8" class="card"/>
+  <text x="452" y="370" class="t">诊断还缺哪些论文证据</text>
+  <rect x="432" y="400" width="276" height="28" rx="14" fill="#0e7490"/>
+  <text x="570" y="419" text-anchor="middle" class="pillText">不是替代品，而是审计证据层</text>
+
+  <path d="M736 281 H792" class="arrow"/>
+
+  <rect x="792" y="122" width="360" height="318" rx="16" class="score"/>
+  <text x="972" y="158" text-anchor="middle" class="h">ecosystem_scorecard.md</text>
+  <text x="820" y="190" class="small">Reviewer 视图：强项、PCL 补充证据、缺口状态。</text>
+  <line x1="820" y1="218" x2="1124" y2="218" stroke="#bbf7d0" stroke-width="2"/>
+  <text x="820" y="244" class="mono">工具</text>
+  <text x="952" y="244" class="mono">缺口状态</text>
+  <text x="1068" y="244" class="mono">下一步</text>
+  <circle cx="830" cy="276" r="7" class="warn"/>
+  <text x="848" y="281" class="t">Promptfoo</text>
+  <text x="952" y="281" class="t">needs_work</text>
+  <text x="1068" y="281" class="t">补诊断</text>
+  <circle cx="830" cy="314" r="7" class="neutral"/>
+  <text x="848" y="319" class="t">Langfuse</text>
+  <text x="952" y="319" class="t">not_checked</text>
+  <text x="1068" y="319" class="t">查状态</text>
+  <circle cx="830" cy="352" r="7" class="ok"/>
+  <text x="848" y="357" class="t">LangSmith</text>
+  <text x="952" y="357" class="t">complete</text>
+  <text x="1068" y="357" class="t">看主张</text>
+  <rect x="820" y="386" width="304" height="34" rx="8" fill="#dcfce7" stroke="#86efac"/>
+  <text x="842" y="408" class="mono">pcl ecosystem-scorecard --run ...</text>
+
+  <path d="M976 440 C976 500 478 500 478 440" class="arrow"/>
+  <text x="480" y="506" class="sub">补齐一个诊断，运行 `pcl gap-status`，刷新 scorecard，再审查当前能支持的主张。</text>
+</svg>

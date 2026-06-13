@@ -99,6 +99,8 @@ If you already use Promptfoo, Langfuse, or LangSmith for prompt/model evaluation
 observability, keep them. `prompt_control_lab` can import their exported artifacts and add the
 research diagnostics layer on top:
 
+![prompt_control_lab ecosystem scorecard flow](docs/assets/ecosystem_scorecard.svg)
+
 ```bash
 # Fast all-tools demo with bundled Promptfoo/Langfuse/LangSmith-style exports.
 pcl ecosystem-demo --examples examples/external --out runs/ecosystem-demo
