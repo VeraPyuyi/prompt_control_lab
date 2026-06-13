@@ -29,6 +29,7 @@ from promptcontrollab.evaluation import run_import_eval
 from promptcontrollab.explain import generate_explanation
 from promptcontrollab.files import JsonDict, ensure_dir, write_json
 from promptcontrollab.gate import run_gate
+from promptcontrollab.hf_hidden import extract_hidden_states
 from promptcontrollab.history import compare_history, index_history
 from promptcontrollab.ingest import (
     ingest_auto_results,
@@ -596,6 +597,35 @@ def build_parser() -> argparse.ArgumentParser:
     diagnose_parser.add_argument("--tail", type=int, default=1)
     diagnose_parser.add_argument("--iterations", type=int, default=200)
     diagnose_parser.set_defaults(func=_cmd_diagnose)
+
+    hidden_parser = subcommands.add_parser(
+        "extract-hidden",
+        help="Extract HuggingFace hidden states into a trajectory-compatible .npz file.",
+    )
+    hidden_parser.add_argument("--model", required=True, help="HuggingFace model id or path.")
+    hidden_parser.add_argument(
+        "--prompts",
+        type=Path,
+        required=True,
+        help="Prompt JSONL or text file.",
+    )
+    hidden_parser.add_argument(
+        "--out",
+        type=Path,
+        required=True,
+        help="Output .npz path containing array `states`.",
+    )
+    hidden_parser.add_argument("--layer", type=int, default=-1)
+    hidden_parser.add_argument(
+        "--pool",
+        choices=["last-token", "mean", "token-trajectory"],
+        default="last-token",
+    )
+    hidden_parser.add_argument("--max-items", type=int, default=None)
+    hidden_parser.add_argument("--max-length", type=int, default=512)
+    hidden_parser.add_argument("--device", default="auto")
+    hidden_parser.add_argument("--trust-remote-code", action="store_true")
+    hidden_parser.set_defaults(func=_cmd_extract_hidden)
 
     analyze_parser = subcommands.add_parser(
         "analyze",
@@ -1225,6 +1255,21 @@ def _cmd_diagnose(args: argparse.Namespace) -> None:
     )
     print(f"Wrote research diagnostics to {payload['diagnostics_dir']}")
     print(f"Report: {Path(str(payload['summary_dir'])) / 'research_diagnostics.md'}")
+
+
+def _cmd_extract_hidden(args: argparse.Namespace) -> None:
+    payload = extract_hidden_states(
+        model_id=args.model,
+        prompts_path=args.prompts,
+        out_path=args.out,
+        layer=args.layer,
+        pool=args.pool,
+        max_items=args.max_items,
+        max_length=args.max_length,
+        device=args.device,
+        trust_remote_code=args.trust_remote_code,
+    )
+    print(json.dumps(payload, indent=2, ensure_ascii=False, sort_keys=True))
 
 
 def _cmd_analyze(args: argparse.Namespace) -> None:

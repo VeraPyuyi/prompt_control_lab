@@ -332,14 +332,29 @@ In that case, strong soft prompt performance does not guarantee hard prompt depl
 Operation:
 
 ```bash
-pcl trajectory --states hidden_states.npz --out runs/candidate/diagnostics
+pcl extract-hidden \
+  --model Qwen/Qwen2.5-0.5B \
+  --prompts examples/tasks.jsonl \
+  --out runs/candidate/inputs/hidden_states.npz \
+  --pool last-token \
+  --max-items 32
+
+pcl trajectory \
+  --states runs/candidate/inputs/hidden_states.npz \
+  --out runs/candidate/diagnostics
 ```
 
 Result:
 
+- `runs/candidate/inputs/hidden_states.npz`
+- `runs/candidate/inputs/hidden_states.npz.metadata.json`
 - `runs/candidate/diagnostics/trajectory.json`
 
 What it explains:
+
+`extract-hidden` turns open/local HuggingFace model activations into the `states` artifact used by
+the research diagnostics. Use a small model first and install the optional dependency with
+`pip install -e ".[hf]"`.
 
 Mean step drift describes how strongly the trajectory moves step to step. A negative log-decay
 slope with good fit quality suggests motion toward a stable region. High drift or weak fit
@@ -350,7 +365,9 @@ suggests more heterogeneous internal behavior.
 Operation:
 
 ```bash
-pcl riccati --trajectory hidden_states.npz --out runs/candidate/diagnostics
+pcl riccati \
+  --trajectory runs/candidate/inputs/hidden_states.npz \
+  --out runs/candidate/diagnostics
 ```
 
 Result:

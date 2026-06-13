@@ -74,6 +74,7 @@ These are the paper-derived capabilities that drive the project:
 | Paired statistical comparison | `pcl stats`, `stats.json` | Whether a prompt change is reliable under bootstrap CI, permutation p-value, and Holm correction. |
 | Prompt-only comparison validity | `pcl validity`, `comparison_validity.json` | Whether a baseline/candidate result is clean prompt-only evidence rather than a model, split, or metric confound. |
 | Soft-to-hard deployment gap | `pcl soft-hard`, `diagnostics/soft_hard.json` | Whether soft prompt gains survive nearest-token hard projection. |
+| HuggingFace hidden-state extraction | `pcl extract-hidden`, `hidden_states.npz` | Turns open-model prompts into trajectory-ready hidden-state artifacts. |
 | Hidden-state trajectory diagnostic | `pcl trajectory`, `diagnostics/trajectory.json` | Whether internal trajectories show drift, decay, or turnpike-like signals. |
 | Riccati surrogate diagnostic | `pcl riccati`, `diagnostics/riccati.json` | Whether a fitted finite-dimensional surrogate is self-consistent and stable. |
 | Time-varying soft-control lane | `pcl tv-soft`, `diagnostics/tv_soft.json` | Whether time-varying gains look like temporal structure rather than parameter capacity. |
@@ -179,13 +180,14 @@ The repository includes narrated 4K hands-on demo videos generated from real UI 
 4. `pcl stats`: paired bootstrap CI, permutation p-value, and Holm correction.
 5. `pcl validity`: check whether a baseline/candidate comparison is clean prompt-only evidence.
 6. `pcl soft-hard`: soft-to-hard projection gap and deployment risk.
-7. `pcl trajectory`: hidden-state drift, decay slope, and turnpike-like signal.
-8. `pcl riccati`: fitted finite-dimensional Riccati/DARE surrogate diagnostics.
-9. `pcl tv-soft`: static/time-varying/shuffled/random soft-control comparison.
-10. `pcl ingest auto` / `promptfoo` / `langfuse` / `langsmith`: import external eval/trace artifacts into PCL research artifacts.
-11. `pcl compare-runs`: turn two imported/scored runs into stats, validity, and a report in one command.
-12. `pcl report` / `pcl explain` / `pcl gate`: turn artifacts into readable decisions.
-13. `pcl guard` / `pcl audit-diff`: applied AI coding agent preflight and post-run audit.
+7. `pcl extract-hidden`: extract HuggingFace hidden states into trajectory-ready `.npz`.
+8. `pcl trajectory`: hidden-state drift, decay slope, and turnpike-like signal.
+9. `pcl riccati`: fitted finite-dimensional Riccati/DARE surrogate diagnostics.
+10. `pcl tv-soft`: static/time-varying/shuffled/random soft-control comparison.
+11. `pcl ingest auto` / `promptfoo` / `langfuse` / `langsmith`: import external eval/trace artifacts into PCL research artifacts.
+12. `pcl compare-runs`: turn two imported/scored runs into stats, validity, and a report in one command.
+13. `pcl report` / `pcl explain` / `pcl gate`: turn artifacts into readable decisions.
+14. `pcl guard` / `pcl audit-diff`: applied AI coding agent preflight and post-run audit.
 
 ## Install The CLI ⚙️
 
@@ -233,6 +235,14 @@ With `uv`:
 ```bash
 uv pip install -e ".[dev,research]"
 ```
+
+For HuggingFace hidden-state extraction, install the HF extra:
+
+```bash
+pip install -e ".[hf]"
+```
+
+Use a small local/open model first; this command loads the model on your machine.
 
 ### 4. Install local UI extras
 
@@ -901,8 +911,21 @@ pcl soft-hard --soft soft_prompt.npz --vocab vocab_embeddings.npz --out runs/can
 Hidden-state trajectory:
 
 ```bash
-pcl trajectory --states hidden_states.npz --out runs/candidate/diagnostics
+pcl extract-hidden \
+  --model Qwen/Qwen2.5-0.5B \
+  --prompts examples/tasks.jsonl \
+  --out runs/candidate/inputs/hidden_states.npz \
+  --pool last-token \
+  --max-items 32
+
+pcl trajectory \
+  --states runs/candidate/inputs/hidden_states.npz \
+  --out runs/candidate/diagnostics
 ```
+
+`extract-hidden` is optional and requires `pip install -e ".[hf]"`. It writes
+`hidden_states.npz` plus `hidden_states.npz.metadata.json`, so open-model users can produce the
+artifact that `trajectory`, `riccati --trajectory`, and `diagnose` expect.
 
 Riccati surrogate:
 

@@ -12,6 +12,7 @@ Agent guard 和 audit 很有用，但它们是应用层；项目的研究内核�
 | 成对统计比较 | `pcl stats` | `stats.json` | 报告 mean delta、bootstrap CI、permutation p-value 和 Holm-adjusted p-value。 |
 | prompt-only 比较有效性 | `pcl validity` | `comparison_validity.json`、`comparison_validity.md` | 检查 baseline / candidate 结果是否被模型、切分、指标或缺失 prompt identity 混淆。 |
 | 软转硬 soft-to-hard projection gap | `pcl soft-hard` | `diagnostics/soft_hard.json` | 衡量 nearest-token projection 风险；不是 hard prompt 最优性证明。 |
+| HuggingFace hidden-state 提取 | `pcl extract-hidden` | `hidden_states.npz`、`hidden_states.npz.metadata.json` | 从开源或本地 HuggingFace 模型生成 trajectory 可直接读取的 hidden states。 |
 | hidden-state trajectory | `pcl trajectory` | `diagnostics/trajectory.json` | 报告 drift、log-decay slope、fit quality 和 turnpike-like signal。 |
 | Riccati surrogate | `pcl riccati` | `diagnostics/riccati.json` | 检查拟合出的有限维 surrogate，不证明完整语言模型稳定。 |
 | time-varying soft-control lane | `pcl tv-soft` | `diagnostics/tv_soft.json` | 比较 static、time-varying、shuffled 和 random control lane。 |
@@ -108,10 +109,31 @@ pcl soft-hard \
 
 ## 6. hidden-state trajectory 诊断
 
-trajectory 命令导入 hidden states，并估计漂移和衰减：
+如果你还没有 `hidden_states.npz`，可以先从开源或本地 HuggingFace 模型提取：
 
 ```bash
-pcl trajectory --states hidden_states.npz --out runs/candidate/diagnostics
+pcl extract-hidden \
+  --model Qwen/Qwen2.5-0.5B \
+  --prompts examples/tasks.jsonl \
+  --out runs/candidate/inputs/hidden_states.npz \
+  --pool last-token \
+  --max-items 32
+```
+
+这个命令会写出包含 `states` 数组的 `hidden_states.npz`，并同时写出
+`hidden_states.npz.metadata.json`，记录 model id、prompt 来源、层号、pooling
+方式、设备和数组形状。它需要安装可选 HF 依赖：
+
+```bash
+pip install -e ".[hf]"
+```
+
+之后 trajectory 命令导入 hidden states，并估计漂移和衰减：
+
+```bash
+pcl trajectory \
+  --states runs/candidate/inputs/hidden_states.npz \
+  --out runs/candidate/diagnostics
 ```
 
 输出包含 mean step drift、log-decay slope、fit quality 和 turnpike-like signal。
@@ -129,7 +151,9 @@ pcl riccati --matrices surrogate_mats.npz --out runs/candidate/diagnostics
 也可以使用：
 
 ```bash
-pcl riccati --trajectory hidden_states.npz --out runs/candidate/diagnostics
+pcl riccati \
+  --trajectory runs/candidate/inputs/hidden_states.npz \
+  --out runs/candidate/diagnostics
 ```
 
 输出会报告 closed-loop spectral radius，以及这个 surrogate 在诊断里是否稳定。

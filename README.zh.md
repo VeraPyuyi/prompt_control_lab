@@ -71,6 +71,7 @@ comparison-validity 审计、explanation、gate 结果、报告 artifact 和本�
 | 成对统计比较 | `pcl stats`、`stats.json` | prompt 改动是否在 bootstrap CI、permutation p-value 和 Holm correction 下仍然可靠。 |
 | prompt-only 比较有效性 | `pcl validity`、`comparison_validity.json` | baseline / candidate 的结果是否真的是干净的 prompt-only 证据，而不是模型、切分或指标变化导致。 |
 | soft-to-hard 部署 gap | `pcl soft-hard`、`diagnostics/soft_hard.json` | soft prompt 的收益转成 hard token 后损失多大。 |
+| HuggingFace hidden-state 提取 | `pcl extract-hidden`、`hidden_states.npz` | 把开源模型 prompt 转成 trajectory 可直接读取的 hidden-state artifact。 |
 | hidden-state trajectory 诊断 | `pcl trajectory`、`diagnostics/trajectory.json` | 内部轨迹是否出现 drift、decay 或 turnpike-like signal。 |
 | Riccati surrogate 诊断 | `pcl riccati`、`diagnostics/riccati.json` | 拟合出的有限维 surrogate 是否自洽稳定。 |
 | time-varying soft-control lane | `pcl tv-soft`、`diagnostics/tv_soft.json` | time-varying 收益更像来自时序结构，还是参数容量。 |
@@ -163,6 +164,14 @@ pip install -e ".[ui]"
 pcl ui --runs runs/ --policy examples/guard.policy.yaml --port 8501
 ```
 
+如果要从 HuggingFace 开源模型提取 hidden states，安装 HF extra：
+
+```bash
+pip install -e ".[hf]"
+```
+
+建议先用小模型或本地模型路径试跑；这个命令会在本机加载模型。
+
 本地 UI 现在默认打开 **研究总览**：先展示 tri-split、成对统计、soft-hard、trajectory、
 Riccati 和 tv-soft 等论文诊断，再把 agent guard、audit、history 等工程应用放在后续标签页。
 
@@ -199,6 +208,7 @@ pcl doctor
 | 成对统计 | `pcl stats` | 输出 bootstrap CI、permutation p-value 和 Holm correction。 |
 | 比较有效性 | `pcl validity` | 检查一次 baseline / candidate 对比是否能被解释为 prompt-only 改动。 |
 | soft-to-hard 风险 | `pcl soft-hard` | 检查 soft prompt 转 hard token 后的 projection gap。 |
+| hidden-state 提取 | `pcl extract-hidden` | 从 HuggingFace 开源模型提取 `hidden_states.npz`。 |
 | 内部轨迹诊断 | `pcl trajectory` | 分析 hidden-state drift、decay slope 和 turnpike-like signal。 |
 | Riccati 诊断 | `pcl riccati` | 检查有限维 surrogate 的 Riccati / DARE 稳定性。 |
 | time-varying control | `pcl tv-soft` | 比较 static、time-varying、shuffled、random control lane。 |

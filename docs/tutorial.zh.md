@@ -282,21 +282,38 @@ pcl soft-hard --soft soft_prompt.npz --vocab vocab_embeddings.npz --out runs/can
 操作：
 
 ```bash
-pcl trajectory --states hidden_states.npz --out runs/candidate/diagnostics
+pcl extract-hidden \
+  --model Qwen/Qwen2.5-0.5B \
+  --prompts examples/tasks.jsonl \
+  --out runs/candidate/inputs/hidden_states.npz \
+  --pool last-token \
+  --max-items 32
+
+pcl trajectory \
+  --states runs/candidate/inputs/hidden_states.npz \
+  --out runs/candidate/diagnostics
 ```
 
 得到：
 
+- `runs/candidate/inputs/hidden_states.npz`
+- `runs/candidate/inputs/hidden_states.npz.metadata.json`
 - `runs/candidate/diagnostics/trajectory.json`
 
-说明：mean step drift 说明轨迹每步变化强度。log-decay slope 为负且 R2 较高时，说明轨迹可能向稳定区域靠近。drift 高或拟合弱时，说明任务或 prompt 可能导致更异质的内部行为。
+说明：`extract-hidden` 会把开源或本地 HuggingFace 模型的 hidden activations 转成研究诊断需要的
+`states` artifact。建议先用小模型试跑，并安装可选依赖 `pip install -e ".[hf]"`。
+
+mean step drift 说明轨迹每步变化强度。log-decay slope 为负且 R2 较高时，说明轨迹可能向稳定区域靠近。
+drift 高或拟合弱时，说明任务或 prompt 可能导致更异质的内部行为。
 
 ## 10. 做 Riccati surrogate 诊断
 
 操作：
 
 ```bash
-pcl riccati --trajectory hidden_states.npz --out runs/candidate/diagnostics
+pcl riccati \
+  --trajectory runs/candidate/inputs/hidden_states.npz \
+  --out runs/candidate/diagnostics
 ```
 
 得到：

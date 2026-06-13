@@ -13,6 +13,7 @@ paper-derived diagnostic stack below.
 | paired statistical comparison | `pcl stats` | `stats.json` | Reports mean delta, bootstrap CI, permutation p-value, and Holm-adjusted p-value. |
 | prompt-only comparison validity | `pcl validity` | `comparison_validity.json`, `comparison_validity.md` | Checks whether a baseline/candidate result is confounded by model, split, metric, or missing prompt identity. |
 | soft-to-hard projection gap | `pcl soft-hard` | `diagnostics/soft_hard.json` | Measures nearest-token projection risk; it is not a proof of optimal hard prompting. |
+| HuggingFace hidden-state extraction | `pcl extract-hidden` | `hidden_states.npz`, `hidden_states.npz.metadata.json` | Generates trajectory-ready hidden states from an open/local HuggingFace model. |
 | hidden-state trajectory | `pcl trajectory` | `diagnostics/trajectory.json` | Reports drift, log-decay slope, fit quality, and turnpike-like signal. |
 | Riccati surrogate | `pcl riccati` | `diagnostics/riccati.json` | Checks a fitted finite-dimensional surrogate, not the full language model. |
 | time-varying soft-control lane | `pcl tv-soft` | `diagnostics/tv_soft.json` | Compares static, time-varying, shuffled, and random control lanes. |
@@ -114,10 +115,34 @@ a deployment-risk diagnostic, not as a hard-prompt optimizer.
 
 ## 6. Hidden-State Trajectory Diagnostics
 
-The trajectory command imports hidden states and estimates drift and decay:
+If you do not already have hidden states, extract them from a local or open
+HuggingFace model first:
 
 ```bash
-pcl trajectory --states hidden_states.npz --out runs/candidate/diagnostics
+pcl extract-hidden \
+  --model Qwen/Qwen2.5-0.5B \
+  --prompts examples/tasks.jsonl \
+  --out runs/candidate/inputs/hidden_states.npz \
+  --pool last-token \
+  --max-items 32
+```
+
+This writes `hidden_states.npz` with a `states` array and a companion
+`hidden_states.npz.metadata.json` file that records model id, prompt source,
+layer, pooling mode, device, and shape. The extraction command requires the
+optional HF extra:
+
+```bash
+pip install -e ".[hf]"
+```
+
+The trajectory command then imports those hidden states and estimates drift and
+decay:
+
+```bash
+pcl trajectory \
+  --states runs/candidate/inputs/hidden_states.npz \
+  --out runs/candidate/diagnostics
 ```
 
 The output includes mean step drift, log-decay slope, fit quality, and a
@@ -136,7 +161,9 @@ pcl riccati --matrices surrogate_mats.npz --out runs/candidate/diagnostics
 or:
 
 ```bash
-pcl riccati --trajectory hidden_states.npz --out runs/candidate/diagnostics
+pcl riccati \
+  --trajectory runs/candidate/inputs/hidden_states.npz \
+  --out runs/candidate/diagnostics
 ```
 
 The result reports closed-loop spectral radius and whether the surrogate looks

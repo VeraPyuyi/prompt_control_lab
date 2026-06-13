@@ -256,6 +256,25 @@ Stores nearest-token projection indices and distances for a soft prompt.
 
 What it explains: whether soft-to-hard projection may lose behavior.
 
+## `hidden_states.npz` / `hidden_states.npz.metadata.json`
+
+Written by:
+
+```bash
+pcl extract-hidden --model <hf-model-or-path> --prompts <prompts.jsonl> --out hidden_states.npz
+```
+
+The NPZ file stores a `states` array. With `--pool last-token` or `--pool mean`, each row is one
+pooled prompt representation. With `--pool token-trajectory`, each row is one token-level state in
+prompt order.
+
+The metadata JSON records model id, prompt source, output path, layer, pooling mode, max length,
+resolved device, prompt count, and array shape.
+
+What it explains: it is the bridge from an open/local HuggingFace model to the trajectory and
+Riccati diagnostics. It records which hidden-state artifact was extracted; it does not prove that
+the model is stable.
+
 ## `diagnostics/trajectory.json`
 
 Stores hidden-state drift, log-decay slope, fit quality, and turnpike-like signal.

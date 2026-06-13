@@ -201,6 +201,24 @@ gate decision、risk level、改动文件、测试、audit path、gate path，�
 
 说明什么问题：soft prompt 转成 hard prompt 的部署风险。
 
+## `hidden_states.npz` / `hidden_states.npz.metadata.json`
+
+由下面的命令写出：
+
+```bash
+pcl extract-hidden --model <hf-model-or-path> --prompts <prompts.jsonl> --out hidden_states.npz
+```
+
+NPZ 文件里保存 `states` 数组。使用 `--pool last-token` 或 `--pool mean` 时，每一行是一条
+prompt 的 pooled hidden representation。使用 `--pool token-trajectory` 时，每一行是一条
+prompt 内的 token-level state，顺序保持为 prompt 的 token 顺序。
+
+metadata JSON 会记录 model id、prompt 来源、输出路径、层号、pooling 方式、最大长度、实际设备、
+prompt 数量和数组形状。
+
+说明什么问题：它是从开源或本地 HuggingFace 模型进入 trajectory / Riccati 诊断的桥接 artifact。
+它记录 hidden-state artifact 的提取方式，但不证明模型本身稳定。
+
 ## `diagnostics/trajectory.json`
 
 记录 hidden-state trajectory 的 drift、log-decay slope、fit quality 和 turnpike-like signal。
