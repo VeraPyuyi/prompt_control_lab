@@ -14,6 +14,7 @@ from promptcontrollab.prompt_identity import build_prompt_identity
 from promptcontrollab.reporting import generate_report
 from promptcontrollab.splitting import load_tasks, make_split, write_split
 from promptcontrollab.statistics import compare_prediction_files
+from promptcontrollab.validity import run_comparison_validity
 from promptcontrollab.version import __version__
 
 
@@ -80,6 +81,10 @@ def run_quick_analysis(
     )
     baseline_manifest = read_json(out_dir / "baseline" / "manifest.json")
     candidate_manifest = read_json(out_dir / "candidate" / "manifest.json")
+    baseline_manifest["split_hash"] = split.split_hash
+    candidate_manifest["split_hash"] = split.split_hash
+    write_json(out_dir / "baseline" / "manifest.json", baseline_manifest)
+    write_json(out_dir / "candidate" / "manifest.json", candidate_manifest)
     baseline_identity = baseline_manifest.get("model", {})
     candidate_identity = candidate_manifest.get("model", {})
     if not isinstance(baseline_identity, dict):
@@ -112,6 +117,11 @@ def run_quick_analysis(
     generate_explanation(out_dir, level=explain_level)
     if policy_path is not None:
         run_gate(out_dir, policy_path=policy_path)
+    run_comparison_validity(
+        baseline_dir=out_dir / "baseline",
+        candidate_dir=out_dir / "candidate",
+        out_path=out_dir / "comparison_validity.json",
+    )
     generate_report(out_dir, title=title)
 
 

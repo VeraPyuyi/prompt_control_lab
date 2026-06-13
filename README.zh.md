@@ -43,7 +43,8 @@ pcl ui --runs runs/ --policy examples/guard.policy.yaml --port 8501
 ```
 
 你会得到：split hash、train/validation/withheld 隔离记录、predictions、metrics、成对统计、
-explanation、gate 结果、报告 artifact 和本地 UI。仪表盘不会上传 prompt、代码或 artifact。
+comparison-validity 审计、explanation、gate 结果、报告 artifact 和本地 UI。
+仪表盘不会上传 prompt、代码或 artifact。
 
 ## 为什么需要它
 

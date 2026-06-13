@@ -76,8 +76,10 @@ def run_comparison_validity(
 def _load_run(run_dir: Path) -> JsonDict:
     manifest = _read_optional(run_dir / "manifest.json")
     metrics = _read_metrics(run_dir)
-    stats = _read_optional(run_dir / "stats.json")
-    splits = _read_optional(run_dir / "splits.json")
+    stats = _read_optional(run_dir / "stats.json") or _read_optional(run_dir.parent / "stats.json")
+    splits = _read_optional(run_dir / "splits.json") or _read_optional(
+        run_dir.parent / "splits.json"
+    )
     warnings: list[str] = []
     if not manifest:
         warnings.append(f"{run_dir} has no manifest.json.")

@@ -317,6 +317,10 @@ def test_cli_analyze_reads_example_config(tmp_path: Path) -> None:
     manifest = json.loads((run / "manifest.json").read_text(encoding="utf-8"))
     assert manifest["mode"] == "quick"
     assert manifest["metric"] == "exact_match"
+    validity = json.loads((run / "comparison_validity.json").read_text(encoding="utf-8"))
+    assert validity["kind"] == "comparison_validity"
+    assert validity["checks"]["model_identity"]["status"] in {"pass", "review"}
+    assert "Comparison Validity" in (run / "report.md").read_text(encoding="utf-8")
 
 
 def test_cli_start_analyze_passes_policy_to_analyze(tmp_path: Path) -> None:

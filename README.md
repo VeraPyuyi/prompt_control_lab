@@ -44,9 +44,9 @@ pcl analyze --config promptcontrol.example.yaml --out runs/quick
 pcl ui --runs runs/ --policy examples/guard.policy.yaml --port 8501
 ```
 
-What you get: split hash, train/validation/withheld hygiene, predictions, metrics, paired statistics,
-explanation, gate result, report artifacts, and a local UI. No prompts, code, or artifacts are
-uploaded by the dashboard.
+What you get: split hash, train/validation/withheld hygiene, predictions, metrics, paired
+statistics, comparison-validity audit, explanation, gate result, report artifacts, and a local UI.
+No prompts, code, or artifacts are uploaded by the dashboard.
 
 ## Why This Exists
 
