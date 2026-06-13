@@ -34,6 +34,10 @@ When written by `pcl ingest langfuse`, `score` comes from the selected Langfuse 
 input fields, and model provenance is copied from the observation model/provider fields. The
 imported run can then be used with the same PCL validity and research diagnostics workflow.
 
+When written by `pcl ingest langsmith`, `score` comes from the selected LangSmith score key or CSV
+column, `output` comes from run outputs, `expected` comes from reference outputs, and model
+provenance is copied from run metadata or CSV columns. JSON and CSV exports are supported.
+
 ## `pcl model-detect` output
 
 Stores `provider`, `model_id`, `source`, `confidence`, optional public metadata such as
@@ -181,6 +185,10 @@ promptfoo`, and a `promptfoo_filter` recording the selected prompt/provider.
 
 `pcl ingest langfuse` writes `manifest.json` with `mode: langfuse_ingest`, `source_tool:
 langfuse`, and a `langfuse_filter` recording the selected observation name, score name, and model.
+
+`pcl ingest langsmith` writes `manifest.json` with `mode: langsmith_ingest`, `source_tool:
+langsmith`, and a `langsmith_filter` recording the selected experiment, score name, model, and
+provider.
 
 What it explains: external tools remain the source of eval or trace data, while
 `prompt_control_lab` records the exact import filter before running comparison validity,

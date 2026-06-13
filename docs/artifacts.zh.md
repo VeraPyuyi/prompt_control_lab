@@ -30,6 +30,10 @@ Quick Mode 做成对 prompt 实验时，顶层 manifest 还可以包含 `baselin
 来自 observation / generation 输出，`expected` 可以从 metadata 或 input 字段读取，模型来源会从
 observation 的 model / provider 字段复制。导入后的 run 可以继续接同一套比较有效性和研究诊断流程。
 
+如果由 `pcl ingest langsmith` 写出，`score` 来自选定的 LangSmith score key 或 CSV 列，
+`output` 来自 run outputs，`expected` 来自 reference outputs，模型来源会从 run metadata
+或 CSV 列复制。JSON 和 CSV 导出都可以导入。
+
 ## `pcl model-detect` 输出
 
 记录 `provider`、`model_id`、`source`、`confidence`、可选的公开模型元数据、`request_id`、
@@ -136,6 +140,9 @@ gate decision、risk level、改动文件、测试、audit path、gate path，�
 
 `pcl ingest langfuse` 会写出 `mode: langfuse_ingest`、`source_tool: langfuse`，并在
 `langfuse_filter` 里记录导入时选择的 observation name、score name 和 model。
+
+`pcl ingest langsmith` 会写出 `mode: langsmith_ingest`、`source_tool: langsmith`，并在
+`langsmith_filter` 里记录导入时选择的 experiment、score name、model 和 provider。
 
 说明什么问题：外部工具仍然负责原始 eval 或 trace 数据，`prompt_control_lab` 负责记录精确导入条件，然后在其上继续运行比较有效性、统计、报告或论文诊断。
 

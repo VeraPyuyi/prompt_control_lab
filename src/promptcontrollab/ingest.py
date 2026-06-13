@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import csv
 import hashlib
 import json
 from pathlib import Path
@@ -147,6 +148,75 @@ def ingest_langfuse_results(
     }
 
 
+def ingest_langsmith_results(
+    *,
+    source_path: Path,
+    out_dir: Path,
+    experiment: str | None = None,
+    score_name: str | None = None,
+    model: str | None = None,
+    provider: str | None = None,
+    method: str | None = None,
+) -> JsonDict:
+    """Convert LangSmith experiment JSON/CSV export into one scored PCL run."""
+
+    rows = _langsmith_rows(source_path, score_name=score_name)
+    if not rows:
+        msg = f"No LangSmith runs with scores found in {source_path}"
+        raise ValueError(msg)
+    selected = _filter_langsmith_rows(
+        rows,
+        experiment=experiment,
+        model=model,
+        provider=provider,
+    )
+    if not selected:
+        msg = "No LangSmith rows matched the requested experiment/model/provider filter"
+        raise ValueError(msg)
+    selected_experiment = experiment or _single_value(
+        selected,
+        "experiment",
+        "LangSmith experiments",
+    )
+    selected_model = model or _single_value(selected, "model_id", "LangSmith model ids")
+    selected_provider = provider or _single_value(selected, "provider", "LangSmith providers")
+    method_name = method or selected_experiment or "langsmith"
+    predictions = [
+        _prediction_from_langsmith_row(row, index=index, method=method_name)
+        for index, row in enumerate(selected)
+    ]
+    summary = summarize_predictions(predictions)
+    ensure_dir(out_dir)
+    write_jsonl(out_dir / "predictions.jsonl", [prediction.to_json() for prediction in predictions])
+    write_json(out_dir / "metrics.json", summary.to_json())
+    model_identity = detect_model_identity(provider=selected_provider, model_id=selected_model)
+    manifest: JsonDict = {
+        "tool": "promptcontrollab",
+        "tool_version": __version__,
+        "mode": "langsmith_ingest",
+        "method": method_name,
+        "metric": f"langsmith_score:{score_name or 'auto'}",
+        "source_tool": "langsmith",
+        "source_path": str(source_path),
+        "langsmith_filter": {
+            "experiment": selected_experiment,
+            "score_name": score_name or "auto",
+            "model": selected_model,
+            "provider": selected_provider,
+        },
+        "model": model_identity.to_json(),
+    }
+    write_json(out_dir / "manifest.json", manifest)
+    return {
+        "out_dir": str(out_dir),
+        "count": len(predictions),
+        "mean_score": summary.mean_score,
+        "experiment": selected_experiment,
+        "model": selected_model,
+        "provider": selected_provider,
+    }
+
+
 def _promptfoo_rows(payload: JsonDict) -> list[JsonDict]:
     results = payload.get("results")
     if isinstance(results, list):
@@ -171,6 +241,117 @@ def _langfuse_rows(payload: JsonDict, *, score_name: str | None) -> list[JsonDic
         if row is not None:
             rows.append(row)
     return rows
+
+
+def _langsmith_rows(source_path: Path, *, score_name: str | None) -> list[JsonDict]:
+    if source_path.suffix.lower() == ".csv":
+        return _langsmith_csv_rows(source_path, score_name=score_name)
+    payload = read_json(source_path)
+    runs = _langsmith_run_items(payload)
+    rows: list[JsonDict] = []
+    for index, item in enumerate(runs):
+        row = _row_from_langsmith_run(item, index=index, score_name=score_name)
+        if row is not None:
+            rows.append(row)
+    return rows
+
+
+def _langsmith_run_items(payload: JsonDict) -> list[JsonDict]:
+    rows: list[JsonDict] = []
+    for key in ["runs", "results", "data", "examples"]:
+        value = payload.get(key)
+        if isinstance(value, list):
+            rows.extend(item for item in value if isinstance(item, dict))
+    return rows
+
+
+def _langsmith_csv_rows(source_path: Path, *, score_name: str | None) -> list[JsonDict]:
+    rows: list[JsonDict] = []
+    with source_path.open("r", encoding="utf-8-sig", newline="") as handle:
+        reader = csv.DictReader(handle)
+        for index, raw in enumerate(reader):
+            row = _row_from_langsmith_csv(raw, index=index, score_name=score_name)
+            if row is not None:
+                rows.append(row)
+    return rows
+
+
+def _row_from_langsmith_run(
+    item: JsonDict,
+    *,
+    index: int,
+    score_name: str | None,
+) -> JsonDict | None:
+    score = _langsmith_score(item, score_name=score_name)
+    if score is None:
+        return None
+    metadata = _langsmith_metadata(item)
+    outputs = _dict_or_empty(item.get("outputs"))
+    references = _dict_or_empty(item.get("reference_outputs")) or _dict_or_empty(
+        item.get("referenceOutputs")
+    )
+    model_id = _optional_str(metadata.get("model")) or _optional_str(item.get("model"))
+    provider = _optional_str(metadata.get("provider")) or _optional_str(item.get("provider"))
+    if provider is None and model_id is not None:
+        provider, model_id = _split_provider_model(model_id)
+    return {
+        "id": _optional_str(item.get("id")) or _optional_str(item.get("run_id"))
+        or _optional_str(item.get("runId")) or f"run-{index}",
+        "experiment": _langsmith_experiment(item, metadata),
+        "provider": provider,
+        "model_id": model_id,
+        "output": _langsmith_output(item, outputs),
+        "expected": _langsmith_expected(item, references),
+        "score": score,
+        "slice": _langsmith_slice(metadata, item),
+        "error": _optional_str(item.get("error")) or _optional_str(item.get("status")),
+    }
+
+
+def _row_from_langsmith_csv(
+    item: dict[str, str],
+    *,
+    index: int,
+    score_name: str | None,
+) -> JsonDict | None:
+    score = _langsmith_csv_score(item, score_name=score_name)
+    if score is None:
+        return None
+    model_id = _csv_first(item, ["model", "model_id", "model_id.name"])
+    provider = _csv_first(item, ["provider", "model_provider"])
+    if provider is None and model_id is not None:
+        provider, model_id = _split_provider_model(model_id)
+    return {
+        "id": _csv_first(item, ["run_id", "id", "runId"]) or f"run-{index}",
+        "experiment": _csv_first(item, ["experiment_name", "experiment", "session_name"]),
+        "provider": provider,
+        "model_id": model_id,
+        "output": _csv_first(item, ["output", "outputs", "prediction", "answer"]) or "",
+        "expected": _csv_first(
+            item,
+            ["reference_output", "reference_outputs", "expected", "target"],
+        )
+        or "",
+        "score": score,
+        "slice": _csv_first(item, ["slice", "metadata.slice", "dataset", "task"]) or "default",
+        "error": _csv_first(item, ["error", "status"]),
+    }
+
+
+def _filter_langsmith_rows(
+    rows: list[JsonDict],
+    *,
+    experiment: str | None,
+    model: str | None,
+    provider: str | None,
+) -> list[JsonDict]:
+    return [
+        row
+        for row in rows
+        if (experiment is None or row.get("experiment") == experiment)
+        and (model is None or row.get("model_id") == model)
+        and (provider is None or row.get("provider") == provider)
+    ]
 
 
 def _langfuse_observations(payload: JsonDict) -> list[JsonDict]:
@@ -369,6 +550,29 @@ def _prediction_from_langfuse_row(
     )
 
 
+def _prediction_from_langsmith_row(
+    row: JsonDict,
+    *,
+    index: int,
+    method: str,
+) -> PredictionRecord:
+    model_payload: JsonDict = {}
+    if isinstance(row.get("provider"), str):
+        model_payload["provider"] = row["provider"]
+    if isinstance(row.get("model_id"), str):
+        model_payload["model_id"] = row["model_id"]
+    return PredictionRecord(
+        id=_unique_id(row, index),
+        output=str(row.get("output", "")),
+        expected=str(row.get("expected", "")),
+        score=float(row.get("score", 0.0)),
+        slice=str(row.get("slice") or "default"),
+        method=method,
+        error=cast(str | None, row.get("error")),
+        model=model_payload,
+    )
+
+
 def _unique_id(row: JsonDict, index: int) -> str:
     raw_id = row.get("id")
     if isinstance(raw_id, str) and raw_id:
@@ -482,6 +686,107 @@ def _langfuse_score(item: JsonDict, *, score_name: str | None) -> float | None:
     return None
 
 
+def _langsmith_score(item: JsonDict, *, score_name: str | None) -> float | None:
+    feedback = item.get("feedback_stats") or item.get("feedbackStats") or item.get("scores")
+    if isinstance(feedback, dict):
+        if score_name is not None:
+            return _numeric_score(feedback.get(score_name))
+        numeric = [
+            float(value)
+            for value in feedback.values()
+            if isinstance(value, int | float | bool)
+        ]
+        if len(numeric) == 1:
+            return numeric[0]
+        if len(numeric) > 1:
+            msg = "Multiple LangSmith score names found; pass --score-name to choose one"
+            raise ValueError(msg)
+    if isinstance(feedback, list):
+        matches = [score for score in feedback if isinstance(score, dict)]
+        if score_name is not None:
+            matches = [
+                score
+                for score in matches
+                if score.get("key") == score_name or score.get("name") == score_name
+            ]
+        elif len({score.get("key") or score.get("name") for score in matches}) > 1:
+            msg = "Multiple LangSmith score names found; pass --score-name to choose one"
+            raise ValueError(msg)
+        for score in matches:
+            value = score.get("score")
+            if value is None:
+                value = score.get("value")
+            parsed = _numeric_score(value)
+            if parsed is not None:
+                return parsed
+    for key in ["score", "value"]:
+        parsed = _numeric_score(item.get(key))
+        if parsed is not None:
+            return parsed
+    return None
+
+
+def _langsmith_csv_score(item: dict[str, str], *, score_name: str | None) -> float | None:
+    if score_name is not None:
+        return _parse_float(item.get(score_name) or item.get(f"feedback.{score_name}"))
+    candidates = [
+        value
+        for key, value in item.items()
+        if key not in {
+            "run_id",
+            "id",
+            "runId",
+            "experiment_name",
+            "experiment",
+            "session_name",
+            "output",
+            "outputs",
+            "prediction",
+            "answer",
+            "reference_output",
+            "reference_outputs",
+            "expected",
+            "target",
+            "model",
+            "model_id",
+            "provider",
+            "model_provider",
+            "slice",
+            "metadata.slice",
+            "dataset",
+            "task",
+            "error",
+            "status",
+        }
+        and _parse_float(value) is not None
+    ]
+    if len(candidates) == 1:
+        return _parse_float(candidates[0])
+    if len(candidates) > 1:
+        msg = "Multiple LangSmith score columns found; pass --score-name to choose one"
+        raise ValueError(msg)
+    return None
+
+
+def _numeric_score(value: object) -> float | None:
+    if isinstance(value, bool):
+        return 1.0 if value else 0.0
+    if isinstance(value, int | float):
+        return float(value)
+    if isinstance(value, str):
+        return _parse_float(value)
+    return None
+
+
+def _parse_float(value: str | None) -> float | None:
+    if value is None or value == "":
+        return None
+    try:
+        return float(value)
+    except ValueError:
+        return None
+
+
 def _dict_or_empty(value: object) -> JsonDict:
     return cast(JsonDict, value) if isinstance(value, dict) else {}
 
@@ -510,6 +815,70 @@ def _langfuse_slice(metadata: JsonDict, input_payload: JsonDict) -> str:
             if isinstance(value, str) and value:
                 return value
     return "default"
+
+
+def _langsmith_metadata(item: JsonDict) -> JsonDict:
+    metadata = item.get("metadata")
+    if isinstance(metadata, dict):
+        return cast(JsonDict, metadata)
+    extra = item.get("extra")
+    if isinstance(extra, dict):
+        nested = extra.get("metadata")
+        if isinstance(nested, dict):
+            return cast(JsonDict, nested)
+    return {}
+
+
+def _langsmith_experiment(item: JsonDict, metadata: JsonDict) -> str | None:
+    for payload in [item, metadata]:
+        for key in ["experiment_name", "experiment", "session_name", "project_name", "name"]:
+            value = payload.get(key)
+            if isinstance(value, str) and value:
+                return value
+    return None
+
+
+def _langsmith_output(item: JsonDict, outputs: JsonDict) -> str:
+    for key in ["output", "prediction", "answer", "response"]:
+        if key in item:
+            return _jsonish_text(item.get(key))
+        if key in outputs:
+            return _jsonish_text(outputs.get(key))
+    if outputs:
+        if len(outputs) == 1:
+            return _jsonish_text(next(iter(outputs.values())))
+        return _jsonish_text(outputs)
+    return ""
+
+
+def _langsmith_expected(item: JsonDict, references: JsonDict) -> str:
+    for key in ["reference_output", "reference", "expected", "target"]:
+        if key in item:
+            return _jsonish_text(item.get(key))
+        if key in references:
+            return _jsonish_text(references.get(key))
+    if references:
+        if len(references) == 1:
+            return _jsonish_text(next(iter(references.values())))
+        return _jsonish_text(references)
+    return ""
+
+
+def _langsmith_slice(metadata: JsonDict, item: JsonDict) -> str:
+    for payload in [metadata, item]:
+        for key in ["slice", "dataset", "dataset_name", "task"]:
+            value = payload.get(key)
+            if isinstance(value, str) and value:
+                return value
+    return "default"
+
+
+def _csv_first(item: dict[str, str], keys: list[str]) -> str | None:
+    for key in keys:
+        value = item.get(key)
+        if value:
+            return value
+    return None
 
 
 def _split_provider_model(provider: str | None) -> tuple[str | None, str | None]:

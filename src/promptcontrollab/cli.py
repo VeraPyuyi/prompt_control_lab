@@ -30,7 +30,11 @@ from promptcontrollab.explain import generate_explanation
 from promptcontrollab.files import JsonDict, ensure_dir, write_json
 from promptcontrollab.gate import run_gate
 from promptcontrollab.history import compare_history, index_history
-from promptcontrollab.ingest import ingest_langfuse_results, ingest_promptfoo_results
+from promptcontrollab.ingest import (
+    ingest_langfuse_results,
+    ingest_langsmith_results,
+    ingest_promptfoo_results,
+)
 from promptcontrollab.model_drift import run_model_drift
 from promptcontrollab.model_identity import detect_model_identity
 from promptcontrollab.plugin_installer import install_plugin
@@ -173,6 +177,43 @@ def build_parser() -> argparse.ArgumentParser:
         help="Method name written to PCL predictions. Defaults to the Langfuse name.",
     )
     langfuse_ingest.set_defaults(func=_cmd_ingest_langfuse)
+    langsmith_ingest = ingest_subcommands.add_parser(
+        "langsmith",
+        help="Import LangSmith experiment JSON/CSV export.",
+    )
+    langsmith_ingest.add_argument(
+        "--input",
+        type=Path,
+        required=True,
+        help="LangSmith export file.",
+    )
+    langsmith_ingest.add_argument("--out", type=Path, required=True, help="PCL run directory.")
+    langsmith_ingest.add_argument(
+        "--experiment",
+        default=None,
+        help="LangSmith experiment/session name to import when multiple experiments exist.",
+    )
+    langsmith_ingest.add_argument(
+        "--score-name",
+        default=None,
+        help="LangSmith score column/key to import when multiple scores exist.",
+    )
+    langsmith_ingest.add_argument(
+        "--model",
+        default=None,
+        help="Model id filter to import when the file contains multiple models.",
+    )
+    langsmith_ingest.add_argument(
+        "--provider",
+        default=None,
+        help="Provider filter to import when the file contains multiple providers.",
+    )
+    langsmith_ingest.add_argument(
+        "--method",
+        default=None,
+        help="Method name written to PCL predictions. Defaults to the experiment name.",
+    )
+    langsmith_ingest.set_defaults(func=_cmd_ingest_langsmith)
 
     improve_parser = subcommands.add_parser(
         "improve",
@@ -737,6 +778,19 @@ def _cmd_ingest_langfuse(args: argparse.Namespace) -> None:
         source_path=args.input,
         out_dir=args.out,
         name=args.name,
+        score_name=args.score_name,
+        model=args.model,
+        provider=args.provider,
+        method=args.method,
+    )
+    print(json.dumps(payload, indent=2, ensure_ascii=False, sort_keys=True))
+
+
+def _cmd_ingest_langsmith(args: argparse.Namespace) -> None:
+    payload = ingest_langsmith_results(
+        source_path=args.input,
+        out_dir=args.out,
+        experiment=args.experiment,
         score_name=args.score_name,
         model=args.model,
         provider=args.provider,

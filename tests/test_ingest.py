@@ -6,7 +6,11 @@ import pytest
 
 from promptcontrollab.cli import main
 from promptcontrollab.files import read_json, read_jsonl
-from promptcontrollab.ingest import ingest_langfuse_results, ingest_promptfoo_results
+from promptcontrollab.ingest import (
+    ingest_langfuse_results,
+    ingest_langsmith_results,
+    ingest_promptfoo_results,
+)
 
 
 def test_ingest_promptfoo_v3_writes_pcl_run(tmp_path: Path) -> None:
@@ -252,6 +256,141 @@ def test_ingest_langfuse_requires_filter_for_multiple_names(tmp_path: Path) -> N
         )
 
 
+def test_ingest_langsmith_runs_writes_pcl_run(tmp_path: Path) -> None:
+    source = tmp_path / "langsmith-runs.json"
+    out_dir = tmp_path / "runs" / "from-langsmith"
+    source.write_text(json.dumps(_langsmith_payload()), encoding="utf-8")
+
+    payload = ingest_langsmith_results(
+        source_path=source,
+        out_dir=out_dir,
+        experiment="candidate",
+        score_name="exact_match",
+    )
+
+    assert payload["count"] == 2
+    assert payload["mean_score"] == 0.5
+    predictions = read_jsonl(out_dir / "predictions.jsonl")
+    assert [item["id"] for item in predictions] == ["run-1", "run-2"]
+    assert [item["score"] for item in predictions] == [1.0, 0.0]
+    assert predictions[0]["output"] == "4"
+    assert predictions[0]["expected"] == "4"
+    assert predictions[0]["slice"] == "arithmetic"
+    manifest = read_json(out_dir / "manifest.json")
+    assert manifest["mode"] == "langsmith_ingest"
+    assert manifest["method"] == "candidate"
+    assert manifest["metric"] == "langsmith_score:exact_match"
+    assert manifest["source_tool"] == "langsmith"
+    assert manifest["model"]["provider"] == "openai"
+    assert manifest["model"]["model_id"] == "gpt-4o-mini"
+    assert manifest["langsmith_filter"] == {
+        "experiment": "candidate",
+        "score_name": "exact_match",
+        "model": "gpt-4o-mini",
+        "provider": "openai",
+    }
+
+
+def test_ingest_langsmith_cli_filters_experiment_score_and_model(tmp_path: Path) -> None:
+    source = tmp_path / "langsmith-runs.json"
+    out_dir = tmp_path / "runs" / "filtered"
+    payload = _langsmith_payload()
+    payload["runs"].append(
+        {
+            "id": "run-3",
+            "experiment_name": "baseline",
+            "outputs": {"answer": "wrong"},
+            "reference_outputs": {"answer": "4"},
+            "feedback_stats": {"exact_match": 0},
+            "extra": {
+                "metadata": {
+                    "provider": "anthropic",
+                    "model": "claude-sonnet-4-20250514",
+                    "slice": "arithmetic",
+                }
+            },
+        }
+    )
+    source.write_text(json.dumps(payload), encoding="utf-8")
+
+    assert (
+        main(
+            [
+                "ingest",
+                "langsmith",
+                "--input",
+                str(source),
+                "--out",
+                str(out_dir),
+                "--experiment",
+                "candidate",
+                "--score-name",
+                "exact_match",
+                "--model",
+                "gpt-4o-mini",
+                "--method",
+                "candidate",
+            ]
+        )
+        == 0
+    )
+
+    predictions = read_jsonl(out_dir / "predictions.jsonl")
+    assert len(predictions) == 2
+    manifest = read_json(out_dir / "manifest.json")
+    assert manifest["langsmith_filter"]["experiment"] == "candidate"
+    assert manifest["langsmith_filter"]["model"] == "gpt-4o-mini"
+
+
+def test_ingest_langsmith_csv_export(tmp_path: Path) -> None:
+    source = tmp_path / "langsmith-runs.csv"
+    out_dir = tmp_path / "runs" / "csv"
+    source.write_text(
+        "\n".join(
+            [
+                "run_id,experiment_name,output,reference_output,exact_match,model,provider,slice",
+                "run-1,candidate,YES,YES,1,gpt-4o-mini,openai,format",
+                "run-2,candidate,NO,YES,0,gpt-4o-mini,openai,format",
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    ingest_langsmith_results(
+        source_path=source,
+        out_dir=out_dir,
+        experiment="candidate",
+        score_name="exact_match",
+    )
+
+    metrics = read_json(out_dir / "metrics.json")
+    assert metrics["mean_score"] == 0.5
+    assert metrics["by_slice"] == {"format": 0.5}
+
+
+def test_ingest_langsmith_requires_filter_for_multiple_experiments(tmp_path: Path) -> None:
+    source = tmp_path / "langsmith-runs.json"
+    payload = _langsmith_payload()
+    payload["runs"].append(
+        {
+            "id": "run-3",
+            "experiment_name": "baseline",
+            "outputs": {"answer": "wrong"},
+            "reference_outputs": {"answer": "4"},
+            "feedback_stats": {"exact_match": 0},
+            "extra": {"metadata": {"model": "gpt-4o-mini", "provider": "openai"}},
+        }
+    )
+    source.write_text(json.dumps(payload), encoding="utf-8")
+
+    with pytest.raises(ValueError, match="Multiple LangSmith experiments"):
+        ingest_langsmith_results(
+            source_path=source,
+            out_dir=tmp_path / "run",
+            score_name="exact_match",
+        )
+
+
 def _promptfoo_v3_payload() -> dict[str, Any]:
     return {
         "version": 3,
@@ -316,6 +455,43 @@ def _langfuse_payload() -> dict[str, Any]:
                 "model": "gpt-4o-mini",
                 "metadata": {"provider": "openai"},
                 "scores": [{"name": "exact_match", "value": 0}],
+            },
+        ]
+    }
+
+
+def _langsmith_payload() -> dict[str, Any]:
+    return {
+        "runs": [
+            {
+                "id": "run-1",
+                "experiment_name": "candidate",
+                "inputs": {"question": "2+2"},
+                "outputs": {"answer": "4"},
+                "reference_outputs": {"answer": "4"},
+                "feedback_stats": {"exact_match": 1},
+                "extra": {
+                    "metadata": {
+                        "provider": "openai",
+                        "model": "gpt-4o-mini",
+                        "slice": "arithmetic",
+                    }
+                },
+            },
+            {
+                "id": "run-2",
+                "experiment_name": "candidate",
+                "inputs": {"question": "3+3"},
+                "outputs": {"answer": "5"},
+                "reference_outputs": {"answer": "6"},
+                "feedback_stats": {"exact_match": 0},
+                "extra": {
+                    "metadata": {
+                        "provider": "openai",
+                        "model": "gpt-4o-mini",
+                        "slice": "arithmetic",
+                    }
+                },
             },
         ]
     }
