@@ -383,7 +383,8 @@ dashboards: paper diagnostics first, engineering agent views second. The **Tutor
 the workflow with screenshots from the current UI plus step-by-step instructions; the **Workflows** tab can run local actions
 from the browser:
 guard a prompt, run analyze, run gate, audit a git diff, build `agent_run.json`, generate a PR
-summary, or export a report zip. Execution mode defaults to `confirm`; advanced users can choose
+summary, import Promptfoo/Langfuse/LangSmith exports into an external evidence bundle, or export a
+report zip. Execution mode defaults to `confirm`; advanced users can choose
 `auto` or `command`.
 
 CLI equivalent for the zip export:
@@ -393,7 +394,7 @@ pcl export-report --run runs/quick --out runs/quick/report.zip
 ```
 
 - **Workflows:** trigger allowlisted local workflows while previewing outputs before files are
-  written.
+  written, including `pcl evidence-from` for external eval/observability exports.
 - **Tutorial:** learn each feature as “screenshot -> steps -> artifact -> meaning -> next step”,
   with synchronized English and Chinese UI screenshots.
 - **Guard Prompt:** try `pcl guard` interactively and inspect risk, policy violations, token cost,

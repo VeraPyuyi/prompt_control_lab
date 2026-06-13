@@ -54,6 +54,7 @@ from promptcontrollab.ui.workflows import (
     run_analyze_workflow,
     run_audit_workflow,
     run_evidence_card_workflow,
+    run_external_evidence_workflow,
     run_gate_workflow,
     run_guard_workflow,
     run_pr_summary_workflow,
@@ -127,10 +128,26 @@ TEXT = {
         "analyze_workflow": "Run analyze",
         "gate_workflow": "Run gate",
         "evidence_card_workflow": "Build evidence card",
+        "external_evidence_workflow": "External evidence bundle",
         "audit_workflow": "Run audit-diff",
         "agent_run_workflow": "Build agent-run",
         "pr_summary_workflow": "Generate PR summary",
         "export_workflow": "Export report zip",
+        "external_tool": "External tool",
+        "baseline_input": "Baseline export",
+        "candidate_input": "Candidate export",
+        "score_name": "Score name",
+        "provider": "Provider",
+        "model": "Model",
+        "baseline_prompt_id": "Baseline prompt ID",
+        "candidate_prompt_id": "Candidate prompt ID",
+        "baseline_name": "Baseline name",
+        "candidate_name": "Candidate name",
+        "baseline_experiment": "Baseline experiment",
+        "candidate_experiment": "Candidate experiment",
+        "split_hash": "Split hash",
+        "bootstrap_samples": "Bootstrap samples",
+        "permutation_samples": "Permutation samples",
         "out_dir": "Output directory",
         "data_path": "Task JSONL",
         "baseline_predictions": "Baseline predictions",
@@ -298,10 +315,26 @@ TEXT = {
         "analyze_workflow": "运行 analyze",
         "gate_workflow": "运行 gate",
         "evidence_card_workflow": "生成证据卡",
+        "external_evidence_workflow": "生成外部证据包",
         "audit_workflow": "运行 audit-diff",
         "agent_run_workflow": "生成 agent-run",
         "pr_summary_workflow": "生成 PR summary",
         "export_workflow": "导出报告 zip",
+        "external_tool": "外部工具",
+        "baseline_input": "Baseline 导出文件",
+        "candidate_input": "Candidate 导出文件",
+        "score_name": "分数字段名",
+        "provider": "Provider",
+        "model": "模型",
+        "baseline_prompt_id": "Baseline prompt ID",
+        "candidate_prompt_id": "Candidate prompt ID",
+        "baseline_name": "Baseline 名称",
+        "candidate_name": "Candidate 名称",
+        "baseline_experiment": "Baseline 实验名",
+        "candidate_experiment": "Candidate 实验名",
+        "split_hash": "Split hash",
+        "bootstrap_samples": "Bootstrap 采样数",
+        "permutation_samples": "Permutation 采样数",
         "out_dir": "输出目录",
         "data_path": "任务 JSONL",
         "baseline_predictions": "Baseline predictions",
@@ -429,6 +462,12 @@ CHOICE_OPTIONS = {
         ("unknown", "unknown", "未知"),
         ("true", "true", "通过"),
         ("false", "false", "失败"),
+    ],
+    "external_tool": [
+        ("auto", "auto", "自动识别"),
+        ("promptfoo", "promptfoo", "Promptfoo"),
+        ("langfuse", "langfuse", "Langfuse"),
+        ("langsmith", "langsmith", "LangSmith"),
     ],
 }
 
@@ -889,6 +928,12 @@ CHOICE_OPTIONS.update(
             ("unknown", "unknown", "未知"),
             ("true", "true", "通过"),
             ("false", "false", "失败"),
+        ],
+        "external_tool": [
+            ("auto", "auto", "自动识别"),
+            ("promptfoo", "promptfoo", "Promptfoo"),
+            ("langfuse", "langfuse", "Langfuse"),
+            ("langsmith", "langsmith", "LangSmith"),
         ],
     }
 )
@@ -1522,6 +1567,99 @@ def _render_workflows_tab(
                     execution_mode=execution_mode,
                     confirmed=confirmed,
                     overwrite=overwrite,
+                    safe_root=runs_dir,
+                    allow_external_outputs=allow_external_outputs,
+                ),
+            )
+
+    with st.expander(text["external_evidence_workflow"]):
+        tool_label = str(
+            st.selectbox(
+                text["external_tool"],
+                _choice_labels("external_tool", language),
+                key="wf_external_tool",
+            )
+        )
+        external_tool = str(_choice_value("external_tool", tool_label, language))
+        baseline_input = Path(
+            st.text_input(
+                text["baseline_input"],
+                "results.json",
+                key="wf_external_baseline_input",
+            )
+        )
+        candidate_input = Path(
+            st.text_input(
+                text["candidate_input"],
+                "results.json",
+                key="wf_external_candidate_input",
+            )
+        )
+        out_dir = Path(
+            st.text_input(
+                text["out_dir"],
+                str(runs_dir / "external-evidence"),
+                key="wf_external_out",
+            )
+        )
+        columns = st.columns(3)
+        baseline_prompt_id = columns[0].text_input(
+            text["baseline_prompt_id"],
+            "baseline",
+            key="wf_external_baseline_prompt_id",
+        )
+        candidate_prompt_id = columns[1].text_input(
+            text["candidate_prompt_id"],
+            "candidate",
+            key="wf_external_candidate_prompt_id",
+        )
+        score_name = columns[2].text_input(
+            text["score_name"],
+            "",
+            key="wf_external_score_name",
+        )
+        columns = st.columns(3)
+        provider = columns[0].text_input(text["provider"], "", key="wf_external_provider")
+        model = columns[1].text_input(text["model"], "", key="wf_external_model")
+        split_hash = columns[2].text_input(text["split_hash"], "", key="wf_external_split_hash")
+        columns = st.columns(2)
+        bootstrap_samples = int(
+            columns[0].number_input(
+                text["bootstrap_samples"],
+                min_value=1,
+                value=100,
+                key="wf_external_bootstrap",
+            )
+        )
+        permutation_samples = int(
+            columns[1].number_input(
+                text["permutation_samples"],
+                min_value=1,
+                value=100,
+                key="wf_external_permutation",
+            )
+        )
+        confirmed = _confirm_checkbox(st, text, execution_mode, "wf_external_confirm")
+        if st.button(text["run_action"], key="wf_external_run_button"):
+            _render_workflow_result(
+                st,
+                text,
+                lambda: run_external_evidence_workflow(
+                    tool=external_tool,
+                    baseline_input=baseline_input,
+                    candidate_input=candidate_input,
+                    out_dir=out_dir,
+                    execution_mode=execution_mode,
+                    confirmed=confirmed,
+                    overwrite=overwrite,
+                    score_name=score_name.strip() or None,
+                    provider=provider.strip() or None,
+                    model=model.strip() or None,
+                    baseline_prompt_id=baseline_prompt_id.strip() or None,
+                    candidate_prompt_id=candidate_prompt_id.strip() or None,
+                    split_hash=split_hash.strip() or None,
+                    bootstrap_samples=bootstrap_samples,
+                    permutation_samples=permutation_samples,
                     safe_root=runs_dir,
                     allow_external_outputs=allow_external_outputs,
                 ),

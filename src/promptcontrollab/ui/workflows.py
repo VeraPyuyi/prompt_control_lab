@@ -5,11 +5,13 @@ from __future__ import annotations
 import shlex
 from collections.abc import Callable
 from pathlib import Path
+from typing import cast
 
 from promptcontrollab.agent_run import build_agent_run_manifest
 from promptcontrollab.artifact_export import export_report_zip
 from promptcontrollab.audit_diff import run_audit_diff
 from promptcontrollab.evidence_card import write_evidence_card
+from promptcontrollab.external_evidence import ExternalTool, build_external_evidence
 from promptcontrollab.files import JsonDict, ensure_dir, write_json
 from promptcontrollab.gate import run_gate
 from promptcontrollab.history import index_history
@@ -275,6 +277,127 @@ def run_evidence_card_workflow(
         name="evidence-card",
         command=command,
         outputs=[resolved_json, resolved_markdown],
+        execution_mode=execution_mode,
+        confirmed=confirmed,
+        overwrite=overwrite,
+        safe_root=safe_root,
+        allow_external_outputs=allow_external_outputs,
+        runner=runner,
+    )
+
+
+def run_external_evidence_workflow(
+    *,
+    tool: str,
+    baseline_input: Path,
+    candidate_input: Path,
+    out_dir: Path,
+    execution_mode: str,
+    confirmed: bool,
+    overwrite: bool,
+    score_name: str | None = None,
+    provider: str | None = None,
+    baseline_provider: str | None = None,
+    candidate_provider: str | None = None,
+    model: str | None = None,
+    baseline_model: str | None = None,
+    candidate_model: str | None = None,
+    baseline_prompt_id: str | None = None,
+    candidate_prompt_id: str | None = None,
+    baseline_name: str | None = None,
+    candidate_name: str | None = None,
+    baseline_experiment: str | None = None,
+    candidate_experiment: str | None = None,
+    split_hash: str | None = None,
+    seed: int = 0,
+    bootstrap_samples: int = 1000,
+    permutation_samples: int = 1000,
+    safe_root: Path | None = None,
+    allow_external_outputs: bool = False,
+) -> JsonDict:
+    """Run or preview the external eval/observability evidence bridge."""
+
+    if tool not in {"auto", "promptfoo", "langfuse", "langsmith"}:
+        msg = f"Unknown external evidence tool `{tool}`."
+        raise ValueError(msg)
+    outputs = [
+        out_dir / "evidence_from_result.json",
+        out_dir / "evidence_card.json",
+        out_dir / "evidence_card.md",
+        out_dir / "report.html",
+        out_dir / "comparison" / "stats.json",
+        out_dir / "comparison" / "comparison_validity.json",
+    ]
+    command = _command(
+        [
+            "pcl",
+            "evidence-from",
+            "--tool",
+            tool,
+            "--baseline-input",
+            str(baseline_input),
+            "--candidate-input",
+            str(candidate_input),
+            "--out",
+            str(out_dir),
+            *(_option("--score-name", score_name) if score_name else []),
+            *(_option("--provider", provider) if provider else []),
+            *(_option("--baseline-provider", baseline_provider) if baseline_provider else []),
+            *(_option("--candidate-provider", candidate_provider) if candidate_provider else []),
+            *(_option("--model", model) if model else []),
+            *(_option("--baseline-model", baseline_model) if baseline_model else []),
+            *(_option("--candidate-model", candidate_model) if candidate_model else []),
+            *(_option("--baseline-prompt-id", baseline_prompt_id) if baseline_prompt_id else []),
+            *(_option("--candidate-prompt-id", candidate_prompt_id) if candidate_prompt_id else []),
+            *(_option("--baseline-name", baseline_name) if baseline_name else []),
+            *(_option("--candidate-name", candidate_name) if candidate_name else []),
+            *(_option("--baseline-experiment", baseline_experiment) if baseline_experiment else []),
+            *(
+                _option("--candidate-experiment", candidate_experiment)
+                if candidate_experiment
+                else []
+            ),
+            *(_option("--split-hash", split_hash) if split_hash else []),
+            "--seed",
+            str(seed),
+            "--bootstrap-samples",
+            str(bootstrap_samples),
+            "--permutation-samples",
+            str(permutation_samples),
+        ]
+    )
+
+    def runner() -> JsonDict:
+        return {
+            "external_evidence": build_external_evidence(
+                tool=cast(ExternalTool, tool),
+                baseline_input=baseline_input,
+                candidate_input=candidate_input,
+                out_dir=out_dir,
+                score_name=score_name,
+                provider=provider,
+                baseline_provider=baseline_provider,
+                candidate_provider=candidate_provider,
+                model=model,
+                baseline_model=baseline_model,
+                candidate_model=candidate_model,
+                baseline_prompt_id=baseline_prompt_id,
+                candidate_prompt_id=candidate_prompt_id,
+                baseline_name=baseline_name,
+                candidate_name=candidate_name,
+                baseline_experiment=baseline_experiment,
+                candidate_experiment=candidate_experiment,
+                split_hash=split_hash,
+                seed=seed,
+                bootstrap_samples=bootstrap_samples,
+                permutation_samples=permutation_samples,
+            )
+        }
+
+    return _handle_execution(
+        name="evidence-from",
+        command=command,
+        outputs=outputs,
         execution_mode=execution_mode,
         confirmed=confirmed,
         overwrite=overwrite,

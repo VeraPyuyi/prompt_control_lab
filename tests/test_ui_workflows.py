@@ -15,6 +15,7 @@ from promptcontrollab.ui.workflows import (
     run_analyze_workflow,
     run_audit_workflow,
     run_evidence_card_workflow,
+    run_external_evidence_workflow,
     run_gate_workflow,
     run_guard_workflow,
     run_pr_summary_workflow,
@@ -307,6 +308,58 @@ def test_evidence_card_workflow_preview_command_and_auto_modes(tmp_path: Path) -
     assert (run_dir / "evidence_card.md").exists()
 
 
+def test_external_evidence_workflow_preview_and_auto_modes(tmp_path: Path) -> None:
+    source = tmp_path / "promptfoo-results.json"
+    source.write_text(json.dumps(_paired_promptfoo_payload(count=20)), encoding="utf-8")
+    out_dir = tmp_path / "runs" / "external-evidence"
+
+    preview = run_external_evidence_workflow(
+        tool="promptfoo",
+        baseline_input=source,
+        candidate_input=source,
+        out_dir=out_dir,
+        execution_mode="confirm",
+        confirmed=False,
+        overwrite=False,
+        provider="openai:gpt-4o-mini-20260601",
+        baseline_prompt_id="baseline",
+        candidate_prompt_id="candidate",
+        split_hash="split-ui-123",
+        bootstrap_samples=20,
+        permutation_samples=100,
+        safe_root=tmp_path / "runs",
+    )
+
+    assert preview["status"] == "preview"
+    assert "pcl evidence-from" in preview["command"]
+    assert not (out_dir / "evidence_from_result.json").exists()
+
+    result = run_external_evidence_workflow(
+        tool="promptfoo",
+        baseline_input=source,
+        candidate_input=source,
+        out_dir=out_dir,
+        execution_mode="auto",
+        confirmed=False,
+        overwrite=False,
+        provider="openai:gpt-4o-mini-20260601",
+        baseline_prompt_id="baseline",
+        candidate_prompt_id="candidate",
+        split_hash="split-ui-123",
+        bootstrap_samples=20,
+        permutation_samples=100,
+        safe_root=tmp_path / "runs",
+    )
+
+    assert result["status"] == "completed"
+    assert result["external_evidence"]["kind"] == "external_evidence"
+    assert (out_dir / "evidence_from_result.json").exists()
+    assert (out_dir / "evidence_card.md").exists()
+    assert (out_dir / "report.html").exists()
+    validity = read_json(out_dir / "comparison" / "comparison_validity.json")
+    assert validity["validity"] == "clean"
+
+
 def test_create_demo_artifacts_workflow_generates_demo_run(tmp_path: Path) -> None:
     runs_dir = tmp_path / "runs"
 
@@ -403,3 +456,49 @@ def _write(path: Path, text: str) -> None:
 
 def _write_json(path: Path, payload: JsonDict) -> None:
     _write(path, json.dumps(payload, indent=2, sort_keys=True) + "\n")
+
+
+def _paired_promptfoo_payload(*, count: int) -> JsonDict:
+    provider = "openai:gpt-4o-mini-20260601"
+    results: list[JsonDict] = []
+    for index in range(count):
+        expected = str(index + 1)
+        test_case: JsonDict = {
+            "vars": {"slice": "demo", "question": f"{index}+1"},
+            "assert": [{"type": "equals", "value": expected}],
+        }
+        results.append(
+            {
+                "promptId": "baseline",
+                "provider": {"id": provider, "label": "OpenAI mini pinned"},
+                "testIdx": index,
+                "testCase": test_case,
+                "response": {"output": "wrong"},
+                "success": False,
+                "score": 0,
+            }
+        )
+        results.append(
+            {
+                "promptId": "candidate",
+                "provider": {"id": provider, "label": "OpenAI mini pinned"},
+                "testIdx": index,
+                "testCase": test_case,
+                "response": {"output": expected},
+                "success": True,
+                "score": 1,
+            }
+        )
+    return {
+        "version": 3,
+        "timestamp": "2026-06-13T00:00:00Z",
+        "prompts": [
+            {"id": "baseline", "raw": "Answer the question.", "label": "Baseline"},
+            {
+                "id": "candidate",
+                "raw": "Answer with only the final result.",
+                "label": "Candidate",
+            },
+        ],
+        "results": results,
+    }
