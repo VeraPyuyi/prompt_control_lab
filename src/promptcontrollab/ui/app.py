@@ -27,6 +27,7 @@ from promptcontrollab.ui.components import (
     badge,
     dashboard_css,
     empty_state,
+    evidence_ladder_html,
     metric_cards,
     paper_card_html,
     prompt_diff,
@@ -36,6 +37,7 @@ from promptcontrollab.ui.data import (
     audit_detail_sections,
     changed_line_rows,
     claim_check_summary,
+    claim_evidence_ladder,
     evidence_card_rows,
     filter_history_rows,
     first_comparison,
@@ -84,6 +86,7 @@ TEXT = {
         "evidence_card_missing": "No evidence_card.json found yet.",
         "evidence_card_command": "pcl evidence-card --run <selected-run>",
         "claim_check": "Claim check",
+        "claim_ladder": "Evidence ladder",
         "claim_check_missing": "No claim_check.json found yet.",
         "claim_check_command": "pcl claim-check --run <selected-run> --claim full-research",
         "claim_check_status": "Claim status",
@@ -280,6 +283,7 @@ TEXT = {
         "evidence_card_missing": "当前还没有 evidence_card.json。",
         "evidence_card_command": "pcl evidence-card --run <选中的 run>",
         "claim_check": "主张检查",
+        "claim_ladder": "证据阶梯",
         "claim_check_missing": "当前还没有 claim_check.json。",
         "claim_check_command": "pcl claim-check --run <选中的 run> --claim full-research",
         "claim_check_status": "主张状态",
@@ -1306,6 +1310,7 @@ def _render_research_overview_tab(st: Any, text: dict[str, str], detail: JsonDic
     evidence_recommendation = evidence_dict.get("recommendation", "missing")
     claim_check = claim_check_summary(detail)
     claim_status = claim_check.get("status", "missing")
+    claim_ladder = claim_evidence_ladder(detail)
 
     st.markdown(
         '<div class="pcl-grid">'
@@ -1349,6 +1354,13 @@ def _render_research_overview_tab(st: Any, text: dict[str, str], detail: JsonDic
         unsafe_allow_html=True,
     )
     if claim_check:
+        ladder_html = evidence_ladder_html(claim_ladder)
+        if ladder_html:
+            st.markdown(
+                f'<div class="pcl-section-title">{html.escape(text["claim_ladder"])}</div>'
+                + ladder_html,
+                unsafe_allow_html=True,
+            )
         claim_rows = [
             {"field": text["claim_check_requested"], "value": claim_check.get("requested_claim", "")},
             {"field": text["claim_check_status"], "value": claim_check.get("status", "")},

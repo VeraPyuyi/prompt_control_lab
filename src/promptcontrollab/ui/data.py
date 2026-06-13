@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+from promptcontrollab.claim_check import CLAIM_LABELS, CLAIM_REQUIREMENTS, TIER_ORDER
 from promptcontrollab.files import JsonDict, read_json
 from promptcontrollab.report_model import ReportModel
 
@@ -234,6 +235,45 @@ def claim_check_summary(detail: JsonDict) -> JsonDict:
     }
 
 
+def claim_evidence_ladder(detail: JsonDict) -> list[JsonDict]:
+    """Return claim-scope ladder rows for paired/partial/full research claims."""
+
+    claim = claim_check_summary(detail)
+    evidence_card = detail.get("evidence_card")
+    evidence_dict = evidence_card if isinstance(evidence_card, dict) else {}
+    tier_name = str(
+        claim.get("evidence_tier")
+        or evidence_dict.get("evidence_tier")
+        or "tier_0_insufficient_or_contradicted"
+    )
+    tier_value = TIER_ORDER.get(tier_name, 0)
+    recommendation = str(
+        claim.get("recommendation") or evidence_dict.get("recommendation") or "unknown"
+    )
+    requested_claim = str(claim.get("requested_claim") or "")
+    missing = claim.get("next_tier_missing")
+    missing_items = missing if isinstance(missing, list) else []
+    rows: list[JsonDict] = []
+    for claim_name, required_tier in CLAIM_REQUIREMENTS.items():
+        status = _claim_ladder_status(
+            tier_value=tier_value,
+            required_tier=required_tier,
+            recommendation=recommendation,
+        )
+        rows.append(
+            {
+                "claim": claim_name,
+                "label": CLAIM_LABELS.get(claim_name, claim_name),
+                "required_tier": required_tier,
+                "current_tier": tier_name,
+                "status": status,
+                "requested": claim_name == requested_claim,
+                "missing": list(missing_items) if status == "missing" else [],
+            }
+        )
+    return rows
+
+
 def history_rows(detail: JsonDict) -> list[JsonDict]:
     """Return normalized history rows for tables and trend charts."""
 
@@ -331,6 +371,21 @@ def _evidence_signal(section_name: str, payload: JsonDict) -> str:
             f"delta={payload.get('best_delta')}"
         )
     return str(payload.get("reason") or payload.get("status") or "")
+
+
+def _claim_ladder_status(
+    *,
+    tier_value: int,
+    required_tier: int,
+    recommendation: str,
+) -> str:
+    if tier_value < required_tier:
+        return "missing"
+    if recommendation == "supported":
+        return "supported"
+    if recommendation in {"not_supported", "insufficient_evidence"}:
+        return "blocked"
+    return "needs_review"
 
 
 def _hidden_state_payload(detail: JsonDict) -> JsonDict:

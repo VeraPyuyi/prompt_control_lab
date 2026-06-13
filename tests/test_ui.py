@@ -11,11 +11,12 @@ import pytest
 from promptcontrollab.cli import main
 from promptcontrollab.report_model import ReportModel
 from promptcontrollab.ui import charts
-from promptcontrollab.ui.components import dashboard_css, stat_card_html
+from promptcontrollab.ui.components import dashboard_css, evidence_ladder_html, stat_card_html
 from promptcontrollab.ui.data import (
     audit_detail_sections,
     changed_line_rows,
     claim_check_summary,
+    claim_evidence_ladder,
     evidence_card_rows,
     filter_history_rows,
     first_comparison,
@@ -270,6 +271,7 @@ def test_report_model_and_ui_detail_read_evidence_card(tmp_path: Path) -> None:
     detail = load_run_detail(run)
     rows = evidence_card_rows(detail)
     claim = claim_check_summary(detail)
+    ladder = claim_evidence_ladder(detail)
 
     assert model.evidence_card["recommendation"] == "supported"
     assert model.claim_check["status"] == "pass"
@@ -281,6 +283,9 @@ def test_report_model_and_ui_detail_read_evidence_card(tmp_path: Path) -> None:
     assert rows[0]["status"] == "pass"
     assert claim["status"] == "pass"
     assert claim["safe_claim"] == "Full research diagnostic claim is supported."
+    assert [row["claim"] for row in ladder] == ["paired", "partial-research", "full-research"]
+    assert all(row["status"] == "supported" for row in ladder)
+    assert ladder[-1]["requested"] is True
 
 
 def test_research_diagnostic_rows_summarize_paper_artifacts(tmp_path: Path) -> None:
@@ -338,7 +343,39 @@ def test_research_diagnostic_chart_and_design_tokens(monkeypatch: pytest.MonkeyP
     assert figure.layout.title.text == "Research coverage"
     assert captured["color"] == "status"
     assert "--pcl-bg" in dashboard_css()
+    assert ".pcl-evidence-ladder" in dashboard_css()
     assert "pcl-stat-card" in stat_card_html("Trajectory", "available", "turnpike-like")
+
+
+def test_claim_evidence_ladder_marks_missing_and_requested_claim(tmp_path: Path) -> None:
+    run = tmp_path / "runs" / "comparison"
+    _write_json(
+        run / "evidence_card.json",
+        {
+            "recommendation": "supported",
+            "evidence_tier": "tier_2_paired_comparison",
+        },
+    )
+    _write_json(
+        run / "claim_check.json",
+        {
+            "requested_claim": "full-research",
+            "status": "fail",
+            "evidence_tier": "tier_2_paired_comparison",
+            "recommendation": "supported",
+            "next_tier_missing": ["soft-hard", "trajectory", "Riccati", "tv-soft"],
+        },
+    )
+
+    rows = claim_evidence_ladder(load_run_detail(run))
+    rendered = evidence_ladder_html(rows)
+
+    assert rows[0]["status"] == "supported"
+    assert rows[1]["status"] == "missing"
+    assert rows[2]["status"] == "missing"
+    assert rows[2]["requested"] is True
+    assert "pcl-ladder-item supported" in rendered
+    assert "pcl-ladder-item missing requested" in rendered
 
 
 def test_report_model_exposes_primary_comparison_fields(tmp_path: Path) -> None:

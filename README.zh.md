@@ -83,7 +83,8 @@ comparison-validity 审计、explanation、gate 结果、报告 artifact 和本�
 surrogate matrices 或 method predictions，可以用 `pcl diagnose` 统一生成诊断报告。现在
 research-demo 还会写出 synthetic tri-split、baseline / candidate scored runs、成对统计、
 prompt-only 比较有效性、`evidence_card.json` / `evidence_card.md` 和 `claim_check.json`，
-本地 UI 的研究总览页也会直接展示证据卡和主张检查边界。
+本地 UI 的研究总览页也会直接展示证据卡和主张证据阶梯，方便 reviewer 判断当前证据支持
+paired、partial-research 还是 full-research 层级。
 
 完整对应关系见 [论文功能映射](docs/research_from_paper.zh.md)。
 

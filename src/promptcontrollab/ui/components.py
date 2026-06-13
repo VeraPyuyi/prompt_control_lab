@@ -111,6 +111,51 @@ def dashboard_css() -> str:
   font-weight: 700;
   color: var(--pcl-ink);
 }
+.pcl-evidence-ladder {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: 12px;
+  margin: 10px 0 18px 0;
+}
+.pcl-ladder-item {
+  border: 1px solid var(--pcl-border);
+  border-left: 5px solid var(--pcl-muted);
+  border-radius: 8px;
+  background: var(--pcl-surface);
+  padding: 12px 14px;
+  min-height: 112px;
+}
+.pcl-ladder-item.supported { border-left-color: var(--pcl-good); }
+.pcl-ladder-item.needs-review { border-left-color: var(--pcl-warn); }
+.pcl-ladder-item.missing, .pcl-ladder-item.blocked { border-left-color: var(--pcl-risk); }
+.pcl-ladder-item.requested {
+  box-shadow: 0 0 0 2px rgba(37,99,235,.16);
+}
+.pcl-ladder-top {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  align-items: flex-start;
+}
+.pcl-ladder-title {
+  color: var(--pcl-ink);
+  font-weight: 700;
+  line-height: 1.25;
+}
+.pcl-ladder-pill {
+  border-radius: 999px;
+  background: var(--pcl-surface-muted);
+  color: var(--pcl-muted);
+  font-size: .72rem;
+  padding: 2px 8px;
+  white-space: nowrap;
+}
+.pcl-ladder-body {
+  color: var(--pcl-muted);
+  font-size: .86rem;
+  line-height: 1.35;
+  margin-top: 8px;
+}
 </style>
 """
 
@@ -136,6 +181,48 @@ def paper_card_html(title: str, body: str) -> str:
         f"<p>{html.escape(body)}</p>"
         "</div>"
     )
+
+
+def evidence_ladder_html(rows: list[dict[str, Any]]) -> str:
+    """Return an HTML ladder for prompt-optimization claim scope."""
+
+    if not rows:
+        return ""
+    items = []
+    for row in rows:
+        status = str(row.get("status") or "unknown")
+        css_status = status.replace("_", "-")
+        requested = bool(row.get("requested"))
+        classes = f"pcl-ladder-item {css_status}" + (" requested" if requested else "")
+        title = str(row.get("label") or row.get("claim") or "")
+        claim = str(row.get("claim") or "")
+        tier = row.get("required_tier")
+        current = str(row.get("current_tier") or "")
+        missing = row.get("missing")
+        missing_text = ""
+        if isinstance(missing, list) and missing:
+            missing_text = f"Missing: {', '.join(str(item) for item in missing)}"
+        body = "; ".join(
+            part
+            for part in [
+                f"claim={claim}",
+                f"required tier={tier}",
+                f"current={current}",
+                missing_text,
+            ]
+            if part
+        )
+        requested_label = " · requested" if requested else ""
+        items.append(
+            f'<div class="{html.escape(classes)}">'
+            '<div class="pcl-ladder-top">'
+            f'<div class="pcl-ladder-title">{html.escape(title)}</div>'
+            f'<div class="pcl-ladder-pill">{html.escape(status + requested_label)}</div>'
+            "</div>"
+            f'<div class="pcl-ladder-body">{html.escape(body)}</div>'
+            "</div>"
+        )
+    return '<div class="pcl-evidence-ladder">' + "".join(items) + "</div>"
 
 
 def badge(label: str, value: object) -> str:
