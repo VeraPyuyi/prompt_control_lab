@@ -40,8 +40,9 @@ Promptfoo、LangSmith 和 Langfuse 分别擅长 LLM 工程流程里的不同部�
 pcl ecosystem-demo --examples examples/external --out runs/ecosystem-demo
 ```
 
-这个命令会写出 `runs/ecosystem-demo/README.md`、`ecosystem_demo.json`，
-并为每个外部工具生成一套 evidence bundle：
+这个命令会写出 `runs/ecosystem-demo/README.md`、`ecosystem_demo.json`、
+`research_diagnostics.md`、`research_diagnostics.json`，并为每个外部工具生成一套
+evidence bundle：
 
 - `runs/ecosystem-demo/promptfoo/`
 - `runs/ecosystem-demo/langfuse/`
@@ -52,7 +53,7 @@ PCL 补充了什么证据，以及当前还缺哪些证据。
 也可以用 `pcl ui --runs runs/ecosystem-demo` 打开根目录；Research Overview
 会按外部工具逐行展示每套 evidence bundle。
 
-如果要按论文证据地图审计整套 bundle，可以继续运行：
+demo 会自动按论文证据地图审计整套 bundle。如果之后手动改过 bundle，可以重新运行：
 
 ```bash
 pcl diagnose --run runs/ecosystem-demo

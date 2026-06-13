@@ -51,8 +51,9 @@ Run all bundled bridge examples at once:
 pcl ecosystem-demo --examples examples/external --out runs/ecosystem-demo
 ```
 
-This writes `runs/ecosystem-demo/README.md`, `ecosystem_demo.json`, and one
-evidence bundle per external tool:
+This writes `runs/ecosystem-demo/README.md`, `ecosystem_demo.json`,
+`research_diagnostics.md`, `research_diagnostics.json`, and one evidence bundle
+per external tool:
 
 - `runs/ecosystem-demo/promptfoo/`
 - `runs/ecosystem-demo/langfuse/`
@@ -64,7 +65,8 @@ You can also open the root directory in the local UI with
 `pcl ui --runs runs/ecosystem-demo`; the Research Overview will show one row per
 external-tool evidence bundle.
 
-To audit the bundle against the paper-derived evidence map, run:
+The demo automatically audits the bundle against the paper-derived evidence map.
+To regenerate that diagnosis after editing the bundle, run:
 
 ```bash
 pcl diagnose --run runs/ecosystem-demo

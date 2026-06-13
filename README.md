@@ -103,9 +103,8 @@ research diagnostics layer on top:
 # Fast all-tools demo with bundled Promptfoo/Langfuse/LangSmith-style exports.
 pcl ecosystem-demo --examples examples/external --out runs/ecosystem-demo
 
-# Then open runs/ecosystem-demo/README.md and each bridge_summary.md.
-# Or run the paper-evidence gap diagnosis for the whole bundle.
-pcl diagnose --run runs/ecosystem-demo
+# Then open runs/ecosystem-demo/README.md, research_diagnostics.md,
+# and each bridge_summary.md.
 
 promptfoo eval --output results.json
 

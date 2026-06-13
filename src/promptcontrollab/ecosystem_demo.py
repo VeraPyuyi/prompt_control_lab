@@ -7,6 +7,7 @@ from pathlib import Path
 
 from promptcontrollab.external_evidence import ExternalTool, build_external_evidence
 from promptcontrollab.files import JsonDict, ensure_dir, read_json, write_json
+from promptcontrollab.research_workflow import run_research_diagnostics
 
 
 @dataclass(frozen=True)
@@ -128,6 +129,16 @@ def run_ecosystem_demo(
         ],
     }
     write_json(out_dir / "ecosystem_demo.json", payload)
+    diagnostics = run_research_diagnostics(
+        run_dir=out_dir,
+        mode="ecosystem_demo",
+        diagnostics_dir=out_dir / "diagnostics",
+        summary_dir=out_dir,
+    )
+    payload["research_diagnostics_path"] = str(out_dir / "research_diagnostics.json")
+    payload["research_diagnostics_md_path"] = str(out_dir / "research_diagnostics.md")
+    payload["research_diagnostic_type"] = diagnostics.get("diagnostic_type")
+    write_json(out_dir / "ecosystem_demo.json", payload)
     (out_dir / "README.md").write_text(_render_readme(payload), encoding="utf-8")
     return payload
 
@@ -176,7 +187,8 @@ def _render_readme(payload: JsonDict) -> str:
             "1. Read `bridge_summary.md` for each tool.",
             "2. Check `evidence_card.md` for protocol and statistical evidence.",
             "3. Check `claim_check.md` before making any prompt optimization claim.",
-            "4. Open `report.html` or `pcl ui --runs <this-dir>` for a visual review.",
+            "4. Read `research_diagnostics.md` for paper-evidence gap coverage.",
+            "5. Open `report.html` or `pcl ui --runs <this-dir>` for a visual review.",
             "",
         ]
     )

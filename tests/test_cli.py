@@ -376,6 +376,9 @@ def test_cli_ecosystem_demo_runs_all_external_bridge_examples(tmp_path: Path) ->
 
     summary = json.loads((out / "ecosystem_demo.json").read_text(encoding="utf-8"))
     assert summary["kind"] == "ecosystem_demo"
+    assert summary["research_diagnostic_type"] == "external_evidence_gap"
+    assert (out / "research_diagnostics.json").exists()
+    assert (out / "research_diagnostics.md").exists()
     assert [item["tool"] for item in summary["runs"]] == ["promptfoo", "langfuse", "langsmith"]
     for tool in ["promptfoo", "langfuse", "langsmith"]:
         tool_dir = out / tool
@@ -386,6 +389,7 @@ def test_cli_ecosystem_demo_runs_all_external_bridge_examples(tmp_path: Path) ->
     assert "prompt optimization evidence auditor" in (out / "README.md").read_text(
         encoding="utf-8"
     )
+    assert "research_diagnostics.md" in (out / "README.md").read_text(encoding="utf-8")
 
 
 def test_cli_compare_runs_rejects_output_inside_source_run(tmp_path: Path) -> None:
