@@ -151,7 +151,7 @@ def test_analyze_gate_agent_pr_and_zip_workflows(tmp_path: Path) -> None:
     )
 
     assert gate["status"] == "completed"
-    assert read_json(run_dir / "gate_result.json")["status"] == "pass"
+    assert read_json(run_dir / "gate_result.json")["status"] == "needs_review"
 
     audit_dir = _make_audit_run(tmp_path)
     agent_run = build_agent_run_workflow(
@@ -173,9 +173,9 @@ def test_analyze_gate_agent_pr_and_zip_workflows(tmp_path: Path) -> None:
     assert payload["commit_before"] == "HEAD~1"
     assert payload["commit_after"] == "HEAD"
     assert payload["prompt"] == {}
-    assert payload["gate"]["status"] == "pass"
+    assert payload["gate"]["status"] == "needs_review"
     assert payload["audit"]["tests_run"] == ["pytest"]
-    assert payload["review_required"] is False
+    assert payload["review_required"] is True
     assert payload["policy_detail"]["policy_file"] == str(gate_policy)
     assert str(payload["policy_detail"]["policy_hash"]).startswith("sha256:")
     assert payload["policy_detail"]["path"] == str(gate_policy)
@@ -194,7 +194,7 @@ def test_analyze_gate_agent_pr_and_zip_workflows(tmp_path: Path) -> None:
     )
 
     assert summary["status"] == "completed"
-    assert read_json(run_dir / "pr_summary.json")["status"] == "pass"
+    assert read_json(run_dir / "pr_summary.json")["status"] == "needs_review"
 
     _write(run_dir / "src.py", "print('not an artifact')\n")
     exported = export_report_zip_workflow(

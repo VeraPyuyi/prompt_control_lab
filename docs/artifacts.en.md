@@ -160,6 +160,8 @@ What it explains: whether the run passes, needs review, or fails configured thre
 includes `plain_summary`, so plugins and reports can show the result without exposing raw JSON.
 When model policy keys are configured, it also records model provenance checks such as unknown
 model, model mismatch, alias model, provider allow-list, and verification requirements.
+If `comparison_validity.json` exists, the gate also consumes it: `invalid` becomes a hard failure,
+`needs_review` becomes a review item, and `clean` passes the comparison-validity check.
 
 ## `pcl guard --json` output
 

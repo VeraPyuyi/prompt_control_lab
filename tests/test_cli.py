@@ -12,6 +12,11 @@ from promptcontrollab.cli import main
 from promptcontrollab.files import write_jsonl
 
 
+def _write_json(path: Path, payload: object) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(payload), encoding="utf-8")
+
+
 def test_cli_example_flow(tmp_path: Path) -> None:
     demo = tmp_path / "demo"
     assert main(["init", "--path", str(demo)]) == 0
@@ -149,11 +154,13 @@ def test_cli_quick_analyze_explain_and_report(tmp_path: Path) -> None:
     assert "artifact_paths" in technical
 
 
-def test_cli_gate_uses_policy_thresholds(tmp_path: Path) -> None:
+def test_cli_gate_reviews_uncertain_validity_even_when_thresholds_pass(tmp_path: Path) -> None:
     demo = tmp_path / "demo"
     run = demo / "runs" / "quick"
     policy = demo / "gate.policy.yaml"
+    prompt_file = demo / "prompt.txt"
     assert main(["init", "--path", str(demo)]) == 0
+    prompt_file.write_text("Answer exactly.\n", encoding="utf-8")
     assert (
         main(
             [
@@ -170,6 +177,12 @@ def test_cli_gate_uses_policy_thresholds(tmp_path: Path) -> None:
                 "10",
                 "--permutation-samples",
                 "10",
+                "--prompt-id",
+                "demo-prompt-v1",
+                "--prompt-file",
+                str(prompt_file),
+                "--prompt-version",
+                "v1",
             ]
         )
         == 0
@@ -188,9 +201,78 @@ def test_cli_gate_uses_policy_thresholds(tmp_path: Path) -> None:
 
     assert main(["gate", "--run", str(run), "--policy", str(policy)]) == 0
     gate = json.loads((run / "gate_result.json").read_text(encoding="utf-8"))
-    assert gate["status"] == "pass"
+    assert gate["status"] == "needs_review"
     assert gate["plain_summary"].startswith("Deployment recommendation:")
     assert gate["checks"]["candidate_score"]["passed"] is True
+    assert gate["checks"]["comparison_validity"]["severity"] == "review"
+
+
+def test_cli_gate_passes_clean_comparison_validity(tmp_path: Path) -> None:
+    run = tmp_path / "run"
+    _write_json(run / "metrics.json", {"count": 1, "mean_score": 1.0})
+    _write_json(
+        run / "comparison_validity.json",
+        {
+            "validity": "clean",
+            "prompt_only_comparison": True,
+            "blocking_issues": [],
+            "review_items": [],
+        },
+    )
+    policy = tmp_path / "gate.policy.yaml"
+    policy.write_text("min_candidate_score: 0.9\n", encoding="utf-8")
+
+    assert main(["gate", "--run", str(run), "--policy", str(policy)]) == 0
+
+    gate = json.loads((run / "gate_result.json").read_text(encoding="utf-8"))
+    assert gate["status"] == "pass"
+    assert gate["checks"]["comparison_validity"]["passed"] is True
+
+
+def test_cli_gate_blocks_invalid_comparison_validity(tmp_path: Path) -> None:
+    run = tmp_path / "run"
+    _write_json(run / "metrics.json", {"count": 1, "mean_score": 1.0})
+    _write_json(
+        run / "comparison_validity.json",
+        {
+            "validity": "invalid",
+            "prompt_only_comparison": False,
+            "blocking_issues": ["Baseline and candidate used different model identities."],
+            "review_items": [],
+        },
+    )
+    policy = tmp_path / "gate.policy.yaml"
+    policy.write_text("min_candidate_score: 0.9\n", encoding="utf-8")
+
+    assert main(["gate", "--run", str(run), "--policy", str(policy)]) == 0
+
+    gate = json.loads((run / "gate_result.json").read_text(encoding="utf-8"))
+    assert gate["status"] == "fail"
+    assert gate["checks"]["comparison_validity"]["passed"] is False
+    assert gate["checks"]["comparison_validity"]["severity"] == "fail"
+
+
+def test_cli_gate_reviews_uncertain_comparison_validity(tmp_path: Path) -> None:
+    run = tmp_path / "run"
+    _write_json(run / "metrics.json", {"count": 1, "mean_score": 1.0})
+    _write_json(
+        run / "comparison_validity.json",
+        {
+            "validity": "needs_review",
+            "prompt_only_comparison": "unknown",
+            "blocking_issues": [],
+            "review_items": ["Prompt identity is missing."],
+        },
+    )
+    policy = tmp_path / "gate.policy.yaml"
+    policy.write_text("min_candidate_score: 0.9\n", encoding="utf-8")
+
+    assert main(["gate", "--run", str(run), "--policy", str(policy)]) == 0
+
+    gate = json.loads((run / "gate_result.json").read_text(encoding="utf-8"))
+    assert gate["status"] == "needs_review"
+    assert gate["checks"]["comparison_validity"]["passed"] is False
+    assert gate["checks"]["comparison_validity"]["severity"] == "review"
 
 
 def test_cli_gate_blocks_model_mismatch_when_policy_requires_it(tmp_path: Path) -> None:

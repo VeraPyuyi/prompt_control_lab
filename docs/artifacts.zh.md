@@ -118,7 +118,7 @@ gate decision、risk level、改动文件、测试、audit path、gate path，�
 
 记录策略阈值判断结果。
 
-说明什么问题：这次运行是 `pass`、`needs_review` 还是 `fail`，以及触发原因是什么。它也会包含 `plain_summary`，方便插件和报告直接展示直白结论。配置模型策略后，它还会记录模型来源检查，例如模型未知、baseline/candidate 模型不同、alias model、provider 白名单和 verified 要求。
+说明什么问题：这次运行是 `pass`、`needs_review` 还是 `fail`，以及触发原因是什么。它也会包含 `plain_summary`，方便插件和报告直接展示直白结论。配置模型策略后，它还会记录模型来源检查，例如模型未知、baseline/candidate 模型不同、alias model、provider 白名单和 verified 要求。如果存在 `comparison_validity.json`，gate 也会消费它：`invalid` 会变成硬失败，`needs_review` 会进入人工复核，`clean` 才通过比较有效性检查。
 
 ## `pcl guard --json` 输出
 

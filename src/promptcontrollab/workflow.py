@@ -115,13 +115,13 @@ def run_quick_analysis(
         manifest["prompt"] = prompt_identity
     write_json(out_dir / "manifest.json", manifest)
     generate_explanation(out_dir, level=explain_level)
-    if policy_path is not None:
-        run_gate(out_dir, policy_path=policy_path)
     run_comparison_validity(
         baseline_dir=out_dir / "baseline",
         candidate_dir=out_dir / "candidate",
         out_path=out_dir / "comparison_validity.json",
     )
+    if policy_path is not None:
+        run_gate(out_dir, policy_path=policy_path)
     generate_report(out_dir, title=title)
 
 

@@ -20,6 +20,7 @@ def run_gate(run_dir: Path, *, policy_path: Path) -> JsonDict:
     stats = _read_optional_json(run_dir / "stats.json")
     diagnostics = _collect_diagnostics(run_dir / "diagnostics")
     manifest = _read_optional_json(run_dir / "manifest.json")
+    comparison_validity = _read_optional_json(run_dir / "comparison_validity.json")
     comparison = _first_comparison(stats)
     checks: JsonDict = {
         "candidate_score": _candidate_score_check(candidate_metrics, policy),
@@ -27,6 +28,7 @@ def run_gate(run_dir: Path, *, policy_path: Path) -> JsonDict:
         "statistical_evidence": _p_value_check(comparison, policy),
         "soft_hard_risk": _soft_hard_check(diagnostics, policy),
         "model_provenance": _model_provenance_check(manifest, policy),
+        "comparison_validity": _comparison_validity_check(comparison_validity),
     }
     hard_fail = any(
         isinstance(check, dict) and check.get("severity") == "fail" and not check.get("passed")
@@ -216,6 +218,43 @@ def _model_provenance_check(manifest: JsonDict, policy: JsonDict) -> JsonDict:
         "baseline_model": baseline,
         "candidate_model": candidate,
         "message": "Model provenance meets the policy." if passed else "Model policy failed.",
+    }
+
+
+def _comparison_validity_check(payload: JsonDict) -> JsonDict:
+    if not payload:
+        return {
+            "passed": True,
+            "severity": "info",
+            "message": "No comparison validity artifact was found.",
+        }
+    validity = payload.get("validity")
+    if validity == "invalid":
+        return {
+            "passed": False,
+            "severity": "fail",
+            "observed": validity,
+            "prompt_only_comparison": payload.get("prompt_only_comparison"),
+            "blocking_issues": payload.get("blocking_issues", []),
+            "review_items": payload.get("review_items", []),
+            "message": "Comparison validity failed; prompt-only evidence is confounded.",
+        }
+    if validity == "needs_review":
+        return {
+            "passed": False,
+            "severity": "review",
+            "observed": validity,
+            "prompt_only_comparison": payload.get("prompt_only_comparison"),
+            "blocking_issues": payload.get("blocking_issues", []),
+            "review_items": payload.get("review_items", []),
+            "message": "Comparison validity needs review before treating this as prompt-only.",
+        }
+    return {
+        "passed": True,
+        "severity": "info",
+        "observed": validity or "unknown",
+        "prompt_only_comparison": payload.get("prompt_only_comparison"),
+        "message": "Comparison validity does not require gate action.",
     }
 
 
