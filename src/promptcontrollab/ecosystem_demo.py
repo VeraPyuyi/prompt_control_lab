@@ -266,8 +266,7 @@ def _scorecard_rows(*, out_dir: Path, payload: JsonDict, diagnostics: JsonDict) 
                 "recommendation": bridge.get("recommendation") or run.get("recommendation"),
                 "paired_n": bridge.get("paired_n"),
                 "mean_delta": bridge.get("mean_delta"),
-                "research_bundle_integrity": bridge.get("research_bundle_integrity")
-                or _bundle_integrity(tool_dir),
+                "research_bundle_integrity": _bundle_integrity(tool_dir),
                 "missing_paper_diagnostics": diagnostic.get(
                     "missing_paper_diagnostics",
                     bridge.get("missing_paper_diagnostics", []),
@@ -351,6 +350,24 @@ def _bundle_integrity(tool_dir: Path) -> JsonDict:
         "hashed_artifact_count": hashed,
         "missing_html_artifacts": missing_list,
         "missing_html_count": len(missing_list),
+        **_bundle_verification_summary(tool_dir),
+    }
+
+
+def _bundle_verification_summary(tool_dir: Path) -> JsonDict:
+    path = tool_dir / "research_bundle_verification.json"
+    if not path.exists():
+        return {
+            "verification_status": "not_checked",
+            "verification_path": "",
+        }
+    payload = read_json(path)
+    return {
+        "verification_status": payload.get("status", "unknown"),
+        "verification_path": str(path),
+        "verification_checked_count": payload.get("checked_count"),
+        "verification_mismatch_count": payload.get("mismatch_count"),
+        "verification_missing_count": payload.get("missing_count"),
     }
 
 
@@ -798,7 +815,14 @@ def _bundle_integrity_markdown(value: object) -> str:
     total = value.get("artifact_count")
     hashed = value.get("hashed_artifact_count")
     missing = value.get("missing_html_count")
-    return f"{status}; present {present}/{total}; hashed {hashed}; missing html {missing}"
+    verification = value.get("verification_status") or "not_checked"
+    mismatches = value.get("verification_mismatch_count", 0)
+    missing_verified = value.get("verification_missing_count", 0)
+    return (
+        f"{status}; present {present}/{total}; hashed {hashed}; "
+        f"verify {verification}; mismatches {mismatches}; missing {missing_verified}; "
+        f"missing html {missing}"
+    )
 
 
 def _html_badge(value: object) -> str:

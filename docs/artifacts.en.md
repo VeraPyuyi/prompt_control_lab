@@ -275,6 +275,23 @@ Important fields:
 What it explains: how an external eval or observability export was converted into a
 PromptControlLab prompt-optimization evidence bundle without replacing the external tool.
 
+## `evidence_audit_result.json`
+
+Written by `pcl evidence-audit`. It runs the same import and comparison workflow as
+`pcl evidence-from`, then immediately runs `pcl gap-status` and `pcl research-bundle --verify`.
+
+Important fields:
+
+- `detected_tools`: external export source detected during import
+- `claim_scope` / `evidence_tier` / `validity`: the prompt-optimization claim boundary
+- `gap_status`: whether paper-derived diagnostics are present or still missing
+- `bundle_verification`: whether linked evidence artifacts still match the recorded hashes
+- `next_actions`: reviewer-first files to open next
+
+What it explains: whether an external eval or observability export has been turned into a
+reviewable PCL evidence bundle, which research diagnostics are still missing, and whether the
+linked evidence package has passed the latest local hash verification.
+
 ## `bridge_summary.json` / `bridge_summary.md`
 
 Written by `pcl evidence-from`.

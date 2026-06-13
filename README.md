@@ -113,6 +113,18 @@ pcl ecosystem-scorecard --run runs/ecosystem-demo
 
 promptfoo eval --output results.json
 
+# Research evidence audit: import external exports, add PCL evidence,
+# check paper-diagnostic gaps, and verify the evidence bundle hashes.
+pcl evidence-audit \
+  --tool promptfoo \
+  --baseline-input results.json \
+  --candidate-input results.json \
+  --baseline-prompt-id baseline \
+  --candidate-prompt-id candidate \
+  --provider openai:gpt-4o-mini-20260601 \
+  --split-hash eval-split-2026-06 \
+  --out runs/from-promptfoo-audit
+
 # One-command bridge: import baseline/candidate exports, compare them,
 # then write stats, comparison validity, evidence card, and report artifacts.
 pcl evidence-from \
@@ -185,7 +197,12 @@ shared.
 The `--verify` mode does not refresh hashes first; it verifies the existing bundle and writes
 `research_bundle_verification.json/md/html` so tampering or accidental edits show up as mismatches.
 `bridge_summary.md` and `ecosystem_scorecard.html` surface this bundle integrity summary so the
-cross-tool view shows not only what PCL adds, but whether the linked evidence package is auditable.
+cross-tool view shows not only what PCL adds, but whether the linked evidence package is hashed and
+whether the last verification passed.
+
+Use `pcl evidence-audit` when you want this bridge in one pass: it runs the external import,
+paired comparison, research diagnostics, gap-status check, bundle index, and bundle verification,
+then writes `evidence_audit_result.json` as the reviewer-facing audit summary.
 
 After running the suggested diagnostic commands, check closure with:
 
@@ -273,12 +290,13 @@ The repository includes narrated 4K hands-on demo videos generated from real UI 
 10. `pcl tv-soft`: static/time-varying/shuffled/random soft-control comparison.
 11. `pcl ecosystem-demo`: run all bundled external-tool bridge examples as one comparison bundle.
 12. `pcl ecosystem-scorecard`: regenerate the cross-tool Promptfoo/DeepEval/Langfuse/LangSmith positioning scorecard.
-13. `pcl evidence-from`: import external baseline/candidate exports and generate a PCL evidence card in one command.
-14. `pcl ingest auto` / `promptfoo` / `deepeval` / `langfuse` / `langsmith`: import external eval/trace artifacts into PCL research artifacts.
-15. `pcl compare-runs`: turn two imported/scored runs into stats, validity, and a report in one command.
-16. `pcl claim-check`: say what claim the current evidence tier can safely support.
-17. `pcl report` / `pcl explain` / `pcl gate`: turn artifacts into readable decisions.
-18. `pcl guard` / `pcl audit-diff`: applied AI coding agent preflight and post-run audit.
+13. `pcl evidence-audit`: import external exports, add PCL evidence, check gaps, and verify the research bundle.
+14. `pcl evidence-from`: import external baseline/candidate exports and generate a PCL evidence card in one command.
+15. `pcl ingest auto` / `promptfoo` / `deepeval` / `langfuse` / `langsmith`: import external eval/trace artifacts into PCL research artifacts.
+16. `pcl compare-runs`: turn two imported/scored runs into stats, validity, and a report in one command.
+17. `pcl claim-check`: say what claim the current evidence tier can safely support.
+18. `pcl report` / `pcl explain` / `pcl gate`: turn artifacts into readable decisions.
+19. `pcl guard` / `pcl audit-diff`: applied AI coding agent preflight and post-run audit.
 
 ## Install The CLI ⚙️
 
@@ -1087,6 +1105,7 @@ PCL's comparison validity and paper-derived diagnostics on top.
 - [Artifacts](docs/artifacts.en.md)
 - [Research From The Paper](docs/research_from_paper.en.md)
 - [Ecosystem Bridge](docs/ecosystem_bridge.en.md)
+- [Comparison With Promptfoo, LangSmith, and Langfuse](docs/comparison.en.md)
 - [Agent guard pilot case study](docs/case_studies/agent_guard_pilot.en.md)
 - [Real paired agent pilot case study](docs/case_studies/agent_guard_paired_pilot.en.md)
 - [Production pilot protocol](docs/production_pilot.en.md)

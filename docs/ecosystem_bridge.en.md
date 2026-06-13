@@ -109,6 +109,26 @@ pcl ecosystem-scorecard --run runs/ecosystem-demo
 Use `--out <file-or-directory>` when you want to write a separate scorecard copy
 for review.
 
+For a single external tool export, the recommended reviewer-first entry point is
+`pcl evidence-audit`. It imports the external baseline/candidate export, writes the PCL comparison
+evidence, checks paper-diagnostic gaps, and verifies the local research bundle hashes in one pass:
+
+```bash
+pcl evidence-audit \
+  --tool promptfoo \
+  --baseline-input examples/external/promptfoo_results.json \
+  --candidate-input examples/external/promptfoo_results.json \
+  --baseline-prompt-id baseline \
+  --candidate-prompt-id candidate \
+  --provider openai:gpt-4o-mini-20260601 \
+  --split-hash external-demo-split \
+  --out runs/from-promptfoo-audit
+```
+
+Open `evidence_audit_result.json` first when automation needs the summary. Open
+`bridge_summary.md`, `research_gap_status.html`, and `research_bundle_verification.html` when a
+human reviewer needs the evidence trail.
+
 The demo automatically audits the bundle against the paper-derived evidence map.
 To regenerate that diagnosis after editing the bundle, run:
 

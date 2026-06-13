@@ -88,6 +88,24 @@ pcl ecosystem-scorecard --run runs/ecosystem-demo
 
 如果想把定位表另存给 reviewer，可以加 `--out <文件或目录>`。
 
+对于单个外部工具导出，推荐的新入口是 `pcl evidence-audit`。它会在一条命令里导入外部
+baseline / candidate export、写出 PCL 比较证据、检查论文诊断缺口，并验证本地 research bundle 哈希：
+
+```bash
+pcl evidence-audit \
+  --tool promptfoo \
+  --baseline-input examples/external/promptfoo_results.json \
+  --candidate-input examples/external/promptfoo_results.json \
+  --baseline-prompt-id baseline \
+  --candidate-prompt-id candidate \
+  --provider openai:gpt-4o-mini-20260601 \
+  --split-hash external-demo-split \
+  --out runs/from-promptfoo-audit
+```
+
+自动化场景建议先读 `evidence_audit_result.json`；人工审查建议打开 `bridge_summary.md`、
+`research_gap_status.html` 和 `research_bundle_verification.html`。
+
 demo 会自动按论文证据地图审计整套 bundle。如果之后手动改过 bundle，可以重新运行：
 
 ```bash

@@ -107,8 +107,55 @@ def test_packaged_external_examples_run_evidence_from(
     assert integrity["status"] == "hashed"
     assert integrity["hashed_artifact_count"] > 0
     assert integrity["present_artifact_count"] > 0
+    assert integrity["verification_status"] == "not_checked"
     bridge_markdown = (out_dir / "bridge_summary.md").read_text(encoding="utf-8")
     assert "Bundle integrity" in bridge_markdown
+    assert "Bundle verification" in bridge_markdown
+
+
+def test_packaged_promptfoo_example_runs_evidence_audit(tmp_path: Path) -> None:
+    source = Path("examples") / "external" / "promptfoo_results.json"
+    out_dir = tmp_path / "runs" / "from-promptfoo-audit"
+
+    assert (
+        main(
+            [
+                "evidence-audit",
+                "--tool",
+                "promptfoo",
+                "--baseline-input",
+                str(source),
+                "--candidate-input",
+                str(source),
+                "--baseline-prompt-id",
+                "baseline",
+                "--candidate-prompt-id",
+                "candidate",
+                "--provider",
+                "openai:gpt-4o-mini-20260601",
+                "--split-hash",
+                "external-demo-split",
+                "--bootstrap-samples",
+                "20",
+                "--permutation-samples",
+                "100",
+                "--out",
+                str(out_dir),
+            ]
+        )
+        == 0
+    )
+
+    result = read_json(out_dir / "evidence_audit_result.json")
+    assert result["kind"] == "external_evidence_audit"
+    assert result["gap_status"]["status"] == "needs_work"
+    assert result["bundle_verification"]["status"] == "pass"
+    assert (out_dir / "research_gap_status.html").exists()
+    assert (out_dir / "research_bundle_verification.html").exists()
+    bridge = read_json(out_dir / "bridge_summary.json")
+    assert bridge["research_bundle_integrity"]["verification_status"] == "pass"
+    bridge_markdown = (out_dir / "bridge_summary.md").read_text(encoding="utf-8")
+    assert "Bundle verification: `pass`" in bridge_markdown
 
 
 def test_evidence_from_langfuse_pairs_by_example_id(tmp_path: Path) -> None:

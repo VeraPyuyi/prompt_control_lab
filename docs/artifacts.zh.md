@@ -214,6 +214,22 @@ gate decision、risk level、改动文件、测试、audit path、gate path，�
 
 说明什么问题：外部 eval / observability 工具仍然作为数据来源，`prompt_control_lab` 负责把这些导出转换成 prompt 优化证据包，而不是替代原工具。
 
+## `evidence_audit_result.json`
+
+由 `pcl evidence-audit` 写出。它会先运行和 `pcl evidence-from` 相同的导入与比较流程，
+然后立刻运行 `pcl gap-status` 和 `pcl research-bundle --verify`。
+
+重要字段：
+
+- `detected_tools`：导入时识别到的外部工具来源
+- `claim_scope` / `evidence_tier` / `validity`：当前 prompt optimization 证据能支持的主张边界
+- `gap_status`：论文诊断是否已经存在，还是仍有缺口
+- `bundle_verification`：被链接的证据 artifact 是否仍然匹配已记录哈希
+- `next_actions`：建议 reviewer 下一步打开的文件
+
+说明什么问题：外部 eval / observability 导出是否已经被转换成可审查的 PCL 证据包，
+还缺哪些研究诊断，以及当前链接的证据包是否通过了最新一次本地哈希验证。
+
 ## `bridge_summary.json` / `bridge_summary.md`
 
 由 `pcl evidence-from` 写出。

@@ -106,6 +106,18 @@ pcl ecosystem-scorecard --run runs/ecosystem-demo
 
 promptfoo eval --output results.json
 
+# 研究证据审计：导入外部导出、补上 PCL 证据、
+# 检查论文诊断缺口，并验证 evidence bundle 哈希。
+pcl evidence-audit \
+  --tool promptfoo \
+  --baseline-input results.json \
+  --candidate-input results.json \
+  --baseline-prompt-id baseline \
+  --candidate-prompt-id candidate \
+  --provider openai:gpt-4o-mini-20260601 \
+  --split-hash eval-split-2026-06 \
+  --out runs/from-promptfoo-audit
+
 # 一条命令桥接：导入 baseline / candidate 导出，完成比较，
 # 并写出 stats、comparison validity、evidence card 和 report。
 pcl evidence-from \
@@ -173,7 +185,7 @@ pcl research-bundle --run runs/from-promptfoo-evidence --verify
 和 `sha256`，方便 reviewer 判断共享之后证据包是否发生过变化。
 `--verify` 模式不会先刷新哈希；它会验证现有 bundle，并写出
 `research_bundle_verification.json/md/html`，让篡改或误改显示为 mismatch。
-`bridge_summary.md` 和 `ecosystem_scorecard.html` 也会展示这份 bundle integrity 摘要，让跨工具视图不仅说明 PCL 补了什么，还说明被链接的证据包是否可审计。
+`bridge_summary.md` 和 `ecosystem_scorecard.html` 也会展示这份 bundle integrity 摘要，让跨工具视图不仅说明 PCL 补了什么，还说明被链接的证据包是否已哈希、最近一次验证是否通过。
 
 运行建议的诊断命令之后，可以用下面的命令检查缺口是否真的补齐：
 
@@ -182,6 +194,8 @@ pcl gap-status --run runs/from-promptfoo-evidence
 ```
 
 导入后的 run 会包含 `predictions.jsonl`、`metrics.json` 和 `manifest.json`，因此可以继续接 `pcl compare-runs`、`pcl stats`、`pcl validity` 和后续报告。`compare-runs` 会写出一个独立比较目录，里面包含成对统计、prompt-only 比较有效性、candidate metrics 快照、源 run 快照以及 Markdown / HTML 报告。`evidence-card` 会继续把这条研究证据链压缩成一份 reviewer 更容易看的卡片。请使用新的或空的 `--out` 目录，避免旧 artifact 污染审计结果。这个能力的定位是桥接 Promptfoo / DeepEval / Langfuse / LangSmith 生态，而不是替代 Promptfoo 的 red-team / provider 生态、DeepEval 的本地 eval runner、Langfuse 的 tracing 平台或 LangSmith 的观测/评测工作流。
+
+如果希望一条命令完成整个闭环，可以用 `pcl evidence-audit`：它会依次运行外部导入、成对比较、研究诊断、gap-status、bundle index 和 bundle verification，并写出 `evidence_audit_result.json` 作为 reviewer 优先的审计摘要。
 
 竞争切口：Promptfoo、DeepEval、LangSmith 和 Langfuse 已经在 security testing、本地 eval、tracing、observability、prompt management 和生产工作流上形成很强能力。PCL 更应该赢在它们通常不覆盖的 **研究证据层**：成对不确定性、prompt-only 有效性、evidence card、claim check、soft-hard gap、hidden-state trajectory、Riccati surrogate、time-varying control evidence，以及现在用 `pcl gap-status` 检查导入之后的论文诊断缺口是否真正补齐。
 
@@ -293,6 +307,7 @@ pcl doctor
 | time-varying control | `pcl tv-soft` | 比较 static、time-varying、shuffled、random control lane。 |
 | 生态桥接 demo | `pcl ecosystem-demo` | 一次性跑完 Promptfoo、DeepEval、Langfuse、LangSmith 样例，并生成 PCL evidence bundle。 |
 | 跨工具定位表 | `pcl ecosystem-scorecard` | 重新生成 Promptfoo / DeepEval / Langfuse / LangSmith 与 PCL 的分工、证据缺口和补齐命令。 |
+| 外部证据审计闭环 | `pcl evidence-audit` | 导入外部 export，补上 PCL 证据，检查论文诊断缺口，并验证 research bundle。 |
 | 一键外部证据包 | `pcl evidence-from` | 导入外部 baseline / candidate export，并一键生成 PCL evidence card。 |
 | 生态桥接 | `pcl ingest auto` / `promptfoo` / `deepeval` / `langfuse` / `langsmith` | 导入外部 eval / trace artifact，再接 PCL 的比较有效性和研究诊断。 |
 | 一键 run 比较 | `pcl compare-runs` | 把两个导入 / 打分后的 run 变成 stats、comparison_validity 和报告。 |
@@ -345,6 +360,8 @@ Agent guard、model provenance、diff audit 和插件仍然有价值，但它们
 - [一步一步教程](docs/tutorial.zh.md)
 - [Artifact 说明](docs/artifacts.zh.md)
 - [论文功能映射](docs/research_from_paper.zh.md)
+- [生态桥接](docs/ecosystem_bridge.zh.md)
+- [与 Promptfoo、LangSmith、Langfuse 的对比](docs/comparison.zh.md)
 - [创新点和贡献](docs/innovation.zh.md)
 - [决策指南](docs/decision_guide.zh.md)
 - [Agent guard 试点 case study](docs/case_studies/agent_guard_pilot.zh.md)

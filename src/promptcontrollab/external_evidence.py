@@ -14,7 +14,11 @@ from promptcontrollab.ingest import (
     ingest_langsmith_results,
     ingest_promptfoo_results,
 )
-from promptcontrollab.research_workflow import run_research_diagnostics
+from promptcontrollab.research_workflow import (
+    run_research_diagnostics,
+    verify_research_bundle_index,
+    write_research_gap_status,
+)
 from promptcontrollab.run_comparison import compare_runs
 
 ExternalTool = Literal["auto", "promptfoo", "langfuse", "langsmith", "deepeval"]
@@ -205,6 +209,127 @@ def build_external_evidence(
     return payload
 
 
+def build_external_evidence_audit(
+    *,
+    tool: ExternalTool,
+    baseline_input: Path,
+    candidate_input: Path,
+    out_dir: Path,
+    score_name: str | None = None,
+    provider: str | None = None,
+    baseline_provider: str | None = None,
+    candidate_provider: str | None = None,
+    model: str | None = None,
+    baseline_model: str | None = None,
+    candidate_model: str | None = None,
+    baseline_prompt_id: str | None = None,
+    candidate_prompt_id: str | None = None,
+    baseline_name: str | None = None,
+    candidate_name: str | None = None,
+    baseline_experiment: str | None = None,
+    candidate_experiment: str | None = None,
+    split_hash: str | None = None,
+    baseline_method: str = "baseline",
+    candidate_method: str = "candidate",
+    title: str = "PromptControlLab External Evidence Audit",
+    seed: int = 0,
+    bootstrap_samples: int = 1000,
+    permutation_samples: int = 1000,
+) -> JsonDict:
+    """Import external exports and close the browser-first evidence audit loop."""
+
+    evidence = build_external_evidence(
+        tool=tool,
+        baseline_input=baseline_input,
+        candidate_input=candidate_input,
+        out_dir=out_dir,
+        score_name=score_name,
+        provider=provider,
+        baseline_provider=baseline_provider,
+        candidate_provider=candidate_provider,
+        model=model,
+        baseline_model=baseline_model,
+        candidate_model=candidate_model,
+        baseline_prompt_id=baseline_prompt_id,
+        candidate_prompt_id=candidate_prompt_id,
+        baseline_name=baseline_name,
+        candidate_name=candidate_name,
+        baseline_experiment=baseline_experiment,
+        candidate_experiment=candidate_experiment,
+        split_hash=split_hash,
+        baseline_method=baseline_method,
+        candidate_method=candidate_method,
+        title=title,
+        seed=seed,
+        bootstrap_samples=bootstrap_samples,
+        permutation_samples=permutation_samples,
+    )
+    gap_status = write_research_gap_status(run_dir=out_dir)
+    verification = verify_research_bundle_index(out_dir)
+    bridge_summary = _refresh_bridge_integrity_after_verification(out_dir)
+    payload: JsonDict = {
+        "kind": "external_evidence_audit",
+        "tool": tool,
+        "out_dir": str(out_dir),
+        "evidence_from_result_path": str(out_dir / "evidence_from_result.json"),
+        "bridge_summary_path": str(out_dir / "bridge_summary.md"),
+        "research_bundle_path": str(out_dir / "research_bundle.html"),
+        "research_diagnostics_path": str(out_dir / "research_diagnostics.html"),
+        "research_gap_status_path": str(out_dir / "research_gap_status.html"),
+        "research_bundle_verification_path": str(
+            out_dir / "research_bundle_verification.html"
+        ),
+        "detected_tools": evidence.get("detected_tools", []),
+        "claim_scope": bridge_summary.get("claim_scope"),
+        "evidence_tier": bridge_summary.get("evidence_tier"),
+        "validity": bridge_summary.get("validity"),
+        "gap_status": {
+            "status": gap_status.get("status"),
+            "complete_count": gap_status.get("complete_count"),
+            "missing_count": gap_status.get("missing_count"),
+        },
+        "bundle_verification": {
+            "status": verification.get("status"),
+            "checked_count": verification.get("checked_count"),
+            "mismatch_count": verification.get("mismatch_count"),
+            "missing_count": verification.get("missing_count"),
+        },
+        "missing_paper_diagnostics": bridge_summary.get("missing_paper_diagnostics", []),
+        "next_actions": [
+            "Open bridge_summary.md to see what the external tool supplied and what PCL added.",
+            "Open research_bundle.html as the browser-first evidence index.",
+            (
+                "Open research_gap_status.html to see which paper-derived diagnostics "
+                "are still missing."
+            ),
+            (
+                "Open research_bundle_verification.html to confirm the linked evidence "
+                "package still matches recorded hashes."
+            ),
+        ],
+        "boundary": (
+            "This workflow audits prompt-optimization evidence from external exports. "
+            "It does not replace the external tool's tracing, security testing, or "
+            "production monitoring."
+        ),
+    }
+    write_json(out_dir / "evidence_audit_result.json", payload)
+    return payload
+
+
+def _refresh_bridge_integrity_after_verification(out_dir: Path) -> JsonDict:
+    """Update bridge summary so it reflects the latest bundle verification artifact."""
+
+    path = out_dir / "bridge_summary.json"
+    if not path.exists():
+        return {}
+    payload = read_json(path)
+    payload["research_bundle_integrity"] = _research_bundle_integrity(out_dir)
+    write_json(path, payload)
+    (out_dir / "bridge_summary.md").write_text(_render_bridge_summary(payload), encoding="utf-8")
+    return payload
+
+
 def _attach_research_diagnostics_to_bridge_summary(
     *,
     out_dir: Path,
@@ -269,6 +394,24 @@ def _research_bundle_integrity(run_dir: Path) -> JsonDict:
         "hashed_artifact_count": hashed,
         "missing_html_artifacts": missing_html_list,
         "missing_html_count": len(missing_html_list),
+        **_research_bundle_verification_summary(run_dir),
+    }
+
+
+def _research_bundle_verification_summary(run_dir: Path) -> JsonDict:
+    path = run_dir / "research_bundle_verification.json"
+    if not path.exists():
+        return {
+            "verification_status": "not_checked",
+            "verification_path": "",
+        }
+    payload = read_json(path)
+    return {
+        "verification_status": payload.get("status", "unknown"),
+        "verification_path": str(path),
+        "verification_checked_count": payload.get("checked_count"),
+        "verification_mismatch_count": payload.get("mismatch_count"),
+        "verification_missing_count": payload.get("missing_count"),
     }
 
 
@@ -700,6 +843,11 @@ def _bridge_bundle_integrity_lines(value: object) -> list[str]:
             f"- Bundle artifacts: `{value.get('present_artifact_count')}/"
             f"{value.get('artifact_count')}` present, "
             f"`{value.get('hashed_artifact_count')}` hashed"
+        ),
+        (
+            f"- Bundle verification: `{value.get('verification_status', 'not_checked')}` "
+            f"({value.get('verification_mismatch_count', 0)} mismatches, "
+            f"{value.get('verification_missing_count', 0)} missing)"
         ),
         f"- Missing HTML artifacts: `{value.get('missing_html_artifacts', [])}`",
     ]

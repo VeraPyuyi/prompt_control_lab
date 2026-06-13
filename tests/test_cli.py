@@ -404,6 +404,10 @@ def test_cli_ecosystem_demo_runs_all_external_bridge_examples(tmp_path: Path) ->
     assert scorecard["rows"][0]["gap_status"] == "not_checked"
     assert scorecard["rows"][0]["research_bundle_integrity"]["status"] == "hashed"
     assert scorecard["rows"][0]["research_bundle_integrity"]["hashed_artifact_count"] > 0
+    assert (
+        scorecard["rows"][0]["research_bundle_integrity"]["verification_status"]
+        == "not_checked"
+    )
     promptfoo_links = scorecard["rows"][0]["artifact_links"]
     assert {"label": "Research bundle", "path": "promptfoo/research_bundle.html"} in promptfoo_links
     assert {"label": "Evidence card", "path": "promptfoo/evidence_card.html"} in promptfoo_links
@@ -414,6 +418,7 @@ def test_cli_ecosystem_demo_runs_all_external_bridge_examples(tmp_path: Path) ->
     assert "pcl gap-status" in scorecard_markdown
     assert "Bundle integrity" in scorecard_markdown
     assert "hashed; present" in scorecard_markdown
+    assert "verify not_checked" in scorecard_markdown
     assert "promptfoo/bridge_summary.md" in scorecard_markdown
     assert "[Research bundle](promptfoo/research_bundle.html)" in scorecard_markdown
     assert "[Evidence card](promptfoo/evidence_card.html)" in scorecard_markdown
@@ -424,11 +429,13 @@ def test_cli_ecosystem_demo_runs_all_external_bridge_examples(tmp_path: Path) ->
     assert "promptfoo/bridge_summary.md" in scorecard_html
     assert "Bundle integrity" in scorecard_html
     assert "hashed; present" in scorecard_html
+    assert "verify not_checked" in scorecard_html
     assert "promptfoo/research_bundle.html" in scorecard_html
     assert "promptfoo/evidence_card.html" in scorecard_html
     assert "promptfoo/claim_check.html" in scorecard_html
     assert "promptfoo/report.html" in scorecard_html
     assert main(["gap-status", "--run", str(out / "promptfoo")]) == 0
+    assert main(["research-bundle", "--run", str(out / "promptfoo"), "--verify"]) == 0
     (out / "ecosystem_scorecard.json").unlink()
     (out / "ecosystem_scorecard.md").unlink()
     (out / "ecosystem_scorecard.html").unlink()
@@ -440,13 +447,17 @@ def test_cli_ecosystem_demo_runs_all_external_bridge_examples(tmp_path: Path) ->
     assert refreshed["html_path"] == str(out / "ecosystem_scorecard.html")
     promptfoo_row = next(item for item in refreshed["rows"] if item["tool"] == "promptfoo")
     assert promptfoo_row["gap_status"] == "needs_work"
+    assert promptfoo_row["research_bundle_integrity"]["verification_status"] == "pass"
+    assert promptfoo_row["research_bundle_integrity"]["verification_mismatch_count"] == 0
     assert promptfoo_row["gap_missing_count"] > 0
     assert promptfoo_row["gap_status_path"] == "promptfoo/research_gap_status.html"
     assert "promptfoo/bridge_summary.md" in (out / "ecosystem_scorecard.md").read_text(
         encoding="utf-8"
     )
     assert "needs_work" in (out / "ecosystem_scorecard.md").read_text(encoding="utf-8")
+    assert "verify pass" in (out / "ecosystem_scorecard.md").read_text(encoding="utf-8")
     assert "needs_work" in (out / "ecosystem_scorecard.html").read_text(encoding="utf-8")
+    assert "verify pass" in (out / "ecosystem_scorecard.html").read_text(encoding="utf-8")
     scorecard_dir = tmp_path / "scorecard-out"
     assert main(["ecosystem-scorecard", "--run", str(out), "--out", str(scorecard_dir)]) == 0
     assert (scorecard_dir / "ecosystem_scorecard.json").exists()
