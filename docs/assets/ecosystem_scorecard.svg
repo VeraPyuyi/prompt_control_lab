@@ -15,7 +15,7 @@
   </defs>
   <rect class="bg" width="1200" height="560"/>
   <text x="44" y="48" class="title">Ecosystem Evidence Closure</text>
-  <text x="44" y="78" class="sub">Keep Promptfoo, Langfuse, and LangSmith for their strengths. Add prompt_control_lab as the research evidence closure layer.</text>
+  <text x="44" y="78" class="sub">Keep existing eval and trace tools. Add prompt_control_lab as the research evidence layer.</text>
 
   <rect x="44" y="126" width="225" height="86" rx="12" class="source"/>
   <text x="68" y="158" class="h">Promptfoo</text>

@@ -1,0 +1,42 @@
+{
+  "tool": "deepeval",
+  "run_name": "baseline",
+  "hyperparameters": {
+    "model": "gpt-4o-mini-20260601",
+    "provider": "openai"
+  },
+  "test_cases": [
+    {
+      "id": "case-1",
+      "input": "What is 2 + 2?",
+      "actual_output": "wrong",
+      "expected_output": "4",
+      "metadata": {"example_id": "case-1", "slice": "arithmetic"},
+      "metrics": [{"name": "exact_match", "score": 0, "reason": "wrong answer"}]
+    },
+    {
+      "id": "case-2",
+      "input": "Return YES.",
+      "actual_output": "NO",
+      "expected_output": "YES",
+      "metadata": {"example_id": "case-2", "slice": "format"},
+      "metrics": [{"name": "exact_match", "score": 0, "reason": "wrong label"}]
+    },
+    {
+      "id": "case-3",
+      "input": "Return blue.",
+      "actual_output": "blue",
+      "expected_output": "blue",
+      "metadata": {"example_id": "case-3", "slice": "classification"},
+      "metrics": [{"name": "exact_match", "score": 1, "reason": "matches"}]
+    },
+    {
+      "id": "case-4",
+      "input": "Return safe.",
+      "actual_output": "maybe",
+      "expected_output": "safe",
+      "metadata": {"example_id": "case-4", "slice": "safety"},
+      "metrics": [{"name": "exact_match", "score": 0, "reason": "ambiguous output"}]
+    }
+  ]
+}

@@ -14,6 +14,7 @@ from promptcontrollab.research_workflow import run_research_diagnostics
 class EcosystemDemoSpec:
     tool: ExternalTool
     filename: str
+    candidate_filename: str | None = None
     score_name: str | None = None
     baseline_prompt_id: str | None = None
     candidate_prompt_id: str | None = None
@@ -44,6 +45,12 @@ DEMO_SPECS: tuple[EcosystemDemoSpec, ...] = (
         baseline_experiment="baseline",
         candidate_experiment="candidate",
     ),
+    EcosystemDemoSpec(
+        tool="deepeval",
+        filename="deepeval_baseline.json",
+        candidate_filename="deepeval_candidate.json",
+        score_name="exact_match",
+    ),
 )
 
 
@@ -73,12 +80,16 @@ def run_ecosystem_demo(
         if not source.exists():
             msg = f"Missing {spec.tool} example export: {source}"
             raise ValueError(msg)
+        candidate_source = examples_dir / (spec.candidate_filename or spec.filename)
+        if not candidate_source.exists():
+            msg = f"Missing {spec.tool} candidate example export: {candidate_source}"
+            raise ValueError(msg)
         tool_dir = out_dir / spec.tool
         provider_value = f"{provider}:{model}" if spec.tool == "promptfoo" else provider
         build_external_evidence(
             tool=spec.tool,
             baseline_input=source,
-            candidate_input=source,
+            candidate_input=candidate_source,
             out_dir=tool_dir,
             score_name=spec.score_name,
             provider=provider_value,
@@ -186,7 +197,7 @@ def _write_scorecard(
     scorecard: JsonDict = {
         "kind": "ecosystem_scorecard",
         "positioning": (
-            "Promptfoo, LangSmith, and Langfuse remain the systems of record for evals, "
+            "Promptfoo, DeepEval, LangSmith, and Langfuse remain the systems of record for evals, "
             "traces, security tests, and prompt management. PCL adds the research evidence "
             "layer for prompt optimization claims."
         ),
@@ -314,6 +325,7 @@ def _external_strength(tool: str) -> str:
         "promptfoo": "LLM evals, red-team/security tests, provider matrices, and CI reports.",
         "langfuse": "Open-source tracing, prompt management, scores, costs, and self-hosting.",
         "langsmith": "Agent tracing, datasets, online/offline evals, debugging, and deployment.",
+        "deepeval": "Local LLM evaluation test runs, metric scores, reasons, and CI artifacts.",
     }
     return values.get(tool, "External eval or observability export.")
 
@@ -332,6 +344,10 @@ def _pcl_adds(tool: str) -> str:
             "Prompt optimization evidence bundles that separate prompt effects from model, "
             "metric, and split confounds."
         ),
+        "deepeval": (
+            "Paired prompt evidence, protocol hygiene, claim checks, and paper-diagnostic "
+            "follow-up planning on top of DeepEval local TestRun JSON."
+        ),
     }
     return values.get(tool, "Paired prompt optimization evidence and diagnostics.")
 
@@ -341,6 +357,7 @@ def _display_tool_name(tool: str) -> str:
         "promptfoo": "Promptfoo",
         "langfuse": "Langfuse",
         "langsmith": "LangSmith",
+        "deepeval": "DeepEval",
     }
     return values.get(tool, tool)
 
@@ -440,7 +457,7 @@ def _render_readme(payload: JsonDict) -> str:
         "",
         (
             "This directory shows how `prompt_control_lab` works as a prompt optimization "
-            "evidence auditor for exports from Promptfoo, Langfuse, and LangSmith."
+            "evidence auditor for exports from Promptfoo, DeepEval, Langfuse, and LangSmith."
         ),
         "",
         "It does not replace those tools. It adds paired statistics, prompt-only validity, "

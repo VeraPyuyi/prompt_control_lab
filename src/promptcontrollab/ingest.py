@@ -27,7 +27,7 @@ def ingest_auto_results(
     provider: str | None = None,
     method: str | None = None,
 ) -> JsonDict:
-    """Auto-detect Promptfoo/Langfuse/LangSmith exports and import them."""
+    """Auto-detect external eval/trace exports and import them."""
 
     source_tool = detect_ingest_source(source_path)
     if source_tool == "promptfoo":
@@ -58,6 +58,15 @@ def ingest_auto_results(
             provider=provider,
             method=method,
         )
+    elif source_tool == "deepeval":
+        payload = ingest_deepeval_results(
+            source_path=source_path,
+            out_dir=out_dir,
+            score_name=score_name,
+            model=model,
+            provider=provider,
+            method=method,
+        )
     else:
         msg = f"Unsupported ingest source `{source_tool}`"
         raise ValueError(msg)
@@ -76,9 +85,11 @@ def detect_ingest_source(source_path: Path) -> str:
         return "langfuse"
     if _looks_like_langsmith(payload):
         return "langsmith"
+    if _looks_like_deepeval(payload):
+        return "deepeval"
     msg = (
         "Could not detect export source. Use `pcl ingest promptfoo`, "
-        "`pcl ingest langfuse`, or `pcl ingest langsmith` explicitly."
+        "`pcl ingest langfuse`, `pcl ingest langsmith`, or `pcl ingest deepeval` explicitly."
     )
     raise ValueError(msg)
 
@@ -285,6 +296,64 @@ def ingest_langsmith_results(
     }
 
 
+def ingest_deepeval_results(
+    *,
+    source_path: Path,
+    out_dir: Path,
+    score_name: str | None = None,
+    model: str | None = None,
+    provider: str | None = None,
+    method: str | None = None,
+) -> JsonDict:
+    """Convert DeepEval local TestRun JSON into one scored PCL run."""
+
+    payload = read_json(source_path)
+    rows = _deepeval_rows(payload, score_name=score_name)
+    if not rows:
+        msg = f"No DeepEval test cases with scores found in {source_path}"
+        raise ValueError(msg)
+    selected = _filter_deepeval_rows(rows, model=model, provider=provider)
+    if not selected:
+        msg = "No DeepEval rows matched the requested model/provider filter"
+        raise ValueError(msg)
+    selected_model = model or _single_value(selected, "model_id", "DeepEval model ids")
+    selected_provider = provider or _single_value(selected, "provider", "DeepEval providers")
+    method_name = method or _optional_str(payload.get("run_name")) or "deepeval"
+    predictions = [
+        _prediction_from_deepeval_row(row, index=index, method=method_name)
+        for index, row in enumerate(selected)
+    ]
+    summary = summarize_predictions(predictions)
+    ensure_dir(out_dir)
+    write_jsonl(out_dir / "predictions.jsonl", [prediction.to_json() for prediction in predictions])
+    write_json(out_dir / "metrics.json", summary.to_json())
+    model_identity = detect_model_identity(provider=selected_provider, model_id=selected_model)
+    manifest: JsonDict = {
+        "tool": "promptcontrollab",
+        "tool_version": __version__,
+        "mode": "deepeval_ingest",
+        "method": method_name,
+        "metric": f"deepeval_metric:{score_name or 'auto'}",
+        "source_tool": "deepeval",
+        "source_path": str(source_path),
+        "deepeval_filter": {
+            "score_name": score_name or "auto",
+            "model": selected_model,
+            "provider": selected_provider,
+        },
+        "model": model_identity.to_json(),
+    }
+    write_json(out_dir / "manifest.json", manifest)
+    return {
+        "out_dir": str(out_dir),
+        "count": len(predictions),
+        "mean_score": summary.mean_score,
+        "score_name": score_name or "auto",
+        "model": selected_model,
+        "provider": selected_provider,
+    }
+
+
 def _promptfoo_rows(payload: JsonDict) -> list[JsonDict]:
     results = payload.get("results")
     if isinstance(results, list):
@@ -342,6 +411,170 @@ def _looks_like_langsmith(payload: JsonDict) -> bool:
                 ):
                     return True
     return False
+
+
+def _looks_like_deepeval(payload: JsonDict) -> bool:
+    tool = payload.get("tool") or payload.get("source_tool") or payload.get("framework")
+    if isinstance(tool, str) and "deepeval" in tool.lower():
+        return True
+    for key in ["test_cases", "testCases", "test_results", "testResults"]:
+        if isinstance(payload.get(key), list):
+            return True
+    for key in ["test_run", "testRun", "run"]:
+        value = payload.get(key)
+        if isinstance(value, dict):
+            for nested_key in ["test_cases", "testCases", "test_results", "testResults"]:
+                if isinstance(value.get(nested_key), list):
+                    return True
+    return False
+
+
+def _deepeval_rows(payload: JsonDict, *, score_name: str | None) -> list[JsonDict]:
+    test_cases, context = _deepeval_test_cases(payload)
+    rows: list[JsonDict] = []
+    for index, item in enumerate(test_cases):
+        row = _row_from_deepeval_case(item, index=index, score_name=score_name, context=context)
+        if row is not None:
+            rows.append(row)
+    return rows
+
+
+def _deepeval_test_cases(payload: JsonDict) -> tuple[list[JsonDict], JsonDict]:
+    context = _deepeval_context(payload)
+    rows: list[JsonDict] = []
+    nested_sources = [
+        _dict_or_empty(payload.get(key)) for key in ["test_run", "testRun", "run"]
+    ]
+    for source in [payload, *nested_sources]:
+        for key in ["test_cases", "testCases", "test_results", "testResults", "results", "data"]:
+            value = source.get(key)
+            if isinstance(value, list):
+                rows.extend(item for item in value if isinstance(item, dict))
+    return rows, context
+
+
+def _deepeval_context(payload: JsonDict) -> JsonDict:
+    for key in ["hyperparameters", "metadata", "config"]:
+        value = payload.get(key)
+        if isinstance(value, dict):
+            return cast(JsonDict, value)
+    nested = payload.get("test_run") or payload.get("testRun") or payload.get("run")
+    if isinstance(nested, dict):
+        return _deepeval_context(cast(JsonDict, nested))
+    return {}
+
+
+def _row_from_deepeval_case(
+    item: JsonDict,
+    *,
+    index: int,
+    score_name: str | None,
+    context: JsonDict,
+) -> JsonDict | None:
+    score = _deepeval_score(item, score_name=score_name)
+    if score is None:
+        return None
+    test_case = _dict_or_empty(item.get("test_case")) or _dict_or_empty(item.get("testCase"))
+    metadata = _dict_or_empty(item.get("metadata")) or _dict_or_empty(test_case.get("metadata"))
+    model_id = (
+        _optional_str(metadata.get("model"))
+        or _optional_str(item.get("model"))
+        or _optional_str(context.get("model"))
+    )
+    provider = (
+        _optional_str(metadata.get("provider"))
+        or _optional_str(item.get("provider"))
+        or _optional_str(context.get("provider"))
+    )
+    if provider is None and model_id is not None:
+        provider, model_id = _split_provider_model(model_id)
+    stable_id = _stable_example_id(metadata, item, test_case)
+    metric_reason = _deepeval_metric_reason(item, score_name=score_name)
+    return {
+        "id": stable_id
+        or _optional_str(item.get("id"))
+        or _optional_str(item.get("test_case_id"))
+        or _optional_str(item.get("testCaseId"))
+        or f"deepeval-{index}",
+        "provider": provider,
+        "model_id": model_id,
+        "output": _deepeval_output(item, test_case),
+        "expected": _deepeval_expected(item, test_case),
+        "score": score,
+        "slice": _deepeval_slice(metadata, item, test_case),
+        "error": _optional_str(item.get("error")) or metric_reason,
+    }
+
+
+def _deepeval_score(item: JsonDict, *, score_name: str | None) -> float | None:
+    for key in ["metrics", "metric_results", "metricResults", "metrics_data", "metricsData"]:
+        value = item.get(key)
+        if isinstance(value, list):
+            matches = [metric for metric in value if isinstance(metric, dict)]
+            if score_name is not None:
+                matches = [
+                    metric
+                    for metric in matches
+                    if metric.get("name") == score_name or metric.get("metric") == score_name
+                ]
+            elif len({metric.get("name") or metric.get("metric") for metric in matches}) > 1:
+                msg = "Multiple DeepEval metric names found; pass --score-name to choose one"
+                raise ValueError(msg)
+            for metric in matches:
+                parsed = _numeric_score(metric.get("score"))
+                if parsed is not None:
+                    return parsed
+                for key in ["success", "passed"]:
+                    parsed = _numeric_score(metric.get(key))
+                    if parsed is not None:
+                        return parsed
+    for key in ["score", "value", "success", "passed"]:
+        parsed = _numeric_score(item.get(key))
+        if parsed is not None:
+            return parsed
+    return None
+
+
+def _deepeval_metric_reason(item: JsonDict, *, score_name: str | None) -> str | None:
+    metrics = item.get("metrics") or item.get("metric_results") or item.get("metricResults")
+    if not isinstance(metrics, list):
+        return None
+    for metric in metrics:
+        if not isinstance(metric, dict):
+            continue
+        if (
+            score_name is not None
+            and metric.get("name") != score_name
+            and metric.get("metric") != score_name
+        ):
+            continue
+        return _optional_str(metric.get("reason")) or _optional_str(metric.get("error"))
+    return None
+
+
+def _deepeval_output(item: JsonDict, test_case: JsonDict) -> str:
+    for payload in [item, test_case]:
+        for key in ["actual_output", "actualOutput", "output", "actual", "prediction"]:
+            if key in payload:
+                return _jsonish_text(payload.get(key))
+    return ""
+
+
+def _deepeval_expected(item: JsonDict, test_case: JsonDict) -> str:
+    for payload in [item, test_case]:
+        for key in ["expected_output", "expectedOutput", "expected", "target", "reference"]:
+            if key in payload:
+                return _jsonish_text(payload.get(key))
+    return ""
+
+
+def _deepeval_slice(*payloads: JsonDict) -> str:
+    for payload in payloads:
+        for key in ["slice", "dataset", "dataset_name", "task", "metric_name", "name"]:
+            value = payload.get(key)
+            if isinstance(value, str) and value:
+                return value
+    return "default"
 
 
 def _langfuse_rows(payload: JsonDict, *, score_name: str | None) -> list[JsonDict]:
@@ -568,6 +801,20 @@ def _filter_langfuse_rows(
     ]
 
 
+def _filter_deepeval_rows(
+    rows: list[JsonDict],
+    *,
+    model: str | None,
+    provider: str | None,
+) -> list[JsonDict]:
+    return [
+        row
+        for row in rows
+        if (model is None or row.get("model_id") == model)
+        and (provider is None or row.get("provider") == provider)
+    ]
+
+
 def _row_from_v3_result(item: JsonDict) -> JsonDict:
     provider = _provider_id(item.get("provider"))
     prompt_id = _optional_str(item.get("promptId"))
@@ -684,6 +931,29 @@ def _prediction_from_langfuse_row(
 
 
 def _prediction_from_langsmith_row(
+    row: JsonDict,
+    *,
+    index: int,
+    method: str,
+) -> PredictionRecord:
+    model_payload: JsonDict = {}
+    if isinstance(row.get("provider"), str):
+        model_payload["provider"] = row["provider"]
+    if isinstance(row.get("model_id"), str):
+        model_payload["model_id"] = row["model_id"]
+    return PredictionRecord(
+        id=_unique_id(row, index),
+        output=str(row.get("output", "")),
+        expected=str(row.get("expected", "")),
+        score=float(row.get("score", 0.0)),
+        slice=str(row.get("slice") or "default"),
+        method=method,
+        error=cast(str | None, row.get("error")),
+        model=model_payload,
+    )
+
+
+def _prediction_from_deepeval_row(
     row: JsonDict,
     *,
     index: int,

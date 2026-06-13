@@ -318,7 +318,7 @@ def run_external_evidence_workflow(
 ) -> JsonDict:
     """Run or preview the external eval/observability evidence bridge."""
 
-    if tool not in {"auto", "promptfoo", "langfuse", "langsmith"}:
+    if tool not in {"auto", "promptfoo", "langfuse", "langsmith", "deepeval"}:
         msg = f"Unknown external evidence tool `{tool}`."
         raise ValueError(msg)
     outputs = [

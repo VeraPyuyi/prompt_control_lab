@@ -90,12 +90,12 @@ prompt-only 比较有效性、`evidence_card.json` / `evidence_card.md` 和 `cla
 
 ## 生态桥接
 
-如果你已经在使用 Promptfoo、Langfuse 或 LangSmith 做 prompt / model 评测和观测，不需要替换它们。`prompt_control_lab` 可以导入这些工具的导出结果，并在其上增加研究诊断层：
+如果你已经在使用 Promptfoo、DeepEval、Langfuse 或 LangSmith 做 prompt / model 评测和观测，不需要替换它们。`prompt_control_lab` 可以导入这些工具的导出结果，并在其上增加研究诊断层：
 
 ![prompt_control_lab 生态证据闭环](docs/assets/ecosystem_scorecard.zh.svg)
 
 ```bash
-# 一次性运行仓库自带的 Promptfoo / Langfuse / LangSmith 风格导出示例。
+# 一次性运行仓库自带的 Promptfoo / DeepEval / Langfuse / LangSmith 风格导出示例。
 pcl ecosystem-demo --examples examples/external --out runs/ecosystem-demo
 
 # 然后先打开 ecosystem_scorecard.md，再看 research_diagnostics.md
@@ -118,7 +118,7 @@ pcl evidence-from \
   --split-hash eval-split-2026-06 \
   --out runs/from-promptfoo-evidence
 
-# 一般先用这个：PCL 会自动识别 Promptfoo、Langfuse 或 LangSmith 导出。
+# 一般先用这个：PCL 会自动识别 Promptfoo、DeepEval、Langfuse 或 LangSmith 导出。
 pcl ingest auto --input results.json --out runs/from-external --score-name exact_match
 pcl report --run runs/from-external
 
@@ -130,6 +130,9 @@ pcl ingest langfuse --input langfuse-export.json --out runs/from-langfuse \
 
 pcl ingest langsmith --input langsmith-runs.csv --out runs/from-langsmith \
   --experiment candidate --score-name exact_match
+
+pcl ingest deepeval --input deepeval-test-run.json --out runs/from-deepeval \
+  --score-name exact_match
 
 # 有了两个已经导入 / 打分的 run 之后，可以一条命令生成比较证据包。
 pcl compare-runs \
@@ -164,9 +167,9 @@ prompt optimization 主张。请使用新的或空的 `--out` 目录，避免旧
 pcl gap-status --run runs/from-promptfoo-evidence
 ```
 
-导入后的 run 会包含 `predictions.jsonl`、`metrics.json` 和 `manifest.json`，因此可以继续接 `pcl compare-runs`、`pcl stats`、`pcl validity` 和后续报告。`compare-runs` 会写出一个独立比较目录，里面包含成对统计、prompt-only 比较有效性、candidate metrics 快照、源 run 快照以及 Markdown / HTML 报告。`evidence-card` 会继续把这条研究证据链压缩成一份 reviewer 更容易看的卡片。请使用新的或空的 `--out` 目录，避免旧 artifact 污染审计结果。这个能力的定位是桥接 Promptfoo / Langfuse / LangSmith 生态，而不是替代 Promptfoo 的 red-team / provider 生态、Langfuse 的 tracing 平台或 LangSmith 的观测/评测工作流。
+导入后的 run 会包含 `predictions.jsonl`、`metrics.json` 和 `manifest.json`，因此可以继续接 `pcl compare-runs`、`pcl stats`、`pcl validity` 和后续报告。`compare-runs` 会写出一个独立比较目录，里面包含成对统计、prompt-only 比较有效性、candidate metrics 快照、源 run 快照以及 Markdown / HTML 报告。`evidence-card` 会继续把这条研究证据链压缩成一份 reviewer 更容易看的卡片。请使用新的或空的 `--out` 目录，避免旧 artifact 污染审计结果。这个能力的定位是桥接 Promptfoo / DeepEval / Langfuse / LangSmith 生态，而不是替代 Promptfoo 的 red-team / provider 生态、DeepEval 的本地 eval runner、Langfuse 的 tracing 平台或 LangSmith 的观测/评测工作流。
 
-竞争切口：Promptfoo、LangSmith 和 Langfuse 已经在 security testing、tracing、observability、prompt management 和生产工作流上形成很强的付费能力。PCL 更应该赢在它们通常不覆盖的 **研究证据层**：成对不确定性、prompt-only 有效性、evidence card、claim check、soft-hard gap、hidden-state trajectory、Riccati surrogate、time-varying control evidence，以及现在用 `pcl gap-status` 检查导入之后的论文诊断缺口是否真正补齐。
+竞争切口：Promptfoo、DeepEval、LangSmith 和 Langfuse 已经在 security testing、本地 eval、tracing、observability、prompt management 和生产工作流上形成很强能力。PCL 更应该赢在它们通常不覆盖的 **研究证据层**：成对不确定性、prompt-only 有效性、evidence card、claim check、soft-hard gap、hidden-state trajectory、Riccati surrogate、time-varying control evidence，以及现在用 `pcl gap-status` 检查导入之后的论文诊断缺口是否真正补齐。
 
 如果想直接复制示例命令，请看 [生态桥接教程](docs/ecosystem_bridge.zh.md) 和
 [examples/external](examples/external/)。
@@ -234,7 +237,7 @@ pip install -e ".[hf]"
 
 本地 UI 现在默认打开 **研究总览**：先展示 tri-split、成对统计、soft-hard、trajectory、
 Riccati 和 tv-soft 等论文诊断，再把 agent guard、audit、history 等工程应用放在后续标签页。
-**工作流** 页也可以从浏览器触发 `pcl evidence-from`，把 Promptfoo、Langfuse 或 LangSmith
+**工作流** 页也可以从浏览器触发 `pcl evidence-from`，把 Promptfoo、DeepEval、Langfuse 或 LangSmith
 导出的 baseline / candidate 结果整理成 PCL 证据包。
 
 本地构建 wheel 后，可以用 `pipx` 安装：
@@ -274,10 +277,10 @@ pcl doctor
 | 内部轨迹诊断 | `pcl trajectory` | 分析 hidden-state drift、decay slope 和 turnpike-like signal。 |
 | Riccati 诊断 | `pcl riccati` | 检查有限维 surrogate 的 Riccati / DARE 稳定性。 |
 | time-varying control | `pcl tv-soft` | 比较 static、time-varying、shuffled、random control lane。 |
-| 三工具桥接 demo | `pcl ecosystem-demo` | 一次性跑完 Promptfoo、Langfuse、LangSmith 样例，并生成三套 PCL evidence bundle。 |
-| 跨工具定位表 | `pcl ecosystem-scorecard` | 重新生成 Promptfoo / Langfuse / LangSmith 与 PCL 的分工、证据缺口和补齐命令。 |
+| 生态桥接 demo | `pcl ecosystem-demo` | 一次性跑完 Promptfoo、DeepEval、Langfuse、LangSmith 样例，并生成 PCL evidence bundle。 |
+| 跨工具定位表 | `pcl ecosystem-scorecard` | 重新生成 Promptfoo / DeepEval / Langfuse / LangSmith 与 PCL 的分工、证据缺口和补齐命令。 |
 | 一键外部证据包 | `pcl evidence-from` | 导入外部 baseline / candidate export，并一键生成 PCL evidence card。 |
-| 生态桥接 | `pcl ingest auto` / `promptfoo` / `langfuse` / `langsmith` | 导入外部 eval / trace artifact，再接 PCL 的比较有效性和研究诊断。 |
+| 生态桥接 | `pcl ingest auto` / `promptfoo` / `deepeval` / `langfuse` / `langsmith` | 导入外部 eval / trace artifact，再接 PCL 的比较有效性和研究诊断。 |
 | 一键 run 比较 | `pcl compare-runs` | 把两个导入 / 打分后的 run 变成 stats、comparison_validity 和报告。 |
 | 报告和解释 | `pcl report` / `pcl explain` / `pcl gate` | 把 artifact 转成可读结论和策略判断。 |
 | Agent 应用层 | `pcl guard` / `pcl audit-diff` | 把研究证据链应用到 coding agent 的执行前后。 |

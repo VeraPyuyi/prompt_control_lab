@@ -135,11 +135,12 @@ def test_diagnose_summarizes_ecosystem_demo_evidence_gaps(tmp_path: Path) -> Non
 
     summary = read_json(out / "research_diagnostics.json")
     ecosystem = summary["diagnostics"]["ecosystem_bridge"]
-    assert ecosystem["tool_count"] == 3
+    assert ecosystem["tool_count"] == 4
     assert [item["tool"] for item in ecosystem["runs"]] == [
         "promptfoo",
         "langfuse",
         "langsmith",
+        "deepeval",
     ]
     assert "hidden-state trajectory" in ecosystem["runs"][0]["missing_paper_diagnostics"]
     remediation = ecosystem["paper_gap_remediation"]

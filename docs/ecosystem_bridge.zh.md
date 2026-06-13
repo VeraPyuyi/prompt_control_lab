@@ -1,8 +1,9 @@
 # 生态桥接
 
-Promptfoo、LangSmith 和 Langfuse 分别擅长 LLM 工程流程里的不同部分：
+Promptfoo、DeepEval、LangSmith 和 Langfuse 分别擅长 LLM 工程流程里的不同部分：
 
 - Promptfoo：评测、红队测试、provider 矩阵、CI 和安全报告。
+- DeepEval：本地 LLM test run、metric 分数、reason 和 CI 风格评测 artifact。
 - LangSmith：trace、监控、在线评测、agent 轨迹调试和生产仪表盘。
 - Langfuse：开源观测、prompt 管理、评测、成本跟踪和自托管部署。
 
@@ -15,6 +16,7 @@ Promptfoo、LangSmith 和 Langfuse 分别擅长 LLM 工程流程里的不同部�
 | 工具 | 最强能力 | PCL 的互补位置 |
 |---|---|---|
 | Promptfoo | LLM eval、红队 / 安全测试、provider 矩阵、CI 和安全报告。 | 导入 Promptfoo 评测结果之后，补上成对不确定性、prompt-only 有效性、evidence card、claim check 和论文诊断缺口闭环。 |
+| DeepEval | 本地 LLM test run、metric 分数、reason 和 CI 风格评测 artifact。 | 导入 DeepEval TestRun JSON 之后，补上成对 prompt 证据、协议卫生、claim scope 检查和论文诊断缺口计划。 |
 | LangSmith | Agent tracing、observability、在线 / 离线评测、部署和 sandbox。 | 把 LangSmith experiment export 变成 prompt optimization 证据包，区分 prompt 效果和 model、metric、split 等混杂因素。 |
 | Langfuse | 开源 observability、prompt management、evaluation、成本跟踪和自托管 trace。 | 补上观测平台通常不覆盖的研究诊断：soft-hard gap、hidden-state trajectory、Riccati surrogate 和 time-varying control evidence。 |
 
@@ -54,7 +56,7 @@ Promptfoo、LangSmith 和 Langfuse 分别擅长 LLM 工程流程里的不同部�
 `demo/examples/external/` 写出同样的样例，所以 wheel 或 `pipx`
 用户不需要 clone 源码，也能直接试用这条桥接链路。
 
-一次性运行三种外部工具的桥接示例：
+一次性运行多种外部工具的桥接示例：
 
 ```bash
 pcl ecosystem-demo --examples examples/external --out runs/ecosystem-demo
@@ -68,6 +70,7 @@ evidence bundle：
 - `runs/ecosystem-demo/promptfoo/`
 - `runs/ecosystem-demo/langfuse/`
 - `runs/ecosystem-demo/langsmith/`
+- `runs/ecosystem-demo/deepeval/`
 
 如果要向团队解释定位，建议先打开根目录里的 `ecosystem_scorecard.md`。它会按工具列出：
 外部工具擅长什么、PCL 补了什么、还缺哪些论文诊断。然后再打开每个目录里的
@@ -142,6 +145,20 @@ pcl evidence-from \
   --provider openai \
   --split-hash external-demo-split \
   --out runs/from-langsmith-evidence
+```
+
+DeepEval：
+
+```bash
+pcl evidence-from \
+  --tool deepeval \
+  --baseline-input examples/external/deepeval_baseline.json \
+  --candidate-input examples/external/deepeval_candidate.json \
+  --score-name exact_match \
+  --model gpt-4o-mini-20260601 \
+  --provider openai \
+  --split-hash external-demo-split \
+  --out runs/from-deepeval-evidence
 ```
 
 ## 成对样本规则

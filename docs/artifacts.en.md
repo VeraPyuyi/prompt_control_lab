@@ -132,9 +132,9 @@ time-varying soft-control evidence. A `supported` recommendation means the recor
 consistent with the configured checks; it is not a proof of universal prompt improvement.
 
 The card also records `evidence_tier`, `claim_scope`, `claim_language`, and
-`next_tier_missing`. These fields keep the claim honest: an imported Promptfoo/Langfuse/LangSmith
-comparison may support a paired-comparison claim while still missing the full paper-derived
-soft-hard, trajectory, Riccati, or time-varying diagnostic stack.
+`next_tier_missing`. These fields keep the claim honest: an imported
+Promptfoo/DeepEval/Langfuse/LangSmith comparison may support a paired-comparison claim while still
+missing the full paper-derived soft-hard, trajectory, Riccati, or time-varying diagnostic stack.
 
 ## `claim_check.json` / `claim_check.md`
 
@@ -160,7 +160,7 @@ snapshots, optional copied `splits.json` files, `stats.json`, `comparison_validi
 `comparison_validity.md`, `metrics.json`, `manifest.json`, `report.md`, and `report.html`. Use a
 new or empty output directory; the command rejects non-empty output paths to prevent stale
 artifacts from contaminating validity checks. This is the recommended next step after importing
-Promptfoo, Langfuse, or LangSmith exports when you want PCL's paired statistics and prompt-only
+Promptfoo, DeepEval, Langfuse, or LangSmith exports when you want PCL's paired statistics and prompt-only
 validity audit without manually chaining multiple commands.
 
 ## `agent_run.json`
@@ -224,8 +224,8 @@ If `comparison_validity.json` exists, the gate also consumes it: `invalid` becom
 
 ## External ingest manifests
 
-`pcl ingest auto` detects Promptfoo, Langfuse, or LangSmith exports, then delegates to the matching
-explicit importer. The written manifest still records the concrete source tool.
+`pcl ingest auto` detects Promptfoo, DeepEval, Langfuse, or LangSmith exports, then delegates to the
+matching explicit importer. The written manifest still records the concrete source tool.
 
 `pcl ingest promptfoo` writes `manifest.json` with `mode: promptfoo_ingest`, `source_tool:
 promptfoo`, and a `promptfoo_filter` recording the selected prompt/provider.
@@ -237,6 +237,11 @@ langfuse`, and a `langfuse_filter` recording the selected observation name, scor
 langsmith`, and a `langsmith_filter` recording the selected experiment, score name, model, and
 provider.
 
+`pcl ingest deepeval` writes `manifest.json` with `mode: deepeval_ingest`, `source_tool:
+deepeval`, and a `deepeval_filter` recording the selected metric, model, and provider. Scores come
+from the selected DeepEval metric in a local TestRun JSON artifact, while outputs, expected values,
+and model provenance come from TestRun fields, hyperparameters, or per-case metadata.
+
 What it explains: external tools remain the source of eval or trace data, while
 `prompt_control_lab` records the exact import filter before running comparison validity,
 statistics, reports, or paper-derived diagnostics on top.
@@ -244,14 +249,14 @@ statistics, reports, or paper-derived diagnostics on top.
 ## `evidence_from_result.json`
 
 Written by `pcl evidence-from`. This one-command bridge imports a baseline export and a
-candidate export from Promptfoo, Langfuse, or LangSmith, snapshots them under `imports/`, runs a
-PCL comparison under `comparison/`, copies the headline `evidence_card.md`, `report.html`,
+candidate export from Promptfoo, DeepEval, Langfuse, or LangSmith, snapshots them under `imports/`,
+runs a PCL comparison under `comparison/`, copies the headline `evidence_card.md`, `report.html`,
 `stats.json`, and `comparison_validity.json` to the output root, and writes
 `research_diagnostics.md` / `research_diagnostics.json` for paper-evidence gap coverage.
 
 Important fields:
 
-- `tool`: `auto`, `promptfoo`, `langfuse`, or `langsmith`
+- `tool`: `auto`, `promptfoo`, `deepeval`, `langfuse`, or `langsmith`
 - `baseline_import` / `candidate_import`: counts, mean scores, and selected filters from import
 - `comparison_dir`: the self-contained PCL comparison run
 - `comparison`: paths to stats, prompt-only validity, evidence card, and reports
@@ -272,15 +277,16 @@ What it explains: the division of labor between the external source tool and PCL
 tool supplied the eval or trace export, what PCL added on top, the main paired statistics,
 prompt-only comparison validity, paper-evidence gap diagnostics, missing evidence, remediation
 commands, review items, and next actions. This is the recommended first file to open when
-explaining why PCL complements Promptfoo, Langfuse, or LangSmith instead of replacing them.
+explaining why PCL complements Promptfoo, DeepEval, Langfuse, or LangSmith instead of replacing
+them.
 
 ## `ecosystem_scorecard.json` / `ecosystem_scorecard.md`
 
 Written by `pcl ecosystem-demo`; refreshed by `pcl ecosystem-scorecard --run <run>`.
 
-What it explains: the cross-tool positioning for the bundled Promptfoo, Langfuse, and LangSmith
-bridge demo. It shows each external tool's strongest lane, what PCL adds as a research evidence
-layer, the current validity/evidence tier, the current gap-status result when available,
+What it explains: the cross-tool positioning for the bundled Promptfoo, DeepEval, Langfuse, and
+LangSmith bridge demo. It shows each external tool's strongest lane, what PCL adds as a research
+evidence layer, the current validity/evidence tier, the current gap-status result when available,
 missing paper diagnostics, and the `pcl gap-status` command to run after closing those gaps.
 This is the recommended first file to open when showing why PCL complements existing eval,
 observability, and security-testing tools.

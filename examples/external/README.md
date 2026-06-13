@@ -1,7 +1,7 @@
 # External Tool Export Examples
 
-These files are tiny Promptfoo, Langfuse, and LangSmith-style exports for trying
-`pcl evidence-from` without setting up those tools first.
+These files are tiny Promptfoo, Langfuse, LangSmith, and DeepEval-style exports
+for trying `pcl evidence-from` without setting up those tools first.
 
 `pcl init --path demo` writes the same files under `demo/examples/external/`, so
 installed users can try the bridge without cloning the repository.
@@ -61,4 +61,22 @@ pcl evidence-from \
   --provider openai \
   --split-hash external-demo-split \
   --out runs/from-langsmith-evidence
+```
+
+## DeepEval
+
+DeepEval commonly saves local TestRun JSON artifacts. The sample keeps baseline
+and candidate as two separate TestRun files, with shared `metadata.example_id`
+values for paired statistics.
+
+```bash
+pcl evidence-from \
+  --tool deepeval \
+  --baseline-input examples/external/deepeval_baseline.json \
+  --candidate-input examples/external/deepeval_candidate.json \
+  --score-name exact_match \
+  --model gpt-4o-mini-20260601 \
+  --provider openai \
+  --split-hash external-demo-split \
+  --out runs/from-deepeval-evidence
 ```

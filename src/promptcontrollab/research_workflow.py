@@ -971,6 +971,7 @@ def _display_tool_name(tool: object) -> str:
         "promptfoo": "Promptfoo",
         "langfuse": "Langfuse",
         "langsmith": "LangSmith",
+        "deepeval": "DeepEval",
     }
     return names.get(str(tool), str(tool))
 

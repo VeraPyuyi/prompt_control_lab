@@ -288,16 +288,109 @@ cand-run-3,case-3,candidate,blue,blue,1,gpt-4o-mini-20260601,openai,classificati
 cand-run-4,case-4,candidate,safe,safe,1,gpt-4o-mini-20260601,openai,safety
 """
 
+DEEPEVAL_BASELINE_JSON = """\
+{
+  "tool": "deepeval",
+  "run_name": "baseline",
+  "hyperparameters": {
+    "model": "gpt-4o-mini-20260601",
+    "provider": "openai"
+  },
+  "test_cases": [
+    {
+      "id": "case-1",
+      "input": "What is 2 + 2?",
+      "actual_output": "wrong",
+      "expected_output": "4",
+      "metadata": {"example_id": "case-1", "slice": "arithmetic"},
+      "metrics": [{"name": "exact_match", "score": 0, "reason": "wrong answer"}]
+    },
+    {
+      "id": "case-2",
+      "input": "Return YES.",
+      "actual_output": "NO",
+      "expected_output": "YES",
+      "metadata": {"example_id": "case-2", "slice": "format"},
+      "metrics": [{"name": "exact_match", "score": 0, "reason": "wrong label"}]
+    },
+    {
+      "id": "case-3",
+      "input": "Return blue.",
+      "actual_output": "blue",
+      "expected_output": "blue",
+      "metadata": {"example_id": "case-3", "slice": "classification"},
+      "metrics": [{"name": "exact_match", "score": 1, "reason": "matches"}]
+    },
+    {
+      "id": "case-4",
+      "input": "Return safe.",
+      "actual_output": "maybe",
+      "expected_output": "safe",
+      "metadata": {"example_id": "case-4", "slice": "safety"},
+      "metrics": [{"name": "exact_match", "score": 0, "reason": "ambiguous output"}]
+    }
+  ]
+}
+"""
+
+DEEPEVAL_CANDIDATE_JSON = """\
+{
+  "tool": "deepeval",
+  "run_name": "candidate",
+  "hyperparameters": {
+    "model": "gpt-4o-mini-20260601",
+    "provider": "openai"
+  },
+  "test_cases": [
+    {
+      "id": "case-1",
+      "input": "What is 2 + 2?",
+      "actual_output": "4",
+      "expected_output": "4",
+      "metadata": {"example_id": "case-1", "slice": "arithmetic"},
+      "metrics": [{"name": "exact_match", "score": 1, "reason": "matches"}]
+    },
+    {
+      "id": "case-2",
+      "input": "Return YES.",
+      "actual_output": "YES",
+      "expected_output": "YES",
+      "metadata": {"example_id": "case-2", "slice": "format"},
+      "metrics": [{"name": "exact_match", "score": 1, "reason": "matches"}]
+    },
+    {
+      "id": "case-3",
+      "input": "Return blue.",
+      "actual_output": "blue",
+      "expected_output": "blue",
+      "metadata": {"example_id": "case-3", "slice": "classification"},
+      "metrics": [{"name": "exact_match", "score": 1, "reason": "matches"}]
+    },
+    {
+      "id": "case-4",
+      "input": "Return safe.",
+      "actual_output": "safe",
+      "expected_output": "safe",
+      "metadata": {"example_id": "case-4", "slice": "safety"},
+      "metrics": [{"name": "exact_match", "score": 1, "reason": "matches"}]
+    }
+  ]
+}
+"""
+
 EXTERNAL_README_MD = """\
 # External Tool Export Examples
 
-These tiny Promptfoo, Langfuse, and LangSmith-style exports let you try
+These tiny Promptfoo, Langfuse, LangSmith, and DeepEval-style exports let you try
 `pcl evidence-from` without setting up those tools first.
 
 They are intentionally small. `comparison_validity.json` may say
 `needs_review` because four examples are not enough for strong statistical
 evidence. That is expected: the demo proves the bridge and artifact shape, not a
 universal prompt improvement claim.
+
+DeepEval uses two files in this demo: `deepeval_baseline.json` and
+`deepeval_candidate.json`.
 """
 
 
@@ -330,6 +423,14 @@ def write_example_project(path: Path) -> None:
     )
     (path / "examples" / "external" / "langsmith_runs.csv").write_text(
         LANGSMITH_RUNS_CSV,
+        encoding="utf-8",
+    )
+    (path / "examples" / "external" / "deepeval_baseline.json").write_text(
+        DEEPEVAL_BASELINE_JSON,
+        encoding="utf-8",
+    )
+    (path / "examples" / "external" / "deepeval_candidate.json").write_text(
+        DEEPEVAL_CANDIDATE_JSON,
         encoding="utf-8",
     )
     (path / "prompts" / "current.txt").write_text(

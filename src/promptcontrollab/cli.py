@@ -37,6 +37,7 @@ from promptcontrollab.hf_hidden import extract_hidden_states
 from promptcontrollab.history import compare_history, index_history
 from promptcontrollab.ingest import (
     ingest_auto_results,
+    ingest_deepeval_results,
     ingest_langfuse_results,
     ingest_langsmith_results,
     ingest_promptfoo_results,
@@ -136,14 +137,18 @@ def build_parser() -> argparse.ArgumentParser:
     ingest_subcommands = ingest_parser.add_subparsers(dest="ingest_command", required=True)
     auto_ingest = ingest_subcommands.add_parser(
         "auto",
-        help="Auto-detect Promptfoo/Langfuse/LangSmith exports and import them.",
+        help="Auto-detect Promptfoo/DeepEval/Langfuse/LangSmith exports and import them.",
     )
     auto_ingest.add_argument("--input", type=Path, required=True, help="External export file.")
     auto_ingest.add_argument("--out", type=Path, required=True, help="PCL run directory.")
     auto_ingest.add_argument("--prompt-id", default=None, help="Promptfoo prompt filter.")
     auto_ingest.add_argument("--name", default=None, help="Langfuse observation name filter.")
     auto_ingest.add_argument("--experiment", default=None, help="LangSmith experiment filter.")
-    auto_ingest.add_argument("--score-name", default=None, help="Langfuse/LangSmith score filter.")
+    auto_ingest.add_argument(
+        "--score-name",
+        default=None,
+        help="Langfuse/LangSmith/DeepEval score or metric filter.",
+    )
     auto_ingest.add_argument("--model", default=None, help="Model id filter.")
     auto_ingest.add_argument("--provider", default=None, help="Provider filter.")
     auto_ingest.add_argument("--method", default=None, help="Method name written to predictions.")
@@ -239,6 +244,33 @@ def build_parser() -> argparse.ArgumentParser:
         help="Method name written to PCL predictions. Defaults to the experiment name.",
     )
     langsmith_ingest.set_defaults(func=_cmd_ingest_langsmith)
+    deepeval_ingest = ingest_subcommands.add_parser(
+        "deepeval",
+        help="Import DeepEval local TestRun JSON output.",
+    )
+    deepeval_ingest.add_argument("--input", type=Path, required=True, help="DeepEval JSON file.")
+    deepeval_ingest.add_argument("--out", type=Path, required=True, help="PCL run directory.")
+    deepeval_ingest.add_argument(
+        "--score-name",
+        default=None,
+        help="DeepEval metric name to import when multiple metrics exist.",
+    )
+    deepeval_ingest.add_argument(
+        "--model",
+        default=None,
+        help="Model id filter or override.",
+    )
+    deepeval_ingest.add_argument(
+        "--provider",
+        default=None,
+        help="Provider filter or override.",
+    )
+    deepeval_ingest.add_argument(
+        "--method",
+        default=None,
+        help="Method name written to PCL predictions. Defaults to the run name.",
+    )
+    deepeval_ingest.set_defaults(func=_cmd_ingest_deepeval)
 
     improve_parser = subcommands.add_parser(
         "improve",
@@ -419,13 +451,13 @@ def build_parser() -> argparse.ArgumentParser:
     evidence_from_parser = subcommands.add_parser(
         "evidence-from",
         help=(
-            "Import baseline/candidate exports from Promptfoo, Langfuse, or LangSmith "
+            "Import baseline/candidate exports from Promptfoo, Langfuse, LangSmith, or DeepEval "
             "and generate a PCL evidence card."
         ),
     )
     evidence_from_parser.add_argument(
         "--tool",
-        choices=["auto", "promptfoo", "langfuse", "langsmith"],
+        choices=["auto", "promptfoo", "langfuse", "langsmith", "deepeval"],
         default="auto",
         help="External export type. Use auto to detect each input file.",
     )
@@ -450,7 +482,7 @@ def build_parser() -> argparse.ArgumentParser:
     evidence_from_parser.add_argument(
         "--score-name",
         default=None,
-        help="Langfuse/LangSmith score name to import.",
+        help="Langfuse/LangSmith/DeepEval score or metric name to import.",
     )
     evidence_from_parser.add_argument(
         "--provider",
@@ -511,7 +543,7 @@ def build_parser() -> argparse.ArgumentParser:
 
     ecosystem_demo_parser = subcommands.add_parser(
         "ecosystem-demo",
-        help="Run bundled Promptfoo/Langfuse/LangSmith bridge examples.",
+        help="Run bundled Promptfoo/DeepEval/Langfuse/LangSmith bridge examples.",
     )
     ecosystem_demo_parser.add_argument(
         "--examples",
@@ -1080,6 +1112,18 @@ def _cmd_ingest_langsmith(args: argparse.Namespace) -> None:
         source_path=args.input,
         out_dir=args.out,
         experiment=args.experiment,
+        score_name=args.score_name,
+        model=args.model,
+        provider=args.provider,
+        method=args.method,
+    )
+    print(json.dumps(payload, indent=2, ensure_ascii=False, sort_keys=True))
+
+
+def _cmd_ingest_deepeval(args: argparse.Namespace) -> None:
+    payload = ingest_deepeval_results(
+        source_path=args.input,
+        out_dir=args.out,
         score_name=args.score_name,
         model=args.model,
         provider=args.provider,

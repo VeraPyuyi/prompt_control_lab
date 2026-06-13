@@ -529,6 +529,7 @@ CHOICE_OPTIONS = {
         ("promptfoo", "promptfoo", "Promptfoo"),
         ("langfuse", "langfuse", "Langfuse"),
         ("langsmith", "langsmith", "LangSmith"),
+        ("deepeval", "deepeval", "DeepEval"),
     ],
 }
 
@@ -995,6 +996,7 @@ CHOICE_OPTIONS.update(
             ("promptfoo", "promptfoo", "Promptfoo"),
             ("langfuse", "langfuse", "Langfuse"),
             ("langsmith", "langsmith", "LangSmith"),
+            ("deepeval", "deepeval", "DeepEval"),
         ],
     }
 )

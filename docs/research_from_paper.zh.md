@@ -119,7 +119,7 @@ pcl claim-check --run runs/candidate --claim paired
 pcl claim-check --run runs/candidate --claim full-research --out runs/candidate/claim_check.json
 ```
 
-这个命令会读取 evidence tier，并回答一个很直接的问题：当前 artifact 是否支持你要求的 claim scope？例如，从 Promptfoo、Langfuse 或 LangSmith 导入的结果可能足以支持 `paired` 层级的成对比较主张，但如果缺少 soft-hard、trajectory、Riccati 和 time-varying 诊断，就不应该被说成 `full-research` 层级的完整 prompt-control 分析。这个失败结果是有价值的：它能阻止把一个小型 eval 导出过度包装成论文级结论。
+这个命令会读取 evidence tier，并回答一个很直接的问题：当前 artifact 是否支持你要求的 claim scope？例如，从 Promptfoo、DeepEval、Langfuse 或 LangSmith 导入的结果可能足以支持 `paired` 层级的成对比较主张，但如果缺少 soft-hard、trajectory、Riccati 和 time-varying 诊断，就不应该被说成 `full-research` 层级的完整 prompt-control 分析。这个失败结果是有价值的：它能阻止把一个小型 eval 导出过度包装成论文级结论。
 
 ## 7. soft-to-hard 部署 gap
 

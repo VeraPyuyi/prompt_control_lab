@@ -34,6 +34,10 @@ observation 的 model / provider 字段复制。导入后的 run 可以继续接
 `output` 来自 run outputs，`expected` 来自 reference outputs，模型来源会从 run metadata
 或 CSV 列复制。JSON 和 CSV 导出都可以导入。
 
+如果由 `pcl ingest deepeval` 写出，`score` 来自本地 DeepEval TestRun JSON 中选定的 metric，
+`output` 来自 `actual_output` / `output` 字段，`expected` 来自 `expected_output` / `expected`
+字段，模型来源会从 TestRun hyperparameters 或每条样本的 metadata 复制。
+
 ## `pcl model-detect` 输出
 
 记录 `provider`、`model_id`、`source`、`confidence`、可选的公开模型元数据、`request_id`、
@@ -101,7 +105,7 @@ Riccati surrogate 状态和 time-varying soft-control 证据。`supported` 表�
 
 证据卡还会记录 `evidence_tier`、`claim_scope`、`claim_language` 和
 `next_tier_missing`。这些字段用于约束可声明范围：从 Promptfoo、Langfuse 或
-LangSmith 导入的比较结果可能足以支持“成对比较”层面的结论，但仍然缺少完整论文诊断所需的 soft-hard、trajectory、Riccati 或 time-varying 证据。
+LangSmith / DeepEval 导入的比较结果可能足以支持“成对比较”层面的结论，但仍然缺少完整论文诊断所需的 soft-hard、trajectory、Riccati 或 time-varying 证据。
 
 ## `claim_check.json` / `claim_check.md`
 
@@ -124,7 +128,7 @@ runs/comparison` 写出。
 可选复制的 `splits.json`、`comparison_validity.md`、`metrics.json`、`manifest.json`、
 `report.md` 和 `report.html`。请使用新的或空的输出目录；命令会拒绝非空输出目录，避免旧 artifact
 污染比较有效性检查。
-当你从 Promptfoo、Langfuse 或 LangSmith 导入结果后，如果想继续运行 PCL 的成对统计和
+当你从 Promptfoo、DeepEval、Langfuse 或 LangSmith 导入结果后，如果想继续运行 PCL 的成对统计和
 prompt-only 比较有效性审计，这是推荐的下一步。
 
 ## `agent_run.json`
@@ -173,7 +177,7 @@ gate decision、risk level、改动文件、测试、audit path、gate path，�
 
 ## 外部导入 manifest
 
-`pcl ingest auto` 会自动识别 Promptfoo、Langfuse 或 LangSmith 导出，然后转交给对应的显式导入器。最终写出的 manifest 仍然会记录具体 source tool。
+`pcl ingest auto` 会自动识别 Promptfoo、DeepEval、Langfuse 或 LangSmith 导出，然后转交给对应的显式导入器。最终写出的 manifest 仍然会记录具体 source tool。
 
 `pcl ingest promptfoo` 会写出 `mode: promptfoo_ingest`、`source_tool: promptfoo`，并在
 `promptfoo_filter` 里记录导入时选择的 prompt / provider。
@@ -184,11 +188,14 @@ gate decision、risk level、改动文件、测试、audit path、gate path，�
 `pcl ingest langsmith` 会写出 `mode: langsmith_ingest`、`source_tool: langsmith`，并在
 `langsmith_filter` 里记录导入时选择的 experiment、score name、model 和 provider。
 
+`pcl ingest deepeval` 会写出 `mode: deepeval_ingest`、`source_tool: deepeval`，并在
+`deepeval_filter` 里记录导入时选择的 metric、model 和 provider。
+
 说明什么问题：外部工具仍然负责原始 eval 或 trace 数据，`prompt_control_lab` 负责记录精确导入条件，然后在其上继续运行比较有效性、统计、报告或论文诊断。
 
 ## `evidence_from_result.json`
 
-由 `pcl evidence-from` 写出。这个一键桥接命令会从 Promptfoo、Langfuse 或 LangSmith
+由 `pcl evidence-from` 写出。这个一键桥接命令会从 Promptfoo、DeepEval、Langfuse 或 LangSmith
 导入 baseline export 和 candidate export，把导入快照保存到 `imports/`，把 PCL 比较结果保存到
 `comparison/`，并把最常用的 `evidence_card.md`、`report.html`、`stats.json` 和
 `comparison_validity.json` 复制到输出根目录，同时写出 `research_diagnostics.md` /
@@ -196,7 +203,7 @@ gate decision、risk level、改动文件、测试、audit path、gate path，�
 
 重要字段：
 
-- `tool`：`auto`、`promptfoo`、`langfuse` 或 `langsmith`
+- `tool`：`auto`、`promptfoo`、`deepeval`、`langfuse` 或 `langsmith`
 - `baseline_import` / `candidate_import`：导入数量、平均分和过滤条件
 - `comparison_dir`：自包含的 PCL 比较 run
 - `comparison`：stats、prompt-only validity、evidence card 和 report 路径
@@ -212,13 +219,13 @@ gate decision、risk level、改动文件、测试、audit path、gate path，�
 
 由 `pcl evidence-from` 写出。
 
-说明什么问题：外部工具和 PCL 的分工。它会记录哪个工具提供 eval 或 trace export、PCL 在其上补了哪些证据、主要成对统计、prompt-only 比较有效性、论文证据缺口诊断、缺失证据、补齐命令、需要复查的项目和下一步动作。当你要解释 PCL 为什么是 Promptfoo、Langfuse 或 LangSmith 的补充层，而不是替代品时，建议先打开这个文件。
+说明什么问题：外部工具和 PCL 的分工。它会记录哪个工具提供 eval 或 trace export、PCL 在其上补了哪些证据、主要成对统计、prompt-only 比较有效性、论文证据缺口诊断、缺失证据、补齐命令、需要复查的项目和下一步动作。当你要解释 PCL 为什么是 Promptfoo、DeepEval、Langfuse 或 LangSmith 的补充层，而不是替代品时，建议先打开这个文件。
 
 ## `ecosystem_scorecard.json` / `ecosystem_scorecard.md`
 
 由 `pcl ecosystem-demo` 写出；也可以用 `pcl ecosystem-scorecard --run <run>` 单独刷新。
 
-说明什么问题：Promptfoo、Langfuse 和 LangSmith 这类外部工具各自擅长什么，PCL 在其上补了什么研究证据层，当前比较的 validity / evidence tier 是什么，已经运行过的 gap-status 结果是什么，还缺哪些论文诊断，以及补齐之后应该运行哪条 `pcl gap-status` 命令。它适合作为解释 PCL 生态定位和 prompt optimization 证据缺口的第一份文件。
+说明什么问题：Promptfoo、DeepEval、Langfuse 和 LangSmith 这类外部工具各自擅长什么，PCL 在其上补了什么研究证据层，当前比较的 validity / evidence tier 是什么，已经运行过的 gap-status 结果是什么，还缺哪些论文诊断，以及补齐之后应该运行哪条 `pcl gap-status` 命令。它适合作为解释 PCL 生态定位和 prompt optimization 证据缺口的第一份文件。
 
 ## `research_gap_plan.json` / `research_gap_plan.md`
 

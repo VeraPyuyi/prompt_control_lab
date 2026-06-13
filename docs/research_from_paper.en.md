@@ -132,7 +132,7 @@ pcl claim-check --run runs/candidate --claim full-research --out runs/candidate/
 
 The command reads the evidence tier from the recorded artifacts and answers one
 question: does this run support the requested claim scope? A Promptfoo,
-Langfuse, or LangSmith import may pass a `paired` claim while failing a
+DeepEval, Langfuse, or LangSmith import may pass a `paired` claim while failing a
 `full-research` claim because the paper-derived soft-hard, trajectory, Riccati,
 and time-varying diagnostics are missing. That failure is useful: it prevents a
 small eval export from being overstated as a complete prompt-control analysis.

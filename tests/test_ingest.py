@@ -8,6 +8,7 @@ from promptcontrollab.cli import main
 from promptcontrollab.files import read_json, read_jsonl
 from promptcontrollab.ingest import (
     ingest_auto_results,
+    ingest_deepeval_results,
     ingest_langfuse_results,
     ingest_langsmith_results,
     ingest_promptfoo_results,
@@ -155,6 +156,111 @@ def test_ingest_auto_detects_promptfoo_json(tmp_path: Path) -> None:
     manifest = read_json(out_dir / "manifest.json")
     assert manifest["mode"] == "promptfoo_ingest"
     assert manifest["source_tool"] == "promptfoo"
+
+
+def test_ingest_deepeval_test_run_writes_pcl_run(tmp_path: Path) -> None:
+    source = tmp_path / "deepeval-test-run.json"
+    out_dir = tmp_path / "runs" / "from-deepeval"
+    source.write_text(json.dumps(_deepeval_payload()), encoding="utf-8")
+
+    payload = ingest_deepeval_results(
+        source_path=source,
+        out_dir=out_dir,
+        score_name="exact_match",
+    )
+
+    assert payload["count"] == 2
+    assert payload["mean_score"] == 0.5
+    predictions = read_jsonl(out_dir / "predictions.jsonl")
+    assert [item["id"] for item in predictions] == ["case-1", "case-2"]
+    assert [item["score"] for item in predictions] == [1.0, 0.0]
+    assert predictions[0]["output"] == "4"
+    assert predictions[0]["expected"] == "4"
+    assert predictions[1]["error"] == "wrong answer"
+    manifest = read_json(out_dir / "manifest.json")
+    assert manifest["mode"] == "deepeval_ingest"
+    assert manifest["method"] == "candidate"
+    assert manifest["source_tool"] == "deepeval"
+    assert manifest["metric"] == "deepeval_metric:exact_match"
+    assert manifest["model"]["provider"] == "openai"
+    assert manifest["model"]["model_id"] == "gpt-4o-mini"
+
+
+def test_ingest_deepeval_cli_filters_model(tmp_path: Path) -> None:
+    source = tmp_path / "deepeval-test-run.json"
+    out_dir = tmp_path / "runs" / "filtered"
+    payload = _deepeval_payload()
+    payload["test_cases"].append(
+        {
+            "id": "case-3",
+            "actual_output": "wrong",
+            "expected_output": "safe",
+            "metadata": {
+                "example_id": "case-3",
+                "slice": "safety",
+                "model": "claude-sonnet-4-20250514",
+                "provider": "anthropic",
+            },
+            "metrics": [{"name": "exact_match", "score": 0}],
+        }
+    )
+    source.write_text(json.dumps(payload), encoding="utf-8")
+
+    assert (
+        main(
+            [
+                "ingest",
+                "deepeval",
+                "--input",
+                str(source),
+                "--out",
+                str(out_dir),
+                "--score-name",
+                "exact_match",
+                "--model",
+                "gpt-4o-mini",
+                "--provider",
+                "openai",
+            ]
+        )
+        == 0
+    )
+
+    predictions = read_jsonl(out_dir / "predictions.jsonl")
+    assert len(predictions) == 2
+    manifest = read_json(out_dir / "manifest.json")
+    assert manifest["deepeval_filter"] == {
+        "score_name": "exact_match",
+        "model": "gpt-4o-mini",
+        "provider": "openai",
+    }
+
+
+def test_ingest_deepeval_requires_score_name_for_multiple_metrics(tmp_path: Path) -> None:
+    source = tmp_path / "deepeval-test-run.json"
+    payload = _deepeval_payload()
+    payload["test_cases"][0]["metrics"].append({"name": "faithfulness", "score": 1})
+    source.write_text(json.dumps(payload), encoding="utf-8")
+
+    with pytest.raises(ValueError, match="Multiple DeepEval metric names"):
+        ingest_deepeval_results(source_path=source, out_dir=tmp_path / "run")
+
+
+def test_ingest_auto_detects_deepeval_json(tmp_path: Path) -> None:
+    source = tmp_path / "deepeval-test-run.json"
+    out_dir = tmp_path / "runs" / "auto-deepeval"
+    source.write_text(json.dumps(_deepeval_payload()), encoding="utf-8")
+
+    payload = ingest_auto_results(
+        source_path=source,
+        out_dir=out_dir,
+        score_name="exact_match",
+    )
+
+    assert payload["source_tool"] == "deepeval"
+    manifest = read_json(out_dir / "manifest.json")
+    assert manifest["mode"] == "deepeval_ingest"
+    assert manifest["source_tool"] == "deepeval"
 
 
 def test_evidence_from_promptfoo_generates_comparison_bundle(tmp_path: Path) -> None:
@@ -675,6 +781,38 @@ def _langfuse_payload() -> dict[str, Any]:
                 "scores": [{"name": "exact_match", "value": 0}],
             },
         ]
+    }
+
+
+def _deepeval_payload() -> dict[str, Any]:
+    return {
+        "tool": "deepeval",
+        "run_name": "candidate",
+        "hyperparameters": {
+            "model": "gpt-4o-mini",
+            "provider": "openai",
+            "temperature": 0,
+        },
+        "test_cases": [
+            {
+                "id": "case-1",
+                "input": "2+2",
+                "actual_output": "4",
+                "expected_output": "4",
+                "metadata": {"example_id": "case-1", "slice": "arithmetic"},
+                "metrics": [{"name": "exact_match", "score": 1, "reason": "matches"}],
+            },
+            {
+                "id": "case-2",
+                "input": "3+3",
+                "actual_output": "5",
+                "expected_output": "6",
+                "metadata": {"example_id": "case-2", "slice": "arithmetic"},
+                "metrics": [
+                    {"name": "exact_match", "score": 0, "reason": "wrong answer"}
+                ],
+            },
+        ],
     }
 
 

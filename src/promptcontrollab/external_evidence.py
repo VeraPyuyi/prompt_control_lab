@@ -9,6 +9,7 @@ from typing import Literal
 from promptcontrollab.files import JsonDict, ensure_dir, read_json, write_json
 from promptcontrollab.ingest import (
     ingest_auto_results,
+    ingest_deepeval_results,
     ingest_langfuse_results,
     ingest_langsmith_results,
     ingest_promptfoo_results,
@@ -16,7 +17,7 @@ from promptcontrollab.ingest import (
 from promptcontrollab.research_workflow import run_research_diagnostics
 from promptcontrollab.run_comparison import compare_runs
 
-ExternalTool = Literal["auto", "promptfoo", "langfuse", "langsmith"]
+ExternalTool = Literal["auto", "promptfoo", "langfuse", "langsmith", "deepeval"]
 
 
 def build_external_evidence(
@@ -301,6 +302,15 @@ def _ingest_one(
             provider=provider,
             method=method,
         )
+    if tool == "deepeval":
+        return ingest_deepeval_results(
+            source_path=source_path,
+            out_dir=out_dir,
+            score_name=score_name,
+            model=model,
+            provider=provider,
+            method=method,
+        )
     msg = f"Unsupported external evidence tool: {tool}"
     raise ValueError(msg)
 
@@ -470,6 +480,15 @@ def _tool_role(tool: str) -> JsonDict:
             "display_name": "LangSmith",
             "role": "agent tracing, datasets, online/offline evals, and production debugging",
             "pcl_adds": "prompt optimization evidence cards and comparison confound checks",
+        },
+        "deepeval": {
+            "tool": "deepeval",
+            "display_name": "DeepEval",
+            "role": "local LLM test runs, metric scores, reasons, and CI-style eval artifacts",
+            "pcl_adds": (
+                "paired prompt optimization evidence, prompt-only validity, and "
+                "paper-diagnostic gap tracking"
+            ),
         },
     }
     return roles.get(

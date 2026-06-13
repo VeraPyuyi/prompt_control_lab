@@ -1,9 +1,10 @@
 # Ecosystem Bridge
 
-Promptfoo, LangSmith, and Langfuse are strong at different parts of the LLM
+Promptfoo, DeepEval, LangSmith, and Langfuse are strong at different parts of the LLM
 engineering workflow:
 
 - Promptfoo: evals, red-team tests, provider matrices, CI, and security reports.
+- DeepEval: local LLM test runs, metrics, reasons, and CI-style evaluation artifacts.
 - LangSmith: tracing, monitoring, online evals, agent trajectory debugging, and
   production dashboards.
 - Langfuse: open-source observability, prompt management, evaluations, cost
@@ -20,6 +21,7 @@ that the larger tools do not focus on:
 | Tool | Strongest lane | PCL's complementary lane |
 |---|---|---|
 | Promptfoo | LLM evals, red-team/security tests, provider matrices, CI, and security reports. | Import Promptfoo eval results, then add paired uncertainty, prompt-only validity, evidence cards, claim checks, and paper-derived diagnostic gap closure. |
+| DeepEval | Local LLM test runs, metric scores, reasons, and CI-style evaluation artifacts. | Import DeepEval TestRun JSON, then add paired prompt evidence, protocol hygiene, claim scope checks, and paper-diagnostic gap planning. |
 | LangSmith | Agent tracing, observability, online/offline evals, deployment, and sandboxed agent infrastructure. | Turn LangSmith experiment exports into prompt-optimization evidence bundles that separate prompt effects from model, metric, and split confounds. |
 | Langfuse | Open-source observability, prompt management, evaluation, cost tracking, and self-hosted traces. | Add research diagnostics that are usually outside observability platforms: soft-hard gap, hidden-state trajectories, Riccati surrogates, and time-varying control evidence. |
 
@@ -83,6 +85,7 @@ This writes `runs/ecosystem-demo/README.md`, `ecosystem_demo.json`,
 - `runs/ecosystem-demo/promptfoo/`
 - `runs/ecosystem-demo/langfuse/`
 - `runs/ecosystem-demo/langsmith/`
+- `runs/ecosystem-demo/deepeval/`
 
 Open `ecosystem_scorecard.md` first when you need the cross-tool positioning table:
 what each external tool is good at, what PCL adds, and which paper diagnostics are
@@ -164,6 +167,20 @@ pcl evidence-from \
   --provider openai \
   --split-hash external-demo-split \
   --out runs/from-langsmith-evidence
+```
+
+DeepEval:
+
+```bash
+pcl evidence-from \
+  --tool deepeval \
+  --baseline-input examples/external/deepeval_baseline.json \
+  --candidate-input examples/external/deepeval_candidate.json \
+  --score-name exact_match \
+  --model gpt-4o-mini-20260601 \
+  --provider openai \
+  --split-hash external-demo-split \
+  --out runs/from-deepeval-evidence
 ```
 
 ## Pairing Rule

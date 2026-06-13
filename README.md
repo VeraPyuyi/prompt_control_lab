@@ -95,14 +95,14 @@ ideas to commands, inputs, outputs, and interpretation boundaries.
 
 ## Ecosystem Bridge
 
-If you already use Promptfoo, Langfuse, or LangSmith for prompt/model evaluation and
+If you already use Promptfoo, DeepEval, Langfuse, or LangSmith for prompt/model evaluation and
 observability, keep them. `prompt_control_lab` can import their exported artifacts and add the
 research diagnostics layer on top:
 
 ![prompt_control_lab ecosystem scorecard flow](docs/assets/ecosystem_scorecard.svg)
 
 ```bash
-# Fast all-tools demo with bundled Promptfoo/Langfuse/LangSmith-style exports.
+# Fast all-tools demo with bundled Promptfoo/DeepEval/Langfuse/LangSmith-style exports.
 pcl ecosystem-demo --examples examples/external --out runs/ecosystem-demo
 
 # Then open ecosystem_scorecard.md first, followed by research_diagnostics.md
@@ -125,7 +125,7 @@ pcl evidence-from \
   --split-hash eval-split-2026-06 \
   --out runs/from-promptfoo-evidence
 
-# Lower-level import: PCL detects Promptfoo, Langfuse, or LangSmith exports.
+# Lower-level import: PCL detects Promptfoo, DeepEval, Langfuse, or LangSmith exports.
 pcl ingest auto --input results.json --out runs/from-external --score-name exact_match
 pcl report --run runs/from-external
 
@@ -137,6 +137,9 @@ pcl ingest langfuse --input langfuse-export.json --out runs/from-langfuse \
 
 pcl ingest langsmith --input langsmith-runs.csv --out runs/from-langsmith \
   --experiment candidate --score-name exact_match
+
+pcl ingest deepeval --input deepeval-test-run.json --out runs/from-deepeval \
+  --score-name exact_match
 
 # Once you have two imported/scored runs, compare them as one evidence bundle.
 pcl compare-runs \
@@ -177,11 +180,11 @@ pcl gap-status --run runs/from-promptfoo-evidence
 The lower-level imported run still contains `predictions.jsonl`, `metrics.json`, and
 `manifest.json`, so it can be used with `pcl compare-runs`, `pcl stats`, `pcl validity`, and
 downstream reports. This is intentionally a bridge, not a replacement for Promptfoo's red-team /
-provider ecosystem, Langfuse's tracing platform, or LangSmith's observability/evaluation
-workflows.
+provider ecosystem, DeepEval's local eval runner, Langfuse's tracing platform, or LangSmith's
+observability/evaluation workflows.
 
-Competitive wedge: Promptfoo, LangSmith, and Langfuse already cover strong paid lanes around
-security testing, tracing, observability, prompt management, and production workflows. PCL should
+Competitive wedge: Promptfoo, DeepEval, LangSmith, and Langfuse already cover strong lanes around
+security testing, local evaluation, tracing, observability, prompt management, and production workflows. PCL should
 win by being the **research evidence layer** they usually do not provide: paired uncertainty,
 prompt-only validity, evidence cards, claim checks, soft-hard gap analysis, hidden-state trajectory
 diagnostics, Riccati surrogates, time-varying control evidence, and now `pcl gap-status` for
@@ -253,9 +256,9 @@ The repository includes narrated 4K hands-on demo videos generated from real UI 
 9. `pcl riccati`: fitted finite-dimensional Riccati/DARE surrogate diagnostics.
 10. `pcl tv-soft`: static/time-varying/shuffled/random soft-control comparison.
 11. `pcl ecosystem-demo`: run all bundled external-tool bridge examples as one comparison bundle.
-12. `pcl ecosystem-scorecard`: regenerate the cross-tool Promptfoo/Langfuse/LangSmith positioning scorecard.
+12. `pcl ecosystem-scorecard`: regenerate the cross-tool Promptfoo/DeepEval/Langfuse/LangSmith positioning scorecard.
 13. `pcl evidence-from`: import external baseline/candidate exports and generate a PCL evidence card in one command.
-14. `pcl ingest auto` / `promptfoo` / `langfuse` / `langsmith`: import external eval/trace artifacts into PCL research artifacts.
+14. `pcl ingest auto` / `promptfoo` / `deepeval` / `langfuse` / `langsmith`: import external eval/trace artifacts into PCL research artifacts.
 15. `pcl compare-runs`: turn two imported/scored runs into stats, validity, and a report in one command.
 16. `pcl claim-check`: say what claim the current evidence tier can safely support.
 17. `pcl report` / `pcl explain` / `pcl gate`: turn artifacts into readable decisions.
@@ -430,7 +433,7 @@ dashboards: paper diagnostics first, engineering agent views second. The **Tutor
 the workflow with screenshots from the current UI plus step-by-step instructions; the **Workflows** tab can run local actions
 from the browser:
 guard a prompt, run analyze, run gate, audit a git diff, build `agent_run.json`, generate a PR
-summary, import Promptfoo/Langfuse/LangSmith exports into an external evidence bundle, or export a
+summary, import Promptfoo/DeepEval/Langfuse/LangSmith exports into an external evidence bundle, or export a
 report zip. Execution mode defaults to `confirm`; advanced users can choose
 `auto` or `command`.
 

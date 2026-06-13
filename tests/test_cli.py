@@ -389,6 +389,7 @@ def test_cli_ecosystem_demo_runs_all_external_bridge_examples(tmp_path: Path) ->
         "promptfoo",
         "langfuse",
         "langsmith",
+        "deepeval",
     ]
     assert scorecard["rows"][0]["gap_status"] == "not_checked"
     scorecard_markdown = (out / "ecosystem_scorecard.md").read_text(encoding="utf-8")
@@ -415,8 +416,13 @@ def test_cli_ecosystem_demo_runs_all_external_bridge_examples(tmp_path: Path) ->
     assert main(["ecosystem-scorecard", "--run", str(out), "--out", str(scorecard_dir)]) == 0
     assert (scorecard_dir / "ecosystem_scorecard.json").exists()
     assert (scorecard_dir / "ecosystem_scorecard.md").exists()
-    assert [item["tool"] for item in summary["runs"]] == ["promptfoo", "langfuse", "langsmith"]
-    for tool in ["promptfoo", "langfuse", "langsmith"]:
+    assert [item["tool"] for item in summary["runs"]] == [
+        "promptfoo",
+        "langfuse",
+        "langsmith",
+        "deepeval",
+    ]
+    for tool in ["promptfoo", "langfuse", "langsmith", "deepeval"]:
         tool_dir = out / tool
         assert (tool_dir / "evidence_from_result.json").exists()
         assert (tool_dir / "bridge_summary.md").exists()

@@ -211,6 +211,57 @@ def test_evidence_from_langsmith_csv_pairs_by_example_id(tmp_path: Path) -> None
     assert "Adjusted or permutation p-value is above 0.05." in validity["review_items"]
 
 
+def test_evidence_from_deepeval_pairs_by_example_id(tmp_path: Path) -> None:
+    baseline = tmp_path / "deepeval-baseline.json"
+    candidate = tmp_path / "deepeval-candidate.json"
+    baseline.write_text(
+        (Path("examples") / "external" / "deepeval_baseline.json").read_text(encoding="utf-8"),
+        encoding="utf-8",
+    )
+    candidate.write_text(
+        (Path("examples") / "external" / "deepeval_candidate.json").read_text(encoding="utf-8"),
+        encoding="utf-8",
+    )
+    out_dir = tmp_path / "runs" / "from-deepeval"
+
+    assert (
+        main(
+            [
+                "evidence-from",
+                "--tool",
+                "deepeval",
+                "--baseline-input",
+                str(baseline),
+                "--candidate-input",
+                str(candidate),
+                "--score-name",
+                "exact_match",
+                "--model",
+                "gpt-4o-mini-20260601",
+                "--provider",
+                "openai",
+                "--split-hash",
+                "external-demo-split",
+                "--bootstrap-samples",
+                "20",
+                "--permutation-samples",
+                "100",
+                "--out",
+                str(out_dir),
+            ]
+        )
+        == 0
+    )
+
+    stats = read_json(out_dir / "comparison" / "stats.json")
+    assert stats["comparisons"][0]["n"] == 4
+    assert stats["comparisons"][0]["mean_delta"] == 0.75
+    bridge = read_json(out_dir / "bridge_summary.json")
+    assert bridge["detected_tools"] == ["deepeval"]
+    assert bridge["source_tool_roles"][0]["display_name"] == "DeepEval"
+    assert "paper_evidence_gap_diagnosis" in bridge["pcl_added_evidence"]
+
+
 def test_init_project_writes_external_bridge_examples(tmp_path: Path) -> None:
     demo = tmp_path / "demo"
     assert main(["init", "--path", str(demo)]) == 0
@@ -219,6 +270,8 @@ def test_init_project_writes_external_bridge_examples(tmp_path: Path) -> None:
     assert (external_dir / "promptfoo_results.json").exists()
     assert (external_dir / "langfuse_export.json").exists()
     assert (external_dir / "langsmith_runs.csv").exists()
+    assert (external_dir / "deepeval_baseline.json").exists()
+    assert (external_dir / "deepeval_candidate.json").exists()
 
     out_dir = demo / "runs" / "from-promptfoo-evidence"
     assert (
