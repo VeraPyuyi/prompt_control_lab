@@ -104,6 +104,8 @@ research diagnostics layer on top:
 pcl ecosystem-demo --examples examples/external --out runs/ecosystem-demo
 
 # Then open runs/ecosystem-demo/README.md and each bridge_summary.md.
+# Or run the paper-evidence gap diagnosis for the whole bundle.
+pcl diagnose --run runs/ecosystem-demo
 
 promptfoo eval --output results.json
 

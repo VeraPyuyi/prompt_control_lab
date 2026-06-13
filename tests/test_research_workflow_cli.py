@@ -110,6 +110,75 @@ def test_diagnose_reuses_research_demo_inputs(tmp_path: Path) -> None:
     assert (run_dir / "claim_check.json").exists()
 
 
+def test_diagnose_summarizes_ecosystem_demo_evidence_gaps(tmp_path: Path) -> None:
+    demo = tmp_path / "demo"
+    out = demo / "runs" / "ecosystem-demo"
+    assert main(["init", "--path", str(demo)]) == 0
+    assert (
+        main(
+            [
+                "ecosystem-demo",
+                "--examples",
+                str(demo / "examples" / "external"),
+                "--out",
+                str(out),
+                "--bootstrap-samples",
+                "10",
+                "--permutation-samples",
+                "20",
+            ]
+        )
+        == 0
+    )
+
+    assert main(["diagnose", "--run", str(out)]) == 0
+
+    summary = read_json(out / "research_diagnostics.json")
+    ecosystem = summary["diagnostics"]["ecosystem_bridge"]
+    assert ecosystem["tool_count"] == 3
+    assert [item["tool"] for item in ecosystem["runs"]] == [
+        "promptfoo",
+        "langfuse",
+        "langsmith",
+    ]
+    assert "hidden-state trajectory" in ecosystem["runs"][0]["missing_paper_diagnostics"]
+    report = (out / "research_diagnostics.md").read_text(encoding="utf-8")
+    assert "Ecosystem evidence gap diagnosis" in report
+    assert "Promptfoo" in report
+    assert "Risk: `None`" not in report
+    assert "Turnpike-like signal: `None`" not in report
+
+
+def test_diagnose_summarizes_single_external_evidence_bundle(tmp_path: Path) -> None:
+    demo = tmp_path / "demo"
+    out = demo / "runs" / "ecosystem-demo"
+    assert main(["init", "--path", str(demo)]) == 0
+    assert (
+        main(
+            [
+                "ecosystem-demo",
+                "--examples",
+                str(demo / "examples" / "external"),
+                "--out",
+                str(out),
+                "--bootstrap-samples",
+                "10",
+                "--permutation-samples",
+                "20",
+            ]
+        )
+        == 0
+    )
+
+    assert main(["diagnose", "--run", str(out / "promptfoo")]) == 0
+
+    summary = read_json(out / "promptfoo" / "research_diagnostics.json")
+    bridge = summary["diagnostics"]["external_bridge"]
+    assert bridge["tool"] == "promptfoo"
+    assert bridge["validity"] == "needs_review"
+    assert "soft-to-hard projection gap" in bridge["missing_paper_diagnostics"]
+
+
 def test_diagnose_requires_enough_inputs(tmp_path: Path) -> None:
     assert main(["diagnose", "--out", str(tmp_path / "diag")]) == 2
 

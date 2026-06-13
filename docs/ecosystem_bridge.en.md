@@ -64,6 +64,17 @@ You can also open the root directory in the local UI with
 `pcl ui --runs runs/ecosystem-demo`; the Research Overview will show one row per
 external-tool evidence bundle.
 
+To audit the bundle against the paper-derived evidence map, run:
+
+```bash
+pcl diagnose --run runs/ecosystem-demo
+```
+
+This writes `research_diagnostics.json` and `research_diagnostics.md` at the
+root. For external-tool exports, `diagnose` reports evidence coverage and missing
+research diagnostics; it does not fabricate hidden-state, soft-hard, Riccati, or
+time-varying-control measurements.
+
 Promptfoo:
 
 ```bash

@@ -97,6 +97,8 @@ prompt-only 比较有效性、`evidence_card.json` / `evidence_card.md` 和 `cla
 pcl ecosystem-demo --examples examples/external --out runs/ecosystem-demo
 
 # 然后先打开 runs/ecosystem-demo/README.md 和每个 bridge_summary.md。
+# 也可以对整套 bundle 运行论文证据缺口诊断。
+pcl diagnose --run runs/ecosystem-demo
 
 promptfoo eval --output results.json
 

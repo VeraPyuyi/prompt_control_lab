@@ -388,6 +388,14 @@ def run_research_diagnostics(
         artifacts["tv_soft"] = str(paths.diagnostics_dir / "tv_soft.json")
 
     if not diagnostics:
+        bridge_payload = _run_external_bridge_diagnostics(
+            run_dir=run_dir,
+            mode=mode,
+            diagnostics_dir=paths.diagnostics_dir,
+            summary_dir=paths.summary_dir,
+        )
+        if bridge_payload is not None:
+            return bridge_payload
         msg = "No research diagnostic inputs found. Provide --run or explicit diagnostic inputs."
         raise ValueError(msg)
 
@@ -423,6 +431,223 @@ def run_research_diagnostics(
     return payload
 
 
+def _run_external_bridge_diagnostics(
+    *,
+    run_dir: Path | None,
+    mode: str,
+    diagnostics_dir: Path,
+    summary_dir: Path,
+) -> JsonDict | None:
+    if run_dir is None:
+        return None
+    ecosystem_path = run_dir / "ecosystem_demo.json"
+    external_path = run_dir / "evidence_from_result.json"
+    if ecosystem_path.exists():
+        ecosystem = read_json(ecosystem_path)
+        diagnostic = _summarize_ecosystem_bundle(run_dir=run_dir, payload=ecosystem)
+        artifacts = {"ecosystem_demo": str(ecosystem_path)}
+        diagnostics: JsonDict = {"ecosystem_bridge": diagnostic}
+        interpretation = [
+            (
+                "External-tool exports were converted into PCL evidence bundles. "
+                "Use this diagnosis to see which paper-derived evidence is present "
+                "and which research diagnostics still require open-model artifacts."
+            )
+        ]
+    elif external_path.exists():
+        external = read_json(external_path)
+        diagnostic = _summarize_external_bundle(run_dir=run_dir, fallback=external)
+        artifacts = {"external_evidence": str(external_path)}
+        diagnostics = {"external_bridge": diagnostic}
+        interpretation = [
+            (
+                f"{diagnostic.get('tool')} export has paired evidence and bridge metadata, "
+                "but missing paper diagnostics should not be treated as measured."
+            )
+        ]
+    else:
+        return None
+
+    payload: JsonDict = {
+        "kind": "research_diagnostics",
+        "mode": mode,
+        "diagnostic_type": "external_evidence_gap",
+        "run_dir": str(run_dir),
+        "diagnostics_dir": str(diagnostics_dir),
+        "summary_dir": str(summary_dir),
+        "inputs": {
+            "external_evidence": (
+                "external eval/observability artifacts; no hidden states or soft prompts "
+                "were inferred"
+            )
+        },
+        "diagnostics": diagnostics,
+        "artifacts": artifacts,
+        "paper_mapping": PAPER_MAPPING,
+        "interpretation": interpretation,
+        "boundary": (
+            "This diagnosis audits evidence coverage for external-tool exports. It can "
+            "identify missing soft-hard, trajectory, Riccati, and time-varying-control "
+            "artifacts, but it does not fabricate those measurements."
+        ),
+    }
+    ensure_dir(summary_dir)
+    ensure_dir(diagnostics_dir)
+    write_json(summary_dir / "research_diagnostics.json", payload)
+    (summary_dir / "research_diagnostics.md").write_text(
+        render_research_diagnostics_markdown(payload),
+        encoding="utf-8",
+    )
+    return payload
+
+
+def _summarize_ecosystem_bundle(*, run_dir: Path, payload: JsonDict) -> JsonDict:
+    runs = payload.get("runs")
+    rows: list[JsonDict] = []
+    if isinstance(runs, list):
+        for item in runs:
+            if not isinstance(item, dict):
+                continue
+            tool_dir = _ecosystem_tool_dir(run_dir=run_dir, item=item)
+            rows.append(_summarize_external_bundle(run_dir=tool_dir, fallback=item))
+    return {
+        "tool_count": len(rows),
+        "runs": rows,
+        "missing_research_diagnostics": sorted(
+            {
+                str(missing)
+                for row in rows
+                for missing in row.get("missing_paper_diagnostics", [])
+            }
+        ),
+        "review_first": [
+            str(row.get("bridge_summary_path"))
+            for row in rows
+            if row.get("bridge_summary_path")
+        ],
+    }
+
+
+def _ecosystem_tool_dir(*, run_dir: Path, item: JsonDict) -> Path:
+    out_dir = item.get("out_dir")
+    if isinstance(out_dir, str) and out_dir:
+        candidate = Path(out_dir)
+        if candidate.exists():
+            return candidate
+    tool = item.get("tool")
+    if isinstance(tool, str) and tool:
+        return run_dir / tool
+    return run_dir
+
+
+def _summarize_external_bundle(*, run_dir: Path, fallback: JsonDict) -> JsonDict:
+    bridge = _read_optional_json(run_dir / "bridge_summary.json")
+    claim = _read_optional_json(run_dir / "claim_check.json")
+    evidence = _read_optional_json(run_dir / "evidence_card.json")
+    validity = _read_optional_json(run_dir / "comparison_validity.json")
+    stats = _read_optional_json(run_dir / "stats.json")
+    tool = _external_tool_name(bridge=bridge, fallback=fallback)
+    coverage = _paper_coverage_rows(run_dir)
+    missing_paper_diagnostics = [
+        row["concept"]
+        for row in coverage
+        if row["category"] == "research_diagnostic" and row["status"] == "missing"
+    ]
+    return {
+        "tool": tool,
+        "display_name": _display_tool_name(tool),
+        "run_dir": str(run_dir),
+        "validity": bridge.get("validity") or validity.get("validity") or fallback.get("validity"),
+        "evidence_tier": bridge.get("evidence_tier")
+        or evidence.get("evidence_tier")
+        or fallback.get("evidence_tier"),
+        "claim_check_status": bridge.get("claim_check_status")
+        or claim.get("status")
+        or fallback.get("claim_check_status"),
+        "recommendation": bridge.get("recommendation") or evidence.get("recommendation"),
+        "mean_delta": bridge.get("mean_delta") or _first_stats_comparison(stats).get("mean_delta"),
+        "permutation_p_value": bridge.get("permutation_p_value")
+        or _first_stats_comparison(stats).get("permutation_p_value"),
+        "paper_coverage": coverage,
+        "missing_paper_diagnostics": missing_paper_diagnostics,
+        "missing_evidence": bridge.get("missing_evidence", fallback.get("missing_evidence", [])),
+        "next_actions": bridge.get("next_actions", fallback.get("next_actions", [])),
+        "bridge_summary_path": str(run_dir / "bridge_summary.md")
+        if (run_dir / "bridge_summary.md").exists()
+        else fallback.get("bridge_summary_path"),
+        "report_html_path": str(run_dir / "report.html")
+        if (run_dir / "report.html").exists()
+        else fallback.get("report_html_path"),
+    }
+
+
+def _read_optional_json(path: Path) -> JsonDict:
+    if not path.exists():
+        return {}
+    return read_json(path)
+
+
+def _first_stats_comparison(stats: JsonDict) -> JsonDict:
+    comparisons = stats.get("comparisons")
+    if isinstance(comparisons, list) and comparisons and isinstance(comparisons[0], dict):
+        return comparisons[0]
+    return stats
+
+
+def _external_tool_name(*, bridge: JsonDict, fallback: JsonDict) -> str:
+    for value in [
+        fallback.get("tool"),
+        bridge.get("requested_tool"),
+    ]:
+        if isinstance(value, str) and value:
+            return value
+    detected = bridge.get("detected_tools")
+    if isinstance(detected, list) and detected:
+        first = detected[0]
+        if isinstance(first, str) and first:
+            return first
+    return "external"
+
+
+def _display_tool_name(tool: object) -> str:
+    names = {
+        "promptfoo": "Promptfoo",
+        "langfuse": "Langfuse",
+        "langsmith": "LangSmith",
+    }
+    return names.get(str(tool), str(tool))
+
+
+def _paper_coverage_rows(run_dir: Path) -> list[JsonDict]:
+    rows: list[JsonDict] = []
+    for item in PAPER_MAPPING:
+        artifact = str(item["artifact"])
+        present = (run_dir / artifact).exists()
+        concept = str(item["concept"])
+        rows.append(
+            {
+                "concept": concept,
+                "artifact": artifact,
+                "status": "present" if present else "missing",
+                "category": _paper_concept_category(concept),
+            }
+        )
+    return rows
+
+
+def _paper_concept_category(concept: str) -> str:
+    if concept in {
+        "soft-to-hard projection gap",
+        "hidden-state trajectory",
+        "Riccati surrogate",
+        "time-varying soft-control lane",
+    }:
+        return "research_diagnostic"
+    if concept == "HuggingFace hidden-state extraction":
+        return "research_input"
+    return "evidence_protocol"
+
+
 def render_research_diagnostics_markdown(payload: JsonDict) -> str:
     """Render a readable research diagnostics report."""
 
@@ -449,6 +674,56 @@ def render_research_diagnostics_markdown(payload: JsonDict) -> str:
             )
         )
     lines.extend(["", "## Diagnostic Results", ""])
+    ecosystem = diagnostics.get("ecosystem_bridge", {})
+    if isinstance(ecosystem, dict) and ecosystem:
+        lines.extend(
+            [
+                "### Ecosystem evidence gap diagnosis",
+                "",
+                (
+                    "| Tool | Validity | Evidence tier | Claim check | "
+                    "Missing paper diagnostics | Open first |"
+                ),
+                "|---|---|---|---|---|---|",
+            ]
+        )
+        rows = ecosystem.get("runs")
+        if isinstance(rows, list):
+            for row in rows:
+                if not isinstance(row, dict):
+                    continue
+                missing = row.get("missing_paper_diagnostics", [])
+                lines.append(
+                    "| "
+                    + " | ".join(
+                        [
+                            str(row.get("display_name") or row.get("tool")),
+                            str(row.get("validity")),
+                            str(row.get("evidence_tier")),
+                            str(row.get("claim_check_status")),
+                            ", ".join(str(item) for item in missing)
+                            if isinstance(missing, list)
+                            else str(missing),
+                            str(row.get("bridge_summary_path") or ""),
+                        ]
+                    )
+                    + " |"
+                )
+        lines.extend([""])
+    external = diagnostics.get("external_bridge", {})
+    if isinstance(external, dict) and external:
+        lines.extend(
+            [
+                "### External evidence gap diagnosis",
+                "",
+                f"- Tool: `{external.get('display_name') or external.get('tool')}`",
+                f"- Validity: `{external.get('validity')}`",
+                f"- Evidence tier: `{external.get('evidence_tier')}`",
+                f"- Claim check: `{external.get('claim_check_status')}`",
+                f"- Missing paper diagnostics: `{external.get('missing_paper_diagnostics', [])}`",
+                "",
+            ]
+        )
     inputs = payload.get("inputs", {})
     inputs_dict = inputs if isinstance(inputs, dict) else {}
     hidden_input = inputs_dict.get("hidden_states")
@@ -466,7 +741,7 @@ def render_research_diagnostics_markdown(payload: JsonDict) -> str:
             ]
         )
     soft = diagnostics.get("soft_hard", {})
-    if isinstance(soft, dict):
+    if isinstance(soft, dict) and soft:
         lines.extend(
             [
                 "### Soft-to-hard projection gap",
@@ -478,7 +753,7 @@ def render_research_diagnostics_markdown(payload: JsonDict) -> str:
             ]
         )
     trajectory = diagnostics.get("trajectory", {})
-    if isinstance(trajectory, dict):
+    if isinstance(trajectory, dict) and trajectory:
         lines.extend(
             [
                 "### Hidden-state trajectory",
@@ -490,7 +765,7 @@ def render_research_diagnostics_markdown(payload: JsonDict) -> str:
             ]
         )
     riccati = diagnostics.get("riccati", {})
-    if isinstance(riccati, dict):
+    if isinstance(riccati, dict) and riccati:
         lines.extend(
             [
                 "### Riccati surrogate",
@@ -501,7 +776,7 @@ def render_research_diagnostics_markdown(payload: JsonDict) -> str:
             ]
         )
     tv_soft = diagnostics.get("tv_soft", {})
-    if isinstance(tv_soft, dict):
+    if isinstance(tv_soft, dict) and tv_soft:
         lines.extend(
             [
                 "### Time-varying soft-control lane",

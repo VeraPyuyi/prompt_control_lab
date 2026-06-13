@@ -52,6 +52,16 @@ PCL 补充了什么证据，以及当前还缺哪些证据。
 也可以用 `pcl ui --runs runs/ecosystem-demo` 打开根目录；Research Overview
 会按外部工具逐行展示每套 evidence bundle。
 
+如果要按论文证据地图审计整套 bundle，可以继续运行：
+
+```bash
+pcl diagnose --run runs/ecosystem-demo
+```
+
+这会在根目录写出 `research_diagnostics.json` 和 `research_diagnostics.md`。
+对于外部工具导出，`diagnose` 会报告已有证据和缺失的研究诊断；它不会伪造
+hidden-state、soft-hard、Riccati 或 time-varying-control 测量结果。
+
 Promptfoo：
 
 ```bash
