@@ -2,17 +2,23 @@
 
 from __future__ import annotations
 
+import hashlib
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, cast
 
+from promptcontrollab.evaluation import run_import_eval
 from promptcontrollab.evidence_card import write_evidence_card
 from promptcontrollab.files import JsonDict, ensure_dir, read_json, write_json, write_jsonl
 from promptcontrollab.optional import require_module
 from promptcontrollab.riccati import analyze_riccati
 from promptcontrollab.soft_hard import analyze_soft_hard
+from promptcontrollab.splitting import load_tasks, make_split, write_split
+from promptcontrollab.statistics import compare_prediction_files
 from promptcontrollab.trajectory import analyze_trajectory
 from promptcontrollab.tv_soft import summarize_tv_soft
+from promptcontrollab.validity import run_comparison_validity
+from promptcontrollab.version import __version__
 
 PAPER_MAPPING: list[JsonDict] = [
     {
@@ -149,6 +155,7 @@ def write_research_demo(*, out_dir: Path, seed: int = 0) -> JsonDict:
             "seed": seed,
         },
     )
+    _write_demo_evaluation_bundle(out_dir=out_dir, inputs_dir=inputs_dir, seed=seed)
 
     return run_research_diagnostics(
         run_dir=out_dir,
@@ -162,6 +169,151 @@ def write_research_demo(*, out_dir: Path, seed: int = 0) -> JsonDict:
         summary_dir=out_dir,
         tail=1,
     )
+
+
+def _write_demo_evaluation_bundle(*, out_dir: Path, inputs_dir: Path, seed: int) -> None:
+    tasks_path = inputs_dir / "tasks.jsonl"
+    baseline_raw_path = inputs_dir / "baseline_predictions.jsonl"
+    candidate_raw_path = inputs_dir / "candidate_predictions.jsonl"
+    tasks = _demo_tasks(count=20)
+    write_jsonl(tasks_path, tasks)
+    write_jsonl(
+        baseline_raw_path,
+        [{"id": task["id"], "output": "wrong"} for task in tasks],
+    )
+    write_jsonl(
+        candidate_raw_path,
+        [{"id": task["id"], "output": task["expected"]} for task in tasks],
+    )
+
+    loaded_tasks = load_tasks(tasks_path)
+    split = make_split(loaded_tasks, train_ratio=0.5, val_ratio=0.25, seed=seed)
+    write_split(out_dir / "splits.json", split)
+    model_provider = "synthetic"
+    model_id = "synthetic-control-model-20260613"
+    run_import_eval(
+        data_path=tasks_path,
+        predictions_path=baseline_raw_path,
+        out_dir=out_dir / "baseline",
+        metric="exact_match",
+        method="baseline",
+        provider=model_provider,
+        model_id=model_id,
+    )
+    run_import_eval(
+        data_path=tasks_path,
+        predictions_path=candidate_raw_path,
+        out_dir=out_dir / "candidate",
+        metric="exact_match",
+        method="candidate",
+        provider=model_provider,
+        model_id=model_id,
+    )
+    baseline_prompt_hash = _demo_prompt_hash("Answer the question.")
+    candidate_prompt_hash = _demo_prompt_hash("Answer with only the final result.")
+    _patch_demo_run_manifest(
+        out_dir / "baseline" / "manifest.json",
+        split_hash=split.split_hash,
+        prompt_id="research-demo-baseline",
+        prompt_hash=baseline_prompt_hash,
+    )
+    _patch_demo_run_manifest(
+        out_dir / "candidate" / "manifest.json",
+        split_hash=split.split_hash,
+        prompt_id="research-demo-candidate",
+        prompt_hash=candidate_prompt_hash,
+    )
+    stats = compare_prediction_files(
+        baseline_path=out_dir / "baseline" / "predictions.jsonl",
+        candidate_path=out_dir / "candidate" / "predictions.jsonl",
+        out_path=out_dir / "stats.json",
+        seed=seed,
+        bootstrap_samples=200,
+        permutation_samples=200,
+    )
+    validity = run_comparison_validity(
+        baseline_dir=out_dir / "baseline",
+        candidate_dir=out_dir / "candidate",
+        out_path=out_dir / "comparison_validity.json",
+    )
+    candidate_metrics = read_json(out_dir / "candidate" / "metrics.json")
+    write_json(out_dir / "metrics.json", candidate_metrics)
+    write_json(
+        out_dir / "manifest.json",
+        {
+            "tool": "promptcontrollab",
+            "tool_version": __version__,
+            "mode": "research_demo",
+            "method": "synthetic_baseline_vs_candidate",
+            "metric": "exact_match",
+            "data_path": str(tasks_path),
+            "baseline_run": str(out_dir / "baseline"),
+            "candidate_run": str(out_dir / "candidate"),
+            "split_hash": split.split_hash,
+            "model": read_json(out_dir / "candidate" / "manifest.json").get("model", {}),
+            "prompt": {
+                "prompt_id": "research-demo-candidate",
+                "prompt_hash": candidate_prompt_hash,
+                "prompt_version": "synthetic-demo",
+            },
+            "baseline_prompt": {
+                "prompt_id": "research-demo-baseline",
+                "prompt_hash": baseline_prompt_hash,
+                "prompt_version": "synthetic-demo",
+            },
+            "candidate_prompt": {
+                "prompt_id": "research-demo-candidate",
+                "prompt_hash": candidate_prompt_hash,
+                "prompt_version": "synthetic-demo",
+            },
+            "stats_summary": {
+                "mean_delta": stats["comparisons"][0]["mean_delta"],
+                "permutation_p_value": stats["comparisons"][0]["permutation_p_value"],
+            },
+            "comparison_validity": validity.get("validity"),
+            "boundary": (
+                "Synthetic comparison bundle for demonstrating PromptControlLab evidence "
+                "artifacts; not a benchmark result."
+            ),
+        },
+    )
+
+
+def _demo_tasks(*, count: int) -> list[JsonDict]:
+    rows: list[JsonDict] = []
+    for index in range(count):
+        expected = str(index + 1)
+        rows.append(
+            {
+                "id": f"demo-{index:02d}",
+                "input": f"What is {index} + 1?",
+                "expected": expected,
+                "slice": "arithmetic" if index % 2 == 0 else "format",
+                "meta": {"source": "research_demo_synthetic"},
+            }
+        )
+    return rows
+
+
+def _patch_demo_run_manifest(
+    path: Path,
+    *,
+    split_hash: str,
+    prompt_id: str,
+    prompt_hash: str,
+) -> None:
+    manifest = read_json(path)
+    manifest["split_hash"] = split_hash
+    manifest["prompt"] = {
+        "prompt_id": prompt_id,
+        "prompt_hash": prompt_hash,
+        "prompt_version": "synthetic-demo",
+    }
+    write_json(path, manifest)
+
+
+def _demo_prompt_hash(text: str) -> str:
+    return f"sha256:{hashlib.sha256(text.encode('utf-8')).hexdigest()}"
 
 
 def run_research_diagnostics(

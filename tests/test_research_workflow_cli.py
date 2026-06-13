@@ -49,6 +49,40 @@ def test_research_demo_generates_paper_diagnostics(tmp_path: Path) -> None:
     assert (run_dir / "evidence_card.md").exists()
 
 
+def test_research_demo_generates_complete_evidence_chain(tmp_path: Path) -> None:
+    pytest.importorskip("numpy")
+    run_dir = tmp_path / "research-demo"
+
+    assert main(["research-demo", "--out", str(run_dir)]) == 0
+
+    for relative_path in [
+        "inputs/tasks.jsonl",
+        "baseline/predictions.jsonl",
+        "baseline/metrics.json",
+        "baseline/manifest.json",
+        "candidate/predictions.jsonl",
+        "candidate/metrics.json",
+        "candidate/manifest.json",
+        "splits.json",
+        "stats.json",
+        "comparison_validity.json",
+        "comparison_validity.md",
+        "metrics.json",
+        "manifest.json",
+    ]:
+        assert (run_dir / relative_path).exists()
+
+    evidence = read_json(run_dir / "evidence_card.json")
+    assert evidence["sections"]["protocol_hygiene"]["status"] == "pass"
+    assert evidence["sections"]["statistical_evidence"]["status"] == "pass"
+    assert evidence["sections"]["comparison_validity"]["status"] == "clean"
+    assert evidence["recommendation"] == "supported"
+    baseline_manifest = read_json(run_dir / "baseline" / "manifest.json")
+    candidate_manifest = read_json(run_dir / "candidate" / "manifest.json")
+    assert len(baseline_manifest["prompt"]["prompt_hash"]) == len("sha256:") + 64
+    assert len(candidate_manifest["prompt"]["prompt_hash"]) == len("sha256:") + 64
+
+
 def test_diagnose_reuses_research_demo_inputs(tmp_path: Path) -> None:
     pytest.importorskip("numpy")
     run_dir = tmp_path / "research-demo"

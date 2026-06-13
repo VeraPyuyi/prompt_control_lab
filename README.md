@@ -83,8 +83,9 @@ These are the paper-derived capabilities that drive the project:
 To experience the whole research stack without preparing model artifacts first, run
 `pcl research-demo --out runs/research-demo`. To apply the same unified diagnostic report to your
 own soft prompts, hidden states, matrices, and method predictions, use `pcl diagnose`. Research
-and comparison workflows write `evidence_card.json` / `evidence_card.md` automatically when enough
-artifacts are available, and the local UI surfaces that card in the Research Overview.
+demo now also writes a synthetic tri-split, baseline/candidate scored runs, paired statistics,
+prompt-only comparison validity, and `evidence_card.json` / `evidence_card.md`. The local UI
+surfaces that card in the Research Overview.
 
 See [Research From The Paper](docs/research_from_paper.en.md) for the direct mapping from paper
 ideas to commands, inputs, outputs, and interpretation boundaries.
@@ -197,7 +198,7 @@ The repository includes narrated 4K hands-on demo videos generated from real UI 
 
 ## Quick Map
 
-1. `pcl research-demo`: generate synthetic paper-style inputs and run all research diagnostics.
+1. `pcl research-demo`: generate synthetic paper-style inputs, a small comparison bundle, and all research diagnostics.
 2. `pcl diagnose`: run soft-hard, trajectory, Riccati, and tv-soft as one diagnostic workflow.
 3. `pcl split` / `pcl analyze`: tri-split prompt evaluation and report generation.
 4. `pcl stats`: paired bootstrap CI, permutation p-value, and Holm correction.

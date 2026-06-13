@@ -28,9 +28,10 @@ pcl diagnose --run runs/research-demo
 ```
 
 这个命令会在 `runs/research-demo/inputs` 下写出 synthetic soft prompt vectors、
-vocabulary embeddings、hidden-state trajectories、Riccati matrices 和 method predictions，
-然后生成 `research_diagnostics.json` 和 `research_diagnostics.md`。它用于学习流程，
-不是 benchmark 结果。
+vocabulary embeddings、hidden-state trajectories、Riccati matrices 和 method predictions。
+它还会生成小型 synthetic `tasks.jsonl`、baseline / candidate scored runs、`splits.json`、
+`stats.json`、`comparison_validity.json`、`evidence_card.json` 和 `evidence_card.md`。
+它用于学习流程和 artifact 关系，不是 benchmark 结果。
 
 ## 2. 三段切分 withheld protocol
 

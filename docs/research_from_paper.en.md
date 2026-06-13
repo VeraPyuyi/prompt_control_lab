@@ -31,8 +31,10 @@ pcl diagnose --run runs/research-demo
 
 This writes synthetic soft prompt vectors, vocabulary embeddings, hidden-state
 trajectories, Riccati matrices, and method predictions under `runs/research-demo/inputs`.
-It then writes `research_diagnostics.json` and `research_diagnostics.md`. The demo is
-for learning the workflow, not for claiming benchmark performance.
+It also writes a small synthetic `tasks.jsonl`, baseline/candidate scored runs,
+`splits.json`, `stats.json`, `comparison_validity.json`, `evidence_card.json`, and
+`evidence_card.md`. The demo is for learning the workflow and artifact relationships, not for
+claiming benchmark performance.
 
 ## 2. Tri-Split Withheld Protocol
 

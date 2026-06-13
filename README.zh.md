@@ -79,9 +79,9 @@ comparison-validity 审计、explanation、gate 结果、报告 artifact 和本�
 
 如果想先体验整套论文诊断流程，不需要自己准备模型 artifact，可以运行
 `pcl research-demo --out runs/research-demo`。如果已经有自己的 soft prompt、hidden states、
-surrogate matrices 或 method predictions，可以用 `pcl diagnose` 统一生成诊断报告。研究流程和
-comparison 流程会在证据足够时自动写出 `evidence_card.json` / `evidence_card.md`，本地 UI 的
-研究总览页也会直接展示这张证据卡。
+surrogate matrices 或 method predictions，可以用 `pcl diagnose` 统一生成诊断报告。现在
+research-demo 还会写出 synthetic tri-split、baseline / candidate scored runs、成对统计、
+prompt-only 比较有效性和 `evidence_card.json` / `evidence_card.md`，本地 UI 的研究总览页也会直接展示这张证据卡。
 
 完整对应关系见 [论文功能映射](docs/research_from_paper.zh.md)。
 
@@ -226,7 +226,7 @@ pcl doctor
 
 | 场景 | 命令 | 说明 |
 |---|---|---|
-| 论文 demo | `pcl research-demo` | 生成 synthetic inputs，并一键跑完研究诊断。 |
+| 论文 demo | `pcl research-demo` | 生成 synthetic inputs、小型比较证据包，并一键跑完研究诊断。 |
 | 统一诊断 | `pcl diagnose` | 把 soft-hard、trajectory、Riccati、tv-soft 合成一份诊断报告。 |
 | 三段切分评测 | `pcl split` / `pcl analyze` | 固化 train / validation / withheld 协议并生成报告。 |
 | 成对统计 | `pcl stats` | 输出 bootstrap CI、permutation p-value 和 Holm correction。 |
