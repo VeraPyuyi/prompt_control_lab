@@ -191,7 +191,8 @@ gate decision、risk level、改动文件、测试、audit path、gate path，�
 由 `pcl evidence-from` 写出。这个一键桥接命令会从 Promptfoo、Langfuse 或 LangSmith
 导入 baseline export 和 candidate export，把导入快照保存到 `imports/`，把 PCL 比较结果保存到
 `comparison/`，并把最常用的 `evidence_card.md`、`report.html`、`stats.json` 和
-`comparison_validity.json` 复制到输出根目录。
+`comparison_validity.json` 复制到输出根目录，同时写出 `research_diagnostics.md` /
+`research_diagnostics.json` 来说明论文证据缺口。
 
 重要字段：
 
@@ -200,6 +201,8 @@ gate decision、risk level、改动文件、测试、audit path、gate path，�
 - `comparison_dir`：自包含的 PCL 比较 run
 - `comparison`：stats、prompt-only validity、evidence card 和 report 路径
 - `copied_artifacts`：复制到输出根目录的重点 artifact
+- `research_diagnostic_type`：通常是 `external_evidence_gap`，表示 PCL 审计了这个外部导出中
+  哪些论文诊断已经存在、哪些仍然缺失
 
 说明什么问题：外部 eval / observability 工具仍然作为数据来源，`prompt_control_lab` 负责把这些导出转换成 prompt 优化证据包，而不是替代原工具。
 

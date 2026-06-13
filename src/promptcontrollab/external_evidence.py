@@ -13,6 +13,7 @@ from promptcontrollab.ingest import (
     ingest_langsmith_results,
     ingest_promptfoo_results,
 )
+from promptcontrollab.research_workflow import run_research_diagnostics
 from promptcontrollab.run_comparison import compare_runs
 
 ExternalTool = Literal["auto", "promptfoo", "langfuse", "langsmith"]
@@ -142,6 +143,20 @@ def build_external_evidence(
             "Review imports/baseline and imports/candidate if provenance looks incomplete.",
         ],
     }
+    write_json(out_dir / "evidence_from_result.json", payload)
+    diagnostics = run_research_diagnostics(
+        run_dir=out_dir,
+        mode="external_evidence",
+        diagnostics_dir=out_dir / "diagnostics",
+        summary_dir=out_dir,
+    )
+    payload["research_diagnostics_path"] = str(out_dir / "research_diagnostics.json")
+    payload["research_diagnostics_md_path"] = str(out_dir / "research_diagnostics.md")
+    payload["research_diagnostic_type"] = diagnostics.get("diagnostic_type")
+    payload["next_actions"].insert(
+        3,
+        "Open research_diagnostics.md for paper-evidence gap coverage.",
+    )
     write_json(out_dir / "evidence_from_result.json", payload)
     return payload
 

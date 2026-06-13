@@ -144,8 +144,12 @@ pcl claim-check \
 
 `pcl evidence-from` 会写出一个自包含桥接目录：`imports/` 保存外部工具的 baseline /
 candidate 导入快照，`comparison/` 保存 PCL 的成对统计和 prompt-only 有效性审计，
-根目录会放置 `bridge_summary.md`、`evidence_card.md`、`claim_check.md`、`report.html` 和
-`evidence_from_result.json` 方便审查。建议先看 `bridge_summary.md`，它会说明外部工具提供了什么、PCL 补了什么、还缺哪些证据；再看 `claim_check.md`，确认当前证据最多能支持哪一层 prompt optimization 主张。请使用新的或空的 `--out` 目录，避免旧 artifact 污染审计结果。
+根目录会放置 `bridge_summary.md`、`evidence_card.md`、`claim_check.md`、
+`research_diagnostics.md`、`report.html` 和 `evidence_from_result.json` 方便审查。建议先看
+`bridge_summary.md`，它会说明外部工具提供了什么、PCL 补了什么、还缺哪些证据；再看
+`research_diagnostics.md`，确认哪些论文诊断已经存在，哪些仍然缺失，而且不会伪造
+hidden-state 或 Riccati 证据；最后看 `claim_check.md`，确认当前证据最多能支持哪一层
+prompt optimization 主张。请使用新的或空的 `--out` 目录，避免旧 artifact 污染审计结果。
 本地 UI 的研究总览页也会展示这条桥接链路，包括识别到的外部工具、PCL 补充的证据、比较有效性、主张检查状态和缺失证据。
 
 导入后的 run 会包含 `predictions.jsonl`、`metrics.json` 和 `manifest.json`，因此可以继续接 `pcl compare-runs`、`pcl stats`、`pcl validity` 和后续报告。`compare-runs` 会写出一个独立比较目录，里面包含成对统计、prompt-only 比较有效性、candidate metrics 快照、源 run 快照以及 Markdown / HTML 报告。`evidence-card` 会继续把这条研究证据链压缩成一份 reviewer 更容易看的卡片。请使用新的或空的 `--out` 目录，避免旧 artifact 污染审计结果。这个能力的定位是桥接 Promptfoo / Langfuse / LangSmith 生态，而不是替代 Promptfoo 的 red-team / provider 生态、Langfuse 的 tracing 平台或 LangSmith 的观测/评测工作流。

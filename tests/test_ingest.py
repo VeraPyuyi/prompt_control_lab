@@ -206,6 +206,8 @@ def test_evidence_from_promptfoo_generates_comparison_bundle(tmp_path: Path) -> 
         "evidence_card.md",
         "report.html",
         "evidence_from_result.json",
+        "research_diagnostics.json",
+        "research_diagnostics.md",
     ]:
         assert (out_dir / relative_path).exists()
     stats = read_json(out_dir / "comparison" / "stats.json")
@@ -222,6 +224,13 @@ def test_evidence_from_promptfoo_generates_comparison_bundle(tmp_path: Path) -> 
     assert result["tool"] == "promptfoo"
     assert result["bridge_summary"]["recommendation"] == "supported"
     assert result["bridge_summary"]["evidence_tier"] == "tier_2_paired_comparison"
+    assert result["research_diagnostic_type"] == "external_evidence_gap"
+    assert "research_diagnostics.md" in result["next_actions"][3]
+    research = read_json(out_dir / "research_diagnostics.json")
+    assert research["diagnostics"]["external_bridge"]["tool"] == "promptfoo"
+    assert "soft-to-hard projection gap" in (
+        out_dir / "research_diagnostics.md"
+    ).read_text(encoding="utf-8")
     bridge = read_json(out_dir / "bridge_summary.json")
     assert bridge["kind"] == "external_bridge_summary"
     assert bridge["detected_tools"] == ["promptfoo"]

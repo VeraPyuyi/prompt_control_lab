@@ -245,8 +245,9 @@ statistics, reports, or paper-derived diagnostics on top.
 
 Written by `pcl evidence-from`. This one-command bridge imports a baseline export and a
 candidate export from Promptfoo, Langfuse, or LangSmith, snapshots them under `imports/`, runs a
-PCL comparison under `comparison/`, and copies the headline `evidence_card.md`, `report.html`,
-`stats.json`, and `comparison_validity.json` to the output root.
+PCL comparison under `comparison/`, copies the headline `evidence_card.md`, `report.html`,
+`stats.json`, and `comparison_validity.json` to the output root, and writes
+`research_diagnostics.md` / `research_diagnostics.json` for paper-evidence gap coverage.
 
 Important fields:
 
@@ -255,6 +256,8 @@ Important fields:
 - `comparison_dir`: the self-contained PCL comparison run
 - `comparison`: paths to stats, prompt-only validity, evidence card, and reports
 - `copied_artifacts`: headline artifacts copied to the output root
+- `research_diagnostic_type`: usually `external_evidence_gap`, meaning PCL audited which
+  paper-derived diagnostics are present or missing for this external export
 
 What it explains: how an external eval or observability export was converted into a
 PromptControlLab prompt-optimization evidence bundle without replacing the external tool.

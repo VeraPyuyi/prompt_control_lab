@@ -327,6 +327,8 @@ def run_external_evidence_workflow(
         out_dir / "evidence_card.md",
         out_dir / "claim_check.json",
         out_dir / "claim_check.md",
+        out_dir / "research_diagnostics.json",
+        out_dir / "research_diagnostics.md",
         out_dir / "report.html",
         out_dir / "comparison" / "stats.json",
         out_dir / "comparison" / "comparison_validity.json",

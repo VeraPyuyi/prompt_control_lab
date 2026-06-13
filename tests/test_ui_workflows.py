@@ -334,6 +334,7 @@ def test_external_evidence_workflow_preview_and_auto_modes(tmp_path: Path) -> No
 
     assert preview["status"] == "preview"
     assert "pcl evidence-from" in preview["command"]
+    assert str(out_dir / "research_diagnostics.md") in preview["outputs"]
     assert not (out_dir / "evidence_from_result.json").exists()
 
     result = run_external_evidence_workflow(
@@ -358,6 +359,7 @@ def test_external_evidence_workflow_preview_and_auto_modes(tmp_path: Path) -> No
     assert (out_dir / "evidence_from_result.json").exists()
     assert (out_dir / "evidence_card.md").exists()
     assert (out_dir / "claim_check.md").exists()
+    assert (out_dir / "research_diagnostics.md").exists()
     assert (out_dir / "report.html").exists()
     validity = read_json(out_dir / "comparison" / "comparison_validity.json")
     assert validity["validity"] == "clean"
