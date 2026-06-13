@@ -61,6 +61,8 @@ pcl diagnose --run runs/ecosystem-demo
 这会在根目录写出 `research_diagnostics.json` 和 `research_diagnostics.md`。
 对于外部工具导出，`diagnose` 会报告已有证据和缺失的研究诊断；它不会伪造
 hidden-state、soft-hard、Riccati 或 time-varying-control 测量结果。
+完成这一步后，`pcl ui --runs runs/ecosystem-demo` 的 Research Overview 也会显示
+论文证据缺口表。
 
 Promptfoo：
 

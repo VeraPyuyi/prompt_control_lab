@@ -24,6 +24,7 @@ from promptcontrollab.ui.data import (
     claim_evidence_ladder,
     ecosystem_demo_rows,
     evidence_card_rows,
+    evidence_gap_rows,
     external_bridge_summary,
     filter_history_rows,
     first_comparison,
@@ -381,6 +382,91 @@ def test_ui_recognizes_ecosystem_demo_root_and_summarizes_tools(tmp_path: Path) 
     assert "ecosystem_demo.json" in detail["artifacts"]
     assert [row["tool"] for row in rows] == ["promptfoo", "langfuse", "langsmith"]
     assert rows[0]["open_first"] == "promptfoo/bridge_summary.md"
+
+
+def test_ui_summarizes_external_evidence_gap_diagnostics(tmp_path: Path) -> None:
+    run = tmp_path / "runs" / "ecosystem-demo"
+    _write_json(
+        run / "research_diagnostics.json",
+        {
+            "kind": "research_diagnostics",
+            "diagnostic_type": "external_evidence_gap",
+            "diagnostics": {
+                "ecosystem_bridge": {
+                    "tool_count": 2,
+                    "runs": [
+                        {
+                            "tool": "promptfoo",
+                            "display_name": "Promptfoo",
+                            "validity": "needs_review",
+                            "evidence_tier": "tier_2_paired_comparison",
+                            "claim_check_status": "needs_review",
+                            "missing_paper_diagnostics": [
+                                "soft-to-hard projection gap",
+                                "hidden-state trajectory",
+                            ],
+                            "bridge_summary_path": "promptfoo/bridge_summary.md",
+                        },
+                        {
+                            "tool": "langsmith",
+                            "display_name": "LangSmith",
+                            "validity": "clean",
+                            "evidence_tier": "tier_2_paired_comparison",
+                            "claim_check_status": "pass",
+                            "missing_paper_diagnostics": ["Riccati surrogate"],
+                            "bridge_summary_path": "langsmith/bridge_summary.md",
+                        },
+                    ],
+                }
+            },
+        },
+    )
+
+    rows = evidence_gap_rows(load_run_detail(run))
+
+    assert [row["tool"] for row in rows] == ["Promptfoo", "LangSmith"]
+    assert rows[0]["missing_count"] == 2
+    assert rows[0]["missing_paper_diagnostics"] == (
+        "soft-to-hard projection gap, hidden-state trajectory"
+    )
+    assert rows[1]["open_first"] == "langsmith/bridge_summary.md"
+
+
+def test_ui_summarizes_single_external_evidence_gap_diagnostic(tmp_path: Path) -> None:
+    run = tmp_path / "runs" / "from-promptfoo"
+    _write_json(
+        run / "research_diagnostics.json",
+        {
+            "kind": "research_diagnostics",
+            "diagnostic_type": "external_evidence_gap",
+            "diagnostics": {
+                "external_bridge": {
+                    "tool": "promptfoo",
+                    "display_name": "Promptfoo",
+                    "validity": "needs_review",
+                    "evidence_tier": "tier_2_paired_comparison",
+                    "claim_check_status": "needs_review",
+                    "missing_paper_diagnostics": ["time-varying soft-control lane"],
+                    "bridge_summary_path": "bridge_summary.md",
+                }
+            },
+        },
+    )
+
+    rows = evidence_gap_rows(load_run_detail(run))
+
+    assert rows == [
+        {
+            "tool": "Promptfoo",
+            "validity": "needs_review",
+            "evidence_tier": "tier_2_paired_comparison",
+            "claim_check_status": "needs_review",
+            "missing_count": 1,
+            "missing_paper_diagnostics": "time-varying soft-control lane",
+            "open_first": "bridge_summary.md",
+            "report_html": "",
+        }
+    ]
 
 
 def test_research_diagnostic_rows_summarize_paper_artifacts(tmp_path: Path) -> None:

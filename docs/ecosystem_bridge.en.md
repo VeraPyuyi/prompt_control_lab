@@ -74,6 +74,8 @@ This writes `research_diagnostics.json` and `research_diagnostics.md` at the
 root. For external-tool exports, `diagnose` reports evidence coverage and missing
 research diagnostics; it does not fabricate hidden-state, soft-hard, Riccati, or
 time-varying-control measurements.
+After this step, `pcl ui --runs runs/ecosystem-demo` also shows a paper-evidence
+gap table in Research Overview.
 
 Promptfoo:
 

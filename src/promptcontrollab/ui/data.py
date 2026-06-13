@@ -401,6 +401,41 @@ def ecosystem_demo_rows(detail: JsonDict) -> list[JsonDict]:
     return rows
 
 
+def evidence_gap_rows(detail: JsonDict) -> list[JsonDict]:
+    """Return paper-evidence gap rows from ``pcl diagnose`` external bridge output."""
+
+    research = detail.get("research_diagnostics")
+    if not isinstance(research, dict):
+        return []
+    diagnostics = research.get("diagnostics")
+    if not isinstance(diagnostics, dict):
+        return []
+    ecosystem = diagnostics.get("ecosystem_bridge")
+    if isinstance(ecosystem, dict):
+        runs = ecosystem.get("runs")
+        if isinstance(runs, list):
+            return [_evidence_gap_row(item) for item in runs if isinstance(item, dict)]
+    external = diagnostics.get("external_bridge")
+    if isinstance(external, dict) and external:
+        return [_evidence_gap_row(external)]
+    return []
+
+
+def _evidence_gap_row(item: JsonDict) -> JsonDict:
+    missing = item.get("missing_paper_diagnostics")
+    missing_list = [str(value) for value in missing] if isinstance(missing, list) else []
+    return {
+        "tool": item.get("display_name") or item.get("tool", ""),
+        "validity": item.get("validity", ""),
+        "evidence_tier": item.get("evidence_tier", ""),
+        "claim_check_status": item.get("claim_check_status", ""),
+        "missing_count": len(missing_list),
+        "missing_paper_diagnostics": ", ".join(missing_list),
+        "open_first": item.get("bridge_summary_path", ""),
+        "report_html": item.get("report_html_path", ""),
+    }
+
+
 def history_rows(detail: JsonDict) -> list[JsonDict]:
     """Return normalized history rows for tables and trend charts."""
 
