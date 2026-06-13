@@ -11,7 +11,12 @@ import pytest
 from promptcontrollab.cli import main
 from promptcontrollab.report_model import ReportModel
 from promptcontrollab.ui import charts
-from promptcontrollab.ui.components import dashboard_css, evidence_ladder_html, stat_card_html
+from promptcontrollab.ui.components import (
+    dashboard_css,
+    evidence_ladder_html,
+    research_evidence_map_html,
+    stat_card_html,
+)
 from promptcontrollab.ui.data import (
     audit_detail_sections,
     changed_line_rows,
@@ -26,6 +31,7 @@ from promptcontrollab.ui.data import (
     list_runs,
     load_run_detail,
     research_diagnostic_rows,
+    research_evidence_map,
     research_status_counts,
 )
 
@@ -362,6 +368,43 @@ def test_research_diagnostic_rows_summarize_paper_artifacts(tmp_path: Path) -> N
     ]
     assert all(row["status"] == "available" for row in rows)
     assert research_status_counts(detail) == {"available": 5}
+
+
+def test_research_evidence_map_links_protocol_diagnostics_and_claim(tmp_path: Path) -> None:
+    run = tmp_path / "runs" / "research-demo"
+    _write_json(run / "splits.json", {"split_hash": "abc"})
+    _write_json(run / "stats.json", {"comparisons": [{"mean_delta": 0.2}]})
+    _write_json(run / "comparison_validity.json", {"validity": "clean"})
+    _write_json(run / "diagnostics" / "soft_hard.json", {"risk": "low"})
+    _write_json(run / "diagnostics" / "trajectory.json", {"turnpike_like_signal": True})
+    _write_json(run / "diagnostics" / "riccati.json", {"stable_surrogate": True})
+    _write_json(run / "diagnostics" / "tv_soft.json", {"delta_vs_baseline": {"time_varying": 0.1}})
+    _write_json(
+        run / "claim_check.json",
+        {
+            "requested_claim": "full-research",
+            "status": "pass",
+            "evidence_tier": "tier_4_full_research_diagnostics",
+        },
+    )
+
+    rows = research_evidence_map(load_run_detail(run))
+    rendered = research_evidence_map_html(rows)
+
+    assert [row["key"] for row in rows] == [
+        "tri_split",
+        "paired_stats",
+        "comparison_validity",
+        "soft_hard",
+        "trajectory",
+        "riccati",
+        "tv_soft",
+        "claim_check",
+    ]
+    assert all(row["status"] == "ready" for row in rows)
+    assert rows[-1]["summary"] == "full-research: pass"
+    assert "pcl-evidence-map" in rendered
+    assert "pcl-map-node ready" in rendered
 
 
 def test_research_diagnostic_chart_and_design_tokens(monkeypatch: pytest.MonkeyPatch) -> None:

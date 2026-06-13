@@ -31,6 +31,7 @@ from promptcontrollab.ui.components import (
     metric_cards,
     paper_card_html,
     prompt_diff,
+    research_evidence_map_html,
     stat_card_html,
 )
 from promptcontrollab.ui.data import (
@@ -48,6 +49,7 @@ from promptcontrollab.ui.data import (
     load_run_detail,
     model_rows,
     research_diagnostic_rows,
+    research_evidence_map,
     research_status_counts,
     slice_rows,
 )
@@ -78,6 +80,7 @@ TEXT = {
         "research_empty": "No research diagnostics found for this run.",
         "research_demo_command": "pcl research-demo --out runs/research-demo",
         "research_pipeline": "Research workflow",
+        "research_evidence_map": "Research evidence map",
         "research_diagnostics": "Paper-derived diagnostics",
         "research_coverage": "Diagnostic coverage",
         "paper_protocol": "Protocol hygiene",
@@ -281,6 +284,7 @@ TEXT = {
         "research_empty": "当前 run 还没有研究诊断 artifact。",
         "research_demo_command": "pcl research-demo --out runs/research-demo",
         "research_pipeline": "研究流程",
+        "research_evidence_map": "研究证据地图",
         "research_diagnostics": "论文诊断模块",
         "research_coverage": "诊断覆盖情况",
         "paper_protocol": "协议洁净度",
@@ -1325,6 +1329,7 @@ def _render_research_overview_tab(st: Any, text: dict[str, str], detail: JsonDic
     claim_status = claim_check.get("status", "missing")
     claim_ladder = claim_evidence_ladder(detail)
     bridge = external_bridge_summary(detail)
+    evidence_map = research_evidence_map(detail)
 
     st.markdown(
         '<div class="pcl-grid">'
@@ -1354,6 +1359,13 @@ def _render_research_overview_tab(st: Any, text: dict[str, str], detail: JsonDic
         + "</div>",
         unsafe_allow_html=True,
     )
+    map_html = research_evidence_map_html(evidence_map)
+    if map_html:
+        st.markdown(
+            f'<div class="pcl-section-title">{html.escape(text["research_evidence_map"])}</div>'
+            + map_html,
+            unsafe_allow_html=True,
+        )
     _render_research_pipeline(st, text)
 
     _render_external_bridge_section(st, text, bridge)

@@ -156,6 +156,56 @@ def dashboard_css() -> str:
   line-height: 1.35;
   margin-top: 8px;
 }
+.pcl-evidence-map {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 10px;
+  margin: 10px 0 18px 0;
+}
+.pcl-map-node {
+  border: 1px solid var(--pcl-border);
+  border-top: 4px solid var(--pcl-muted);
+  border-radius: 8px;
+  background: var(--pcl-surface);
+  padding: 12px 12px 14px 12px;
+  min-height: 118px;
+  box-shadow: 0 1px 2px rgba(15,23,42,.04);
+}
+.pcl-map-node.ready { border-top-color: var(--pcl-good); }
+.pcl-map-node.needs-review { border-top-color: var(--pcl-warn); }
+.pcl-map-node.missing, .pcl-map-node.blocked { border-top-color: var(--pcl-risk); }
+.pcl-map-node-index {
+  width: 24px;
+  height: 24px;
+  border-radius: 999px;
+  background: var(--pcl-accent-soft);
+  color: var(--pcl-accent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: .76rem;
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+.pcl-map-node-title {
+  color: var(--pcl-ink);
+  font-weight: 700;
+  line-height: 1.2;
+}
+.pcl-map-node-status {
+  color: var(--pcl-muted);
+  font-size: .75rem;
+  text-transform: uppercase;
+  letter-spacing: .05em;
+  margin-top: 4px;
+}
+.pcl-map-node-summary {
+  color: var(--pcl-muted);
+  font-size: .84rem;
+  line-height: 1.35;
+  margin-top: 8px;
+  overflow-wrap: anywhere;
+}
 </style>
 """
 
@@ -223,6 +273,28 @@ def evidence_ladder_html(rows: list[dict[str, Any]]) -> str:
             "</div>"
         )
     return '<div class="pcl-evidence-ladder">' + "".join(items) + "</div>"
+
+
+def research_evidence_map_html(rows: list[dict[str, Any]]) -> str:
+    """Return an HTML map for the paper-derived evidence path."""
+
+    if not rows:
+        return ""
+    items = []
+    for index, row in enumerate(rows, start=1):
+        raw_status = str(row.get("status") or "unknown")
+        css_status = raw_status.replace("_", "-")
+        title = str(row.get("label") or row.get("key") or "")
+        summary = str(row.get("summary") or "")
+        items.append(
+            f'<div class="pcl-map-node {html.escape(css_status)}">'
+            f'<div class="pcl-map-node-index">{index}</div>'
+            f'<div class="pcl-map-node-title">{html.escape(title)}</div>'
+            f'<div class="pcl-map-node-status">{html.escape(raw_status)}</div>'
+            f'<div class="pcl-map-node-summary">{html.escape(summary)}</div>'
+            "</div>"
+        )
+    return '<div class="pcl-evidence-map">' + "".join(items) + "</div>"
 
 
 def badge(label: str, value: object) -> str:

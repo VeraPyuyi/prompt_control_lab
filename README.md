@@ -86,9 +86,9 @@ To experience the whole research stack without preparing model artifacts first, 
 own soft prompts, hidden states, matrices, and method predictions, use `pcl diagnose`. Research
 demo now also writes a synthetic tri-split, baseline/candidate scored runs, paired statistics,
 prompt-only comparison validity, `evidence_card.json` / `evidence_card.md`, and
-`claim_check.json`. The local UI surfaces both the evidence card and a claim evidence ladder in
-the Research Overview, so reviewers can see whether the bundle supports paired, partial-research,
-or full-research claims.
+`claim_check.json`. The local UI surfaces a research evidence map, the evidence card, and a claim
+evidence ladder in the Research Overview, so reviewers can see whether the bundle has protocol
+evidence, diagnostics, and claim support for paired, partial-research, or full-research claims.
 
 See [Research From The Paper](docs/research_from_paper.en.md) for the direct mapping from paper
 ideas to commands, inputs, outputs, and interpretation boundaries.

@@ -76,6 +76,7 @@ def load_run_detail(run_dir: Path) -> JsonDict:
         "artifacts": model.artifacts,
         "manifest": model.manifest,
         "stats": model.stats,
+        "splits": model.splits,
         "gate": model.gate,
         "comparison_validity": model.comparison_validity,
         "explanation": model.explanation,
@@ -199,6 +200,69 @@ def research_status_counts(detail: JsonDict) -> dict[str, int]:
         status = str(row.get("status") or "unknown")
         counts[status] = counts.get(status, 0) + 1
     return counts
+
+
+def research_evidence_map(detail: JsonDict) -> list[JsonDict]:
+    """Return a left-to-right evidence path for the paper-derived research workflow."""
+
+    diagnostics = detail.get("diagnostics")
+    diagnostics_dict = diagnostics if isinstance(diagnostics, dict) else {}
+    stats = detail.get("stats")
+    stats_dict = stats if isinstance(stats, dict) else {}
+    comparison = first_comparison(stats_dict)
+    validity = detail.get("comparison_validity")
+    validity_dict = validity if isinstance(validity, dict) else {}
+    claim = claim_check_summary(detail)
+    return [
+        _map_node(
+            key="tri_split",
+            label="Tri-split",
+            status="ready" if detail.get("splits") or _manifest_has_split(detail) else "missing",
+            summary=_split_summary(detail),
+        ),
+        _map_node(
+            key="paired_stats",
+            label="Paired stats",
+            status="ready" if comparison else "missing",
+            summary=_comparison_summary(comparison),
+        ),
+        _map_node(
+            key="comparison_validity",
+            label="Validity",
+            status=_validity_status(validity_dict),
+            summary=str(validity_dict.get("validity") or validity_dict.get("status") or "not run"),
+        ),
+        _map_node(
+            key="soft_hard",
+            label="Soft-hard",
+            status="ready" if isinstance(diagnostics_dict.get("soft_hard"), dict) else "missing",
+            summary=_soft_hard_signal(diagnostics_dict.get("soft_hard", {})),
+        ),
+        _map_node(
+            key="trajectory",
+            label="Trajectory",
+            status="ready" if isinstance(diagnostics_dict.get("trajectory"), dict) else "missing",
+            summary=_trajectory_signal(diagnostics_dict.get("trajectory", {})),
+        ),
+        _map_node(
+            key="riccati",
+            label="Riccati",
+            status="ready" if isinstance(diagnostics_dict.get("riccati"), dict) else "missing",
+            summary=_riccati_signal(diagnostics_dict.get("riccati", {})),
+        ),
+        _map_node(
+            key="tv_soft",
+            label="TV-soft",
+            status="ready" if isinstance(diagnostics_dict.get("tv_soft"), dict) else "missing",
+            summary=_tv_soft_signal(diagnostics_dict.get("tv_soft", {})),
+        ),
+        _map_node(
+            key="claim_check",
+            label="Claim",
+            status=_claim_map_status(claim),
+            summary=_claim_map_summary(claim),
+        ),
+    ]
 
 
 def evidence_card_rows(detail: JsonDict) -> list[JsonDict]:
@@ -376,6 +440,76 @@ def _tv_soft_signal(payload: JsonDict) -> str:
         return f"best delta={best_key}:{deltas.get(best_key)}"
     means = payload.get("method_means")
     return f"method means={len(means) if isinstance(means, dict) else 0}"
+
+
+def _map_node(*, key: str, label: str, status: str, summary: str) -> JsonDict:
+    return {"key": key, "label": label, "status": status, "summary": summary}
+
+
+def _manifest_has_split(detail: JsonDict) -> bool:
+    manifest = detail.get("manifest")
+    if not isinstance(manifest, dict):
+        return False
+    return bool(
+        manifest.get("split_hash")
+        or manifest.get("split")
+        or manifest.get("splits")
+        or manifest.get("split_manifest")
+    )
+
+
+def _split_summary(detail: JsonDict) -> str:
+    splits = detail.get("splits")
+    if isinstance(splits, dict) and splits:
+        return str(splits.get("split_hash") or splits.get("hash") or "recorded")
+    manifest = detail.get("manifest")
+    if isinstance(manifest, dict):
+        return str(manifest.get("split_hash") or manifest.get("split") or "recorded")
+    return "not recorded"
+
+
+def _comparison_summary(comparison: JsonDict) -> str:
+    if not comparison:
+        return "not run"
+    delta = comparison.get("mean_delta")
+    p_value = comparison.get("permutation_p_value")
+    if p_value is None:
+        return f"delta={delta}"
+    return f"delta={delta}; p={p_value}"
+
+
+def _validity_status(payload: JsonDict) -> str:
+    if not payload:
+        return "missing"
+    value = str(payload.get("validity") or payload.get("status") or "").lower()
+    if value in {"clean", "pass", "valid", "prompt_only"}:
+        return "ready"
+    if value in {"blocked", "invalid", "fail", "failed"}:
+        return "blocked"
+    return "needs_review"
+
+
+def _claim_map_status(claim: JsonDict) -> str:
+    if not claim:
+        return "missing"
+    status = str(claim.get("status") or "").lower()
+    if status == "pass":
+        return "ready"
+    if status == "fail":
+        return "blocked"
+    if status == "needs_review":
+        return "needs-review"
+    return "missing"
+
+
+def _claim_map_summary(claim: JsonDict) -> str:
+    if not claim:
+        return "not run"
+    requested = str(claim.get("requested_claim") or "")
+    status = str(claim.get("status") or "")
+    if requested or status:
+        return f"{requested}: {status}".strip(": ")
+    return "not run"
 
 
 def _evidence_signal(section_name: str, payload: JsonDict) -> str:
