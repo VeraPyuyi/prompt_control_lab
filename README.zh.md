@@ -89,9 +89,13 @@ surrogate matrices 或 method predictions，可以用 `pcl diagnose` 统一生�
 promptfoo eval --output results.json
 pcl ingest promptfoo --input results.json --out runs/from-promptfoo --prompt-id candidate
 pcl report --run runs/from-promptfoo
+
+pcl ingest langfuse --input langfuse-export.json --out runs/from-langfuse \
+  --name candidate --score-name exact_match
+pcl report --run runs/from-langfuse
 ```
 
-导入后的 run 会包含 `predictions.jsonl`、`metrics.json` 和 `manifest.json`，因此可以继续接 `pcl stats`、`pcl validity` 和后续报告。这个能力的定位是桥接 Promptfoo 生态，而不是替代它的 red-team 或 provider 生态。
+导入后的 run 会包含 `predictions.jsonl`、`metrics.json` 和 `manifest.json`，因此可以继续接 `pcl stats`、`pcl validity` 和后续报告。这个能力的定位是桥接 Promptfoo / Langfuse 生态，而不是替代 Promptfoo 的 red-team / provider 生态或 Langfuse 的 tracing 平台。
 
 ## 工程应用层
 
@@ -185,6 +189,7 @@ pcl doctor
 | 内部轨迹诊断 | `pcl trajectory` | 分析 hidden-state drift、decay slope 和 turnpike-like signal。 |
 | Riccati 诊断 | `pcl riccati` | 检查有限维 surrogate 的 Riccati / DARE 稳定性。 |
 | time-varying control | `pcl tv-soft` | 比较 static、time-varying、shuffled、random control lane。 |
+| 生态桥接 | `pcl ingest promptfoo` / `pcl ingest langfuse` | 导入外部 eval / trace artifact，再接 PCL 的比较有效性和研究诊断。 |
 | 报告和解释 | `pcl report` / `pcl explain` / `pcl gate` | 把 artifact 转成可读结论和策略判断。 |
 | Agent 应用层 | `pcl guard` / `pcl audit-diff` | 把研究证据链应用到 coding agent 的执行前后。 |
 

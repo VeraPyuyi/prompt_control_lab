@@ -29,6 +29,11 @@ What it explains: which exact examples passed or failed.
 When written by `pcl ingest promptfoo`, `score` comes from Promptfoo's exported result score or
 pass/fail value. That run can then be used with `pcl stats`, `pcl validity`, and `pcl report`.
 
+When written by `pcl ingest langfuse`, `score` comes from the selected Langfuse score object,
+`output` comes from the observation/generation output, `expected` can be read from metadata or
+input fields, and model provenance is copied from the observation model/provider fields. The
+imported run can then be used with the same PCL validity and research diagnostics workflow.
+
 ## `pcl model-detect` output
 
 Stores `provider`, `model_id`, `source`, `confidence`, optional public metadata such as
@@ -168,6 +173,18 @@ When model policy keys are configured, it also records model provenance checks s
 model, model mismatch, alias model, provider allow-list, and verification requirements.
 If `comparison_validity.json` exists, the gate also consumes it: `invalid` becomes a hard failure,
 `needs_review` becomes a review item, and `clean` passes the comparison-validity check.
+
+## External ingest manifests
+
+`pcl ingest promptfoo` writes `manifest.json` with `mode: promptfoo_ingest`, `source_tool:
+promptfoo`, and a `promptfoo_filter` recording the selected prompt/provider.
+
+`pcl ingest langfuse` writes `manifest.json` with `mode: langfuse_ingest`, `source_tool:
+langfuse`, and a `langfuse_filter` recording the selected observation name, score name, and model.
+
+What it explains: external tools remain the source of eval or trace data, while
+`prompt_control_lab` records the exact import filter before running comparison validity,
+statistics, reports, or paper-derived diagnostics on top.
 
 ## `pcl guard --json` output
 

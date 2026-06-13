@@ -26,6 +26,10 @@ Quick Mode 做成对 prompt 实验时，顶层 manifest 还可以包含 `baselin
 如果由 `pcl ingest promptfoo` 写出，`score` 来自 Promptfoo 导出的 result score 或 pass/fail
 结果；这个 run 之后可以继续接 `pcl stats`、`pcl validity` 和 `pcl report`。
 
+如果由 `pcl ingest langfuse` 写出，`score` 来自选定的 Langfuse score 对象，`output`
+来自 observation / generation 输出，`expected` 可以从 metadata 或 input 字段读取，模型来源会从
+observation 的 model / provider 字段复制。导入后的 run 可以继续接同一套比较有效性和研究诊断流程。
+
 ## `pcl model-detect` 输出
 
 记录 `provider`、`model_id`、`source`、`confidence`、可选的公开模型元数据、`request_id`、
@@ -124,6 +128,16 @@ gate decision、risk level、改动文件、测试、audit path、gate path，�
 记录策略阈值判断结果。
 
 说明什么问题：这次运行是 `pass`、`needs_review` 还是 `fail`，以及触发原因是什么。它也会包含 `plain_summary`，方便插件和报告直接展示直白结论。配置模型策略后，它还会记录模型来源检查，例如模型未知、baseline/candidate 模型不同、alias model、provider 白名单和 verified 要求。如果存在 `comparison_validity.json`，gate 也会消费它：`invalid` 会变成硬失败，`needs_review` 会进入人工复核，`clean` 才通过比较有效性检查。
+
+## 外部导入 manifest
+
+`pcl ingest promptfoo` 会写出 `mode: promptfoo_ingest`、`source_tool: promptfoo`，并在
+`promptfoo_filter` 里记录导入时选择的 prompt / provider。
+
+`pcl ingest langfuse` 会写出 `mode: langfuse_ingest`、`source_tool: langfuse`，并在
+`langfuse_filter` 里记录导入时选择的 observation name、score name 和 model。
+
+说明什么问题：外部工具仍然负责原始 eval 或 trace 数据，`prompt_control_lab` 负责记录精确导入条件，然后在其上继续运行比较有效性、统计、报告或论文诊断。
 
 ## `pcl guard --json` 输出
 

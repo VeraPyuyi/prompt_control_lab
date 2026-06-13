@@ -30,7 +30,7 @@ from promptcontrollab.explain import generate_explanation
 from promptcontrollab.files import JsonDict, ensure_dir, write_json
 from promptcontrollab.gate import run_gate
 from promptcontrollab.history import compare_history, index_history
-from promptcontrollab.ingest import ingest_promptfoo_results
+from promptcontrollab.ingest import ingest_langfuse_results, ingest_promptfoo_results
 from promptcontrollab.model_drift import run_model_drift
 from promptcontrollab.model_identity import detect_model_identity
 from promptcontrollab.plugin_installer import install_plugin
@@ -141,6 +141,38 @@ def build_parser() -> argparse.ArgumentParser:
         help="Method name written to PCL predictions. Defaults to the prompt id.",
     )
     promptfoo_ingest.set_defaults(func=_cmd_ingest_promptfoo)
+    langfuse_ingest = ingest_subcommands.add_parser(
+        "langfuse",
+        help="Import Langfuse observations/traces JSON export.",
+    )
+    langfuse_ingest.add_argument("--input", type=Path, required=True, help="Langfuse JSON file.")
+    langfuse_ingest.add_argument("--out", type=Path, required=True, help="PCL run directory.")
+    langfuse_ingest.add_argument(
+        "--name",
+        default=None,
+        help="Langfuse observation/generation name to import when multiple names exist.",
+    )
+    langfuse_ingest.add_argument(
+        "--score-name",
+        default=None,
+        help="Langfuse score name to import when multiple score names exist.",
+    )
+    langfuse_ingest.add_argument(
+        "--model",
+        default=None,
+        help="Model id filter to import when the file contains multiple models.",
+    )
+    langfuse_ingest.add_argument(
+        "--provider",
+        default=None,
+        help="Provider filter to import when the file contains multiple providers.",
+    )
+    langfuse_ingest.add_argument(
+        "--method",
+        default=None,
+        help="Method name written to PCL predictions. Defaults to the Langfuse name.",
+    )
+    langfuse_ingest.set_defaults(func=_cmd_ingest_langfuse)
 
     improve_parser = subcommands.add_parser(
         "improve",
@@ -694,6 +726,19 @@ def _cmd_ingest_promptfoo(args: argparse.Namespace) -> None:
         source_path=args.input,
         out_dir=args.out,
         prompt_id=args.prompt_id,
+        provider=args.provider,
+        method=args.method,
+    )
+    print(json.dumps(payload, indent=2, ensure_ascii=False, sort_keys=True))
+
+
+def _cmd_ingest_langfuse(args: argparse.Namespace) -> None:
+    payload = ingest_langfuse_results(
+        source_path=args.input,
+        out_dir=args.out,
+        name=args.name,
+        score_name=args.score_name,
+        model=args.model,
         provider=args.provider,
         method=args.method,
     )

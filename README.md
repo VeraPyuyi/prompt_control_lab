@@ -87,18 +87,22 @@ ideas to commands, inputs, outputs, and interpretation boundaries.
 
 ## Ecosystem Bridge
 
-If you already use Promptfoo for prompt/model evaluation, keep it. `prompt_control_lab` can import
-Promptfoo JSON results and add the research diagnostics layer on top:
+If you already use Promptfoo or Langfuse for prompt/model evaluation and observability, keep them.
+`prompt_control_lab` can import their JSON artifacts and add the research diagnostics layer on top:
 
 ```bash
 promptfoo eval --output results.json
 pcl ingest promptfoo --input results.json --out runs/from-promptfoo --prompt-id candidate
 pcl report --run runs/from-promptfoo
+
+pcl ingest langfuse --input langfuse-export.json --out runs/from-langfuse \
+  --name candidate --score-name exact_match
+pcl report --run runs/from-langfuse
 ```
 
 The imported run contains `predictions.jsonl`, `metrics.json`, and `manifest.json`, so it can be
 used with `pcl stats`, `pcl validity`, and downstream reports. This is intentionally a bridge, not a
-replacement for Promptfoo's red-team or provider ecosystem.
+replacement for Promptfoo's red-team/provider ecosystem or Langfuse's tracing platform.
 
 ## Applied Engineering Layer
 
@@ -160,7 +164,7 @@ The repository includes narrated 4K hands-on demo videos generated from real UI 
 7. `pcl trajectory`: hidden-state drift, decay slope, and turnpike-like signal.
 8. `pcl riccati`: fitted finite-dimensional Riccati/DARE surrogate diagnostics.
 9. `pcl tv-soft`: static/time-varying/shuffled/random soft-control comparison.
-10. `pcl ingest promptfoo`: import Promptfoo eval JSON into PCL research artifacts.
+10. `pcl ingest promptfoo` / `pcl ingest langfuse`: import external eval/trace artifacts into PCL research artifacts.
 11. `pcl report` / `pcl explain` / `pcl gate`: turn artifacts into readable decisions.
 12. `pcl guard` / `pcl audit-diff`: applied AI coding agent preflight and post-run audit.
 
@@ -917,6 +921,9 @@ Adjacent tools cover important neighboring layers:
 
 The guard/policy/model-audit workflow remains useful, but it is an applied engineering layer around
 the research diagnostics rather than the center of gravity.
+
+The ecosystem bridge is deliberately narrow: import external eval/trace evidence first, then run
+PCL's comparison validity and paper-derived diagnostics on top.
 
 ![prompt_control_lab ecosystem position](docs/assets/ecosystem.svg)
 

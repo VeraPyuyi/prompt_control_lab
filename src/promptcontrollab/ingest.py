@@ -73,6 +73,80 @@ def ingest_promptfoo_results(
     }
 
 
+def ingest_langfuse_results(
+    *,
+    source_path: Path,
+    out_dir: Path,
+    name: str | None = None,
+    score_name: str | None = None,
+    model: str | None = None,
+    provider: str | None = None,
+    method: str | None = None,
+) -> JsonDict:
+    """Convert Langfuse observations/traces JSON export into one scored PCL run.
+
+    This intentionally avoids the Langfuse SDK. The bridge is for local exported
+    artifacts so teams can keep using Langfuse while adding PCL's protocol and
+    research diagnostics on top.
+    """
+
+    payload = read_json(source_path)
+    rows = _langfuse_rows(payload, score_name=score_name)
+    if not rows:
+        msg = f"No Langfuse observations with scores found in {source_path}"
+        raise ValueError(msg)
+    selected = _filter_langfuse_rows(rows, name=name, model=model, provider=provider)
+    if not selected:
+        msg = "No Langfuse rows matched the requested name/model/provider filter"
+        raise ValueError(msg)
+    selected_name = name or _single_value(
+        selected,
+        "name",
+        "Langfuse observation names",
+    )
+    selected_model = model or _single_value(selected, "model_id", "Langfuse model ids")
+    selected_provider = provider or _single_value(
+        selected,
+        "provider",
+        "Langfuse providers",
+    )
+    method_name = method or selected_name or "langfuse"
+    predictions = [
+        _prediction_from_langfuse_row(row, index=index, method=method_name)
+        for index, row in enumerate(selected)
+    ]
+    summary = summarize_predictions(predictions)
+    ensure_dir(out_dir)
+    write_jsonl(out_dir / "predictions.jsonl", [prediction.to_json() for prediction in predictions])
+    write_json(out_dir / "metrics.json", summary.to_json())
+    model_identity = detect_model_identity(provider=selected_provider, model_id=selected_model)
+    manifest: JsonDict = {
+        "tool": "promptcontrollab",
+        "tool_version": __version__,
+        "mode": "langfuse_ingest",
+        "method": method_name,
+        "metric": f"langfuse_score:{score_name or 'auto'}",
+        "source_tool": "langfuse",
+        "source_path": str(source_path),
+        "langfuse_filter": {
+            "name": selected_name,
+            "score_name": score_name or "auto",
+            "model": selected_model,
+            "provider": selected_provider,
+        },
+        "model": model_identity.to_json(),
+    }
+    write_json(out_dir / "manifest.json", manifest)
+    return {
+        "out_dir": str(out_dir),
+        "count": len(predictions),
+        "mean_score": summary.mean_score,
+        "name": selected_name,
+        "model": selected_model,
+        "provider": selected_provider,
+    }
+
+
 def _promptfoo_rows(payload: JsonDict) -> list[JsonDict]:
     results = payload.get("results")
     if isinstance(results, list):
@@ -87,6 +161,97 @@ def _promptfoo_rows(payload: JsonDict) -> list[JsonDict]:
                     rows.extend(_rows_from_table_row(row))
             return rows
     return []
+
+
+def _langfuse_rows(payload: JsonDict, *, score_name: str | None) -> list[JsonDict]:
+    observations = _langfuse_observations(payload)
+    rows: list[JsonDict] = []
+    for index, item in enumerate(observations):
+        row = _row_from_langfuse_observation(item, index=index, score_name=score_name)
+        if row is not None:
+            rows.append(row)
+    return rows
+
+
+def _langfuse_observations(payload: JsonDict) -> list[JsonDict]:
+    rows: list[JsonDict] = []
+    for key in ["observations", "generations"]:
+        value = payload.get(key)
+        if isinstance(value, list):
+            rows.extend(item for item in value if isinstance(item, dict))
+    for key in ["data", "traces"]:
+        value = payload.get(key)
+        if not isinstance(value, list):
+            continue
+        for item in value:
+            if not isinstance(item, dict):
+                continue
+            nested = item.get("observations")
+            if isinstance(nested, list):
+                rows.extend(
+                    _with_trace_context(observation, item)
+                    for observation in nested
+                    if isinstance(observation, dict)
+                )
+            else:
+                rows.append(item)
+    return rows
+
+
+def _with_trace_context(observation: JsonDict, trace: JsonDict) -> JsonDict:
+    context: JsonDict = {}
+    trace_id = trace.get("id") or trace.get("traceId")
+    if isinstance(trace_id, str):
+        context["trace_id"] = trace_id
+    trace_name = trace.get("name")
+    if isinstance(trace_name, str):
+        context["trace_name"] = trace_name
+    return {**observation, "_trace": context}
+
+
+def _row_from_langfuse_observation(
+    item: JsonDict,
+    *,
+    index: int,
+    score_name: str | None,
+) -> JsonDict | None:
+    score = _langfuse_score(item, score_name=score_name)
+    if score is None:
+        return None
+    metadata = _dict_or_empty(item.get("metadata"))
+    input_payload = _dict_or_empty(item.get("input"))
+    model_id = _optional_str(item.get("model")) or _optional_str(item.get("modelId"))
+    provider = _optional_str(metadata.get("provider")) or _optional_str(item.get("provider"))
+    if provider is None and model_id is not None:
+        provider, model_id = _split_provider_model(model_id)
+    return {
+        "id": _optional_str(item.get("id")) or _optional_str(item.get("observationId"))
+        or f"observation-{index}",
+        "name": _optional_str(item.get("name")),
+        "provider": provider,
+        "model_id": model_id,
+        "output": _jsonish_text(item.get("output")),
+        "expected": _langfuse_expected(metadata, input_payload),
+        "score": score,
+        "slice": _langfuse_slice(metadata, input_payload),
+        "error": _optional_str(item.get("error")) or _optional_str(item.get("statusMessage")),
+    }
+
+
+def _filter_langfuse_rows(
+    rows: list[JsonDict],
+    *,
+    name: str | None,
+    model: str | None,
+    provider: str | None,
+) -> list[JsonDict]:
+    return [
+        row
+        for row in rows
+        if (name is None or row.get("name") == name)
+        and (model is None or row.get("model_id") == model)
+        and (provider is None or row.get("provider") == provider)
+    ]
 
 
 def _row_from_v3_result(item: JsonDict) -> JsonDict:
@@ -181,6 +346,29 @@ def _prediction_from_promptfoo_row(
     )
 
 
+def _prediction_from_langfuse_row(
+    row: JsonDict,
+    *,
+    index: int,
+    method: str,
+) -> PredictionRecord:
+    model_payload: JsonDict = {}
+    if isinstance(row.get("provider"), str):
+        model_payload["provider"] = row["provider"]
+    if isinstance(row.get("model_id"), str):
+        model_payload["model_id"] = row["model_id"]
+    return PredictionRecord(
+        id=_unique_id(row, index),
+        output=str(row.get("output", "")),
+        expected=str(row.get("expected", "")),
+        score=float(row.get("score", 0.0)),
+        slice=str(row.get("slice") or "default"),
+        method=method,
+        error=cast(str | None, row.get("error")),
+        model=model_payload,
+    )
+
+
 def _unique_id(row: JsonDict, index: int) -> str:
     raw_id = row.get("id")
     if isinstance(raw_id, str) and raw_id:
@@ -260,6 +448,68 @@ def _score(item: JsonDict) -> float:
     if item.get("success") is True or item.get("pass") is True:
         return 1.0
     return 0.0
+
+
+def _langfuse_score(item: JsonDict, *, score_name: str | None) -> float | None:
+    scores = item.get("scores")
+    if isinstance(scores, list):
+        matches = [score for score in scores if isinstance(score, dict)]
+        if score_name is not None:
+            matches = [score for score in matches if score.get("name") == score_name]
+        else:
+            score_names = {
+                score.get("name") for score in matches if isinstance(score.get("name"), str)
+            }
+            if len(score_names) > 1:
+                msg = "Multiple Langfuse score names found; pass --score-name to choose one"
+                raise ValueError(msg)
+        for score in matches:
+            value = score.get("value")
+            if isinstance(value, bool):
+                return 1.0 if value else 0.0
+            if isinstance(value, int | float):
+                return float(value)
+    for key in ["score", "value"]:
+        value = item.get(key)
+        if isinstance(value, bool):
+            return 1.0 if value else 0.0
+        if isinstance(value, int | float):
+            return float(value)
+    if item.get("success") is True or item.get("pass") is True:
+        return 1.0
+    if item.get("success") is False or item.get("pass") is False:
+        return 0.0
+    return None
+
+
+def _dict_or_empty(value: object) -> JsonDict:
+    return cast(JsonDict, value) if isinstance(value, dict) else {}
+
+
+def _jsonish_text(value: object) -> str:
+    if value is None:
+        return ""
+    if isinstance(value, str):
+        return value
+    return json.dumps(value, sort_keys=True, ensure_ascii=False)
+
+
+def _langfuse_expected(metadata: JsonDict, input_payload: JsonDict) -> str:
+    for payload in [metadata, input_payload]:
+        for key in ["expected", "reference", "target", "ground_truth", "groundTruth"]:
+            value = payload.get(key)
+            if value is not None:
+                return _jsonish_text(value)
+    return ""
+
+
+def _langfuse_slice(metadata: JsonDict, input_payload: JsonDict) -> str:
+    for payload in [metadata, input_payload]:
+        for key in ["slice", "dataset", "dataset_name", "datasetName", "task"]:
+            value = payload.get(key)
+            if isinstance(value, str) and value:
+                return value
+    return "default"
 
 
 def _split_provider_model(provider: str | None) -> tuple[str | None, str | None]:
