@@ -100,9 +100,15 @@ pcl ingest langfuse --input langfuse-export.json --out runs/from-langfuse \
 
 pcl ingest langsmith --input langsmith-runs.csv --out runs/from-langsmith \
   --experiment candidate --score-name exact_match
+
+# 有了两个已经导入 / 打分的 run 之后，可以一条命令生成比较证据包。
+pcl compare-runs \
+  --baseline runs/from-promptfoo-baseline \
+  --candidate runs/from-promptfoo-candidate \
+  --out runs/from-promptfoo-comparison
 ```
 
-导入后的 run 会包含 `predictions.jsonl`、`metrics.json` 和 `manifest.json`，因此可以继续接 `pcl stats`、`pcl validity` 和后续报告。这个能力的定位是桥接 Promptfoo / Langfuse / LangSmith 生态，而不是替代 Promptfoo 的 red-team / provider 生态、Langfuse 的 tracing 平台或 LangSmith 的观测/评测工作流。
+导入后的 run 会包含 `predictions.jsonl`、`metrics.json` 和 `manifest.json`，因此可以继续接 `pcl compare-runs`、`pcl stats`、`pcl validity` 和后续报告。`compare-runs` 会写出一个独立比较目录，里面包含成对统计、prompt-only 比较有效性、candidate metrics 快照、源 run 快照以及 Markdown / HTML 报告。请使用新的或空的 `--out` 目录，避免旧 artifact 污染审计结果。这个能力的定位是桥接 Promptfoo / Langfuse / LangSmith 生态，而不是替代 Promptfoo 的 red-team / provider 生态、Langfuse 的 tracing 平台或 LangSmith 的观测/评测工作流。
 
 ## 工程应用层
 
@@ -197,6 +203,7 @@ pcl doctor
 | Riccati 诊断 | `pcl riccati` | 检查有限维 surrogate 的 Riccati / DARE 稳定性。 |
 | time-varying control | `pcl tv-soft` | 比较 static、time-varying、shuffled、random control lane。 |
 | 生态桥接 | `pcl ingest auto` / `promptfoo` / `langfuse` / `langsmith` | 导入外部 eval / trace artifact，再接 PCL 的比较有效性和研究诊断。 |
+| 一键 run 比较 | `pcl compare-runs` | 把两个导入 / 打分后的 run 变成 stats、comparison_validity 和报告。 |
 | 报告和解释 | `pcl report` / `pcl explain` / `pcl gate` | 把 artifact 转成可读结论和策略判断。 |
 | Agent 应用层 | `pcl guard` / `pcl audit-diff` | 把研究证据链应用到 coding agent 的执行前后。 |
 

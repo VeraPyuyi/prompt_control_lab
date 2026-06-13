@@ -106,10 +106,19 @@ pcl ingest langfuse --input langfuse-export.json --out runs/from-langfuse \
 
 pcl ingest langsmith --input langsmith-runs.csv --out runs/from-langsmith \
   --experiment candidate --score-name exact_match
+
+# Once you have two imported/scored runs, compare them as one evidence bundle.
+pcl compare-runs \
+  --baseline runs/from-promptfoo-baseline \
+  --candidate runs/from-promptfoo-candidate \
+  --out runs/from-promptfoo-comparison
 ```
 
 The imported run contains `predictions.jsonl`, `metrics.json`, and `manifest.json`, so it can be
-used with `pcl stats`, `pcl validity`, and downstream reports. This is intentionally a bridge, not a
+used with `pcl compare-runs`, `pcl stats`, `pcl validity`, and downstream reports. `compare-runs`
+writes a self-contained comparison directory with paired statistics, prompt-only validity, a
+candidate metrics snapshot, source-run snapshots, and Markdown/HTML reports. Use a new or empty
+`--out` directory so stale artifacts cannot contaminate the audit. This is intentionally a bridge, not a
 replacement for Promptfoo's red-team/provider ecosystem, Langfuse's tracing platform, or
 LangSmith's observability/evaluation workflows.
 
@@ -174,8 +183,9 @@ The repository includes narrated 4K hands-on demo videos generated from real UI 
 8. `pcl riccati`: fitted finite-dimensional Riccati/DARE surrogate diagnostics.
 9. `pcl tv-soft`: static/time-varying/shuffled/random soft-control comparison.
 10. `pcl ingest auto` / `promptfoo` / `langfuse` / `langsmith`: import external eval/trace artifacts into PCL research artifacts.
-11. `pcl report` / `pcl explain` / `pcl gate`: turn artifacts into readable decisions.
-12. `pcl guard` / `pcl audit-diff`: applied AI coding agent preflight and post-run audit.
+11. `pcl compare-runs`: turn two imported/scored runs into stats, validity, and a report in one command.
+12. `pcl report` / `pcl explain` / `pcl gate`: turn artifacts into readable decisions.
+13. `pcl guard` / `pcl audit-diff`: applied AI coding agent preflight and post-run audit.
 
 ## Install The CLI ⚙️
 

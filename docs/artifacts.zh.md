@@ -89,6 +89,19 @@ runs/candidate/comparison_validity.json` 写出。
 model identity、split hash、metric identity、成对统计证据和 slice 退化。`clean` 表示证据链较完整；
 `needs_review` 表示证据有用但不完整或不确定；`invalid` 表示发现了模型、指标或切分不一致等阻断性混淆。
 
+## `compare_runs_result.json`
+
+由 `pcl compare-runs --baseline runs/baseline --candidate runs/candidate --out
+runs/comparison` 写出。
+
+说明什么问题：两个已经打分的 run 是如何被整理成一个独立比较证据包的。输出目录会包含复制后的
+`baseline/` 和 `candidate/` 快照、`stats.json`、`comparison_validity.json`、
+可选复制的 `splits.json`、`comparison_validity.md`、`metrics.json`、`manifest.json`、
+`report.md` 和 `report.html`。请使用新的或空的输出目录；命令会拒绝非空输出目录，避免旧 artifact
+污染比较有效性检查。
+当你从 Promptfoo、Langfuse 或 LangSmith 导入结果后，如果想继续运行 PCL 的成对统计和
+prompt-only 比较有效性审计，这是推荐的下一步。
+
 ## `agent_run.json`
 
 记录一个紧凑的 agent 执行 manifest：prompt identity、agent 名称、provider/model、policy、

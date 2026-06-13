@@ -17,6 +17,61 @@ def _write_json(path: Path, payload: object) -> None:
     path.write_text(json.dumps(payload), encoding="utf-8")
 
 
+def _write_scored_run(
+    run_dir: Path,
+    *,
+    method: str,
+    score: float,
+    prompt_id: str,
+    split_hash: str | None = "split-123",
+    write_split_manifest: bool = False,
+) -> None:
+    write_jsonl(
+        run_dir / "predictions.jsonl",
+        [
+            {
+                "id": f"item-{index}",
+                "output": "right" if score else "wrong",
+                "expected": "right",
+                "score": score,
+                "slice": "format" if index % 2 == 0 else "math",
+                "method": method,
+            }
+            for index in range(20)
+        ],
+    )
+    _write_json(
+        run_dir / "metrics.json",
+        {"count": 20, "mean_score": score, "by_slice": {"format": score, "math": score}},
+    )
+    manifest = {
+        "tool": "promptcontrollab",
+        "tool_version": "0.1.0",
+        "mode": "langsmith_ingest",
+        "method": method,
+        "metric": "exact_match",
+        "prompt": {"prompt_id": prompt_id},
+        "model": {
+            "provider": "openai",
+            "model_id": "gpt-5.2-20260601",
+            "source": "test",
+            "confidence": "high",
+        },
+    }
+    if split_hash is not None:
+        manifest["split_hash"] = split_hash
+    _write_json(run_dir / "manifest.json", manifest)
+    if write_split_manifest:
+        _write_json(
+            run_dir / "splits.json",
+            {
+                "split_hash": split_hash or "split-from-file",
+                "counts": {"train": 10, "val": 5, "withheld": 5},
+                "leakage": {"has_leakage": False},
+            },
+        )
+
+
 def test_cli_example_flow(tmp_path: Path) -> None:
     demo = tmp_path / "demo"
     assert main(["init", "--path", str(demo)]) == 0
@@ -152,6 +207,227 @@ def test_cli_quick_analyze_explain_and_report(tmp_path: Path) -> None:
     technical = json.loads((run / "explanation.json").read_text(encoding="utf-8"))
     assert technical["level"] == "technical"
     assert "artifact_paths" in technical
+
+
+def test_cli_compare_runs_generates_stats_validity_and_report(tmp_path: Path) -> None:
+    baseline = tmp_path / "runs" / "from-langsmith-baseline"
+    candidate = tmp_path / "runs" / "from-langsmith-candidate"
+    out = tmp_path / "runs" / "comparison"
+    write_jsonl(
+        baseline / "predictions.jsonl",
+        [
+            {
+                "id": f"item-{index}",
+                "output": "wrong",
+                "expected": "right",
+                "score": 0.0,
+                "slice": "format" if index % 2 == 0 else "math",
+                "method": "baseline",
+            }
+            for index in range(20)
+        ],
+    )
+    write_jsonl(
+        candidate / "predictions.jsonl",
+        [
+            {
+                "id": f"item-{index}",
+                "output": "right",
+                "expected": "right",
+                "score": 1.0,
+                "slice": "format" if index % 2 == 0 else "math",
+                "method": "candidate",
+            }
+            for index in range(20)
+        ],
+    )
+    _write_json(
+        baseline / "metrics.json",
+        {"count": 20, "mean_score": 0.0, "by_slice": {"format": 0.0, "math": 0.0}},
+    )
+    _write_json(
+        candidate / "metrics.json",
+        {"count": 20, "mean_score": 1.0, "by_slice": {"format": 1.0, "math": 1.0}},
+    )
+    common_model = {
+        "provider": "openai",
+        "model_id": "gpt-5.2-20260601",
+        "source": "test",
+        "confidence": "high",
+    }
+    _write_json(
+        baseline / "manifest.json",
+        {
+            "tool": "promptcontrollab",
+            "tool_version": "0.1.0",
+            "mode": "langsmith_ingest",
+            "method": "baseline",
+            "metric": "exact_match",
+            "split_hash": "split-123",
+            "prompt": {"prompt_id": "baseline-prompt"},
+            "model": common_model,
+        },
+    )
+    _write_json(
+        candidate / "manifest.json",
+        {
+            "tool": "promptcontrollab",
+            "tool_version": "0.1.0",
+            "mode": "langsmith_ingest",
+            "method": "candidate",
+            "metric": "exact_match",
+            "split_hash": "split-123",
+            "prompt": {"prompt_id": "candidate-prompt"},
+            "model": common_model,
+        },
+    )
+
+    assert (
+        main(
+            [
+                "compare-runs",
+                "--baseline",
+                str(baseline),
+                "--candidate",
+                str(candidate),
+                "--out",
+                str(out),
+                "--title",
+                "Imported Comparison",
+                "--bootstrap-samples",
+                "20",
+                "--permutation-samples",
+                "100",
+            ]
+        )
+        == 0
+    )
+
+    for relative_path in [
+        "baseline/predictions.jsonl",
+        "candidate/predictions.jsonl",
+        "baseline/metrics.json",
+        "candidate/metrics.json",
+        "metrics.json",
+        "manifest.json",
+        "stats.json",
+        "comparison_validity.json",
+        "comparison_validity.md",
+        "report.md",
+        "report.html",
+    ]:
+        assert (out / relative_path).exists()
+    stats = json.loads((out / "stats.json").read_text(encoding="utf-8"))
+    assert stats["comparisons"][0]["mean_delta"] == 1.0
+    validity = json.loads((out / "comparison_validity.json").read_text(encoding="utf-8"))
+    assert validity["validity"] == "clean"
+    manifest = json.loads((out / "manifest.json").read_text(encoding="utf-8"))
+    assert manifest["mode"] == "run_comparison"
+    assert manifest["baseline_run"] == str(baseline)
+    assert manifest["candidate_run"] == str(candidate)
+    report = (out / "report.md").read_text(encoding="utf-8")
+    assert "Imported Comparison" in report
+    assert "Comparison Validity" in report
+    html = (out / "report.html").read_text(encoding="utf-8")
+    assert "recommendation-card" in html
+    assert "dashboard-card" in html
+    assert "Prompt-only comparison validity" in html
+    assert "Full Markdown Audit" in html
+
+
+def test_cli_compare_runs_rejects_output_inside_source_run(tmp_path: Path) -> None:
+    baseline = tmp_path / "runs" / "baseline"
+    candidate = tmp_path / "runs" / "candidate"
+    _write_scored_run(baseline, method="baseline", score=0.0, prompt_id="baseline-prompt")
+    _write_scored_run(candidate, method="candidate", score=1.0, prompt_id="candidate-prompt")
+
+    assert (
+        main(
+            [
+                "compare-runs",
+                "--baseline",
+                str(baseline),
+                "--candidate",
+                str(candidate),
+                "--out",
+                str(baseline / "comparison"),
+            ]
+        )
+        == 2
+    )
+    assert not (baseline / "comparison").exists()
+
+
+def test_cli_compare_runs_rejects_non_empty_output_directory(tmp_path: Path) -> None:
+    baseline = tmp_path / "runs" / "baseline"
+    candidate = tmp_path / "runs" / "candidate"
+    out = tmp_path / "runs" / "comparison"
+    _write_scored_run(baseline, method="baseline", score=0.0, prompt_id="baseline-prompt")
+    _write_scored_run(candidate, method="candidate", score=1.0, prompt_id="candidate-prompt")
+    _write_json(out / "splits.json", {"split_hash": "stale"})
+
+    assert (
+        main(
+            [
+                "compare-runs",
+                "--baseline",
+                str(baseline),
+                "--candidate",
+                str(candidate),
+                "--out",
+                str(out),
+            ]
+        )
+        == 2
+    )
+    assert not (out / "stats.json").exists()
+
+
+def test_cli_compare_runs_preserves_source_split_manifests(tmp_path: Path) -> None:
+    baseline = tmp_path / "runs" / "baseline"
+    candidate = tmp_path / "runs" / "candidate"
+    out = tmp_path / "runs" / "comparison"
+    _write_scored_run(
+        baseline,
+        method="baseline",
+        score=0.0,
+        prompt_id="baseline-prompt",
+        split_hash=None,
+        write_split_manifest=True,
+    )
+    _write_scored_run(
+        candidate,
+        method="candidate",
+        score=1.0,
+        prompt_id="candidate-prompt",
+        split_hash=None,
+        write_split_manifest=True,
+    )
+
+    assert (
+        main(
+            [
+                "compare-runs",
+                "--baseline",
+                str(baseline),
+                "--candidate",
+                str(candidate),
+                "--out",
+                str(out),
+                "--bootstrap-samples",
+                "20",
+                "--permutation-samples",
+                "100",
+            ]
+        )
+        == 0
+    )
+
+    assert (out / "baseline" / "splits.json").exists()
+    assert (out / "candidate" / "splits.json").exists()
+    validity = json.loads((out / "comparison_validity.json").read_text(encoding="utf-8"))
+    assert validity["checks"]["split_identity"]["status"] == "pass"
+    assert validity["validity"] == "clean"
 
 
 def test_cli_gate_reviews_uncertain_validity_even_when_thresholds_pass(tmp_path: Path) -> None:

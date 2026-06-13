@@ -47,6 +47,7 @@ from promptcontrollab.prompt_improver import improve_prompt
 from promptcontrollab.reporting import generate_report
 from promptcontrollab.research_workflow import run_research_diagnostics, write_research_demo
 from promptcontrollab.riccati import analyze_riccati
+from promptcontrollab.run_comparison import compare_runs
 from promptcontrollab.soft_hard import analyze_soft_hard
 from promptcontrollab.splitting import load_tasks, make_split, write_split
 from promptcontrollab.statistics import compare_prediction_files
@@ -377,6 +378,34 @@ def build_parser() -> argparse.ArgumentParser:
         help="comparison_validity.json output path. A sibling .md report is also written.",
     )
     validity_parser.set_defaults(func=_cmd_validity)
+
+    compare_runs_parser = subcommands.add_parser(
+        "compare-runs",
+        help="Compare two scored run directories and generate stats, validity, and report.",
+    )
+    compare_runs_parser.add_argument(
+        "--baseline",
+        type=Path,
+        required=True,
+        help="Baseline run directory.",
+    )
+    compare_runs_parser.add_argument(
+        "--candidate",
+        type=Path,
+        required=True,
+        help="Candidate run directory.",
+    )
+    compare_runs_parser.add_argument(
+        "--out",
+        type=Path,
+        required=True,
+        help="Comparison run directory.",
+    )
+    compare_runs_parser.add_argument("--title", default="PromptControlLab Run Comparison")
+    compare_runs_parser.add_argument("--seed", type=int, default=0)
+    compare_runs_parser.add_argument("--bootstrap-samples", type=int, default=1000)
+    compare_runs_parser.add_argument("--permutation-samples", type=int, default=1000)
+    compare_runs_parser.set_defaults(func=_cmd_compare_runs)
 
     audit_parser = subcommands.add_parser(
         "audit-diff",
@@ -1023,6 +1052,19 @@ def _cmd_validity(args: argparse.Namespace) -> None:
         baseline_dir=args.baseline,
         candidate_dir=args.candidate,
         out_path=args.out,
+    )
+    print(json.dumps(payload, indent=2, ensure_ascii=False, sort_keys=True))
+
+
+def _cmd_compare_runs(args: argparse.Namespace) -> None:
+    payload = compare_runs(
+        baseline_dir=args.baseline,
+        candidate_dir=args.candidate,
+        out_dir=args.out,
+        title=args.title,
+        seed=args.seed,
+        bootstrap_samples=args.bootstrap_samples,
+        permutation_samples=args.permutation_samples,
     )
     print(json.dumps(payload, indent=2, ensure_ascii=False, sort_keys=True))
 

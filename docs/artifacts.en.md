@@ -119,6 +119,20 @@ slice regressions. `clean` means the comparison is well supported by artifacts; 
 means evidence is incomplete or uncertain; `invalid` means a blocking confound such as model,
 metric, or split mismatch was found.
 
+## `compare_runs_result.json`
+
+Written by `pcl compare-runs --baseline runs/baseline --candidate runs/candidate --out
+runs/comparison`.
+
+What it explains: how two already-scored run directories were converted into one self-contained
+comparison artifact bundle. The output directory contains copied `baseline/` and `candidate/`
+snapshots, optional copied `splits.json` files, `stats.json`, `comparison_validity.json`,
+`comparison_validity.md`, `metrics.json`, `manifest.json`, `report.md`, and `report.html`. Use a
+new or empty output directory; the command rejects non-empty output paths to prevent stale
+artifacts from contaminating validity checks. This is the recommended next step after importing
+Promptfoo, Langfuse, or LangSmith exports when you want PCL's paired statistics and prompt-only
+validity audit without manually chaining multiple commands.
+
 ## `agent_run.json`
 
 Stores a compact agent execution manifest: prompt identity, agent name, provider/model, policy,
