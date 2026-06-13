@@ -156,6 +156,7 @@ def build_external_evidence(
     payload["research_diagnostics_html_path"] = str(out_dir / "research_diagnostics.html")
     payload["research_bundle_html_path"] = str(out_dir / "research_bundle.html")
     payload["research_diagnostic_type"] = diagnostics.get("diagnostic_type")
+    payload["research_bundle_integrity"] = _research_bundle_integrity(out_dir)
     _attach_gap_plan_paths(payload, diagnostics)
     bridge_summary = _attach_research_diagnostics_to_bridge_summary(
         out_dir=out_dir,
@@ -170,6 +171,9 @@ def build_external_evidence(
     )
     payload["bridge_summary"]["research_bundle_html_path"] = bridge_summary.get(
         "research_bundle_html_path"
+    )
+    payload["bridge_summary"]["research_bundle_integrity"] = bridge_summary.get(
+        "research_bundle_integrity"
     )
     payload["bridge_summary"]["research_diagnostic_type"] = bridge_summary.get(
         "research_diagnostic_type"
@@ -219,6 +223,7 @@ def _attach_research_diagnostics_to_bridge_summary(
     payload["research_diagnostics_md_path"] = str(out_dir / "research_diagnostics.md")
     payload["research_diagnostics_html_path"] = str(out_dir / "research_diagnostics.html")
     payload["research_bundle_html_path"] = str(out_dir / "research_bundle.html")
+    payload["research_bundle_integrity"] = _research_bundle_integrity(out_dir)
     payload["research_diagnostic_type"] = diagnostics.get("diagnostic_type")
     payload["missing_paper_diagnostics"] = missing_list
     payload["paper_gap_remediation"] = remediation_list
@@ -240,6 +245,31 @@ def _attach_research_diagnostics_to_bridge_summary(
     write_json(out_dir / "bridge_summary.json", payload)
     (out_dir / "bridge_summary.md").write_text(_render_bridge_summary(payload), encoding="utf-8")
     return payload
+
+
+def _research_bundle_integrity(run_dir: Path) -> JsonDict:
+    bundle_path = run_dir / "research_bundle.json"
+    if not bundle_path.exists():
+        return {
+            "status": "missing",
+            "json_path": str(bundle_path),
+            "html_path": str(run_dir / "research_bundle.html"),
+        }
+    bundle = read_json(bundle_path)
+    missing_html = bundle.get("missing_html_artifacts")
+    missing_html_list = missing_html if isinstance(missing_html, list) else []
+    hashed = int(bundle.get("hashed_artifact_count") or 0)
+    present = int(bundle.get("present_artifact_count") or 0)
+    return {
+        "status": "hashed" if hashed else "present_without_hashes",
+        "json_path": str(bundle_path),
+        "html_path": str(run_dir / "research_bundle.html"),
+        "artifact_count": bundle.get("artifact_count"),
+        "present_artifact_count": present,
+        "hashed_artifact_count": hashed,
+        "missing_html_artifacts": missing_html_list,
+        "missing_html_count": len(missing_html_list),
+    }
 
 
 def _attach_gap_plan_paths(payload: JsonDict, diagnostics: JsonDict) -> None:
@@ -607,9 +637,11 @@ def _render_bridge_summary(payload: JsonDict) -> str:
             "research_gap_plan_md_path",
             "",
         )
+        integrity = _bridge_bundle_integrity_lines(payload.get("research_bundle_integrity"))
         lines.extend(
             [
                 f"- Bundle index: `{bundle_path or ''}`",
+                *integrity,
                 f"- Report: `{research_path}`",
                 f"- Diagnostic type: `{payload.get('research_diagnostic_type')}`",
                 f"- Missing paper diagnostics: `{payload.get('missing_paper_diagnostics', [])}`",
@@ -657,6 +689,20 @@ def _render_bridge_summary(payload: JsonDict) -> str:
         ]
     )
     return "\n".join(lines)
+
+
+def _bridge_bundle_integrity_lines(value: object) -> list[str]:
+    if not isinstance(value, dict) or not value:
+        return []
+    return [
+        f"- Bundle integrity: `{value.get('status')}`",
+        (
+            f"- Bundle artifacts: `{value.get('present_artifact_count')}/"
+            f"{value.get('artifact_count')}` present, "
+            f"`{value.get('hashed_artifact_count')}` hashed"
+        ),
+        f"- Missing HTML artifacts: `{value.get('missing_html_artifacts', [])}`",
+    ]
 
 
 def _string_list(value: object) -> list[str]:

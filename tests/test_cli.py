@@ -402,6 +402,8 @@ def test_cli_ecosystem_demo_runs_all_external_bridge_examples(tmp_path: Path) ->
         "deepeval",
     ]
     assert scorecard["rows"][0]["gap_status"] == "not_checked"
+    assert scorecard["rows"][0]["research_bundle_integrity"]["status"] == "hashed"
+    assert scorecard["rows"][0]["research_bundle_integrity"]["hashed_artifact_count"] > 0
     promptfoo_links = scorecard["rows"][0]["artifact_links"]
     assert {"label": "Research bundle", "path": "promptfoo/research_bundle.html"} in promptfoo_links
     assert {"label": "Evidence card", "path": "promptfoo/evidence_card.html"} in promptfoo_links
@@ -410,6 +412,8 @@ def test_cli_ecosystem_demo_runs_all_external_bridge_examples(tmp_path: Path) ->
     scorecard_markdown = (out / "ecosystem_scorecard.md").read_text(encoding="utf-8")
     assert "research evidence layer" in scorecard_markdown
     assert "pcl gap-status" in scorecard_markdown
+    assert "Bundle integrity" in scorecard_markdown
+    assert "hashed; present" in scorecard_markdown
     assert "promptfoo/bridge_summary.md" in scorecard_markdown
     assert "[Research bundle](promptfoo/research_bundle.html)" in scorecard_markdown
     assert "[Evidence card](promptfoo/evidence_card.html)" in scorecard_markdown
@@ -418,6 +422,8 @@ def test_cli_ecosystem_demo_runs_all_external_bridge_examples(tmp_path: Path) ->
     assert "Ecosystem Scorecard" in scorecard_html
     assert "DeepEval" in scorecard_html
     assert "promptfoo/bridge_summary.md" in scorecard_html
+    assert "Bundle integrity" in scorecard_html
+    assert "hashed; present" in scorecard_html
     assert "promptfoo/research_bundle.html" in scorecard_html
     assert "promptfoo/evidence_card.html" in scorecard_html
     assert "promptfoo/claim_check.html" in scorecard_html

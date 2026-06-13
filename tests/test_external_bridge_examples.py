@@ -103,6 +103,12 @@ def test_packaged_external_examples_run_evidence_from(
     assert tool in bridge["detected_tools"]
     assert bridge["validity"] == "needs_review"
     assert bridge["evidence_tier"] == "tier_2_paired_comparison"
+    integrity = bridge["research_bundle_integrity"]
+    assert integrity["status"] == "hashed"
+    assert integrity["hashed_artifact_count"] > 0
+    assert integrity["present_artifact_count"] > 0
+    bridge_markdown = (out_dir / "bridge_summary.md").read_text(encoding="utf-8")
+    assert "Bundle integrity" in bridge_markdown
 
 
 def test_evidence_from_langfuse_pairs_by_example_id(tmp_path: Path) -> None:

@@ -181,6 +181,8 @@ pcl research-bundle --run runs/from-promptfoo-evidence
 The refreshed `research_bundle.json` records the visible artifact inventory plus `bytes` and
 `sha256` for linked evidence files, so a reviewer can tell whether the bundle changed after it was
 shared.
+`bridge_summary.md` and `ecosystem_scorecard.html` surface this bundle integrity summary so the
+cross-tool view shows not only what PCL adds, but whether the linked evidence package is auditable.
 
 After running the suggested diagnostic commands, check closure with:
 

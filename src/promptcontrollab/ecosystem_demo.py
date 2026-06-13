@@ -266,6 +266,8 @@ def _scorecard_rows(*, out_dir: Path, payload: JsonDict, diagnostics: JsonDict) 
                 "recommendation": bridge.get("recommendation") or run.get("recommendation"),
                 "paired_n": bridge.get("paired_n"),
                 "mean_delta": bridge.get("mean_delta"),
+                "research_bundle_integrity": bridge.get("research_bundle_integrity")
+                or _bundle_integrity(tool_dir),
                 "missing_paper_diagnostics": diagnostic.get(
                     "missing_paper_diagnostics",
                     bridge.get("missing_paper_diagnostics", []),
@@ -331,6 +333,24 @@ def _gap_status_summary(tool_dir: Path) -> JsonDict:
         "status": payload.get("status", "unknown"),
         "complete_count": payload.get("complete_count"),
         "missing_count": payload.get("missing_count"),
+    }
+
+
+def _bundle_integrity(tool_dir: Path) -> JsonDict:
+    path = tool_dir / "research_bundle.json"
+    if not path.exists():
+        return {"status": "missing", "missing_html_count": None}
+    payload = read_json(path)
+    missing = payload.get("missing_html_artifacts")
+    missing_list = missing if isinstance(missing, list) else []
+    hashed = int(payload.get("hashed_artifact_count") or 0)
+    return {
+        "status": "hashed" if hashed else "present_without_hashes",
+        "artifact_count": payload.get("artifact_count"),
+        "present_artifact_count": payload.get("present_artifact_count"),
+        "hashed_artifact_count": hashed,
+        "missing_html_artifacts": missing_list,
+        "missing_html_count": len(missing_list),
     }
 
 
@@ -413,9 +433,9 @@ def _render_scorecard(payload: JsonDict) -> str:
         "",
         (
             "| Tool | External strength | What PCL adds | Validity | Evidence tier | "
-            "Gap status | Reviewer artifacts | Missing paper diagnostics |"
+            "Gap status | Bundle integrity | Reviewer artifacts | Missing paper diagnostics |"
         ),
-        "|---|---|---|---|---|---|---|---|",
+        "|---|---|---|---|---|---|---|---|---|",
     ]
     rows = payload.get("rows")
     if isinstance(rows, list):
@@ -438,6 +458,7 @@ def _render_scorecard(payload: JsonDict) -> str:
                         str(row.get("validity", "")),
                         str(row.get("evidence_tier", "")),
                         str(row.get("gap_status", "")),
+                        _bundle_integrity_markdown(row.get("research_bundle_integrity")),
                         _artifact_links_markdown(row.get("artifact_links")),
                         missing_text,
                     ]
@@ -678,6 +699,7 @@ def _render_scorecard_html(payload: JsonDict) -> str:
             <th>Validity</th>
             <th>Evidence</th>
             <th>Gap</th>
+            <th>Bundle integrity</th>
             <th>Reviewer artifacts</th>
             <th>Missing diagnostics</th>
             <th>Open first</th>
@@ -745,6 +767,7 @@ def _render_scorecard_html_row(row: JsonDict) -> str:
         f"<td>{_html_badge(row.get('validity'))}</td>"
         f"<td>{_html_badge(row.get('evidence_tier'))}</td>"
         f"<td>{_html_badge(gap_status)}</td>"
+        f"<td>{_html_text(_bundle_integrity_markdown(row.get('research_bundle_integrity')))}</td>"
         f"<td>{_html_artifact_links(row.get('artifact_links'))}</td>"
         f"<td class=\"muted\">{_html_text(missing_text)}</td>"
         f"<td>{_html_link(row.get('open_first'))}</td>"
@@ -765,6 +788,17 @@ def _html_artifact_links(value: object) -> str:
         if label and path:
             links.append(_html_link_with_label(path=path, label=label))
     return "<br>".join(links)
+
+
+def _bundle_integrity_markdown(value: object) -> str:
+    if not isinstance(value, dict) or not value:
+        return ""
+    status = str(value.get("status") or "")
+    present = value.get("present_artifact_count")
+    total = value.get("artifact_count")
+    hashed = value.get("hashed_artifact_count")
+    missing = value.get("missing_html_count")
+    return f"{status}; present {present}/{total}; hashed {hashed}; missing html {missing}"
 
 
 def _html_badge(value: object) -> str:
