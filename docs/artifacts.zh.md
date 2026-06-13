@@ -89,6 +89,15 @@ runs/candidate/comparison_validity.json` 写出。
 model identity、split hash、metric identity、成对统计证据和 slice 退化。`clean` 表示证据链较完整；
 `needs_review` 表示证据有用但不完整或不确定；`invalid` 表示发现了模型、指标或切分不一致等阻断性混淆。
 
+## `evidence_card.json` / `evidence_card.md`
+
+由 `pcl evidence-card --run runs/candidate` 写出。
+
+说明什么问题：当前 artifact bundle 是否支持一次 prompt 优化主张。证据卡会汇总协议卫生、
+成对统计证据、prompt-only 比较有效性、soft-to-hard 部署风险、hidden-state trajectory 证据、
+Riccati surrogate 状态和 time-varying soft-control 证据。`supported` 表示已记录证据与配置的检查一致；
+它不是“prompt 一定全局最优”的证明。
+
 ## `compare_runs_result.json`
 
 由 `pcl compare-runs --baseline runs/baseline --candidate runs/candidate --out

@@ -119,6 +119,16 @@ slice regressions. `clean` means the comparison is well supported by artifacts; 
 means evidence is incomplete or uncertain; `invalid` means a blocking confound such as model,
 metric, or split mismatch was found.
 
+## `evidence_card.json` / `evidence_card.md`
+
+Written by `pcl evidence-card --run runs/candidate`.
+
+What it explains: whether the recorded artifact bundle supports a prompt optimization claim. The
+card summarizes protocol hygiene, paired statistical evidence, prompt-only comparison validity,
+soft-to-hard deployment risk, hidden-state trajectory evidence, Riccati surrogate status, and
+time-varying soft-control evidence. A `supported` recommendation means the recorded evidence is
+consistent with the configured checks; it is not a proof of universal prompt improvement.
+
 ## `compare_runs_result.json`
 
 Written by `pcl compare-runs --baseline runs/baseline --candidate runs/candidate --out

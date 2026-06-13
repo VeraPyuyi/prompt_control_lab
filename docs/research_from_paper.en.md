@@ -12,6 +12,7 @@ paper-derived diagnostic stack below.
 | tri-split withheld protocol | `pcl split`, `pcl analyze` | `splits.json`, `manifest.json` | Checks protocol hygiene; it does not make a small task pool representative. |
 | paired statistical comparison | `pcl stats` | `stats.json` | Reports mean delta, bootstrap CI, permutation p-value, and Holm-adjusted p-value. |
 | prompt-only comparison validity | `pcl validity` | `comparison_validity.json`, `comparison_validity.md` | Checks whether a baseline/candidate result is confounded by model, split, metric, or missing prompt identity. |
+| prompt optimization evidence card | `pcl evidence-card` | `evidence_card.json`, `evidence_card.md` | Summarizes protocol, statistics, validity, deployment, trajectory, Riccati, and time-varying evidence in one reviewer-facing artifact. |
 | soft-to-hard projection gap | `pcl soft-hard` | `diagnostics/soft_hard.json` | Measures nearest-token projection risk; it is not a proof of optimal hard prompting. |
 | HuggingFace hidden-state extraction | `pcl extract-hidden` | `hidden_states.npz`, `hidden_states.npz.metadata.json` | Generates trajectory-ready hidden states from an open/local HuggingFace model. |
 | hidden-state trajectory | `pcl trajectory` | `diagnostics/trajectory.json` | Reports drift, log-decay slope, fit quality, and turnpike-like signal. |
@@ -98,7 +99,20 @@ This writes prompt hashes into `runs/quick/baseline/manifest.json` and
 `runs/quick/candidate/manifest.json`, so `comparison_validity.json` can tell
 whether the result is really a prompt-only comparison.
 
-## 5. Soft-To-Hard Deployment Gap
+## 5. Prompt Optimization Evidence Card
+
+After a comparison run has statistics, validity checks, and any available
+research diagnostics, compress the evidence into one reviewer-facing card:
+
+```bash
+pcl evidence-card --run runs/candidate --out runs/candidate/evidence_card.md
+```
+
+The card gives a bounded recommendation: `supported`, `needs_review`,
+`not_supported`, or `insufficient_evidence`. It is meant to make the evidence
+trail easy to inspect, not to claim global prompt optimality.
+
+## 6. Soft-To-Hard Deployment Gap
 
 Soft prompts can look good during optimization but fail when projected to hard
 tokens. The soft-to-hard diagnostic quantifies that gap:
@@ -113,7 +127,7 @@ pcl soft-hard \
 This reports projection distances and risk signals. It should be interpreted as
 a deployment-risk diagnostic, not as a hard-prompt optimizer.
 
-## 6. Hidden-State Trajectory Diagnostics
+## 7. Hidden-State Trajectory Diagnostics
 
 If you do not already have hidden states, extract them from a local or open
 HuggingFace model first:
@@ -150,7 +164,7 @@ turnpike-like signal. A negative decay slope with reasonable fit can suggest
 stability-like behavior on that trace; heterogeneous traces may weaken the
 signature.
 
-## 7. Riccati Surrogate Diagnostics
+## 8. Riccati Surrogate Diagnostics
 
 The Riccati command checks a fitted or supplied finite-dimensional surrogate:
 
@@ -170,7 +184,7 @@ The result reports closed-loop spectral radius and whether the surrogate looks
 stable under the fitted diagnostic. This is intentionally limited: it does not
 prove that the operational language model satisfies the surrogate assumptions.
 
-## 8. Time-Varying Soft-Control Lane
+## 9. Time-Varying Soft-Control Lane
 
 The time-varying lane compares method groups:
 
@@ -182,7 +196,7 @@ Use this to compare static, time-varying, shuffled time-varying, and random
 controls. The key question is whether gains are consistent with temporal
 structure or merely with extra parameter capacity.
 
-## 9. Unified Diagnose Command
+## 10. Unified Diagnose Command
 
 For user-provided artifacts, run the same diagnostic stack directly:
 

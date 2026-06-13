@@ -73,6 +73,7 @@ These are the paper-derived capabilities that drive the project:
 | Tri-split withheld protocol | `pcl split`, `pcl analyze`, `splits.json` | Whether prompt evaluation avoided train/validation/withheld leakage. |
 | Paired statistical comparison | `pcl stats`, `stats.json` | Whether a prompt change is reliable under bootstrap CI, permutation p-value, and Holm correction. |
 | Prompt-only comparison validity | `pcl validity`, `comparison_validity.json` | Whether a baseline/candidate result is clean prompt-only evidence rather than a model, split, or metric confound. |
+| Prompt optimization evidence card | `pcl evidence-card`, `evidence_card.md/json` | One compact audit card for protocol hygiene, paired stats, comparison validity, deployment risk, hidden-state diagnostics, Riccati, and time-varying control evidence. |
 | Soft-to-hard deployment gap | `pcl soft-hard`, `diagnostics/soft_hard.json` | Whether soft prompt gains survive nearest-token hard projection. |
 | HuggingFace hidden-state extraction | `pcl extract-hidden`, `hidden_states.npz` | Turns open-model prompts into trajectory-ready hidden-state artifacts. |
 | Hidden-state trajectory diagnostic | `pcl trajectory`, `diagnostics/trajectory.json` | Whether internal trajectories show drift, decay, or turnpike-like signals. |
@@ -113,12 +114,17 @@ pcl compare-runs \
   --baseline runs/from-promptfoo-baseline \
   --candidate runs/from-promptfoo-candidate \
   --out runs/from-promptfoo-comparison
+
+pcl evidence-card \
+  --run runs/from-promptfoo-comparison \
+  --out runs/from-promptfoo-comparison/evidence_card.md
 ```
 
 The imported run contains `predictions.jsonl`, `metrics.json`, and `manifest.json`, so it can be
 used with `pcl compare-runs`, `pcl stats`, `pcl validity`, and downstream reports. `compare-runs`
 writes a self-contained comparison directory with paired statistics, prompt-only validity, a
-candidate metrics snapshot, source-run snapshots, and Markdown/HTML reports. Use a new or empty
+candidate metrics snapshot, source-run snapshots, and Markdown/HTML reports. `evidence-card`
+then compresses the resulting research trail into one reviewer-facing artifact. Use a new or empty
 `--out` directory so stale artifacts cannot contaminate the audit. This is intentionally a bridge, not a
 replacement for Promptfoo's red-team/provider ecosystem, Langfuse's tracing platform, or
 LangSmith's observability/evaluation workflows.

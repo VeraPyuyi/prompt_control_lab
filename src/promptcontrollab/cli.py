@@ -26,6 +26,7 @@ from promptcontrollab.config import (
 from promptcontrollab.doctor import format_doctor, run_doctor
 from promptcontrollab.errors import PromptControlLabError
 from promptcontrollab.evaluation import run_import_eval
+from promptcontrollab.evidence_card import write_evidence_card
 from promptcontrollab.explain import generate_explanation
 from promptcontrollab.files import JsonDict, ensure_dir, write_json
 from promptcontrollab.gate import run_gate
@@ -774,6 +775,25 @@ def build_parser() -> argparse.ArgumentParser:
     report_parser.add_argument("--title", default="PromptControlLab Report")
     report_parser.set_defaults(func=_cmd_report)
 
+    evidence_parser = subcommands.add_parser(
+        "evidence-card",
+        help="Generate a prompt optimization evidence card from run artifacts.",
+    )
+    evidence_parser.add_argument("--run", type=Path, required=True, help="Run directory.")
+    evidence_parser.add_argument(
+        "--out",
+        type=Path,
+        default=None,
+        help="Markdown output path. Defaults to RUN/evidence_card.md.",
+    )
+    evidence_parser.add_argument(
+        "--json-out",
+        type=Path,
+        default=None,
+        help="JSON output path. Defaults to RUN/evidence_card.json.",
+    )
+    evidence_parser.set_defaults(func=_cmd_evidence_card)
+
     explain_parser = subcommands.add_parser(
         "explain",
         help="Generate plain or technical explanation.json for a run.",
@@ -1443,6 +1463,11 @@ def _cmd_stats(args: argparse.Namespace) -> None:
 def _cmd_report(args: argparse.Namespace) -> None:
     md_path, html_path = generate_report(args.run, title=args.title)
     print(f"Wrote reports to {md_path} and {html_path}")
+
+
+def _cmd_evidence_card(args: argparse.Namespace) -> None:
+    payload = write_evidence_card(args.run, markdown_path=args.out, json_path=args.json_out)
+    print(json.dumps(payload, indent=2, ensure_ascii=False, sort_keys=True))
 
 
 def _cmd_explain(args: argparse.Namespace) -> None:
