@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, cast
 
+from promptcontrollab.evidence_card import write_evidence_card
 from promptcontrollab.files import JsonDict, ensure_dir, read_json, write_json, write_jsonl
 from promptcontrollab.optional import require_module
 from promptcontrollab.riccati import analyze_riccati
@@ -64,6 +65,12 @@ PAPER_MAPPING: list[JsonDict] = [
         "commands": ["pcl tv-soft"],
         "artifact": "diagnostics/tv_soft.json",
         "meaning": "Compares static, time-varying, shuffled, and random soft-control lanes.",
+    },
+    {
+        "concept": "prompt optimization evidence card",
+        "commands": ["pcl evidence-card"],
+        "artifact": "evidence_card.json",
+        "meaning": "Summarizes the recorded research evidence into one reviewer-facing card.",
     },
 ]
 
@@ -254,6 +261,7 @@ def run_research_diagnostics(
         render_research_diagnostics_markdown(payload),
         encoding="utf-8",
     )
+    write_evidence_card(paths.summary_dir)
     return payload
 
 

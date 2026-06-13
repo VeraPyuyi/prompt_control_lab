@@ -91,7 +91,8 @@ model identity、split hash、metric identity、成对统计证据和 slice 退�
 
 ## `evidence_card.json` / `evidence_card.md`
 
-由 `pcl evidence-card --run runs/candidate` 写出。
+由 `pcl evidence-card --run runs/candidate` 写出。`pcl analyze`、`pcl compare-runs`、
+`pcl research-demo` 和 `pcl diagnose` 在有足够 artifact 时也会自动写出这两个文件。
 
 说明什么问题：当前 artifact bundle 是否支持一次 prompt 优化主张。证据卡会汇总协议卫生、
 成对统计证据、prompt-only 比较有效性、soft-to-hard 部署风险、hidden-state trajectory 证据、

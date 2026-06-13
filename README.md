@@ -82,7 +82,9 @@ These are the paper-derived capabilities that drive the project:
 
 To experience the whole research stack without preparing model artifacts first, run
 `pcl research-demo --out runs/research-demo`. To apply the same unified diagnostic report to your
-own soft prompts, hidden states, matrices, and method predictions, use `pcl diagnose`.
+own soft prompts, hidden states, matrices, and method predictions, use `pcl diagnose`. Research
+and comparison workflows write `evidence_card.json` / `evidence_card.md` automatically when enough
+artifacts are available, and the local UI surfaces that card in the Research Overview.
 
 See [Research From The Paper](docs/research_from_paper.en.md) for the direct mapping from paper
 ideas to commands, inputs, outputs, and interpretation boundaries.

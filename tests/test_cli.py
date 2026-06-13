@@ -177,6 +177,8 @@ def test_cli_quick_analyze_explain_and_report(tmp_path: Path) -> None:
         "candidate/metrics.json",
         "stats.json",
         "explanation.json",
+        "evidence_card.json",
+        "evidence_card.md",
         "report.md",
         "report.html",
     ]
@@ -191,6 +193,7 @@ def test_cli_quick_analyze_explain_and_report(tmp_path: Path) -> None:
 
     report = (run / "report.md").read_text(encoding="utf-8")
     assert "Deployment Recommendation" in report
+    assert "Prompt Optimization Evidence Card" in report
     assert "Recommendation:" in report
     assert "Quick Mode Explanation" in report
     assert "What this means" in report
@@ -313,6 +316,8 @@ def test_cli_compare_runs_generates_stats_validity_and_report(tmp_path: Path) ->
         "stats.json",
         "comparison_validity.json",
         "comparison_validity.md",
+        "evidence_card.json",
+        "evidence_card.md",
         "report.md",
         "report.html",
     ]:
@@ -321,6 +326,9 @@ def test_cli_compare_runs_generates_stats_validity_and_report(tmp_path: Path) ->
     assert stats["comparisons"][0]["mean_delta"] == 1.0
     validity = json.loads((out / "comparison_validity.json").read_text(encoding="utf-8"))
     assert validity["validity"] == "clean"
+    evidence = json.loads((out / "evidence_card.json").read_text(encoding="utf-8"))
+    assert evidence["kind"] == "prompt_optimization_evidence_card"
+    assert evidence["sections"]["comparison_validity"]["status"] == "clean"
     manifest = json.loads((out / "manifest.json").read_text(encoding="utf-8"))
     assert manifest["mode"] == "run_comparison"
     assert manifest["baseline_run"] == str(baseline)
@@ -328,6 +336,7 @@ def test_cli_compare_runs_generates_stats_validity_and_report(tmp_path: Path) ->
     report = (out / "report.md").read_text(encoding="utf-8")
     assert "Imported Comparison" in report
     assert "Comparison Validity" in report
+    assert "Prompt Optimization Evidence Card" in report
     html = (out / "report.html").read_text(encoding="utf-8")
     assert "recommendation-card" in html
     assert "dashboard-card" in html

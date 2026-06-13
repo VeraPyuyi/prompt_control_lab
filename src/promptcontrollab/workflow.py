@@ -6,6 +6,7 @@ from pathlib import Path
 
 from promptcontrollab.config import get_config_path, get_config_str, read_simple_yaml
 from promptcontrollab.evaluation import run_import_eval
+from promptcontrollab.evidence_card import write_evidence_card
 from promptcontrollab.explain import generate_explanation
 from promptcontrollab.files import JsonDict, ensure_dir, read_json, write_json
 from promptcontrollab.gate import run_gate
@@ -146,6 +147,7 @@ def run_quick_analysis(
     )
     if policy_path is not None:
         run_gate(out_dir, policy_path=policy_path)
+    write_evidence_card(out_dir)
     generate_report(out_dir, title=title)
 
 

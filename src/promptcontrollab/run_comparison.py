@@ -5,6 +5,7 @@ from __future__ import annotations
 import shutil
 from pathlib import Path
 
+from promptcontrollab.evidence_card import write_evidence_card
 from promptcontrollab.files import JsonDict, ensure_dir, read_json, write_json
 from promptcontrollab.model_identity import compare_model_identities
 from promptcontrollab.reporting import generate_report
@@ -97,6 +98,7 @@ def compare_runs(
     if candidate_prompt:
         manifest["candidate_prompt"] = candidate_prompt
     write_json(out_dir / "manifest.json", manifest)
+    evidence_card = write_evidence_card(out_dir)
     md_path, html_path = generate_report(out_dir, title=title)
 
     payload: JsonDict = {
@@ -106,10 +108,15 @@ def compare_runs(
         "candidate_run": str(candidate_dir),
         "stats_path": str(out_dir / "stats.json"),
         "comparison_validity_path": str(out_dir / "comparison_validity.json"),
+        "evidence_card_path": str(out_dir / "evidence_card.json"),
         "report_md": str(md_path),
         "report_html": str(html_path),
         "stats": stats,
         "comparison_validity": validity,
+        "evidence_card": {
+            "recommendation": evidence_card.get("recommendation"),
+            "summary": evidence_card.get("summary"),
+        },
     }
     write_json(out_dir / "compare_runs_result.json", payload)
     return payload

@@ -79,7 +79,9 @@ comparison-validity 审计、explanation、gate 结果、报告 artifact 和本�
 
 如果想先体验整套论文诊断流程，不需要自己准备模型 artifact，可以运行
 `pcl research-demo --out runs/research-demo`。如果已经有自己的 soft prompt、hidden states、
-surrogate matrices 或 method predictions，可以用 `pcl diagnose` 统一生成诊断报告。
+surrogate matrices 或 method predictions，可以用 `pcl diagnose` 统一生成诊断报告。研究流程和
+comparison 流程会在证据足够时自动写出 `evidence_card.json` / `evidence_card.md`，本地 UI 的
+研究总览页也会直接展示这张证据卡。
 
 完整对应关系见 [论文功能映射](docs/research_from_paper.zh.md)。
 

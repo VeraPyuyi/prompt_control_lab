@@ -37,11 +37,16 @@ def test_research_demo_generates_paper_diagnostics(tmp_path: Path) -> None:
     assert "HuggingFace hidden-state extraction" in concept_names
     assert "Riccati surrogate" in concept_names
     assert "time-varying soft-control lane" in concept_names
+    assert "prompt optimization evidence card" in concept_names
     report = (run_dir / "research_diagnostics.md").read_text(encoding="utf-8")
     assert "Research Diagnostics Report" in report
     assert "Hidden-state input" in report
     assert "soft-to-hard projection gap" in report
     assert "Riccati surrogate" in report
+    evidence = read_json(run_dir / "evidence_card.json")
+    assert evidence["kind"] == "prompt_optimization_evidence_card"
+    assert evidence["sections"]["hidden_state_diagnostics"]["input_source"] == "synthetic_demo"
+    assert (run_dir / "evidence_card.md").exists()
 
 
 def test_diagnose_reuses_research_demo_inputs(tmp_path: Path) -> None:
@@ -60,6 +65,7 @@ def test_diagnose_reuses_research_demo_inputs(tmp_path: Path) -> None:
     assert summary["diagnostics"]["trajectory"]["turnpike_like_signal"] is True
     assert (run_dir / "diagnostics" / "soft_hard.json").exists()
     assert (run_dir / "diagnostics" / "tv_soft.json").exists()
+    assert (run_dir / "evidence_card.json").exists()
 
 
 def test_diagnose_requires_enough_inputs(tmp_path: Path) -> None:

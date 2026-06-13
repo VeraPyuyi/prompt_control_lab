@@ -121,7 +121,9 @@ metric, or split mismatch was found.
 
 ## `evidence_card.json` / `evidence_card.md`
 
-Written by `pcl evidence-card --run runs/candidate`.
+Written by `pcl evidence-card --run runs/candidate`. It is also written automatically by
+`pcl analyze`, `pcl compare-runs`, `pcl research-demo`, and `pcl diagnose` when those workflows
+have enough recorded artifacts.
 
 What it explains: whether the recorded artifact bundle supports a prompt optimization claim. The
 card summarizes protocol hygiene, paired statistical evidence, prompt-only comparison validity,
