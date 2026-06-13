@@ -60,6 +60,9 @@ evidence bundle per external tool:
 
 Open each `bridge_summary.md` first. It explains what the external tool supplied,
 what PCL added, and what evidence remains missing.
+You can also open the root directory in the local UI with
+`pcl ui --runs runs/ecosystem-demo`; the Research Overview will show one row per
+external-tool evidence bundle.
 
 Promptfoo:
 

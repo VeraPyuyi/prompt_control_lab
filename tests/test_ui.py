@@ -22,6 +22,7 @@ from promptcontrollab.ui.data import (
     changed_line_rows,
     claim_check_summary,
     claim_evidence_ladder,
+    ecosystem_demo_rows,
     evidence_card_rows,
     external_bridge_summary,
     filter_history_rows,
@@ -338,6 +339,48 @@ def test_report_model_and_ui_detail_read_external_bridge_artifacts(tmp_path: Pat
     assert bridge["detected_tools"] == ["promptfoo"]
     assert bridge["pcl_added_count"] == 3
     assert bridge["missing_evidence"] == ["hidden_state_diagnostics"]
+
+
+def test_ui_recognizes_ecosystem_demo_root_and_summarizes_tools(tmp_path: Path) -> None:
+    root = tmp_path / "runs"
+    demo = root / "ecosystem-demo"
+    _write_json(
+        demo / "ecosystem_demo.json",
+        {
+            "kind": "ecosystem_demo",
+            "runs": [
+                {
+                    "tool": "promptfoo",
+                    "validity": "clean",
+                    "evidence_tier": "tier_2_paired_comparison",
+                    "claim_check_status": "pass",
+                    "bridge_summary_path": "promptfoo/bridge_summary.md",
+                },
+                {
+                    "tool": "langfuse",
+                    "validity": "needs_review",
+                    "evidence_tier": "tier_1_scored_runs",
+                    "claim_check_status": "needs_review",
+                    "bridge_summary_path": "langfuse/bridge_summary.md",
+                },
+                {
+                    "tool": "langsmith",
+                    "validity": "clean",
+                    "evidence_tier": "tier_2_paired_comparison",
+                    "claim_check_status": "pass",
+                    "bridge_summary_path": "langsmith/bridge_summary.md",
+                },
+            ],
+        },
+    )
+
+    assert list_runs(root) == [{"name": "ecosystem-demo", "path": str(demo)}]
+    detail = load_run_detail(demo)
+    rows = ecosystem_demo_rows(detail)
+
+    assert "ecosystem_demo.json" in detail["artifacts"]
+    assert [row["tool"] for row in rows] == ["promptfoo", "langfuse", "langsmith"]
+    assert rows[0]["open_first"] == "promptfoo/bridge_summary.md"
 
 
 def test_research_diagnostic_rows_summarize_paper_artifacts(tmp_path: Path) -> None:

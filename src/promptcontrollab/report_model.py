@@ -32,6 +32,7 @@ class ReportModel:
     claim_check: JsonDict
     external_evidence: JsonDict
     bridge_summary: JsonDict
+    ecosystem_demo: JsonDict
     diagnostics: dict[str, JsonDict]
     artifacts: list[str]
     candidate_score: float | None
@@ -69,6 +70,7 @@ class ReportModel:
             claim_check=_read_optional(run_dir / "claim_check.json"),
             external_evidence=_read_optional(run_dir / "evidence_from_result.json"),
             bridge_summary=_read_optional(run_dir / "bridge_summary.json"),
+            ecosystem_demo=_read_optional(run_dir / "ecosystem_demo.json"),
             diagnostics=diagnostics,
             artifacts=artifacts,
             candidate_score=_first_score(candidate_metrics, root_metrics),
@@ -144,6 +146,7 @@ def _existing_artifacts(run_dir: Path, diagnostics: dict[str, JsonDict]) -> list
         "evidence_from_result.json",
         "bridge_summary.json",
         "bridge_summary.md",
+        "ecosystem_demo.json",
         "inputs/hidden_states.npz",
         "inputs/hidden_states.npz.metadata.json",
         "report.md",

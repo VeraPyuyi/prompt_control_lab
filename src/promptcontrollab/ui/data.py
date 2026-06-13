@@ -25,6 +25,7 @@ RUN_ARTIFACTS = [
     "claim_check.json",
     "evidence_from_result.json",
     "bridge_summary.json",
+    "ecosystem_demo.json",
 ]
 
 RUN_LEVEL_ARTIFACTS = [
@@ -41,6 +42,7 @@ RUN_LEVEL_ARTIFACTS = [
     "claim_check.json",
     "evidence_from_result.json",
     "bridge_summary.json",
+    "ecosystem_demo.json",
 ]
 
 
@@ -90,6 +92,7 @@ def load_run_detail(run_dir: Path) -> JsonDict:
         "claim_check": model.claim_check,
         "external_evidence": model.external_evidence,
         "bridge_summary": model.bridge_summary,
+        "ecosystem_demo": model.ecosystem_demo,
         "diagnostics": model.diagnostics,
         "baseline_metrics": model.baseline_metrics,
         "candidate_metrics": model.candidate_metrics,
@@ -370,6 +373,32 @@ def external_bridge_summary(detail: JsonDict) -> JsonDict:
         "missing_evidence": missing if isinstance(missing, list) else [],
         "next_actions": next_actions if isinstance(next_actions, list) else [],
     }
+
+
+def ecosystem_demo_rows(detail: JsonDict) -> list[JsonDict]:
+    """Return one row per external-tool bundle in an ecosystem demo run."""
+
+    payload = detail.get("ecosystem_demo")
+    if not isinstance(payload, dict):
+        return []
+    runs = payload.get("runs")
+    if not isinstance(runs, list):
+        return []
+    rows: list[JsonDict] = []
+    for item in runs:
+        if not isinstance(item, dict):
+            continue
+        rows.append(
+            {
+                "tool": item.get("tool", ""),
+                "validity": item.get("validity", ""),
+                "evidence_tier": item.get("evidence_tier", ""),
+                "claim_check_status": item.get("claim_check_status", ""),
+                "open_first": item.get("bridge_summary_path", ""),
+                "report_html": item.get("report_html_path", ""),
+            }
+        )
+    return rows
 
 
 def history_rows(detail: JsonDict) -> list[JsonDict]:

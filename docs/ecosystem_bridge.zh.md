@@ -49,6 +49,8 @@ pcl ecosystem-demo --examples examples/external --out runs/ecosystem-demo
 
 建议先打开每个目录里的 `bridge_summary.md`。它会说明外部工具提供了什么、
 PCL 补充了什么证据，以及当前还缺哪些证据。
+也可以用 `pcl ui --runs runs/ecosystem-demo` 打开根目录；Research Overview
+会按外部工具逐行展示每套 evidence bundle。
 
 Promptfoo：
 
