@@ -1,7 +1,7 @@
 # Ecosystem Bridge
 
-Promptfoo, DeepEval, LangSmith, and Langfuse are strong at different parts of the LLM
-engineering workflow:
+Promptfoo, DeepEval, LangSmith, Langfuse, and prompt-optimizer are strong at different parts of
+the LLM engineering workflow:
 
 - Promptfoo: evals, red-team tests, provider matrices, CI, and security reports.
 - DeepEval: local LLM test runs, metrics, reasons, and CI-style evaluation artifacts.
@@ -9,6 +9,8 @@ engineering workflow:
   production dashboards.
 - Langfuse: open-source observability, prompt management, evaluations, cost
   tracking, and self-hosted deployments.
+- prompt-optimizer: user-facing prompt rewriting, prompt asset management, web/desktop/browser
+  distribution, Prompt Garden, and interactive prompt testing.
 
 `prompt_control_lab` should not replace those systems. Its job is to add a
 paper-style prompt optimization evidence layer on top of their exported results.
@@ -24,6 +26,7 @@ that the larger tools do not focus on:
 | DeepEval | Local LLM test runs, metric scores, reasons, and CI-style evaluation artifacts. | Import DeepEval TestRun JSON, then add paired prompt evidence, protocol hygiene, claim scope checks, and paper-diagnostic gap planning. |
 | LangSmith | Agent tracing, observability, online/offline evals, deployment, and sandboxed agent infrastructure. | Turn LangSmith experiment exports into prompt-optimization evidence bundles that separate prompt effects from model, metric, and split confounds. |
 | Langfuse | Open-source observability, prompt management, evaluation, cost tracking, and self-hosted traces. | Add research diagnostics that are usually outside observability platforms: soft-hard gap, hidden-state trajectories, Riccati surrogates, and time-varying control evidence. |
+| prompt-optimizer | Prompt rewriting UX, prompt favorites/templates, model-calling app surface, and interactive testing. | Import prompt assets as auditable candidates, record content hashes, and produce the evidence gap plan required before making an improvement claim. |
 
 The practical integration story is:
 
@@ -267,6 +270,18 @@ pcl evidence-from \
   --split-hash external-demo-split \
   --out runs/from-deepeval-evidence
 ```
+
+prompt-optimizer asset import:
+
+```bash
+pcl import prompt-optimizer \
+  --input examples/external/prompt_optimizer_favorites.json \
+  --out runs/from-prompt-optimizer
+```
+
+This is deliberately not an `evidence-from` example: prompt-optimizer exports are prompt
+assets/favorites/templates, not paired scored eval results. PCL records asset hashes and writes
+a gap plan so the next evaluation step is explicit.
 
 ## Pairing Rule
 

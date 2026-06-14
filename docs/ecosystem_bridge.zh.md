@@ -1,6 +1,6 @@
-# Ecosystem Bridge：连接 Promptfoo、DeepEval、Langfuse 和 LangSmith
+# Ecosystem Bridge：连接 Promptfoo、DeepEval、Langfuse、LangSmith 和 prompt-optimizer
 
-`prompt_control_lab` 不需要替代 Promptfoo、DeepEval、Langfuse 或 LangSmith。
+`prompt_control_lab` 不需要替代 Promptfoo、DeepEval、Langfuse、LangSmith 或 prompt-optimizer。
 更好的用法是：先让这些工具负责它们擅长的 eval、red-team、tracing、observability，
 再把导出结果交给 PCL，补上 prompt optimization 的研究证据层。
 
@@ -156,6 +156,7 @@ pcl claim-check \
 | DeepEval | 本地 eval runner、metric、测试风格输出。 | 把测试结果升级为 prompt optimization 证据卡片和 claim 边界。 |
 | Langfuse | tracing、prompt management、eval、成本追踪、自托管 observability。 | 对导出结果补 soft-hard、trajectory、Riccati、tv-soft 等研究诊断路径。 |
 | LangSmith | agent tracing、experiment、dataset、online/offline eval。 | 检查实验导出是否能支持干净 prompt-only 比较和统计可靠结论。 |
+| prompt-optimizer | prompt ??????????????????????? | ? prompt ??????????????? hash???? claim ???????? |
 
 ## 打开哪个文件
 
@@ -184,3 +185,14 @@ benchmark 或完整论文结论。
 
 PCL 的目标不是更大、更全，而是更审慎、更可复现。它应该成为外部 eval /
 observability 工具之后的研究证据层。
+
+## prompt-optimizer ????
+
+```bash
+pcl import prompt-optimizer \
+  --input examples/external/prompt_optimizer_favorites.json \
+  --out runs/from-prompt-optimizer
+```
+
+????????? `evidence-from`?prompt-optimizer ?????? prompt
+??????????????????PCL ????? hash???? gap plan????????????????

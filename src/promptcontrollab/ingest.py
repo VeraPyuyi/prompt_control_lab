@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import csv
 import hashlib
+import html
 import json
 from pathlib import Path
 from typing import Any, cast
@@ -26,6 +27,7 @@ def ingest_auto_results(
     model: str | None = None,
     provider: str | None = None,
     method: str | None = None,
+    asset_id: str | None = None,
 ) -> JsonDict:
     """Auto-detect external eval/trace exports and import them."""
 
@@ -67,6 +69,12 @@ def ingest_auto_results(
             provider=provider,
             method=method,
         )
+    elif source_tool == "prompt-optimizer":
+        payload = ingest_prompt_optimizer_assets(
+            source_path=source_path,
+            out_dir=out_dir,
+            asset_id=asset_id,
+        )
     else:
         msg = f"Unsupported ingest source `{source_tool}`"
         raise ValueError(msg)
@@ -87,9 +95,12 @@ def detect_ingest_source(source_path: Path) -> str:
         return "langsmith"
     if _looks_like_deepeval(payload):
         return "deepeval"
+    if _looks_like_prompt_optimizer(payload):
+        return "prompt-optimizer"
     msg = (
         "Could not detect export source. Use `pcl ingest promptfoo`, "
-        "`pcl ingest langfuse`, `pcl ingest langsmith`, or `pcl ingest deepeval` explicitly."
+        "`pcl ingest langfuse`, `pcl ingest langsmith`, `pcl ingest deepeval`, "
+        "or `pcl ingest prompt-optimizer` explicitly."
     )
     raise ValueError(msg)
 
@@ -354,6 +365,98 @@ def ingest_deepeval_results(
     }
 
 
+def ingest_prompt_optimizer_assets(
+    *,
+    source_path: Path,
+    out_dir: Path,
+    asset_id: str | None = None,
+) -> JsonDict:
+    """Convert prompt-optimizer exports into auditable prompt asset artifacts.
+
+    prompt-optimizer exports are prompt candidates/favorites/templates. They do
+    not normally include per-example scores, so this bridge intentionally writes
+    prompt asset artifacts and a gap plan instead of fake predictions/metrics.
+    """
+
+    payload = read_json(source_path)
+    assets = _prompt_optimizer_assets(payload, source_path=source_path)
+    if asset_id is not None:
+        assets = [
+            asset
+            for asset in assets
+            if asset.get("id") == asset_id or asset.get("title") == asset_id
+        ]
+    if not assets:
+        msg = "No prompt-optimizer prompt assets found in the input file"
+        if asset_id is not None:
+            msg = f"No prompt-optimizer prompt assets matched --asset-id {asset_id!r}"
+        raise ValueError(msg)
+
+    ensure_dir(out_dir)
+    source_sha256 = f"sha256:{hashlib.sha256(source_path.read_bytes()).hexdigest()}"
+    asset_bundle: JsonDict = {
+        "schema": "prompt_control_lab.prompt_assets.v1",
+        "source_tool": "prompt-optimizer",
+        "artifact_type": "prompt_assets",
+        "source_path": str(source_path),
+        "source_sha256": source_sha256,
+        "evaluation_status": "not_scored",
+        "asset_count": len(assets),
+        "asset_ids": [str(asset.get("id", "")) for asset in assets],
+        "assets": assets,
+        "boundary": (
+            "prompt-optimizer exports are prompt candidates and prompt assets. "
+            "This import does not prove that any prompt improved."
+        ),
+        "next_actions": _prompt_optimizer_next_actions(out_dir),
+    }
+    gap_plan = _prompt_optimizer_gap_plan(asset_bundle)
+    manifest: JsonDict = {
+        "tool": "promptcontrollab",
+        "tool_version": __version__,
+        "mode": "prompt_optimizer_asset_import",
+        "source_tool": "prompt-optimizer",
+        "artifact_type": "prompt_assets",
+        "source_path": str(source_path),
+        "source_sha256": source_sha256,
+        "evaluation_status": "not_scored",
+        "asset_count": len(assets),
+    }
+    if asset_id is not None:
+        manifest["asset_filter"] = asset_id
+    write_json(out_dir / "prompt_assets.json", asset_bundle)
+    write_json(out_dir / "prompt_optimizer_gap_plan.json", gap_plan)
+    write_json(out_dir / "manifest.json", manifest)
+    (out_dir / "prompt_assets.md").write_text(
+        render_prompt_assets_markdown(asset_bundle),
+        encoding="utf-8",
+    )
+    (out_dir / "prompt_assets.html").write_text(
+        render_prompt_assets_html(asset_bundle),
+        encoding="utf-8",
+    )
+    (out_dir / "prompt_optimizer_gap_plan.md").write_text(
+        render_prompt_optimizer_gap_plan_markdown(gap_plan),
+        encoding="utf-8",
+    )
+    (out_dir / "prompt_optimizer_gap_plan.html").write_text(
+        render_prompt_optimizer_gap_plan_html(gap_plan),
+        encoding="utf-8",
+    )
+    return {
+        "out_dir": str(out_dir),
+        "artifact_type": "prompt_assets",
+        "asset_count": len(assets),
+        "asset_ids": asset_bundle["asset_ids"],
+        "evaluation_status": "not_scored",
+        "prompt_assets_path": str(out_dir / "prompt_assets.json"),
+        "prompt_assets_html_path": str(out_dir / "prompt_assets.html"),
+        "gap_plan_path": str(out_dir / "prompt_optimizer_gap_plan.json"),
+        "boundary": asset_bundle["boundary"],
+        "next_actions": asset_bundle["next_actions"],
+    }
+
+
 def _promptfoo_rows(payload: JsonDict) -> list[JsonDict]:
     results = payload.get("results")
     if isinstance(results, list):
@@ -427,6 +530,355 @@ def _looks_like_deepeval(payload: JsonDict) -> bool:
                 if isinstance(value.get(nested_key), list):
                     return True
     return False
+
+
+def _looks_like_prompt_optimizer(payload: JsonDict) -> bool:
+    favorites = payload.get("favorites")
+    if isinstance(favorites, list):
+        return any(
+            isinstance(item, dict)
+            and isinstance(item.get("content"), str)
+            and ("functionMode" in item or "useCount" in item or "tags" in item)
+            for item in favorites
+        )
+    export_info = payload.get("export_info")
+    template = payload.get("template")
+    if isinstance(export_info, dict) and export_info.get("format") == "template":
+        return isinstance(template, dict)
+    return False
+
+
+def _prompt_optimizer_assets(payload: JsonDict, *, source_path: Path) -> list[JsonDict]:
+    assets: list[JsonDict] = []
+    favorites = payload.get("favorites")
+    if isinstance(favorites, list):
+        for index, item in enumerate(favorites):
+            if isinstance(item, dict):
+                asset = _prompt_optimizer_favorite_asset(item, index=index)
+                if asset is not None:
+                    assets.append(asset)
+    template = payload.get("template")
+    if isinstance(template, dict):
+        asset = _prompt_optimizer_template_asset(
+            template,
+            payload=payload,
+            source_path=source_path,
+        )
+        if asset is not None:
+            assets.append(asset)
+    elif isinstance(payload.get("messages"), list):
+        asset = _prompt_optimizer_template_asset(
+            payload,
+            payload=payload,
+            source_path=source_path,
+        )
+        if asset is not None:
+            assets.append(asset)
+    return assets
+
+
+def _prompt_optimizer_favorite_asset(item: JsonDict, *, index: int) -> JsonDict | None:
+    content = _optional_str(item.get("content"))
+    if content is None:
+        return None
+    metadata = _dict_or_empty(item.get("metadata"))
+    prompt_asset = _dict_or_empty(metadata.get("promptAsset"))
+    asset: JsonDict = {
+        "id": _optional_str(item.get("id")) or f"favorite-{index}",
+        "title": _optional_str(item.get("title")) or f"Favorite {index + 1}",
+        "content": content,
+        "content_hash": f"sha256:{hashlib.sha256(content.encode('utf-8')).hexdigest()}",
+        "source_type": "favorite",
+        "description": _optional_str(item.get("description")),
+        "tags": _string_list(item.get("tags")),
+        "category": _optional_str(item.get("category")),
+        "function_mode": _optional_str(item.get("functionMode")),
+        "optimization_mode": _optional_str(item.get("optimizationMode")),
+        "use_count": item.get("useCount") if isinstance(item.get("useCount"), int) else None,
+        "created_at": _optional_str(item.get("createdAt")),
+        "updated_at": _optional_str(item.get("updatedAt")),
+        "metadata_summary": _prompt_optimizer_metadata_summary(metadata, prompt_asset),
+    }
+    model_payload: JsonDict = {}
+    for source_key, target_key in [
+        ("modelKey", "model_key"),
+        ("modelName", "model_name"),
+        ("templateId", "template_id"),
+        ("sourceHistoryId", "source_history_id"),
+    ]:
+        value = _optional_str(metadata.get(source_key))
+        if value is not None:
+            model_payload[target_key] = value
+    if model_payload:
+        asset["model_or_source"] = model_payload
+    original_content = _optional_str(metadata.get("originalContent"))
+    if original_content is not None:
+        asset["original_content_hash"] = (
+            f"sha256:{hashlib.sha256(original_content.encode('utf-8')).hexdigest()}"
+        )
+        asset["has_original_content"] = True
+    else:
+        asset["has_original_content"] = False
+    return {key: value for key, value in asset.items() if value is not None}
+
+
+def _prompt_optimizer_template_asset(
+    template: JsonDict,
+    *,
+    payload: JsonDict,
+    source_path: Path,
+) -> JsonDict | None:
+    content = _prompt_optimizer_template_content(template)
+    if not content:
+        return None
+    title = (
+        _optional_str(template.get("title"))
+        or _optional_str(template.get("name"))
+        or _optional_str(template.get("id"))
+        or source_path.stem
+    )
+    variables = payload.get("variables")
+    messages = template.get("messages")
+    asset: JsonDict = {
+        "id": _optional_str(template.get("id")) or f"template:{source_path.stem}",
+        "title": title,
+        "content": content,
+        "content_hash": f"sha256:{hashlib.sha256(content.encode('utf-8')).hexdigest()}",
+        "source_type": "template",
+        "description": _optional_str(template.get("description")),
+        "tags": _string_list(template.get("tags")),
+        "variables": variables if isinstance(variables, dict) else {},
+        "metadata_summary": {
+            "message_count": len(messages) if isinstance(messages, list) else None,
+            "export_format": _dict_or_empty(payload.get("export_info")).get("format"),
+        },
+    }
+    return {key: value for key, value in asset.items() if value is not None}
+
+
+def _prompt_optimizer_template_content(template: JsonDict) -> str:
+    content = _optional_str(template.get("content")) or _optional_str(template.get("prompt"))
+    if content is not None:
+        return content
+    messages = template.get("messages")
+    if not isinstance(messages, list):
+        return ""
+    parts: list[str] = []
+    for message in messages:
+        if not isinstance(message, dict):
+            continue
+        role = _optional_str(message.get("role")) or "message"
+        text = message.get("content")
+        if not isinstance(text, str):
+            text = json.dumps(text, sort_keys=True, ensure_ascii=False)
+        parts.append(f"[{role}]\n{text}")
+    return "\n\n".join(parts)
+
+
+def _prompt_optimizer_metadata_summary(metadata: JsonDict, prompt_asset: JsonDict) -> JsonDict:
+    versions = prompt_asset.get("versions")
+    examples = prompt_asset.get("examples")
+    summary: JsonDict = {
+        "has_prompt_asset": bool(prompt_asset),
+        "prompt_asset_schema_version": prompt_asset.get("schemaVersion")
+        if isinstance(prompt_asset.get("schemaVersion"), str)
+        else None,
+        "current_version_id": _optional_str(prompt_asset.get("currentVersionId")),
+        "version_count": len(versions) if isinstance(versions, list) else 0,
+        "example_count": len(examples) if isinstance(examples, list) else 0,
+    }
+    media = metadata.get("media")
+    if isinstance(media, list):
+        summary["media_count"] = len(media)
+    return {key: value for key, value in summary.items() if value is not None}
+
+
+def _prompt_optimizer_next_actions(out_dir: Path) -> list[str]:
+    return [
+        "Choose one imported prompt asset as baseline or candidate.",
+        "Create a paired task set and predictions with a fixed model/provider.",
+        "Run `pcl analyze --config promptcontrol.example.yaml --out runs/quick` after scoring.",
+        f"Open `{out_dir / 'prompt_optimizer_gap_plan.html'}` before making an improvement claim.",
+    ]
+
+
+def _prompt_optimizer_gap_plan(asset_bundle: JsonDict) -> JsonDict:
+    return {
+        "kind": "prompt_optimizer_gap_plan",
+        "source_tool": "prompt-optimizer",
+        "status": "not_scored",
+        "asset_count": asset_bundle.get("asset_count", 0),
+        "boundary": asset_bundle.get("boundary", ""),
+        "missing_evidence": [
+            "No paired baseline/candidate prediction file was imported.",
+            "No train/validation/withheld split hash is available yet.",
+            "No paired bootstrap confidence interval or permutation p-value exists yet.",
+            (
+                "No prompt-only validity check can be made until model/provider/prompt "
+                "identity is recorded."
+            ),
+            (
+                "Paper diagnostics such as soft-hard, trajectory, Riccati, and tv-soft "
+                "are not present yet."
+            ),
+        ],
+        "recommended_commands": [
+            "pcl split --data tasks.jsonl --out runs/quick",
+            "pcl analyze --config promptcontrol.example.yaml --out runs/quick",
+            (
+                "pcl validity --baseline runs/baseline --candidate runs/candidate "
+                "--out runs/validity.json"
+            ),
+            "pcl diagnose --run runs/quick",
+        ],
+        "next_actions": asset_bundle.get("next_actions", []),
+    }
+
+
+def render_prompt_assets_markdown(bundle: JsonDict) -> str:
+    lines = [
+        "# Prompt Optimizer Asset Import",
+        "",
+        f"- Source tool: `{bundle.get('source_tool')}`",
+        f"- Asset count: `{bundle.get('asset_count')}`",
+        f"- Evaluation status: `{bundle.get('evaluation_status')}`",
+        f"- Source SHA256: `{bundle.get('source_sha256')}`",
+        "",
+        "## Boundary",
+        "",
+        str(bundle.get("boundary", "")),
+        "",
+        "## Assets",
+        "",
+        "| ID | Title | Type | Hash | Tags |",
+        "|---|---|---|---|---|",
+    ]
+    for asset in _json_list(bundle.get("assets")):
+        lines.append(
+            "| "
+            + " | ".join(
+                [
+                    _markdown_cell(asset.get("id")),
+                    _markdown_cell(asset.get("title")),
+                    _markdown_cell(asset.get("source_type")),
+                    _markdown_cell(asset.get("content_hash")),
+                    _markdown_cell(", ".join(_string_list(asset.get("tags")))),
+                ]
+            )
+            + " |"
+        )
+    lines.extend(["", "## Next actions", ""])
+    lines.extend(f"- {item}" for item in _string_list(bundle.get("next_actions")))
+    lines.append("")
+    return "\n".join(lines)
+
+
+def render_prompt_optimizer_gap_plan_markdown(plan: JsonDict) -> str:
+    lines = [
+        "# Prompt Optimizer Evidence Gap Plan",
+        "",
+        f"- Status: `{plan.get('status')}`",
+        f"- Asset count: `{plan.get('asset_count')}`",
+        "",
+        "## Missing evidence",
+        "",
+    ]
+    lines.extend(f"- {item}" for item in _string_list(plan.get("missing_evidence")))
+    lines.extend(["", "## Recommended commands", ""])
+    lines.extend(f"- `{item}`" for item in _string_list(plan.get("recommended_commands")))
+    lines.append("")
+    return "\n".join(lines)
+
+
+def render_prompt_assets_html(bundle: JsonDict) -> str:
+    rows = "\n".join(
+        "<tr>"
+        f"<td>{_html_text(asset.get('id'))}</td>"
+        f"<td>{_html_text(asset.get('title'))}</td>"
+        f"<td>{_html_text(asset.get('source_type'))}</td>"
+        f"<td><code>{_html_text(asset.get('content_hash'))}</code></td>"
+        f"<td>{_html_text(', '.join(_string_list(asset.get('tags'))))}</td>"
+        "</tr>"
+        for asset in _json_list(bundle.get("assets"))
+    )
+    actions = "\n".join(
+        f"<li>{_html_text(item)}</li>" for item in _string_list(bundle.get("next_actions"))
+    )
+    return f"""<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Prompt Optimizer Asset Import</title>
+  <style>
+    body {{ font-family: Inter, Segoe UI, Arial, sans-serif; margin: 32px; color: #172033; }}
+    table {{ border-collapse: collapse; width: 100%; margin-top: 16px; }}
+    th, td {{
+      border: 1px solid #d8dee9;
+      padding: 8px 10px;
+      text-align: left;
+      vertical-align: top;
+    }}
+    th {{ background: #f5f7fb; }}
+    .card {{ border: 1px solid #d8dee9; border-radius: 8px; padding: 16px; background: #fbfcff; }}
+    code {{ background: #eef2f7; padding: 2px 4px; border-radius: 4px; }}
+  </style>
+</head>
+<body>
+  <h1>Prompt Optimizer Asset Import</h1>
+  <div class="card">
+    <p><strong>Source tool:</strong> {_html_text(bundle.get('source_tool'))}</p>
+    <p><strong>Asset count:</strong> {_html_text(bundle.get('asset_count'))}</p>
+    <p><strong>Evaluation status:</strong> {_html_text(bundle.get('evaluation_status'))}</p>
+    <p><strong>Boundary:</strong> {_html_text(bundle.get('boundary'))}</p>
+  </div>
+  <h2>Assets</h2>
+  <table>
+    <thead><tr><th>ID</th><th>Title</th><th>Type</th><th>Hash</th><th>Tags</th></tr></thead>
+    <tbody>{rows}</tbody>
+  </table>
+  <h2>Next actions</h2>
+  <ul>{actions}</ul>
+</body>
+</html>
+"""
+
+
+def render_prompt_optimizer_gap_plan_html(plan: JsonDict) -> str:
+    missing = "\n".join(
+        f"<li>{_html_text(item)}</li>" for item in _string_list(plan.get("missing_evidence"))
+    )
+    commands = "\n".join(
+        f"<li><code>{_html_text(item)}</code></li>"
+        for item in _string_list(plan.get("recommended_commands"))
+    )
+    return f"""<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Prompt Optimizer Evidence Gap Plan</title>
+  <style>
+    body {{ font-family: Inter, Segoe UI, Arial, sans-serif; margin: 32px; color: #172033; }}
+    .status {{
+      display: inline-block;
+      border-radius: 999px;
+      background: #fff4cc;
+      padding: 4px 10px;
+    }}
+    code {{ background: #eef2f7; padding: 2px 4px; border-radius: 4px; }}
+  </style>
+</head>
+<body>
+  <h1>Prompt Optimizer Evidence Gap Plan</h1>
+  <p class="status">Status: {_html_text(plan.get('status'))}</p>
+  <h2>Boundary</h2>
+  <p>{_html_text(plan.get('boundary'))}</p>
+  <h2>Missing evidence</h2>
+  <ul>{missing}</ul>
+  <h2>Recommended commands</h2>
+  <ul>{commands}</ul>
+</body>
+</html>
+"""
 
 
 def _deepeval_rows(payload: JsonDict, *, score_name: str | None) -> list[JsonDict]:
@@ -1215,6 +1667,28 @@ def _parse_float(value: str | None) -> float | None:
 
 def _dict_or_empty(value: object) -> JsonDict:
     return cast(JsonDict, value) if isinstance(value, dict) else {}
+
+
+def _json_list(value: object) -> list[JsonDict]:
+    if not isinstance(value, list):
+        return []
+    return [cast(JsonDict, item) for item in value if isinstance(item, dict)]
+
+
+def _string_list(value: object) -> list[str]:
+    if isinstance(value, str) and value:
+        return [value]
+    if not isinstance(value, list):
+        return []
+    return [item for item in value if isinstance(item, str) and item]
+
+
+def _markdown_cell(value: object) -> str:
+    return str(value or "").replace("|", "\\|").replace("\n", " ")
+
+
+def _html_text(value: object) -> str:
+    return html.escape(str(value or ""))
 
 
 def _jsonish_text(value: object) -> str:

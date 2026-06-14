@@ -46,6 +46,7 @@ from promptcontrollab.ingest import (
     ingest_deepeval_results,
     ingest_langfuse_results,
     ingest_langsmith_results,
+    ingest_prompt_optimizer_assets,
     ingest_promptfoo_results,
 )
 from promptcontrollab.model_drift import run_model_drift
@@ -142,12 +143,15 @@ def build_parser() -> argparse.ArgumentParser:
     ingest_parser = subcommands.add_parser(
         "ingest",
         aliases=["import"],
-        help="Import external eval-tool results into PromptControlLab artifacts.",
+        help="Import external eval-tool results or prompt assets into PromptControlLab artifacts.",
     )
     ingest_subcommands = ingest_parser.add_subparsers(dest="ingest_command", required=True)
     auto_ingest = ingest_subcommands.add_parser(
         "auto",
-        help="Auto-detect Promptfoo/DeepEval/Langfuse/LangSmith exports and import them.",
+        help=(
+            "Auto-detect Promptfoo/DeepEval/Langfuse/LangSmith scored exports or "
+            "prompt-optimizer prompt assets and import them."
+        ),
     )
     auto_ingest.add_argument("--input", type=Path, required=True, help="External export file.")
     auto_ingest.add_argument("--out", type=Path, required=True, help="PCL run directory.")
@@ -162,6 +166,11 @@ def build_parser() -> argparse.ArgumentParser:
     auto_ingest.add_argument("--model", default=None, help="Model id filter.")
     auto_ingest.add_argument("--provider", default=None, help="Provider filter.")
     auto_ingest.add_argument("--method", default=None, help="Method name written to predictions.")
+    auto_ingest.add_argument(
+        "--asset-id",
+        default=None,
+        help="prompt-optimizer asset id/title filter when importing prompt assets.",
+    )
     auto_ingest.set_defaults(func=_cmd_ingest_auto)
     promptfoo_ingest = ingest_subcommands.add_parser(
         "promptfoo",
@@ -281,6 +290,28 @@ def build_parser() -> argparse.ArgumentParser:
         help="Method name written to PCL predictions. Defaults to the run name.",
     )
     deepeval_ingest.set_defaults(func=_cmd_ingest_deepeval)
+    prompt_optimizer_ingest = ingest_subcommands.add_parser(
+        "prompt-optimizer",
+        help="Import prompt-optimizer favorites/templates as prompt assets, not scored evidence.",
+    )
+    prompt_optimizer_ingest.add_argument(
+        "--input",
+        type=Path,
+        required=True,
+        help="prompt-optimizer JSON export, such as favorites or template export.",
+    )
+    prompt_optimizer_ingest.add_argument(
+        "--out",
+        type=Path,
+        required=True,
+        help="Output directory for prompt_assets.json and gap plan artifacts.",
+    )
+    prompt_optimizer_ingest.add_argument(
+        "--asset-id",
+        default=None,
+        help="Optional asset id or title to import from a multi-asset export.",
+    )
+    prompt_optimizer_ingest.set_defaults(func=_cmd_ingest_prompt_optimizer)
 
     improve_parser = subcommands.add_parser(
         "improve",
@@ -1264,6 +1295,7 @@ def _cmd_ingest_auto(args: argparse.Namespace) -> None:
         model=args.model,
         provider=args.provider,
         method=args.method,
+        asset_id=args.asset_id,
     )
     print(json.dumps(payload, indent=2, ensure_ascii=False, sort_keys=True))
 
@@ -1313,6 +1345,15 @@ def _cmd_ingest_deepeval(args: argparse.Namespace) -> None:
         model=args.model,
         provider=args.provider,
         method=args.method,
+    )
+    print(json.dumps(payload, indent=2, ensure_ascii=False, sort_keys=True))
+
+
+def _cmd_ingest_prompt_optimizer(args: argparse.Namespace) -> None:
+    payload = ingest_prompt_optimizer_assets(
+        source_path=args.input,
+        out_dir=args.out,
+        asset_id=args.asset_id,
     )
     print(json.dumps(payload, indent=2, ensure_ascii=False, sort_keys=True))
 

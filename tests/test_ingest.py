@@ -11,6 +11,7 @@ from promptcontrollab.ingest import (
     ingest_deepeval_results,
     ingest_langfuse_results,
     ingest_langsmith_results,
+    ingest_prompt_optimizer_assets,
     ingest_promptfoo_results,
 )
 
@@ -184,6 +185,88 @@ def test_ingest_auto_detects_promptfoo_json(tmp_path: Path) -> None:
     manifest = read_json(out_dir / "manifest.json")
     assert manifest["mode"] == "promptfoo_ingest"
     assert manifest["source_tool"] == "promptfoo"
+
+
+def test_ingest_prompt_optimizer_favorites_write_prompt_assets(tmp_path: Path) -> None:
+    source = tmp_path / "prompt-optimizer-favorites.json"
+    out_dir = tmp_path / "runs" / "from-prompt-optimizer"
+    source.write_text(json.dumps(_prompt_optimizer_favorites_payload()), encoding="utf-8")
+
+    payload = ingest_prompt_optimizer_assets(source_path=source, out_dir=out_dir)
+
+    assert payload["artifact_type"] == "prompt_assets"
+    assert payload["asset_count"] == 2
+    assert payload["evaluation_status"] == "not_scored"
+    assets = read_json(out_dir / "prompt_assets.json")
+    assert assets["source_tool"] == "prompt-optimizer"
+    assert assets["asset_count"] == 2
+    assert assets["assets"][0]["content_hash"].startswith("sha256:")
+    assert assets["assets"][0]["metadata_summary"]["version_count"] == 1
+    assert assets["assets"][0]["has_original_content"] is True
+    manifest = read_json(out_dir / "manifest.json")
+    assert manifest["mode"] == "prompt_optimizer_asset_import"
+    assert manifest["evaluation_status"] == "not_scored"
+    assert not (out_dir / "predictions.jsonl").exists()
+    assert not (out_dir / "metrics.json").exists()
+    assert "does not prove" in (out_dir / "prompt_assets.md").read_text(encoding="utf-8")
+    assert "Missing evidence" in (
+        out_dir / "prompt_optimizer_gap_plan.md"
+    ).read_text(encoding="utf-8")
+
+
+def test_import_prompt_optimizer_cli_filters_asset(tmp_path: Path) -> None:
+    source = tmp_path / "prompt-optimizer-favorites.json"
+    out_dir = tmp_path / "runs" / "filtered-prompt-optimizer"
+    source.write_text(json.dumps(_prompt_optimizer_favorites_payload()), encoding="utf-8")
+
+    assert (
+        main(
+            [
+                "import",
+                "prompt-optimizer",
+                "--input",
+                str(source),
+                "--out",
+                str(out_dir),
+                "--asset-id",
+                "strict-format",
+            ]
+        )
+        == 0
+    )
+
+    assets = read_json(out_dir / "prompt_assets.json")
+    assert assets["asset_count"] == 1
+    assert assets["assets"][0]["id"] == "strict-format"
+    manifest = read_json(out_dir / "manifest.json")
+    assert manifest["asset_filter"] == "strict-format"
+
+
+def test_ingest_auto_detects_prompt_optimizer_favorites(tmp_path: Path) -> None:
+    source = tmp_path / "prompt-optimizer-favorites.json"
+    out_dir = tmp_path / "runs" / "auto-prompt-optimizer"
+    source.write_text(json.dumps(_prompt_optimizer_favorites_payload()), encoding="utf-8")
+
+    payload = ingest_auto_results(source_path=source, out_dir=out_dir)
+
+    assert payload["source_tool"] == "prompt-optimizer"
+    assert payload["artifact_type"] == "prompt_assets"
+    manifest = read_json(out_dir / "manifest.json")
+    assert manifest["mode"] == "prompt_optimizer_asset_import"
+
+
+def test_ingest_prompt_optimizer_template_export(tmp_path: Path) -> None:
+    source = tmp_path / "template-export.json"
+    out_dir = tmp_path / "runs" / "template"
+    source.write_text(json.dumps(_prompt_optimizer_template_payload()), encoding="utf-8")
+
+    ingest_prompt_optimizer_assets(source_path=source, out_dir=out_dir)
+
+    assets = read_json(out_dir / "prompt_assets.json")
+    assert assets["asset_count"] == 1
+    assert assets["assets"][0]["source_type"] == "template"
+    assert "[system]" in assets["assets"][0]["content"]
+    assert assets["assets"][0]["variables"] == {"topic": "control"}
 
 
 def test_ingest_deepeval_test_run_writes_pcl_run(tmp_path: Path) -> None:
@@ -810,6 +893,67 @@ def _paired_promptfoo_payload(*, count: int) -> dict[str, Any]:
             },
         ],
         "results": results,
+    }
+
+
+def _prompt_optimizer_favorites_payload() -> dict[str, Any]:
+    return {
+        "version": "1.0",
+        "favorites": [
+            {
+                "id": "strict-format",
+                "title": "Strict format answer",
+                "content": "Answer with exactly one JSON object and no markdown.",
+                "description": "A deployment-oriented answer format prompt.",
+                "createdAt": "2026-06-14T00:00:00.000Z",
+                "updatedAt": "2026-06-14T00:00:00.000Z",
+                "tags": ["format", "deployment"],
+                "category": "qa",
+                "useCount": 3,
+                "functionMode": "basic",
+                "optimizationMode": "system",
+                "metadata": {
+                    "originalContent": "Answer the question.",
+                    "sourceHistoryId": "hist-1",
+                    "modelKey": "openai",
+                    "modelName": "gpt-4o-mini",
+                    "templateId": "tmpl-format",
+                    "promptAsset": {
+                        "schemaVersion": "1.0",
+                        "currentVersionId": "v1",
+                        "versions": [{"id": "v1", "content": "Answer with JSON."}],
+                        "examples": [{"input": "2+2", "output": "{\"answer\":\"4\"}"}],
+                    },
+                },
+            },
+            {
+                "id": "arithmetic-check",
+                "title": "Arithmetic checker",
+                "content": "Solve the arithmetic problem and verify the final number.",
+                "tags": ["math"],
+                "functionMode": "context",
+                "useCount": 1,
+            },
+        ],
+    }
+
+
+def _prompt_optimizer_template_payload() -> dict[str, Any]:
+    return {
+        "template": {
+            "id": "tmpl-control",
+            "name": "Control explanation",
+            "messages": [
+                {"role": "system", "content": "Explain {topic} in precise terms."},
+                {"role": "user", "content": "Use one short example."},
+            ],
+        },
+        "variables": {"topic": "control"},
+        "export_info": {
+            "format": "template",
+            "exported_at": "2026-06-14T00:00:00Z",
+            "variable_count": 1,
+        },
     }
 
 

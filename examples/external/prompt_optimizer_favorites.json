@@ -1,0 +1,49 @@
+{
+  "version": "1.0",
+  "favorites": [
+    {
+      "id": "strict-format",
+      "title": "Strict format answer",
+      "content": "Answer with exactly one JSON object and no markdown.",
+      "description": "A deployment-oriented answer format prompt.",
+      "createdAt": "2026-06-14T00:00:00.000Z",
+      "updatedAt": "2026-06-14T00:00:00.000Z",
+      "tags": ["format", "deployment"],
+      "category": "qa",
+      "useCount": 3,
+      "functionMode": "basic",
+      "optimizationMode": "system",
+      "metadata": {
+        "originalContent": "Answer the question.",
+        "sourceHistoryId": "hist-1",
+        "modelKey": "openai",
+        "modelName": "gpt-4o-mini",
+        "templateId": "tmpl-format",
+        "promptAsset": {
+          "schemaVersion": "1.0",
+          "currentVersionId": "v1",
+          "versions": [
+            {
+              "id": "v1",
+              "content": "Answer with JSON."
+            }
+          ],
+          "examples": [
+            {
+              "input": "2+2",
+              "output": "{\"answer\":\"4\"}"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "arithmetic-check",
+      "title": "Arithmetic checker",
+      "content": "Solve the arithmetic problem and verify the final number.",
+      "tags": ["math"],
+      "functionMode": "context",
+      "useCount": 1
+    }
+  ]
+}

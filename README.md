@@ -85,6 +85,7 @@ validity, paired uncertainty, claim checks, hash verification, and diagnostic ga
 ```bash
 pcl ecosystem-demo --examples examples/external --out runs/ecosystem-demo
 pcl import promptfoo --input results.json --out runs/from-promptfoo --prompt-id candidate
+pcl import prompt-optimizer --input favorites.json --out runs/from-prompt-optimizer
 pcl import auto --input results.json --out runs/from-external --score-name exact_match
 pcl evidence-audit --tool promptfoo --baseline-input results.json --candidate-input results.json --out runs/from-promptfoo-audit
 ```

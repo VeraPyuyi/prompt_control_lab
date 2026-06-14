@@ -76,9 +76,16 @@ For a single external run, use the readable import facade:
 pcl import promptfoo --input results.json --out runs/from-promptfoo --prompt-id candidate
 pcl import langfuse --input langfuse-export.json --out runs/from-langfuse --name candidate
 pcl import langsmith --input langsmith-runs.csv --out runs/from-langsmith --experiment candidate
+pcl import prompt-optimizer --input favorites.json --out runs/from-prompt-optimizer
 ```
 
 `pcl ingest ...` remains a backward-compatible alias for existing scripts.
+
+For prompt-optimizer specifically, the import is an **asset bridge**, not a scored evidence
+bridge. It writes `prompt_assets.json/html` and `prompt_optimizer_gap_plan.json/html`, records
+content hashes, and explains what eval evidence is still missing. It does not create
+`predictions.jsonl` or `metrics.json` until the user later scores those prompts with a paired
+evaluation protocol.
 
 ## How PCL Can Beat Adjacent Tools Without Rebuilding Them
 

@@ -378,11 +378,51 @@ DEEPEVAL_CANDIDATE_JSON = """\
 }
 """
 
+PROMPT_OPTIMIZER_FAVORITES_JSON = """\
+{
+  "version": "1.0",
+  "favorites": [
+    {
+      "id": "strict-format",
+      "title": "Strict format answer",
+      "content": "Answer with exactly one JSON object and no markdown.",
+      "description": "A deployment-oriented answer format prompt.",
+      "tags": ["format", "deployment"],
+      "category": "qa",
+      "useCount": 3,
+      "functionMode": "basic",
+      "optimizationMode": "system",
+      "metadata": {
+        "originalContent": "Answer the question.",
+        "sourceHistoryId": "hist-1",
+        "modelKey": "openai",
+        "modelName": "gpt-4o-mini",
+        "templateId": "tmpl-format",
+        "promptAsset": {
+          "schemaVersion": "1.0",
+          "currentVersionId": "v1",
+          "versions": [{"id": "v1", "content": "Answer with JSON."}],
+          "examples": [{"input": "2+2", "output": "{\\"answer\\":\\"4\\"}"}]
+        }
+      }
+    },
+    {
+      "id": "arithmetic-check",
+      "title": "Arithmetic checker",
+      "content": "Solve the arithmetic problem and verify the final number.",
+      "tags": ["math"],
+      "functionMode": "context",
+      "useCount": 1
+    }
+  ]
+}
+"""
+
 EXTERNAL_README_MD = """\
 # External Tool Export Examples
 
-These tiny Promptfoo, Langfuse, LangSmith, and DeepEval-style exports let you try
-`pcl evidence-from` without setting up those tools first.
+These tiny Promptfoo, Langfuse, LangSmith, DeepEval, and prompt-optimizer-style exports let you
+try the external bridge without setting up those tools first.
 
 They are intentionally small. `comparison_validity.json` may say
 `needs_review` because four examples are not enough for strong statistical
@@ -391,6 +431,11 @@ universal prompt improvement claim.
 
 DeepEval uses two files in this demo: `deepeval_baseline.json` and
 `deepeval_candidate.json`.
+
+prompt-optimizer uses `prompt_optimizer_favorites.json`. Import it with:
+`pcl import prompt-optimizer --input examples/external/prompt_optimizer_favorites.json \
+--out runs/from-prompt-optimizer`.
+This writes prompt assets and a gap plan, not scored predictions.
 """
 
 
@@ -431,6 +476,10 @@ def write_example_project(path: Path) -> None:
     )
     (path / "examples" / "external" / "deepeval_candidate.json").write_text(
         DEEPEVAL_CANDIDATE_JSON,
+        encoding="utf-8",
+    )
+    (path / "examples" / "external" / "prompt_optimizer_favorites.json").write_text(
+        PROMPT_OPTIMIZER_FAVORITES_JSON,
         encoding="utf-8",
     )
     (path / "prompts" / "current.txt").write_text(

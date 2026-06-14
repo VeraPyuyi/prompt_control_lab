@@ -1,7 +1,8 @@
 # External Tool Export Examples
 
-These files are tiny Promptfoo, Langfuse, LangSmith, and DeepEval-style exports
-for trying `pcl evidence-from` without setting up those tools first.
+These files are tiny Promptfoo, Langfuse, LangSmith, DeepEval, and
+prompt-optimizer-style exports for trying the external bridge without setting up
+those tools first.
 
 `pcl init --path demo` writes the same files under `demo/examples/external/`, so
 installed users can try the bridge without cloning the repository.
@@ -80,3 +81,20 @@ pcl evidence-from \
   --split-hash external-demo-split \
   --out runs/from-deepeval-evidence
 ```
+
+## prompt-optimizer
+
+prompt-optimizer exports usually contain prompt assets, favorites, or templates,
+not scored per-example eval results. PCL imports them as auditable prompt
+candidates and writes a gap plan for the evidence still needed before claiming
+that an optimized prompt improved.
+
+```bash
+pcl import prompt-optimizer \
+  --input examples/external/prompt_optimizer_favorites.json \
+  --out runs/from-prompt-optimizer
+```
+
+This writes `prompt_assets.json`, `prompt_assets.html`, and
+`prompt_optimizer_gap_plan.html`. It intentionally does not write
+`predictions.jsonl` or `metrics.json`.
