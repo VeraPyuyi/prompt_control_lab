@@ -864,6 +864,9 @@ def _bundle_artifacts(run_dir: Path) -> list[JsonDict]:
         "evidence_audit_result.html",
         "evidence_audit_result.md",
         "evidence_audit_result.json",
+        "evidence_gate_result.html",
+        "evidence_gate_result.md",
+        "evidence_gate_result.json",
         "research_bundle_verification.html",
         "research_bundle_verification.md",
         "research_bundle_verification.json",
@@ -897,7 +900,9 @@ def _bundle_artifacts(run_dir: Path) -> list[JsonDict]:
 def _bundle_artifact_row(*, run_dir: Path, name: str) -> JsonDict:
     path = run_dir / name
     self_generated = name in {"research_bundle.html", "research_bundle.json"}
-    audit_summary = name.startswith("evidence_audit_result.")
+    audit_summary = name.startswith("evidence_audit_result.") or name.startswith(
+        "evidence_gate_result."
+    )
     exists = path.exists() or self_generated
     row: JsonDict = {
         "path": name,

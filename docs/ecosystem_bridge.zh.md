@@ -59,6 +59,7 @@ pcl evidence-audit \
 - `research_bundle.html` / `.json`
 - `source_input_verification.html` / `.md` / `.json`
 - `research_bundle_verification.html` / `.md` / `.json`
+- `evidence_gate_result.html` / `.md` / `.json`
 - `research_gap_status.html` / `.md` / `.json`
 - `evidence_card.html`
 - `claim_check.html`

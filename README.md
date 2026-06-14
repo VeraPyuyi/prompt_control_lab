@@ -210,8 +210,8 @@ whether the last verification passed.
 
 Use `pcl evidence-audit` when you want this bridge in one pass: it runs the external import,
 paired comparison, research diagnostics, gap-status check, source-input verification, bundle index,
-and bundle verification, then writes `evidence_audit_result.html` / `.md` / `.json` as the
-reviewer-facing audit summary.
+bundle verification, and evidence gate, then writes `evidence_audit_result.html` / `.md` /
+`.json` as the reviewer-facing audit summary.
 If you later need to re-check that the original external export files still match the recorded
 source-input hashes, run:
 

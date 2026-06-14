@@ -431,6 +431,34 @@ def _write_evidence_audit_artifacts(out_dir: Path, payload: JsonDict) -> None:
     )
 
 
+def attach_evidence_gate_to_audit(*, out_dir: Path, gate_payload: JsonDict) -> JsonDict:
+    """Attach evidence-gate status to an existing evidence-audit summary."""
+
+    path = out_dir / "evidence_audit_result.json"
+    if not path.exists():
+        return {}
+    payload = read_json(path)
+    evidence_gate = {
+        "status": gate_payload.get("status"),
+        "summary": gate_payload.get("summary"),
+        "json_path": gate_payload.get("json_path"),
+        "markdown_path": gate_payload.get("markdown_path"),
+        "html_path": gate_payload.get("html_path"),
+    }
+    payload["evidence_gate"] = evidence_gate
+    payload["evidence_gate_path"] = gate_payload.get("html_path")
+    payload["evidence_gate_json_path"] = gate_payload.get("json_path")
+    next_actions = payload.get("next_actions")
+    gate_action = "Open evidence_gate_result.html for the combined CI/reviewer gate."
+    if isinstance(next_actions, list) and gate_action not in next_actions:
+        next_actions.insert(
+            1,
+            gate_action,
+        )
+    _write_evidence_audit_artifacts(out_dir, payload)
+    return payload
+
+
 def _refresh_bridge_integrity_after_verification(out_dir: Path) -> JsonDict:
     """Update bridge summary so it reflects the latest bundle verification artifact."""
 
@@ -1089,9 +1117,11 @@ def _render_evidence_audit_markdown(payload: JsonDict) -> str:
     gap = payload.get("gap_status")
     verification = payload.get("bundle_verification")
     source_verification = payload.get("source_verification")
+    evidence_gate = payload.get("evidence_gate")
     gap_summary = gap if isinstance(gap, dict) else {}
     verification_summary = verification if isinstance(verification, dict) else {}
     source_summary = source_verification if isinstance(source_verification, dict) else {}
+    evidence_gate_summary = evidence_gate if isinstance(evidence_gate, dict) else {}
     lines = [
         "# External Evidence Audit Summary",
         "",
@@ -1102,6 +1132,7 @@ def _render_evidence_audit_markdown(payload: JsonDict) -> str:
         f"- Gap status: `{gap_summary.get('status')}`",
         f"- Missing paper diagnostics: `{payload.get('missing_paper_diagnostics', [])}`",
         f"- Source input verification: `{source_summary.get('status')}`",
+        f"- Evidence gate: `{evidence_gate_summary.get('status', 'not_recorded')}`",
         (
             f"- Source verification counts: checked `{source_summary.get('checked_count')}`, "
             f"mismatch `{source_summary.get('mismatch_count')}`, "
@@ -1129,6 +1160,7 @@ def _render_evidence_audit_markdown(payload: JsonDict) -> str:
         f"- Gap status: `{payload.get('research_gap_status_path')}`",
         f"- Source input verification: `{payload.get('source_input_verification_path')}`",
         f"- Bundle verification: `{payload.get('research_bundle_verification_path')}`",
+        f"- Evidence gate: `{payload.get('evidence_gate_path')}`",
         "",
         "## What this audit did",
         "",
@@ -1157,9 +1189,11 @@ def render_evidence_audit_html(payload: JsonDict) -> str:
     gap = payload.get("gap_status")
     verification = payload.get("bundle_verification")
     source_verification = payload.get("source_verification")
+    evidence_gate = payload.get("evidence_gate")
     gap_summary = gap if isinstance(gap, dict) else {}
     verification_summary = verification if isinstance(verification, dict) else {}
     source_summary = source_verification if isinstance(source_verification, dict) else {}
+    evidence_gate_summary = evidence_gate if isinstance(evidence_gate, dict) else {}
     cards = "\n".join(
         [
             _html_card("Tool", payload.get("tool")),
@@ -1169,6 +1203,7 @@ def render_evidence_audit_html(payload: JsonDict) -> str:
             _html_card("Missing diagnostics", gap_summary.get("missing_count")),
             _html_card("Source verification", source_summary.get("status")),
             _html_card("Bundle verification", verification_summary.get("status")),
+            _html_card("Evidence gate", evidence_gate_summary.get("status", "not_recorded")),
         ]
     )
     reviewer_links = " ".join(
@@ -1186,6 +1221,7 @@ def render_evidence_audit_html(payload: JsonDict) -> str:
                 payload.get("research_bundle_verification_path"),
                 "Bundle verification",
             ),
+            _html_link(payload.get("evidence_gate_path"), "Evidence gate"),
         ]
         if item
     )

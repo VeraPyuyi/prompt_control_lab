@@ -127,9 +127,11 @@ pcl evidence-audit \
 ```
 
 Open `evidence_audit_result.html` first when a human reviewer needs the one-command audit
-summary. Use `evidence_audit_result.json` when automation needs the same status. Then open
-`bridge_summary.html`, `research_gap_status.html`, `source_input_verification.html`, and
-`research_bundle_verification.html` for the full evidence trail.
+summary. Use `evidence_audit_result.json` when automation needs the same status. The audit also
+writes `evidence_gate_result.html` / `.json` so CI and reviewers can see the combined source and
+bundle gate. Then open `bridge_summary.html`, `research_gap_status.html`,
+`source_input_verification.html`, and `research_bundle_verification.html` for the full evidence
+trail.
 
 The audit also records source input provenance for the external baseline and candidate exports:
 original path, path kind, resolved absolute path, byte size, SHA-256 hash, detected tool, and

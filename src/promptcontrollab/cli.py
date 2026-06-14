@@ -32,6 +32,7 @@ from promptcontrollab.evidence_card import write_evidence_card
 from promptcontrollab.evidence_gate import run_evidence_gate
 from promptcontrollab.explain import generate_explanation
 from promptcontrollab.external_evidence import (
+    attach_evidence_gate_to_audit,
     build_external_evidence,
     build_external_evidence_audit,
     verify_source_inputs,
@@ -1372,6 +1373,8 @@ def _cmd_evidence_audit(args: argparse.Namespace) -> None:
         bootstrap_samples=args.bootstrap_samples,
         permutation_samples=args.permutation_samples,
     )
+    gate_payload = run_evidence_gate(run_dir=args.out)
+    payload = attach_evidence_gate_to_audit(out_dir=args.out, gate_payload=gate_payload)
     print(json.dumps(payload, indent=2, ensure_ascii=False, sort_keys=True))
 
 

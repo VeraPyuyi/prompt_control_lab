@@ -281,7 +281,7 @@ PromptControlLab prompt-optimization evidence bundle without replacing the exter
 
 Written by `pcl evidence-audit`. It runs the same import and comparison workflow as
 `pcl evidence-from`, then immediately runs `pcl gap-status`, source-input verification,
-and `pcl research-bundle --verify`.
+`pcl research-bundle --verify`, and `pcl evidence-gate`.
 
 Important fields:
 
@@ -293,6 +293,8 @@ Important fields:
 - `source_verification`: whether original external export files still match recorded hashes
 - `bundle_verification`: whether linked evidence artifacts still match the recorded hashes
 - `source_input_verification_path`: browser summary for original export hash verification
+- `evidence_gate`: combined reviewer/CI gate status for source and bundle evidence
+- `evidence_gate_path`: browser summary for the combined evidence gate
 - `html_path` / `markdown_path`: browser and text summaries for human review
 - `next_actions`: reviewer-first files to open next
 

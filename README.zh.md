@@ -203,7 +203,7 @@ pcl gap-status --run runs/from-promptfoo-evidence
 
 导入后的 run 会包含 `predictions.jsonl`、`metrics.json` 和 `manifest.json`，因此可以继续接 `pcl compare-runs`、`pcl stats`、`pcl validity` 和后续报告。`compare-runs` 会写出一个独立比较目录，里面包含成对统计、prompt-only 比较有效性、candidate metrics 快照、源 run 快照以及 Markdown / HTML 报告。`evidence-card` 会继续把这条研究证据链压缩成一份 reviewer 更容易看的卡片。请使用新的或空的 `--out` 目录，避免旧 artifact 污染审计结果。这个能力的定位是桥接 Promptfoo / DeepEval / Langfuse / LangSmith 生态，而不是替代 Promptfoo 的 red-team / provider 生态、DeepEval 的本地 eval runner、Langfuse 的 tracing 平台或 LangSmith 的观测/评测工作流。
 
-如果希望一条命令完成整个闭环，可以用 `pcl evidence-audit`：它会依次运行外部导入、成对比较、研究诊断、gap-status、source-input verification、bundle index 和 bundle verification，并写出 `evidence_audit_result.html` / `.md` / `.json` 作为 reviewer 优先的审计摘要。
+如果希望一条命令完成整个闭环，可以用 `pcl evidence-audit`：它会依次运行外部导入、成对比较、研究诊断、gap-status、source-input verification、bundle index、bundle verification 和 evidence gate，并写出 `evidence_audit_result.html` / `.md` / `.json` 作为 reviewer 优先的审计摘要。
 
 如果后续还需要重新确认原始外部导出文件本身没有被替换或改动，可以运行：
 

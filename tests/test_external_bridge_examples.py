@@ -152,17 +152,22 @@ def test_packaged_promptfoo_example_runs_evidence_audit(tmp_path: Path) -> None:
     assert result["gap_status"]["status"] == "needs_work"
     assert result["bundle_verification"]["status"] == "pass"
     assert result["source_verification"]["status"] == "pass"
+    assert result["evidence_gate"]["status"] == "pass"
     assert result["source_verification"]["checked_count"] == 2
     assert result["source_input_verification_path"].endswith(
         "source_input_verification.html"
     )
     assert result["markdown_path"].endswith("evidence_audit_result.md")
     assert result["html_path"].endswith("evidence_audit_result.html")
+    assert result["evidence_gate_path"].endswith("evidence_gate_result.html")
     assert len(result["source_inputs"]) == 2
     assert result["source_inputs"][0]["sha256"].startswith("sha256:")
     assert (out_dir / "evidence_audit_result.md").exists()
     assert (out_dir / "evidence_audit_result.html").exists()
     assert (out_dir / "source_input_verification.html").exists()
+    assert (out_dir / "evidence_gate_result.json").exists()
+    assert (out_dir / "evidence_gate_result.md").exists()
+    assert (out_dir / "evidence_gate_result.html").exists()
     audit_markdown = (out_dir / "evidence_audit_result.md").read_text(encoding="utf-8")
     assert "External Evidence Audit Summary" in audit_markdown
     assert "Source input provenance" in audit_markdown
@@ -171,6 +176,7 @@ def test_packaged_promptfoo_example_runs_evidence_audit(tmp_path: Path) -> None:
     assert "External Evidence Audit Summary" in audit_html
     assert "Source Input Provenance" in audit_html
     assert "Source verification" in audit_html
+    assert "Evidence gate" in audit_html
     assert "Bridge summary" in audit_html
     bundle = read_json(out_dir / "research_bundle.json")
     artifact_rows = {item["path"]: item for item in bundle["artifacts"]}

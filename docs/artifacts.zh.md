@@ -162,7 +162,8 @@ artifact 是否已经存在。它适合用来确认“证据缺口是否真的�
 ## `evidence_audit_result.json` / `evidence_audit_result.md` / `evidence_audit_result.html`
 
 由 `pcl evidence-audit` 写出。它会先运行和 `pcl evidence-from` 相同的导入与比较流程，
-然后立刻运行 `pcl gap-status`、source-input verification 和 `pcl research-bundle --verify`。
+然后立刻运行 `pcl gap-status`、source-input verification、`pcl research-bundle --verify`
+和 `pcl evidence-gate`。
 
 重要字段：
 
@@ -174,6 +175,8 @@ artifact 是否已经存在。它适合用来确认“证据缺口是否真的�
 - `source_verification`：原始外部导出文件是否仍然匹配记录哈希。
 - `bundle_verification`：被链接的证据 artifact 是否仍然匹配已记录哈希。
 - `source_input_verification_path`：原始导出哈希验证的浏览器报告路径。
+- `evidence_gate`：source 和 bundle 证据的组合 reviewer/CI gate 状态。
+- `evidence_gate_path`：组合 evidence gate 的浏览器报告路径。
 - `html_path` / `markdown_path`：给人工审查使用的浏览器摘要和文本摘要。
 - `next_actions`：建议 reviewer 下一步打开的文件。
 
