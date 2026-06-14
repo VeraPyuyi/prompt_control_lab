@@ -374,6 +374,19 @@ paired stats, evidence card, claim check, research bundle, bundle verification, 
 The HTML version is the reviewer-facing dashboard artifact; the Markdown version is easier to
 review in plain text, and the JSON version is for automation.
 
+## `prompt_assets.json` / `prompt_optimizer_gap_plan.json` / `eval_scaffold/`
+
+Written by `pcl import prompt-optimizer`.
+
+What it explains: prompt-optimizer exports are prompt candidates, favorites, or templates, not
+paired scored evidence. PCL records prompt content hashes, writes a gap plan, and creates
+`eval_scaffold/` files that show exactly what to fill next: `tasks.template.jsonl`,
+`baseline_predictions.template.jsonl`, `candidate_predictions.template.jsonl`, imported prompt
+text files, and `promptcontrol.prompt_optimizer.example.yaml`.
+
+The scaffold is not evidence by itself. It is a bridge from prompt assets to the paired evaluation
+protocol required before making an improvement claim.
+
 ## `research_bundle.json` / `research_bundle.html`
 
 Written by `pcl research-demo`, `pcl diagnose`, `pcl evidence-from`, and refreshed by

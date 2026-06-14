@@ -244,6 +244,19 @@ PCL 补了哪些证据、主要成对统计、prompt-only 比较有效性、论�
 JSON 中的 `pcl_evidence_matrix` 会按工具列出 prompt-only validity、paired stats、证据卡、
 主张检查、research bundle、bundle verification 和 gap status，方便 UI、CI 或 reviewer 直接读取。
 
+## `prompt_assets.json` / `prompt_optimizer_gap_plan.json` / `eval_scaffold/`
+
+由 `pcl import prompt-optimizer` 写出。
+
+说明什么问题：prompt-optimizer 导出的是 prompt 候选、收藏或模板，不是已经成对打分的评测证据。
+PCL 会记录 prompt 内容哈希，写出证据缺口计划，并生成 `eval_scaffold/`：
+`tasks.template.jsonl`、`baseline_predictions.template.jsonl`、
+`candidate_predictions.template.jsonl`、导入的 prompt 文本文件，以及
+`promptcontrol.prompt_optimizer.example.yaml`。
+
+这个 scaffold 本身不是证据。它的作用是把 prompt 资产推进到成对评测协议，
+让用户知道下一步要补哪些任务、输出和模型信息，之后才能主张 prompt 真的变好。
+
 ## `model_identity.json` / `model_drift.json`
 
 由 `pcl model-detect` 和 `pcl model-drift` 写出。

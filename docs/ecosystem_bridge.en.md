@@ -280,8 +280,10 @@ pcl import prompt-optimizer \
 ```
 
 This is deliberately not an `evidence-from` example: prompt-optimizer exports are prompt
-assets/favorites/templates, not paired scored eval results. PCL records asset hashes and writes
-a gap plan so the next evaluation step is explicit.
+assets/favorites/templates, not paired scored eval results. PCL records asset hashes, writes
+a gap plan, and creates `eval_scaffold/` templates so the next scoring step is concrete:
+fill `tasks.template.jsonl`, `baseline_predictions.template.jsonl`, and
+`candidate_predictions.template.jsonl`, then run the generated analyze config.
 
 ## Pairing Rule
 

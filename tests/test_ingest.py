@@ -212,6 +212,27 @@ def test_ingest_prompt_optimizer_favorites_write_prompt_assets(tmp_path: Path) -
     assert "Missing evidence" in (
         out_dir / "prompt_optimizer_gap_plan.md"
     ).read_text(encoding="utf-8")
+    scaffold = read_json(out_dir / "eval_scaffold" / "prompt_optimizer_eval_scaffold.json")
+    assert scaffold["kind"] == "prompt_optimizer_eval_scaffold"
+    assert scaffold["status"] == "template_not_scored"
+    assert scaffold["asset_count"] == 2
+    assert scaffold["asset_prompt_files"][0]["asset_id"] == "strict-format"
+    assert (out_dir / "eval_scaffold" / "prompts" / "strict-format.txt").exists()
+    assert (out_dir / "eval_scaffold" / "tasks.template.jsonl").exists()
+    assert (out_dir / "eval_scaffold" / "baseline_predictions.template.jsonl").exists()
+    assert (out_dir / "eval_scaffold" / "candidate_predictions.template.jsonl").exists()
+    assert (
+        out_dir / "eval_scaffold" / "promptcontrol.prompt_optimizer.example.yaml"
+    ).exists()
+    assert "pcl analyze --config" in (
+        out_dir / "eval_scaffold" / "README.md"
+    ).read_text(encoding="utf-8")
+    gap_plan = read_json(out_dir / "prompt_optimizer_gap_plan.json")
+    assert gap_plan["eval_scaffold"]["kind"] == "prompt_optimizer_eval_scaffold"
+    assert any(
+        "eval_scaffold/promptcontrol.prompt_optimizer.example.yaml" in command
+        for command in gap_plan["recommended_commands"]
+    )
 
 
 def test_import_prompt_optimizer_cli_filters_asset(tmp_path: Path) -> None:

@@ -410,6 +410,15 @@ def ingest_prompt_optimizer_assets(
         ),
         "next_actions": _prompt_optimizer_next_actions(out_dir),
     }
+    scaffold = _write_prompt_optimizer_eval_scaffold(
+        out_dir=out_dir,
+        asset_bundle=asset_bundle,
+    )
+    asset_bundle["eval_scaffold"] = scaffold
+    asset_bundle["next_actions"] = [
+        *_string_list(asset_bundle.get("next_actions")),
+        f"Edit `{scaffold['readme_path']}` to turn imported assets into paired evidence.",
+    ]
     gap_plan = _prompt_optimizer_gap_plan(asset_bundle)
     manifest: JsonDict = {
         "tool": "promptcontrollab",
@@ -452,6 +461,9 @@ def ingest_prompt_optimizer_assets(
         "prompt_assets_path": str(out_dir / "prompt_assets.json"),
         "prompt_assets_html_path": str(out_dir / "prompt_assets.html"),
         "gap_plan_path": str(out_dir / "prompt_optimizer_gap_plan.json"),
+        "eval_scaffold_path": str(
+            out_dir / "eval_scaffold" / "prompt_optimizer_eval_scaffold.json"
+        ),
         "boundary": asset_bundle["boundary"],
         "next_actions": asset_bundle["next_actions"],
     }
@@ -697,12 +709,162 @@ def _prompt_optimizer_next_actions(out_dir: Path) -> list[str]:
     return [
         "Choose one imported prompt asset as baseline or candidate.",
         "Create a paired task set and predictions with a fixed model/provider.",
-        "Run `pcl analyze --config promptcontrol.example.yaml --out runs/quick` after scoring.",
+        (
+            "Edit the generated `eval_scaffold/` files, then run "
+            "`pcl analyze --config eval_scaffold/promptcontrol.prompt_optimizer.example.yaml "
+            "--out runs/quick` after scoring."
+        ),
         f"Open `{out_dir / 'prompt_optimizer_gap_plan.html'}` before making an improvement claim.",
     ]
 
 
+def _write_prompt_optimizer_eval_scaffold(*, out_dir: Path, asset_bundle: JsonDict) -> JsonDict:
+    scaffold_dir = out_dir / "eval_scaffold"
+    prompts_dir = scaffold_dir / "prompts"
+    ensure_dir(scaffold_dir)
+    ensure_dir(prompts_dir)
+    asset_prompt_files: list[JsonDict] = []
+    for index, asset in enumerate(_json_list(asset_bundle.get("assets"))):
+        asset_id = str(asset.get("id") or f"asset-{index + 1}")
+        filename = _safe_prompt_asset_filename(asset_id, fallback=f"asset-{index + 1}") + ".txt"
+        prompt_path = prompts_dir / filename
+        prompt_path.write_text(str(asset.get("content", "")), encoding="utf-8")
+        asset_prompt_files.append(
+            {
+                "asset_id": asset_id,
+                "title": asset.get("title"),
+                "path": str(prompt_path),
+                "content_hash": asset.get("content_hash"),
+            }
+        )
+
+    tasks_path = scaffold_dir / "tasks.template.jsonl"
+    baseline_path = scaffold_dir / "baseline_predictions.template.jsonl"
+    candidate_path = scaffold_dir / "candidate_predictions.template.jsonl"
+    config_path = scaffold_dir / "promptcontrol.prompt_optimizer.example.yaml"
+    readme_path = scaffold_dir / "README.md"
+    scaffold_path = scaffold_dir / "prompt_optimizer_eval_scaffold.json"
+
+    write_jsonl(
+        tasks_path,
+        [
+            {
+                "id": "example-1",
+                "input": "Replace with a real evaluation input.",
+                "expected": "Replace with the expected answer.",
+                "slice": "replace-me",
+            },
+            {
+                "id": "example-2",
+                "input": "Add another paired evaluation input.",
+                "expected": "Add the expected answer for the same metric.",
+                "slice": "replace-me",
+            },
+        ],
+    )
+    write_jsonl(
+        baseline_path,
+        [
+            {
+                "id": "example-1",
+                "output": "TODO: run the baseline prompt on example-1.",
+                "provider": "TODO",
+                "model": "TODO",
+            },
+            {
+                "id": "example-2",
+                "output": "TODO: run the baseline prompt on example-2.",
+                "provider": "TODO",
+                "model": "TODO",
+            },
+        ],
+    )
+    candidate_asset_id = (
+        str(asset_prompt_files[0]["asset_id"]) if asset_prompt_files else "imported-asset"
+    )
+    write_jsonl(
+        candidate_path,
+        [
+            {
+                "id": "example-1",
+                "output": "TODO: run the imported candidate prompt on example-1.",
+                "provider": "TODO",
+                "model": "TODO",
+                "prompt_asset_id": candidate_asset_id,
+            },
+            {
+                "id": "example-2",
+                "output": "TODO: run the imported candidate prompt on example-2.",
+                "provider": "TODO",
+                "model": "TODO",
+                "prompt_asset_id": candidate_asset_id,
+            },
+        ],
+    )
+    config_path.write_text(
+        "\n".join(
+            [
+                "# Fill the template JSONL files before running this config.",
+                "mode: quick",
+                "data: tasks.template.jsonl",
+                "metric: exact_match",
+                "baseline_predictions: baseline_predictions.template.jsonl",
+                "candidate_predictions: candidate_predictions.template.jsonl",
+                "out: ../runs/from-prompt-optimizer-scored",
+                "explain_level: plain",
+                "baseline_prompt_id: baseline",
+                f"candidate_prompt_id: {candidate_asset_id}",
+                "",
+            ]
+        ),
+        encoding="utf-8",
+    )
+    scaffold: JsonDict = {
+        "kind": "prompt_optimizer_eval_scaffold",
+        "schema": "prompt_control_lab.prompt_optimizer_eval_scaffold.v1",
+        "source_tool": "prompt-optimizer",
+        "status": "template_not_scored",
+        "boundary": (
+            "This scaffold is not evidence until tasks and predictions are filled "
+            "with paired outputs from a fixed model/provider and `pcl analyze` is run."
+        ),
+        "asset_count": asset_bundle.get("asset_count", 0),
+        "asset_prompt_files": asset_prompt_files,
+        "tasks_template_path": str(tasks_path),
+        "baseline_predictions_template_path": str(baseline_path),
+        "candidate_predictions_template_path": str(candidate_path),
+        "analyze_config_template_path": str(config_path),
+        "readme_path": str(readme_path),
+        "fields_to_fill": [
+            "tasks.template.jsonl input/expected/slice",
+            "baseline_predictions.template.jsonl output/provider/model",
+            "candidate_predictions.template.jsonl output/provider/model",
+            "promptcontrol.prompt_optimizer.example.yaml metric and prompt ids",
+        ],
+        "commands": [
+            f"pcl analyze --config {config_path} --out runs/from-prompt-optimizer-scored",
+            "pcl diagnose --run runs/from-prompt-optimizer-scored",
+        ],
+    }
+    write_json(scaffold_path, scaffold)
+    readme_path.write_text(
+        render_prompt_optimizer_eval_scaffold_markdown(scaffold),
+        encoding="utf-8",
+    )
+    return {**scaffold, "path": str(scaffold_path)}
+
+
+def _safe_prompt_asset_filename(value: str, *, fallback: str) -> str:
+    safe = "".join(char.lower() if char.isalnum() else "-" for char in value)
+    safe = "-".join(part for part in safe.split("-") if part)
+    return safe[:80] or fallback
+
+
 def _prompt_optimizer_gap_plan(asset_bundle: JsonDict) -> JsonDict:
+    scaffold = asset_bundle.get("eval_scaffold")
+    scaffold_path = ""
+    if isinstance(scaffold, dict):
+        scaffold_path = str(scaffold.get("readme_path") or scaffold.get("path") or "")
     return {
         "kind": "prompt_optimizer_gap_plan",
         "source_tool": "prompt-optimizer",
@@ -723,15 +885,20 @@ def _prompt_optimizer_gap_plan(asset_bundle: JsonDict) -> JsonDict:
             ),
         ],
         "recommended_commands": [
-            "pcl split --data tasks.jsonl --out runs/quick",
-            "pcl analyze --config promptcontrol.example.yaml --out runs/quick",
+            f"Open {scaffold_path}" if scaffold_path else "Open eval_scaffold/README.md",
+            (
+                "pcl analyze --config "
+                "eval_scaffold/promptcontrol.prompt_optimizer.example.yaml "
+                "--out runs/from-prompt-optimizer-scored"
+            ),
             (
                 "pcl validity --baseline runs/baseline --candidate runs/candidate "
                 "--out runs/validity.json"
             ),
-            "pcl diagnose --run runs/quick",
+            "pcl diagnose --run runs/from-prompt-optimizer-scored",
         ],
         "next_actions": asset_bundle.get("next_actions", []),
+        "eval_scaffold": scaffold if isinstance(scaffold, dict) else {},
     }
 
 
@@ -786,6 +953,42 @@ def render_prompt_optimizer_gap_plan_markdown(plan: JsonDict) -> str:
     lines.extend(f"- {item}" for item in _string_list(plan.get("missing_evidence")))
     lines.extend(["", "## Recommended commands", ""])
     lines.extend(f"- `{item}`" for item in _string_list(plan.get("recommended_commands")))
+    lines.append("")
+    return "\n".join(lines)
+
+
+def render_prompt_optimizer_eval_scaffold_markdown(scaffold: JsonDict) -> str:
+    lines = [
+        "# Prompt Optimizer Eval Scaffold",
+        "",
+        "This folder turns imported prompt-optimizer assets into a concrete scoring checklist.",
+        "",
+        "## Boundary",
+        "",
+        str(scaffold.get("boundary", "")),
+        "",
+        "## Files",
+        "",
+        f"- Tasks template: `{scaffold.get('tasks_template_path')}`",
+        f"- Baseline predictions template: `{scaffold.get('baseline_predictions_template_path')}`",
+        (
+            "- Candidate predictions template: "
+            f"`{scaffold.get('candidate_predictions_template_path')}`"
+        ),
+        f"- Analyze config template: `{scaffold.get('analyze_config_template_path')}`",
+        "",
+        "## Imported prompt files",
+        "",
+    ]
+    for item in _json_list(scaffold.get("asset_prompt_files")):
+        lines.append(
+            f"- `{item.get('asset_id')}`: `{item.get('path')}` "
+            f"({item.get('content_hash')})"
+        )
+    lines.extend(["", "## Fill these fields", ""])
+    lines.extend(f"- {item}" for item in _string_list(scaffold.get("fields_to_fill")))
+    lines.extend(["", "## Commands after scoring", ""])
+    lines.extend(f"- `{item}`" for item in _string_list(scaffold.get("commands")))
     lines.append("")
     return "\n".join(lines)
 

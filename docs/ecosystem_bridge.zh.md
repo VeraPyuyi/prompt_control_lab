@@ -194,7 +194,9 @@ pcl import prompt-optimizer \
   --out runs/from-prompt-optimizer
 ```
 
-这一步不是 `evidence-from`：prompt-optimizer 导出的是 prompt 候选、收藏或模板，而不是已经成对打分的
-评测证据。PCL 会记录 prompt 内容哈希，生成 `prompt_assets.json/html` 和
-`prompt_optimizer_gap_plan.json/html`，并说明要支持“这个 prompt 确实更好”还需要补充哪些
-split、prediction、统计和诊断 artifact。
+这一步不是 `evidence-from`：prompt-optimizer 导出的是 prompt 候选、收藏或模板，
+而不是已经成对打分的评测证据。PCL 会记录 prompt 内容哈希，生成
+`prompt_assets.json/html`、`prompt_optimizer_gap_plan.json/html`，并额外写出
+`eval_scaffold/` 模板。用户补齐 `tasks.template.jsonl`、
+`baseline_predictions.template.jsonl` 和 `candidate_predictions.template.jsonl`
+之后，再运行生成的 analyze 配置，就能把 prompt 资产推进到成对评测证据。
