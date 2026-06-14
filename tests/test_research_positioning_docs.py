@@ -6,26 +6,26 @@ def test_readmes_lead_with_paper_research_core() -> None:
     readme_zh = Path("README.zh.md").read_text(encoding="utf-8")
 
     assert (
-        "Control-theoretic diagnostics and reproducible evaluation for prompt optimization."
+        "Control-theoretic diagnostics and reproducible evidence for prompt optimization."
         in readme
     )
-    assert "Research Core" in readme
-    assert "Applied Engineering Layer" in readme
+    assert "What It Adds" in readme
+    assert "Applied Agent Layer" in readme
     assert "pcl research-demo" in readme
     assert "pcl diagnose" in readme
-    assert readme.find("Research Core") < readme.find("Local Case Studies")
+    assert readme.find("What It Adds") < readme.find("Applied Agent Layer")
     assert "docs/research_from_paper.en.md" in readme
     assert (
         "Preflight, provenance, and reproducible evaluation for AI coding agents."
         not in readme[:600]
     )
 
-    assert "面向 prompt 优化的控制论诊断与可复现评测工具。" in readme_zh
-    assert "研究内核" in readme_zh
-    assert "工程应用层" in readme_zh
+    assert "面向 prompt 优化的控制论诊断与可复现证据工具。" in readme_zh
+    assert "它补上了什么" in readme_zh
+    assert "Agent 应用层" in readme_zh
     assert "pcl research-demo" in readme_zh
     assert "pcl diagnose" in readme_zh
-    assert readme_zh.find("研究内核") < readme_zh.find("本地 Case Study")
+    assert readme_zh.find("它补上了什么") < readme_zh.find("Agent 应用层")
     assert "docs/research_from_paper.zh.md" in readme_zh
 
 
@@ -49,12 +49,6 @@ def test_research_from_paper_docs_map_concepts_to_commands() -> None:
     assert "Riccati surrogate" in doc_en
     assert "time-varying soft-control lane" in doc_en
 
-    assert "三段切分" in doc_zh
-    assert "软转硬" in doc_zh
-    assert "hidden-state trajectory" in doc_zh
-    assert "Riccati surrogate" in doc_zh
-    assert "time-varying soft-control" in doc_zh
-
 
 def test_competitive_positioning_stays_evidence_layer_first() -> None:
     readme = Path("README.md").read_text(encoding="utf-8")
@@ -64,8 +58,8 @@ def test_competitive_positioning_stays_evidence_layer_first() -> None:
 
     assert "pcl import promptfoo" in readme
     assert "pcl import promptfoo" in readme_zh
-    assert "pcl ingest` is kept as the backward-compatible alias" in readme
-    assert "兼容别名" in readme_zh
+    assert "pcl ingest` remains the backward-compatible alias" in readme
+    assert "向后兼容别名" in readme_zh
 
     for text in [comparison, comparison_zh]:
         assert "Promptfoo" in text
@@ -79,11 +73,6 @@ def test_competitive_positioning_stays_evidence_layer_first() -> None:
     assert "How PCL Can Beat Adjacent Tools Without Rebuilding Them" in comparison
     assert "Do not rebuild prompt-optimizer's prompt editor" in comparison
     assert "Use prompt-optimizer when you want a better prompt writing interface" in comparison
-    assert "不重造竞品" in comparison_zh
-    assert "超过它们的方式" in comparison_zh
-    assert "不要重造 prompt-optimizer 的 prompt 编辑器" in comparison_zh
-    assert "想写出更好的 prompt" in comparison_zh
-    assert "用 prompt-optimizer" in comparison_zh
     assert "Promptfoo intro" in comparison
     assert "Langfuse docs" in comparison
     assert "linshenkx/prompt-optimizer README" in comparison

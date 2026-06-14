@@ -6,262 +6,128 @@
 [![License](https://img.shields.io/github/license/VeraPyuyi/prompt_control_lab)](LICENSE)
 [![Python](https://img.shields.io/badge/python-3.10%2B-blue)](pyproject.toml)
 
-**面向 prompt 优化的控制论诊断与可复现评测工具。**
+**面向 prompt 优化的控制论诊断与可复现证据工具。**
 
-`prompt_control_lab` 是 Prompt-Engineering-Optimal-Control 项目的开源工具包。
-它的研究内核是把 prompt 优化实验变成可复现的切分、成对统计、soft-to-hard 部署诊断、
-hidden-state trajectory 探针、Riccati surrogate 检查和 time-varying soft-control 对比。
+`prompt_control_lab` 是 Prompt-Engineering-Optimal-Control 项目的开源工具包。它把 prompt
+优化实验变成可审计的 artifact：干净的 train/validation/withheld 切分、成对统计、prompt-only
+有效性检查、soft-to-hard gap、hidden-state trajectory 诊断、Riccati surrogate 探针和
+time-varying soft-control 对比。
 
-它也保留面向 AI 编程 Agent 的工程应用层：prompt 策略门禁、公开模型溯源、diff 审计、
-PR summary、插件模板和本地 UI。但这些是论文研究流程的应用外壳，不是项目的主身份。
+它也包含工程应用层：prompt policy guard、公开模型溯源、diff audit、GitHub/IDE 模板和本地
+dashboard。这些是围绕研究证据链做出的应用，不替代论文中的诊断主线。
 
-Python 包名是 `promptcontrollab`。仓库和项目品牌名是 `prompt_control_lab`。
+Python 包名是 `promptcontrollab`。仓库和项目名是 `prompt_control_lab`。
 
 English documentation is available in [README.md](README.md).
 
-## 2 分钟上手
-
-```bash
-# 0. 安装本段教程需要的 research / UI extras。
-pip install -e ".[research,ui]"
-
-# 1. 运行一套论文风格的研究诊断 demo。
-pcl start --choice research --out runs/research-demo
-
-# 同一个流程，也可以用显式专家命令运行。
-pcl research-demo --out runs/research-demo
-
-# 2. 从 demo inputs 重新生成统一诊断报告。
-pcl diagnose --run runs/research-demo
-
-# 3. 创建一个可复现 prompt 评测 demo。
-pcl init --path demo
-cd demo
-
-# 4. 运行 tri-split 评测、统计和报告流程。
-pcl analyze --config promptcontrol.example.yaml --out runs/quick
-
-# 5. 打开本地 UI 查看报告和研究诊断。
-pcl ui --runs runs/ --policy examples/guard.policy.yaml --port 8501
-```
-
-你会得到：split hash、train/validation/withheld 隔离记录、predictions、metrics、成对统计、
-comparison-validity 审计、explanation、gate 结果、报告 artifact 和本地 UI。
-仪表盘不会上传 prompt、代码或 artifact。
-
-## 为什么需要它
-
-很多 prompt 优化实验最后只剩一个输出分数。这样会盖住更关键的问题：
-
-- train / validation / withheld 是否干净隔离？
-- candidate prompt 的提升是否真的可靠，还是只是在一个 split 上碰巧更好？
-- soft prompt 的收益能否转成 hard token 部署？
-- hidden-state trajectory 是更稳定，还是更漂移？
-- time-varying prompt 的收益来自时序结构，还是来自更多参数容量？
-- 拟合出的 Riccati surrogate 是否自洽稳定？这个结论的边界在哪里？
-
-`prompt_control_lab` 的目标是把这些问题变成可执行、可复现、可审计的工具流程。
-
-![prompt_control_lab 工作流](docs/assets/workflow.zh.svg)
-
-## 研究内核
-
-下面这些是项目最初来自论文框架的核心能力：
-
-| 论文概念 | 命令 / artifact | 能说明什么问题 |
-|---|---|---|
-| 三段切分 withheld protocol | `pcl split`、`pcl analyze`、`splits.json` | 评测是否避免了 train / validation / withheld 泄漏。 |
-| 成对统计比较 | `pcl stats`、`stats.json` | prompt 改动是否在 bootstrap CI、permutation p-value 和 Holm correction 下仍然可靠。 |
-| prompt-only 比较有效性 | `pcl validity`、`comparison_validity.json` | baseline / candidate 的结果是否真的是干净的 prompt-only 证据，而不是模型、切分或指标变化导致。 |
-| prompt 优化证据卡 | `pcl evidence-card`、`evidence_card.json/md/html` | 把协议卫生、成对统计、比较有效性、部署风险、hidden-state 诊断、Riccati 和 time-varying 证据压缩成一张可审查卡片。 |
-| 证据门禁 | `pcl evidence-gate`、`evidence_gate_result.json/md/html` | 给 reviewer 或 CI 检查 source-input hash 和 research-bundle verification；gap 与 claim 作为 advisory context 保留。 |
-| prompt 优化主张检查 | `pcl claim-check`、`claim_check.json/md/html` | 判断当前证据最多能支持 paired、partial-research 还是 full-research 层级的主张。 |
-| soft-to-hard 部署 gap | `pcl soft-hard`、`diagnostics/soft_hard.json` | soft prompt 的收益转成 hard token 后损失多大。 |
-| HuggingFace hidden-state 提取 | `pcl extract-hidden`、`hidden_states.npz` | 把开源模型 prompt 转成 trajectory 可直接读取的 hidden-state artifact。 |
-| hidden-state trajectory 诊断 | `pcl trajectory`、`diagnostics/trajectory.json` | 内部轨迹是否出现 drift、decay 或 turnpike-like signal。 |
-| Riccati surrogate 诊断 | `pcl riccati`、`diagnostics/riccati.json` | 拟合出的有限维 surrogate 是否自洽稳定。 |
-| time-varying soft-control lane | `pcl tv-soft`、`diagnostics/tv_soft.json` | time-varying 收益更像来自时序结构，还是参数容量。 |
-
-如果想先体验整套论文诊断流程，不需要自己准备模型 artifact，可以运行
-`pcl research-demo --out runs/research-demo`。如果已经有自己的 soft prompt、hidden states、
-surrogate matrices 或 method predictions，可以用 `pcl diagnose` 统一生成诊断报告。现在
-research-demo 还会写出 synthetic tri-split、baseline / candidate scored runs、成对统计、
-prompt-only 比较有效性、`evidence_card.json` / `.md` / `.html`、
-`evidence_gate_result.json` / `.md` / `.html` 和 `claim_check.json` / `.md` / `.html`，
-本地 UI 的研究总览页也会直接展示研究证据地图、证据门禁状态、证据卡和主张证据阶梯，方便 reviewer 判断当前证据链
-是否覆盖 source/bundle 可复现证据、协议、诊断和 paired、partial-research、full-research 等主张层级。
-
-完整对应关系见 [论文功能映射](docs/research_from_paper.zh.md)。
-
-## 生态桥接
-
-如果你已经在使用 Promptfoo、DeepEval、Langfuse 或 LangSmith 做 prompt / model 评测和观测，不需要替换它们。`prompt_control_lab` 可以导入这些工具的导出结果，并补上它们通常不覆盖的研究证据层：prompt-only 有效性、成对不确定性、证据卡、主张检查、source / bundle 哈希验证，以及论文诊断缺口追踪。
-
-![prompt_control_lab 生态证据闭环](docs/assets/ecosystem_scorecard.zh.svg)
-
-![prompt_control_lab 生态补充证据矩阵](docs/assets/ecosystem_evidence_matrix.zh.svg)
-
-```bash
-# 一次性运行仓库自带的 Promptfoo / DeepEval / Langfuse / LangSmith 风格导出示例。
-pcl ecosystem-demo --examples examples/external --out runs/ecosystem-demo
-
-# 一条命令生成 reviewer 优先的证据包：导入外部 export、成对比较、诊断缺口、验证 source、验证 bundle、运行 evidence gate。
-pcl evidence-audit \
-  --tool promptfoo \
-  --baseline-input results.json \
-  --candidate-input results.json \
-  --baseline-prompt-id baseline \
-  --candidate-prompt-id candidate \
-  --provider openai:gpt-4o-mini-20260601 \
-  --split-hash eval-split-2026-06 \
-  --out runs/from-promptfoo-audit
-
-# 如果已经有 baseline / candidate 两份外部 export，可以用更轻的一键桥接。
-pcl evidence-from \
-  --tool promptfoo \
-  --baseline-input results.json \
-  --candidate-input results.json \
-  --baseline-prompt-id baseline \
-  --candidate-prompt-id candidate \
-  --out runs/from-promptfoo-evidence
-
-# 低层导入仍保留给脚本和自定义流程。
-pcl import promptfoo --input results.json --out runs/from-promptfoo --prompt-id candidate
-pcl import auto --input results.json --out runs/from-external --score-name exact_match
-```
-
-`pcl ingest` 作为兼容别名保留。导入之后，如果需要 reviewer 或 CI 检查，可以继续运行 `pcl research-bundle --verify`、`pcl source-verify --strict`、`pcl evidence-gate --strict` 和 `pcl gap-status`。完整 walkthrough 和各工具导入示例见 [生态桥接教程](docs/ecosystem_bridge.zh.md)、[与 Promptfoo、LangSmith、Langfuse 和 Prompt Optimizer 的对比](docs/comparison.zh.md) 和 [examples/external](examples/external/)。
-
-竞争切口：相邻工具已经覆盖 security testing、本地 eval、tracing、observability、prompt management 和生产工作流。PCL 更应该赢在 **研究证据层**：成对不确定性、prompt-only 有效性、evidence card、claim check、soft-hard gap、hidden-state trajectory、Riccati surrogate 和 time-varying control evidence。
-## 工程应用层
-
-Agent guard、模型溯源、diff audit、GitHub Action、插件和 UI 是围绕研究内核做出的工程应用。
-它们让 Claude Code、Cursor、Codex 等 coding agent 的使用过程也能留下同样的证据链。
-
-## 本地 Case Study
-
-仓库包含一个小样本本地 preflight 试点：[agent_guard_pilot.csv](docs/case_studies/agent_guard_pilot.csv)。它记录 20 条原始 coding prompt，以及通过 `pcl guard --profile coding --policy examples/guard.policy.yaml --token-mode balanced` 得到的 guarded prompt。
-
-| 指标 | 本地 preflight 试点 |
-|---|---:|
-| 成对 prompt 数 | 20 |
-| 中风险 prompt | 17 |
-| 高风险 prompt | 3 |
-| 标记出的策略违规 | 84 |
-| 原始 prompt 平均估算 token | 8.75 |
-| guarded prompt 平均估算 token | 51.75 |
-
-这不是通用 benchmark，也不声称任务成功率提升。本批次没有执行 raw-agent vs guarded-agent 双跑，所以成功率、测试、文件改动字段都明确标记为 `not_run`。它说明的是：guard 在执行前如何改写和分类这批 prompt。
-
-仓库还包含一个真实成对试点：[agent_guard_paired_pilot.csv](docs/case_studies/agent_guard_paired_pilot.csv)。它让本地 Codex 对每个任务运行两次：一次使用 raw prompt，一次使用 guarded prompt，并且两侧都从同一个干净 fixture repo 开始。当前任务集包含 12 个隔离 Python 任务，包括多文件和有状态 bugfix 场景。
-
-| 指标 | Raw agent | Guarded agent |
-|---|---:|---:|
-| 完成任务 | 12/12 | 12/12 |
-| 测试通过 | 12/12 | 12/12 |
-| 平均触碰文件数 | 1.25 | 1.0 |
-| 非预期文件改动总数 | 3 | 0 |
-| 平均估算 prompt token | 8.08 | 51.08 |
-| 平均耗时秒数 | 173.74 | 119.97 |
-
-![真实成对 Codex guard 试点可视化](docs/assets/agent_guard_paired_pilot.zh.svg)
-
-解读：在这组扩展到 12 个任务的 fixture 任务里，guarded prompt **没有提升成功率**，因为 raw Codex 也完成了全部任务；但 guarded runs 平均触碰文件更少、非预期文件改动为 0、平均耗时更短。guarded prompt 仍比 raw prompt 消耗更多 token，但已经从旧版长模板明显压缩。完整说明见 [agent_guard_paired_pilot.zh.md](docs/case_studies/agent_guard_paired_pilot.zh.md)。
-
-## 安装
-
-需要 Python 3.10 或更新版本。
+## 快速开始
 
 ```bash
 git clone https://github.com/VeraPyuyi/prompt_control_lab.git
 cd prompt_control_lab
-pip install -e .
-pcl doctor
+pip install -e ".[research,ui]"
+
+# 一键体验论文风格 demo。
+pcl research-demo --out runs/research-demo
+
+# 基于 demo artifact 重新生成统一研究诊断。
+pcl diagnose --run runs/research-demo
+
+# 创建可复现 prompt 评测 demo，并打开本地 UI。
+pcl init --path demo
+cd demo
+pcl analyze --config promptcontrol.example.yaml --out runs/quick
+pcl ui --runs runs/ --policy examples/guard.policy.yaml --port 8501
 ```
 
-安装本地 UI：
+你会得到：split hash、scored predictions、metrics、成对 bootstrap/permutation 统计、
+prompt-only 比较有效性、解释、gate 结果、研究诊断、报告 artifact 和本地仪表盘。UI 只读取本地文件，
+不会上传 prompt、代码或报告。
+
+![prompt_control_lab 工作流](docs/assets/workflow.zh.svg)
+
+## 它补上了什么
+
+| 层级 | 主要命令 | 能回答什么问题 |
+|---|---|---|
+| 可复现协议 | `pcl split`, `pcl analyze`, `pcl stats`, `pcl validity` | 这次 prompt 对比是否切分干净、成对可比、统计上可解释？ |
+| 论文诊断 | `pcl soft-hard`, `pcl trajectory`, `pcl riccati`, `pcl tv-soft`, `pcl diagnose` | 除了输出分数，内部轨迹和控制论 surrogate 发生了什么？ |
+| 证据包 | `pcl evidence-card`, `pcl evidence-gate`, `pcl claim-check` | 当前证据最多能支持哪一级 claim？ |
+| 生态桥接 | `pcl import`, `pcl evidence-from`, `pcl evidence-audit` | 在 Promptfoo、DeepEval、Langfuse、LangSmith 或 prompt optimizer 之上，PCL 补了哪些证据？ |
+| Agent 工作流 | `pcl guard`, `pcl model-detect`, `pcl audit-diff`, `pcl history` | AI 编程 agent 执行前后是否留下了可审计记录？ |
+
+## 研究流程
+
+最快体验论文功能：
+
+```bash
+pcl research-demo --out runs/research-demo
+pcl diagnose --run runs/research-demo
+```
+
+`research-demo` 会生成可检查的 synthetic artifact，覆盖 tri-split 评测、成对统计、prompt-only
+有效性、evidence card、evidence gate、claim check、soft-hard gap、trajectory、Riccati surrogate
+和 time-varying soft-control。
+
+如果你已经有自己的 soft prompt、hidden states、surrogate matrices 或 method predictions，
+可以直接用 `pcl diagnose` 生成统一诊断报告。
+
+论文概念到命令的完整映射见：[论文功能映射](docs/research_from_paper.zh.md)。
+
+![prompt_control_lab 诊断图](docs/assets/diagnostics.zh.svg)
+
+## 本地 UI
 
 ```bash
 pip install -e ".[ui]"
 pcl ui --runs runs/ --policy examples/guard.policy.yaml --port 8501
 ```
 
-如果要从 HuggingFace 开源模型提取 hidden states，安装 HF extra：
-
-```bash
-pip install -e ".[hf]"
-```
-
-建议先用小模型或本地模型路径试跑；这个命令会在本机加载模型。
-
-本地 UI 现在默认打开 **研究总览**：先展示 tri-split、成对统计、soft-hard、trajectory、
-Riccati 和 tv-soft 等论文诊断，再把 agent guard、audit、history 等工程应用放在后续标签页。
-**工作流** 页也可以从浏览器触发 `pcl evidence-from`，把 Promptfoo、DeepEval、Langfuse 或 LangSmith
-导出的 baseline / candidate 结果整理成 PCL 证据包。
-
-本地构建 wheel 后，可以用 `pipx` 安装：
-
-```bash
-python -m build
-pipx install dist/promptcontrollab-0.1.0-py3-none-any.whl
-pcl doctor
-```
-
-如果没有发布到 PyPI，请使用本地 wheel 或源码安装，不要把 `prompt_control_lab` 当成 pip 包名；Python 包名是 `promptcontrollab`。
-
-## 演示视频和 UI
-
-仓库包含 4K 实操型双语演示视频，由真实 UI 截图和脚本化操作回放生成。
-
-[![prompt_control_lab 中文演示封面](docs/assets/demo/poster.zh.png)](docs/assets/demo/prompt_control_lab_demo.zh.mp4)
-
-- [中文 MP4](docs/assets/demo/prompt_control_lab_demo.zh.mp4)
-- [中文字幕](docs/assets/demo/prompt_control_lab_demo.zh.srt)
-- [English MP4](docs/assets/demo/prompt_control_lab_demo.en.mp4)
-- [English subtitles](docs/assets/demo/prompt_control_lab_demo.en.srt)
+dashboard 包含研究总览、教程、工作流、Guard Prompt、Run Report、Model Drift、Agent Diff Audit
+和 History。它既能查看 artifact，也能触发受控的本地工作流：guard、analyze、gate、audit-diff、
+agent-run、PR summary、外部证据导入和报告 zip 导出。
 
 ![prompt_control_lab UI 工作流教程截图](docs/assets/tutorial_workflows.zh.png)
 
-## 功能地图
+4K 实操演示视频：
+[中文 MP4](docs/assets/demo/prompt_control_lab_demo.zh.mp4)，
+[English MP4](docs/assets/demo/prompt_control_lab_demo.en.mp4)。
 
-| 场景 | 命令 | 说明 |
-|---|---|---|
-| 论文 demo | `pcl research-demo` | 生成 synthetic inputs、小型比较证据包，并一键跑完研究诊断。 |
-| 统一诊断 | `pcl diagnose` | 把 soft-hard、trajectory、Riccati、tv-soft 合成一份诊断报告。 |
-| 三段切分评测 | `pcl split` / `pcl analyze` | 固化 train / validation / withheld 协议并生成报告。 |
-| 成对统计 | `pcl stats` | 输出 bootstrap CI、permutation p-value 和 Holm correction。 |
-| 比较有效性 | `pcl validity` | 检查一次 baseline / candidate 对比是否能被解释为 prompt-only 改动。 |
-| soft-to-hard 风险 | `pcl soft-hard` | 检查 soft prompt 转 hard token 后的 projection gap。 |
-| hidden-state 提取 | `pcl extract-hidden` | 从 HuggingFace 开源模型提取 `hidden_states.npz`。 |
-| 内部轨迹诊断 | `pcl trajectory` | 分析 hidden-state drift、decay slope 和 turnpike-like signal。 |
-| Riccati 诊断 | `pcl riccati` | 检查有限维 surrogate 的 Riccati / DARE 稳定性。 |
-| time-varying control | `pcl tv-soft` | 比较 static、time-varying、shuffled、random control lane。 |
-| 生态桥接 demo | `pcl ecosystem-demo` | 一次性跑完 Promptfoo、DeepEval、Langfuse、LangSmith 样例，并生成 PCL evidence bundle。 |
-| 跨工具定位表 | `pcl ecosystem-scorecard` | 重新生成 Promptfoo / DeepEval / Langfuse / LangSmith 与 PCL 的分工、证据缺口和补齐命令。 |
-| 外部证据审计闭环 | `pcl evidence-audit` | 导入外部 export，补上 PCL 证据，检查论文诊断缺口，验证原始 source inputs，并验证 research bundle。 |
-| 一键外部证据包 | `pcl evidence-from` | 导入外部 baseline / candidate export，并一键生成 PCL evidence card。 |
-| 生态桥接 | `pcl import auto` / `promptfoo` / `deepeval` / `langfuse` / `langsmith` | 导入外部 eval / trace artifact，再接 PCL 的比较有效性和研究诊断。`pcl ingest` 作为兼容别名保留。 |
-| 一键 run 比较 | `pcl compare-runs` | 把两个导入 / 打分后的 run 变成 stats、comparison_validity 和报告。 |
-| 报告和解释 | `pcl report` / `pcl explain` / `pcl gate` | 把 artifact 转成可读结论和策略判断。 |
-| Agent 应用层 | `pcl guard` / `pcl audit-diff` | 把研究证据链应用到 coding agent 的执行前后。 |
+## 生态桥接
 
-## 模型追溯边界
+如果你已经在用 Promptfoo、DeepEval、Langfuse、LangSmith 或 prompt optimizer，不需要替换它们。
+PCL 的作用是补一层研究证据：prompt-only 比较有效性、成对不确定性、evidence card、claim check、
+source/bundle hash 验证，以及论文诊断缺口追踪。
 
-`pcl model-detect` 记录的是公开模型 id 和证据，不声称能证明服务商隐藏的内部权重版本。
+```bash
+pcl ecosystem-demo --examples examples/external --out runs/ecosystem-demo
+pcl evidence-audit --tool promptfoo --baseline-input results.json --candidate-input results.json --out runs/from-promptfoo-audit
+pcl import promptfoo --input results.json --out runs/from-promptfoo --prompt-id candidate
+pcl import auto --input results.json --out runs/from-external --score-name exact_match
+```
 
-可信等级包括：
+`pcl ingest` 仍作为 `pcl import` 的向后兼容别名保留。
 
-| 等级 | 含义 |
-|---|---|
-| `level_0_declared_by_user` | 用户或配置声明的 model id。 |
-| `level_1_observed_in_response` | 从 response 或 prediction artifact 观察到的 model id。 |
-| `level_2_provider_metadata_verified` | 通过 provider metadata 接口确认公开 model object。 |
-| `level_3_provider_log_reference_recorded` | 记录了 provider 侧日志引用。 |
-| `level_4_signed_receipt_recorded` | 记录了签名收据引用；这不等于已经完成签名验真。 |
+详见：[生态桥接](docs/ecosystem_bridge.zh.md) 和
+[与 Promptfoo、LangSmith、Langfuse、Prompt Optimizer 的对比](docs/comparison.zh.md)。
+更多图示：[生态 scorecard](docs/assets/ecosystem_scorecard.zh.svg) 和
+[PCL 补充证据矩阵](docs/assets/ecosystem_evidence_matrix.zh.svg)。
 
-如果中间人能篡改 response，单独的 `response.model` 不再是强证据。应结合 TLS、request id、response hash、provider log 和签名收据来提高可信度。
+![prompt_control_lab 生态定位](docs/assets/ecosystem.zh.svg)
 
-## 插件和 CI
+## Agent 应用层
+
+工程应用层把同一套证据习惯用于 Claude Code、Cursor、Codex 和 shell agent：
+
+```bash
+pcl guard --prompt "Fix this bug" --profile coding --policy examples/guard.policy.yaml
+pcl model-detect --response response.json --provider openai
+pcl audit-diff --before HEAD~1 --after HEAD --out runs/audit
+pcl history index --runs runs/ --out runs/history_index.json
+pcl export-report --run runs/quick --out runs/quick/report.zip
+```
+
+安装本地模板：
 
 ```bash
 pcl install-plugin codex
@@ -270,21 +136,39 @@ pcl install-plugin claude-code
 pcl install-plugin github-action
 ```
 
-这些模板都围绕 `pcl guard --json` 和 policy gate 工作。GitHub Action 示例可以运行 `pcl gate`，在存在 research bundle 时运行 `pcl evidence-gate`，再用 `pcl audit-diff` 审计 PR diff，并发布 PR summary。
+边界：`pcl guard` 和 `pcl audit-diff` 是启发式 preflight / governance 工具。它们能减少明显风险并产出审计记录，
+但不能证明 agent 行为一定安全。
 
-## 生态定位
+## 证据边界
 
-`prompt_control_lab` 不应该被理解成另一个宽泛 LLM dashboard 或 prompt manager。它的核心定位是：
+- 模型溯源记录的是公开 model id 和证据等级，不证明服务商隐藏权重版本。见
+  [决策指南](docs/decision_guide.zh.md)。
+- 本地 paired pilots 用于透明记录，不是通用 benchmark。见
+  [preflight pilot](docs/case_studies/agent_guard_pilot.zh.md) 和
+  [paired agent pilot](docs/case_studies/agent_guard_paired_pilot.zh.md)。
+- Guarded prompt 可能比 raw prompt 更长，因为它补充了范围、约束和测试计划。目标不总是“更短”，而是更清楚、
+  更可控、更容易审计。
 
-**控制论 prompt 诊断 + 可复现 prompt optimization 证据。**
+## 安装说明
 
-它与 promptfoo、DeepEval、LangSmith、Langfuse 互补：那些工具更偏 eval、red-team、observability 或 prompt management；`prompt_control_lab` 更偏论文所述的 prompt optimization 诊断，包括 tri-split 协议、成对统计、soft-hard gap、hidden-state trajectory、Riccati surrogate 和 time-varying soft-control。
+```bash
+pip install -e .
+pip install -e ".[research]"
+pip install -e ".[hf]"      # 可选：HuggingFace hidden-state 提取
+pip install -e ".[ui]"      # 可选：本地 dashboard
+pcl doctor
+```
 
-Agent guard、model provenance、diff audit 和插件仍然有价值，但它们是围绕研究诊断做出的工程应用层，不是项目重心。
-导入单个外部 run 时优先用 `pcl import ...`；需要 reviewer-facing 证据包时优先用
-`pcl evidence-audit ...`，它会同时检查 source hash、claim 支持、诊断缺口和 bundle 完整性。
+本地 wheel / pipx 验证：
 
-![prompt_control_lab 生态定位](docs/assets/ecosystem.zh.svg)
+```bash
+python -m build
+pipx install dist/promptcontrollab-0.1.0-py3-none-any.whl
+pcl doctor
+```
+
+`pcl init` 会写入 `.promptcontrol.yaml`，保存 guard policy、gate policy、runs 目录、expected paths
+和 UI 默认页等本地默认值。显式 CLI 参数仍然优先。
 
 ## 文档
 
@@ -294,13 +178,11 @@ Agent guard、model provenance、diff audit 和插件仍然有价值，但它们
 - [Artifact 说明](docs/artifacts.zh.md)
 - [论文功能映射](docs/research_from_paper.zh.md)
 - [生态桥接](docs/ecosystem_bridge.zh.md)
-- [与 Promptfoo、LangSmith、Langfuse 和 Prompt Optimizer 的对比](docs/comparison.zh.md)
+- [与 Promptfoo、LangSmith、Langfuse、Prompt Optimizer 的对比](docs/comparison.zh.md)
 - [创新点和贡献](docs/innovation.zh.md)
-- [决策指南](docs/decision_guide.zh.md)
-- [Agent guard 试点 case study](docs/case_studies/agent_guard_pilot.zh.md)
-- [真实成对 agent 试点 case study](docs/case_studies/agent_guard_paired_pilot.zh.md)
 - [生产级试点协议](docs/production_pilot.zh.md)
-- [发布和安装验证清单](docs/release_install.zh.md)
+- [发布和安装验证](docs/release_install.zh.md)
+- [插件模板](plugins/)
 
 ## License
 

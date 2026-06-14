@@ -30,6 +30,7 @@ PAIRED_FIELDS = [
     "notes",
 ]
 
+
 def test_core_chinese_docs_do_not_contain_mojibake() -> None:
     for path in [
         Path("README.zh.md"),
@@ -38,11 +39,12 @@ def test_core_chinese_docs_do_not_contain_mojibake() -> None:
     ]:
         text = path.read_text(encoding="utf-8")
         assert "\ufffd" not in text
+
     readme_zh = Path("README.zh.md").read_text(encoding="utf-8")
-    assert "面向 prompt 优化的控制论诊断与可复现评测工具。" in readme_zh
-    assert "研究内核" in readme_zh
-    assert "本地 Case Study" in readme_zh
-    assert "模型追溯边界" in readme_zh
+    assert "面向 prompt 优化的控制论诊断与可复现证据工具。" in readme_zh
+    assert "它补上了什么" in readme_zh
+    assert "研究流程" in readme_zh
+    assert "证据边界" in readme_zh
 
 
 def test_readmes_link_production_and_release_readiness_docs() -> None:
@@ -85,6 +87,7 @@ def test_agent_guard_preflight_pilot_schema_and_claims() -> None:
     assert all(row["raw_prompt_tokens"] for row in rows)
     assert all(row["guarded_prompt_tokens"] for row in rows)
     assert all("preflight-only" in row["notes"] for row in rows)
+
     raw_avg_tokens = round(
         sum(int(row["raw_prompt_tokens"]) for row in rows) / len(rows),
         2,
@@ -96,15 +99,15 @@ def test_agent_guard_preflight_pilot_schema_and_claims() -> None:
 
     readme = Path("README.md").read_text(encoding="utf-8")
     readme_zh = Path("README.zh.md").read_text(encoding="utf-8")
-    assert "small local preflight pilot" in readme
-    assert "小样本本地 preflight 试点" in readme_zh
-    assert "does **not** claim task-success improvement" in readme
-    assert "不声称任务成功率提升" in readme_zh
-    assert f"Avg raw estimated prompt tokens | {raw_avg_tokens}" in readme
-    assert f"Avg guarded estimated prompt tokens | {guarded_avg_tokens}" in readme
+    assert "docs/case_studies/agent_guard_pilot.en.md" in readme
+    assert "docs/case_studies/agent_guard_pilot.zh.md" in readme_zh
+    assert "not as universal benchmarks" in readme
+    assert "不是通用 benchmark" in readme_zh
+    assert raw_avg_tokens > 0
+    assert guarded_avg_tokens > raw_avg_tokens
 
 
-def test_agent_guard_paired_pilot_schema_and_readme_numbers() -> None:
+def test_agent_guard_paired_pilot_schema_and_readme_links() -> None:
     csv_path = Path("docs/case_studies/agent_guard_paired_pilot.csv")
     summary_path = Path("docs/case_studies/agent_guard_paired_pilot.summary.json")
     reader = csv.DictReader(csv_path.read_text(encoding="utf-8").splitlines())
@@ -122,20 +125,19 @@ def test_agent_guard_paired_pilot_schema_and_readme_numbers() -> None:
     )
     assert all("real Codex paired pilot" in row["notes"] for row in rows)
 
-    readme = Path("README.md").read_text(encoding="utf-8")
-    readme_zh = Path("README.zh.md").read_text(encoding="utf-8")
     raw_success = f"{summary['raw_success']}/{summary['sample_size']}"
     guarded_success = f"{summary['guarded_success']}/{summary['sample_size']}"
     raw_tests = f"{summary['raw_tests_passed']}/{summary['sample_size']}"
     guarded_tests = f"{summary['guarded_tests_passed']}/{summary['sample_size']}"
-    assert f"Completed tasks | {raw_success} | {guarded_success}" in readme
-    assert f"Tests passed | {raw_tests} | {guarded_tests}" in readme
-    assert "guarded prompts still did **not** improve success rate" in readme
-    assert "docs/assets/agent_guard_paired_pilot.svg" in readme
-    assert f"完成任务 | {raw_success} | {guarded_success}" in readme_zh
-    assert f"测试通过 | {raw_tests} | {guarded_tests}" in readme_zh
-    assert "没有提升成功率" in readme_zh
-    assert "docs/assets/agent_guard_paired_pilot.zh.svg" in readme_zh
+    assert raw_success == guarded_success
+    assert raw_tests == guarded_tests
+
+    readme = Path("README.md").read_text(encoding="utf-8")
+    readme_zh = Path("README.zh.md").read_text(encoding="utf-8")
+    assert "docs/case_studies/agent_guard_paired_pilot.en.md" in readme
+    assert "docs/case_studies/agent_guard_paired_pilot.zh.md" in readme_zh
+    assert "not as universal benchmarks" in readme
+    assert "不是通用 benchmark" in readme_zh
 
 
 def test_agent_guard_paired_pilot_visual_assets_exist() -> None:
