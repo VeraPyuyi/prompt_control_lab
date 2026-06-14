@@ -139,6 +139,60 @@ def test_cli_evidence_card_writes_json_and_markdown(tmp_path: Path) -> None:
     assert "Prompt Optimization Evidence Card" in html_out.read_text(encoding="utf-8")
 
 
+def test_evidence_card_surfaces_prompt_optimizer_scaffold_readiness(tmp_path: Path) -> None:
+    run = tmp_path / "runs" / "from-prompt-optimizer"
+    _write_json(
+        run / "prompt_assets.json",
+        {
+            "schema": "prompt_control_lab.prompt_assets.v1",
+            "source_tool": "prompt-optimizer",
+            "artifact_type": "prompt_assets",
+            "evaluation_status": "not_scored",
+            "asset_count": 1,
+            "assets": [],
+        },
+    )
+    _write_json(
+        run / "eval_scaffold" / "scaffold_check.json",
+        {
+            "status": "needs_input",
+            "task_count": 2,
+            "baseline_prediction_count": 2,
+            "candidate_prediction_count": 2,
+            "prompt_file_count": 1,
+            "issues": [{"code": "placeholder_value"}],
+        },
+    )
+
+    card = build_evidence_card(run)
+
+    scaffold = card["sections"]["prompt_optimizer_scaffold"]
+    assert card["recommendation"] == "needs_review"
+    assert scaffold["status"] == "review"
+    assert scaffold["scaffold_status"] == "needs_input"
+    assert scaffold["issue_count"] == 1
+    markdown = render_evidence_card_markdown(card)
+    html = render_evidence_card_html(card)
+    assert "Prompt optimizer eval scaffold" in markdown
+    assert "Prompt optimizer eval scaffold" in html
+    assert "Scaffold must be completed" in markdown
+
+    _write_json(
+        run / "eval_scaffold" / "scaffold_check.json",
+        {
+            "status": "pass",
+            "task_count": 2,
+            "baseline_prediction_count": 2,
+            "candidate_prediction_count": 2,
+            "prompt_file_count": 1,
+            "issues": [],
+        },
+    )
+    passed = build_evidence_card(run)
+    assert passed["sections"]["prompt_optimizer_scaffold"]["status"] == "pass"
+    assert passed["sections"]["prompt_optimizer_scaffold"]["issue_count"] == 0
+
+
 def _write_json(path: Path, payload: object) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")

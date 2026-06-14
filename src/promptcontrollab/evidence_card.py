@@ -18,6 +18,7 @@ def build_evidence_card(run_dir: Path) -> JsonDict:
         "protocol_hygiene": _protocol_hygiene(model),
         "statistical_evidence": _statistical_evidence(model),
         "comparison_validity": _comparison_validity(model),
+        "prompt_optimizer_scaffold": _prompt_optimizer_scaffold(model),
         "deployment_diagnostics": _deployment_diagnostics(model),
         "hidden_state_diagnostics": _hidden_state_diagnostics(model),
         "riccati_surrogate": _riccati_surrogate(model),
@@ -101,6 +102,10 @@ def render_evidence_card_markdown(card: JsonDict) -> str:
         "",
         *_section_lines(_section(sections_dict, "comparison_validity")),
         "",
+        "## Prompt optimizer eval scaffold",
+        "",
+        *_section_lines(_section(sections_dict, "prompt_optimizer_scaffold")),
+        "",
         "## Deployment diagnostics",
         "",
         *_section_lines(_section(sections_dict, "deployment_diagnostics")),
@@ -136,6 +141,7 @@ def render_evidence_card_html(card: JsonDict) -> str:
             ("protocol_hygiene", "Protocol hygiene"),
             ("statistical_evidence", "Statistical evidence"),
             ("comparison_validity", "Prompt-only comparison validity"),
+            ("prompt_optimizer_scaffold", "Prompt optimizer eval scaffold"),
             ("deployment_diagnostics", "Deployment diagnostics"),
             ("hidden_state_diagnostics", "Hidden-state diagnostics"),
             ("riccati_surrogate", "Riccati surrogate"),
@@ -373,6 +379,49 @@ def _deployment_diagnostics(model: ReportModel) -> JsonDict:
         "soft_hard_risk": risk,
         "mean_projection_distance": soft.get("mean_projection_distance"),
         "max_projection_distance": soft.get("max_projection_distance"),
+    }
+
+
+def _prompt_optimizer_scaffold(model: ReportModel) -> JsonDict:
+    has_context = bool(
+        model.prompt_assets
+        or model.prompt_optimizer_gap_plan
+        or (model.run_dir / "eval_scaffold").exists()
+    )
+    if not has_context:
+        return {
+            "status": "skipped",
+            "reason": "No prompt-optimizer asset import or eval scaffold was recorded.",
+        }
+    payload = model.scaffold_check
+    if not payload:
+        return {
+            "status": "review",
+            "reason": "Prompt-optimizer eval scaffold exists but scaffold_check.json is missing.",
+            "expected_artifact": "eval_scaffold/scaffold_check.json",
+        }
+    scaffold_status = str(payload.get("status") or "unknown")
+    issues = payload.get("issues")
+    issue_count = len(issues) if isinstance(issues, list) else 0
+    if scaffold_status == "pass":
+        status = "pass"
+    elif scaffold_status == "fail":
+        status = "fail"
+    else:
+        status = "review"
+    return {
+        "status": status,
+        "scaffold_status": scaffold_status,
+        "issue_count": issue_count,
+        "task_count": payload.get("task_count"),
+        "baseline_prediction_count": payload.get("baseline_prediction_count"),
+        "candidate_prediction_count": payload.get("candidate_prediction_count"),
+        "prompt_file_count": payload.get("prompt_file_count"),
+        "reason": (
+            "Scaffold is ready for paired scoring."
+            if scaffold_status == "pass"
+            else "Scaffold must be completed before treating prompt assets as scored evidence."
+        ),
     }
 
 
