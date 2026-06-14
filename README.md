@@ -97,32 +97,21 @@ ideas to commands, inputs, outputs, and interpretation boundaries.
 
 ## Ecosystem Bridge
 
-If you already use Promptfoo, DeepEval, Langfuse, or LangSmith for prompt/model evaluation and
-observability, keep them. `prompt_control_lab` can import their exported artifacts and add the
-research diagnostics layer on top:
+If you already use Promptfoo, DeepEval, Langfuse, or LangSmith, keep them. `prompt_control_lab`
+imports their exported eval/trace artifacts and adds the research evidence layer they usually do
+not provide: prompt-only validity, paired uncertainty, evidence cards, claim checks, source/bundle
+hash verification, and paper-derived diagnostic gap tracking.
 
 ![prompt_control_lab ecosystem scorecard flow](docs/assets/ecosystem_scorecard.svg)
-
-The scorecard also writes a machine-readable evidence matrix. It makes the extra PCL layer explicit:
-validity checks, paired uncertainty, evidence cards, claim checks, remaining gaps, and the next
-diagnostic command to run.
 
 ![prompt_control_lab ecosystem evidence matrix](docs/assets/ecosystem_evidence_matrix.svg)
 
 ```bash
-# Fast all-tools demo with bundled Promptfoo/DeepEval/Langfuse/LangSmith-style exports.
+# Fast demo with bundled Promptfoo/DeepEval/Langfuse/LangSmith-style exports.
 pcl ecosystem-demo --examples examples/external --out runs/ecosystem-demo
 
-# Then open ecosystem_scorecard.html first, followed by research_bundle.html
-# and each tool-specific bridge_summary.html.
-
-# If you edit the bundle later, refresh the cross-tool scorecard directly.
-pcl ecosystem-scorecard --run runs/ecosystem-demo
-
-promptfoo eval --output results.json
-
-# Research evidence audit: import external exports, add PCL evidence,
-# check paper-diagnostic gaps, and verify the evidence bundle hashes.
+# One-pass reviewer evidence package: import external exports, compare, diagnose gaps,
+# verify source inputs, verify the research bundle, and run the evidence gate.
 pcl evidence-audit \
   --tool promptfoo \
   --baseline-input results.json \
@@ -133,148 +122,31 @@ pcl evidence-audit \
   --split-hash eval-split-2026-06 \
   --out runs/from-promptfoo-audit
 
-# One-command bridge: import baseline/candidate exports, compare them,
-# then write stats, comparison validity, evidence card, and report artifacts.
+# Smaller bridge when you already have two external exports.
 pcl evidence-from \
   --tool promptfoo \
   --baseline-input results.json \
   --candidate-input results.json \
   --baseline-prompt-id baseline \
   --candidate-prompt-id candidate \
-  --provider openai:gpt-4o-mini-20260601 \
-  --split-hash eval-split-2026-06 \
   --out runs/from-promptfoo-evidence
 
-# Lower-level import: PCL detects Promptfoo, DeepEval, Langfuse, or LangSmith exports.
-# `pcl import` is the readable alias; `pcl ingest` remains supported for scripts.
-pcl import auto --input results.json --out runs/from-external --score-name exact_match
-pcl report --run runs/from-external
-
-# Use explicit importers when you need tool-specific filters.
+# Low-level import remains available for scripts and custom pipelines.
 pcl import promptfoo --input results.json --out runs/from-promptfoo --prompt-id candidate
-
-pcl import langfuse --input langfuse-export.json --out runs/from-langfuse \
-  --name candidate --score-name exact_match
-
-pcl import langsmith --input langsmith-runs.csv --out runs/from-langsmith \
-  --experiment candidate --score-name exact_match
-
-pcl import deepeval --input deepeval-test-run.json --out runs/from-deepeval \
-  --score-name exact_match
-
-# Once you have two imported/scored runs, compare them as one evidence bundle.
-pcl compare-runs \
-  --baseline runs/from-promptfoo-baseline \
-  --candidate runs/from-promptfoo-candidate \
-  --out runs/from-promptfoo-comparison
-
-pcl evidence-card \
-  --run runs/from-promptfoo-comparison \
-  --out runs/from-promptfoo-comparison/evidence_card.md
-
-pcl claim-check \
-  --run runs/from-promptfoo-comparison \
-  --claim paired \
-  --out runs/from-promptfoo-comparison/claim_check.json
+pcl import auto --input results.json --out runs/from-external --score-name exact_match
 ```
 
-`pcl evidence-from` writes a self-contained bridge directory: `imports/` keeps the external-tool
-baseline/candidate snapshots, `comparison/` keeps the PCL paired statistics and prompt-only
-validity audit, and the root directory exposes `bridge_summary.html`, `research_bundle.html`,
-`evidence_card.html`, `claim_check.html`, `research_diagnostics.html`, `research_gap_plan.html`, review-first command
-scripts, `report.html`, and `evidence_from_result.json` for reviewers. Start with
-`bridge_summary.html` to see what the external tool supplied, what PCL added, and which evidence is
-still missing. Use `research_bundle.html` as the browser-first reviewer entry, then
-`research_diagnostics.html` to see which paper-derived diagnostics are present
-or still missing, and which copy-paste commands can close each missing gap, without fabricating
-hidden-state or Riccati evidence. Use `claim_check.html` or `.md` to see the strongest
-prompt-optimization claim supported. Use a
-new or empty `--out` directory so stale artifacts cannot contaminate the audit. The local UI also
-surfaces the bridge in Research Overview, including detected external tools, PCL-added evidence,
-comparison validity, claim-check status, and missing evidence.
+`pcl ingest` is kept as the backward-compatible alias. Use `pcl research-bundle --verify`,
+`pcl source-verify --strict`, `pcl evidence-gate --strict`, and `pcl gap-status` when you need
+reviewer/CI checks after the import. For the full walkthrough and tool-specific import examples,
+see [Ecosystem Bridge](docs/ecosystem_bridge.en.md), [Comparison With Promptfoo, LangSmith, and
+Langfuse](docs/comparison.en.md), and [examples/external](examples/external/).
 
-Refresh the browser-first evidence index after adding diagnostics or importing external results:
-
-```bash
-pcl research-bundle --run runs/from-promptfoo-evidence
-pcl research-bundle --run runs/from-promptfoo-evidence --verify
-```
-
-The refreshed `research_bundle.json` records the visible artifact inventory plus `bytes` and
-`sha256` for linked evidence files, so a reviewer can tell whether the bundle changed after it was
-shared.
-The `--verify` mode does not refresh hashes first; it verifies the existing bundle and writes
-`research_bundle_verification.json/md/html` so tampering or accidental edits show up as mismatches.
-For CI or reviewer gates, add `--strict` so bundle mismatches or missing artifacts return a
-non-zero exit code after writing the verification evidence:
-
-```bash
-pcl research-bundle --run runs/from-promptfoo-evidence --verify --strict
-```
-
-`bridge_summary.html` and `ecosystem_scorecard.html` surface this bundle integrity summary so the
-cross-tool view shows not only what PCL adds, but whether the linked evidence package is hashed and
-whether the last verification passed.
-
-Use `pcl evidence-audit` when you want this bridge in one pass: it runs the external import,
-paired comparison, research diagnostics, gap-status check, source-input verification, bundle index,
-bundle verification, and evidence gate, then writes `evidence_audit_result.html` / `.md` /
-`.json` as the reviewer-facing audit summary.
-If you later need to re-check that the original external export files still match the recorded
-source-input hashes, run:
-
-```bash
-pcl source-verify --run runs/from-promptfoo-audit
-```
-
-`evidence-audit` already writes `source_input_verification.json/md/html`; the standalone
-`source-verify` command refreshes that check after files move or change. Source provenance records
-both the original path and the resolved absolute path, so verification is not tied to the original
-working directory. It complements
-`research-bundle --verify`: source verification checks the original Promptfoo / DeepEval /
-Langfuse / LangSmith exports, while bundle verification checks the PCL evidence artifacts created
-from those exports.
-For CI or reviewer gates, add `--strict` so a changed, missing, or unchecked source export returns
-a non-zero exit code after writing the same JSON/Markdown/HTML evidence:
-
-```bash
-pcl source-verify --run runs/from-promptfoo-audit --strict
-```
-
-When CI or a reviewer wants one command that checks both original source exports and the local
-research evidence bundle, use the combined evidence gate:
-
-```bash
-pcl evidence-gate --run runs/from-promptfoo-audit --strict
-```
-
-`evidence-gate` writes `evidence_gate_result.json/md/html`. It treats source-input hash failures
-and research-bundle hash failures as required checks. Paper diagnostic gap status and claim-check
-status are included as advisory evidence so they remain visible without making a small external
-smoke export pretend to contain hidden-state, Riccati, or time-varying-control measurements.
-
-After running the suggested diagnostic commands, check closure with:
-
-```bash
-pcl gap-status --run runs/from-promptfoo-evidence
-```
-
-The lower-level imported run still contains `predictions.jsonl`, `metrics.json`, and
-`manifest.json`, so it can be used with `pcl compare-runs`, `pcl stats`, `pcl validity`, and
-downstream reports. This is intentionally a bridge, not a replacement for Promptfoo's red-team /
-provider ecosystem, DeepEval's local eval runner, Langfuse's tracing platform, or LangSmith's
-observability/evaluation workflows.
-
-Competitive wedge: Promptfoo, DeepEval, LangSmith, and Langfuse already cover strong lanes around
-security testing, local evaluation, tracing, observability, prompt management, and production workflows. PCL should
-win by being the **research evidence layer** they usually do not provide: paired uncertainty,
-prompt-only validity, evidence cards, claim checks, soft-hard gap analysis, hidden-state trajectory
-diagnostics, Riccati surrogates, time-varying control evidence, and now `pcl gap-status` for
-closing missing paper-derived diagnostics after an import.
-
-For a copy-paste walkthrough with bundled sample exports, see
-[Ecosystem Bridge](docs/ecosystem_bridge.en.md) and
-[examples/external](examples/external/).
+Competitive wedge: adjacent tools already cover security testing, local eval, tracing,
+observability, prompt management, and production workflows. PCL should win as the **research
+evidence layer**: paired uncertainty, prompt-only validity, evidence cards, claim checks,
+soft-hard gap analysis, hidden-state trajectory diagnostics, Riccati surrogates, and
+time-varying control evidence.
 
 ## Applied Engineering Layer
 
@@ -548,7 +420,7 @@ pcl export-report --run runs/quick --out runs/quick/report.zip
 
 ![prompt_control_lab UI audit tutorial screenshot](docs/assets/tutorial_audit.en.png)
 
-## Install IDE / CLI Plugins And Skills 🧩
+## Install IDE / CLI Plugins And Skills
 
 All integrations are thin adapters around the same stable command:
 
@@ -556,118 +428,7 @@ All integrations are thin adapters around the same stable command:
 pcl guard --prompt "Fix this bug" --profile coding --token-mode balanced --json
 ```
 
-For hooks and wrappers, use stdin:
-
-```bash
-echo "Fix this bug" | pcl guard --stdin --profile coding --json
-```
-
-### Claude Code Hook 🪝
-
-Claude Code supports `UserPromptSubmit` hooks. This repository includes a working hook:
-
-```text
-plugins/claude-code/hooks/prompt_guard.py
-```
-
-Install steps:
-
-1. Install the CLI first with `pip install -e .`.
-2. Open your Claude Code settings file.
-3. Add a `UserPromptSubmit` hook like this:
-
-```json
-{
-  "hooks": {
-    "UserPromptSubmit": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "python \"D:/path/to/prompt_control_lab/plugins/claude-code/hooks/prompt_guard.py\" --mode suggest --profile coding --token-mode balanced --max-tokens 300 --policy \"D:/path/to/prompt_control_lab/examples/guard.policy.yaml\""
-          }
-        ]
-      }
-    ]
-  }
-}
-```
-
-4. Adjust the path to your local checkout.
-5. Test the hook manually:
-
-```powershell
-'{"hook_event_name":"UserPromptSubmit","prompt":"Fix this bug"}' |
-  python plugins\claude-code\hooks\prompt_guard.py --mode suggest --profile coding
-```
-
-Expected result: JSON with `additionalContext`. In `--mode gate`, risky prompts can return
-`decision: "block"` with a clear reason. (ง •̀_•́)ง
-
-More details: [plugins/claude-code](plugins/claude-code).
-
-### Cursor Rules 🖱️
-
-Cursor can be used in two layers: a simple rules workflow, or an optional MCP-style
-server that exposes `guard_prompt` as a callable tool.
-
-Install steps inside a Cursor project:
-
-```powershell
-New-Item -ItemType Directory -Force .cursor\rules
-Copy-Item plugins\cursor\rules\prompt_control_lab.mdc .cursor\rules\prompt_control_lab.mdc
-```
-
-Then ask Cursor to follow the rule, or run this before sending an expensive prompt:
-
-```bash
-pcl guard --prompt "Refactor this module" --profile coding --token-mode balanced
-```
-
-Expected result: Cursor has a project rule that nudges agents to use `pcl guard` for vague,
-broad, risky, or expensive prompts. This is not full prompt interception yet; it is a practical
-rules workflow.
-
-Optional MCP-style server:
-
-```bash
-python plugins/cursor/mcp_server.py
-```
-
-Point your Cursor MCP configuration at that command if your Cursor setup supports local MCP
-servers. Expected result: Cursor can call `guard_prompt` and display the returned
-`plain_summary`, `risk_level`, `improved_prompt`, and token estimate.
-
-More details: [plugins/cursor](plugins/cursor).
-
-### Codex Skill 🛠️
-
-The repository includes a local Codex skill template:
-
-```text
-plugins/codex/skills/prompt_control_lab/SKILL.md
-```
-
-Install steps on Windows PowerShell:
-
-```powershell
-New-Item -ItemType Directory -Force "$env:USERPROFILE\.codex\skills\prompt_control_lab"
-Copy-Item -Recurse -Force .\plugins\codex\skills\prompt_control_lab\* "$env:USERPROFILE\.codex\skills\prompt_control_lab\"
-```
-
-Then restart Codex so it can discover the skill. Use it when you want Codex to guard a prompt
-before doing expensive work:
-
-```text
-$prompt_control_lab Guard this prompt before implementation: "Build the feature"
-```
-
-Expected result: Codex should consult the skill instructions and use `pcl guard` before
-turning the prompt into a larger coding task. (｡•̀ᴗ-)✧
-
-More details: [plugins/codex](plugins/codex).
-
-If you installed from a wheel, `pipx`, or `uvx`, install adapter templates with:
+For local templates installed from a wheel, `pipx`, or `uvx`:
 
 ```bash
 pcl install-plugin codex
@@ -676,435 +437,42 @@ pcl install-plugin claude-code
 pcl install-plugin github-action
 ```
 
-Existing files are not overwritten unless you pass `--force`.
-
-### Generic Shell Wrapper 🐚
-
-Any CLI tool can use the JSON interface:
-
-```bash
-echo "Write tests for this feature" | pcl guard --stdin --profile coding --json
-```
-
-Use the `improved_prompt` field as the prompt sent to your agent, or use `action=block` as
-a stop signal in gate mode.
-
-Boundary: `pcl guard` is a local heuristic and policy preflight. It catches obvious risk and
-missing context, but it does not prove an agent action is safe.
-
-### GitHub Action / PR Comment Example 🧪
-
-The repository includes a copy-ready workflow template:
-
-```text
-examples/github-action/prompt-control-lab-gate.yml
-```
-
-Copy it into `.github/workflows/` when you want PRs to run `pcl gate`, verify research evidence
-with `pcl evidence-gate` when a bundle exists, audit the PR diff with `pcl audit-diff`, and post a
-short prompt_control_lab result comment.
-
-For a reusable local summary artifact:
-
-```bash
-pcl pr-summary \
-  --audit runs/agent-audit/audit_result.json \
-  --gate runs/quick/gate_result.json \
-  --evidence-gate runs/quick/evidence_gate_result.json \
-  --out runs/pr_summary.md \
-  --json-out runs/pr_summary.json
-```
-
-For a self-hosted GitHub App webhook:
-
-```bash
-pcl github-app serve --host 0.0.0.0 --port 8080
-```
-
-## Feature Path: Simple To Expert 🚀
-
-The sections below are ordered from direct, friendly workflows to more flexible research tools.
-
-### 1. `pcl start`: beginner scenario menu 🌈
-
-Operation:
-
-```bash
-pcl start
-```
-
-Non-interactive operation:
-
-```bash
-pcl start --choice improve --prompt "Answer the user question."
-pcl start --choice guard --prompt "Fix this bug"
-```
-
-Result:
-
-- a simple menu with three scenarios: improve, guard, or analyze
-- plain-language output without needing to understand `profile`, `gate`, or JSON first
-- all expert commands remain available after the beginner path
-
-What it means:
-
-Use this when you only know what you want in ordinary language: make the prompt clearer,
-check whether it is too broad, or learn how to generate a full report.
-
-### 2. `pcl improve`: rewrite one prompt directly ✨
-
-Operation:
-
-```bash
-pcl improve --prompt "Answer the user question."
-```
-
-Token-conscious operation:
-
-```bash
-pcl improve --prompt "Answer the user question." --token-mode aggressive --max-tokens 80
-```
-
-Result:
-
-- optimized prompt in the terminal
-- estimated token count before and after rewriting
-- with `--out runs/improve`: `improved_prompt.txt`, `prompt_improvement.json`, `prompt_diff.md`
-
-What it means:
-
-Use this when you only have a prompt string. It adds task goal, output-format constraints,
-stability rules, and optional token-budget pressure without calling any external model.
-
-### 3. `pcl guard`: protect prompts before IDE or CLI agents use them 🛡️
-
-Operation:
-
-```bash
-pcl guard --prompt "Fix this bug" --profile coding --token-mode balanced --json
-```
-
-Gate operation:
-
-```bash
-echo "Answer the user question." | pcl guard --stdin --mode gate --max-tokens 80 --json
-```
-
-Team policy operation:
-
-```bash
-pcl guard --prompt "Fix this bug" \
-  --profile coding \
-  --policy examples/guard.policy.yaml \
-  --json
-```
-
-Result:
-
-- `plain_summary`: a human-readable sentence for non-technical users
-- `action`: `suggest`, `auto`, or `block`
-- `risk_level`: `low`, `medium`, or `high`
-- `improved_prompt`: guarded prompt
-- `token_report`: estimated token cost
-- `reasons`: why the guard suggested or blocked
-- `risk_categories`: examples include `destructive_change`, `security`, `production_path`,
-  `broad_refactor`, `token_budget`, or team policy categories
-- `policy_violations`: exact policy or built-in guard violations
-- `required_review`: whether a human should review before execution
-
-What it means:
-
-Use this before Claude Code, Cursor, Codex, or a shell wrapper spends tokens. It catches vague,
-over-budget, dangerous, or underspecified prompts early. With `--policy`, teams can turn it into
-a configurable preflight gate for AI coding agents.
-
-Policy files are dependency-free: the bundled example uses flat keys such as
-`rule.destructive_action.patterns`, and v0.1 also accepts a small nested `rules:` form for users
-who naturally write YAML lists.
-
-### 4. `pcl analyze`: one command, one report 📦
-
-Operation:
-
-```bash
-pcl init --path demo
-cd demo
-pcl analyze --config promptcontrol.example.yaml --out runs/quick
-```
-
-Result:
-
-- `runs/quick/splits.json`
-- `runs/quick/baseline/metrics.json`
-- `runs/quick/candidate/metrics.json`
-- `runs/quick/stats.json`
-- `runs/quick/explanation.json`
-- `runs/quick/report.md`
-- `runs/quick/report.html`
-
-What it means:
-
-This is the easiest full evaluation path. It answers: did the candidate improve, is the
-evidence reliable, did any task slice regress, and what should be checked next?
-
-### 5. `pcl model-detect`: record model identity 🔎
-
-Operations:
-
-```bash
-pcl model-detect --response response.json --provider openai
-pcl model-detect --predictions examples/predictions_candidate.jsonl
-pcl model-detect --model gpt-5.2 --provider openai --verify
-```
-
-Result:
-
-```json
-{
-  "provider": "openai",
-  "model_id": "gpt-5.2",
-  "source": "response.model",
-  "confidence": "high",
-  "provenance_level": "level_1_observed_in_response",
-  "verified": false,
-  "warnings": []
-}
-```
-
-What it means:
-
-This records the public model id declared in API responses, prediction files, or command-line
-metadata. It helps answer whether a baseline and candidate were run on the same model. It does
-not prove the provider's hidden internal weight build.
-
-Provenance levels are explicit:
-
-| Level | Meaning |
-|---|---|
-| `level_0_declared_by_user` | model id came from a user argument or config |
-| `level_1_observed_in_response` | model id was observed in response or prediction artifacts |
-| `level_2_provider_metadata_verified` | public provider metadata confirmed the model object |
-| `level_3_provider_log_reference_recorded` | provider-side log reference was recorded |
-| `level_4_signed_receipt_recorded` | signed receipt reference was recorded; this is not signature verification |
-
-For stronger provenance, attach request evidence:
-
-```bash
-pcl model-detect \
-  --response response.json \
-  --provider openai \
-  --request-id req_123 \
-  --provider-log-reference usage-log:req_123
-```
-
-You can also attach model identity to evaluation artifacts:
-
-```bash
-pcl eval --data examples/tasks.jsonl \
-  --predictions examples/predictions_candidate.jsonl \
-  --out runs/candidate \
-  --method candidate \
-  --provider openai \
-  --model gpt-5.2
-
-pcl analyze --config promptcontrol.example.yaml \
-  --baseline-model gpt-4o \
-  --candidate-model gpt-5.2
-```
-
-If baseline and candidate use different model ids, `report.md` shows a warning because the
-comparison is no longer prompt-only.
-
-Model drift audit:
-
-```bash
-pcl model-drift --run runs/current --history runs/previous --out runs/current/model_drift.json
-```
-
-This reports whether a prompt comparison is clean or confounded by a model/provider change or
-alias model id.
-
-### 6. `pcl audit-diff`: inspect what the agent changed 🔎
-
-Operation:
-
-```bash
-pcl audit-diff --before HEAD~1 --after HEAD --out runs/audit
-```
-
-Optional scope and tests:
-
-```bash
-pcl audit-diff \
-  --before HEAD~1 \
-  --after HEAD \
-  --expected-path src \
-  --test-command "pytest tests/test_session.py" \
-  --out runs/audit
-```
-
-Optional SARIF and external secret scanner entrypoints:
-
-```bash
-pcl audit-diff \
-  --before HEAD~1 \
-  --after HEAD \
-  --out runs/audit \
-  --sarif runs/audit/pcl.sarif \
-  --secret-scanner builtin
-```
-
-`builtin` scans added diff lines. `gitleaks` and `trufflehog` are optional workspace-level
-scanner entrypoints; their findings may include pre-existing files outside the selected
-`before`/`after` diff.
-
-By default, `--test-command` runs without shell control syntax, records stdout/stderr snippets,
-and times out per command. Prefer `--tests-run` / `--tests-passed` when tests were already run
-elsewhere. Use `--allow-shell-test-command` only for trusted local input.
-
-Result:
-
-- `runs/audit/audit_result.json`
-- `runs/audit/audit_summary.md`
-- optional `runs/audit/pcl.sarif`
-
-What it means:
-
-Use this after a coding agent runs. It records touched files, source/test/docs/config changes,
-dangerous paths such as auth or billing code, public API changes, test evidence, unexpected file
-edits, and whether human review is required.
-
-To connect prompt identity, model provenance, gate status, and audit evidence into one compact
-artifact:
-
-```bash
-pcl agent-run build --run runs/quick --audit runs/audit --agent codex --out runs/agent_run.json
-```
-
-### 7. `pcl history`: index and compare runs 🧭
-
-Operations:
-
-```bash
-pcl history index --runs runs/ --out runs/history_index.json
-pcl history compare --a runs/old --b runs/new --out runs/history_compare.json
-```
-
-What it means:
-
-The index turns run directories into a small local history. The comparison highlights prompt
-identity changes, model/provider changes, score deltas, gate status changes, slice regressions,
-and new risk categories.
-
-### 8. `pcl init`: create a runnable example 🌱
-
-Operation:
-
-```bash
-pcl init --path demo
-cd demo
-```
-
-Result:
-
-- `examples/tasks.jsonl`
-- `examples/predictions_baseline.jsonl`
-- `examples/predictions_candidate.jsonl`
-- `examples/guard.policy.yaml`
-- `examples/gate.policy.yaml`
-- `promptcontrol.example.yaml`
-
-What it means:
-
-These files show the minimal input format: task `id`, `input`, `expected`, `slice`, model
-`output`, and optional `provider` / `model` provenance records.
-
-### 9. `pcl report`, `pcl explain`, `pcl gate`: read and decide ✅
-
-Operations:
-
-```bash
-pcl report --run runs/quick --title "Candidate Prompt Report"
-pcl explain --run runs/quick --level plain
-pcl gate --run runs/quick --policy examples/gate.policy.yaml
-```
-
-Result:
-
-- `report.md` / `report.html`
-- `explanation.json`
-- `gate_result.json`
-- a top-of-report deployment recommendation: `yes`, `no`, or `needs_review`
-
-What it means:
-
-These commands turn artifacts into decisions: keep the prompt, review it, or hold it.
-The gate can check metrics, statistical evidence, soft-hard risk, and model provenance.
-
-### 10. Expert evaluation: `split → eval → stats` 🧠
-
-Operations:
-
-```bash
-pcl split --data examples/tasks.jsonl --out runs/candidate --seed 0
-pcl eval --data examples/tasks.jsonl --predictions examples/predictions_candidate.jsonl --out runs/candidate --method candidate
-pcl stats --baseline runs/baseline/predictions.jsonl --candidate runs/candidate/predictions.jsonl --out runs/candidate/stats.json
-```
-
-Result:
-
-- reproducible train/val/withheld split
-- scored predictions and slice metrics
-- paired confidence intervals, permutation p-values, and Holm-adjusted p-values
-
-What it means:
-
-This is for users who want full control over protocol hygiene and statistical comparison.
-
-### 11. Advanced / Research Mode diagnostics 🔬
-
-Soft-to-hard risk:
+Existing files are not overwritten unless you pass `--force`. The adapters cover Claude Code hooks,
+Cursor rules / MCP-style server, a Codex skill, generic shell wrappers, and a GitHub Action / PR
+summary example. Detailed setup lives in [plugins/claude-code](plugins/claude-code),
+[plugins/cursor](plugins/cursor), [plugins/codex](plugins/codex), and
+[examples/github-action](examples/github-action/).
+
+Boundary: `pcl guard` is a local heuristic and policy preflight. It catches obvious risk and missing
+context, but it does not prove an agent action is safe.
+
+## Command Cheat Sheet
+
+For a detailed step-by-step tutorial, use [Tutorial](docs/tutorial.en.md) and
+[Research From The Paper](docs/research_from_paper.en.md). The README keeps only the shortest paths.
+
+| Goal | Command | What you get |
+|---|---|---|
+| Try the paper workflow | `pcl research-demo --out runs/research-demo` | synthetic tri-split, paired stats, validity, evidence card, claim check, evidence gate, soft-hard, trajectory, Riccati, and tv-soft artifacts |
+| Run all paper diagnostics on your own artifacts | `pcl diagnose --run runs/research-demo` | one unified research diagnostic report |
+| Improve one prompt | `pcl improve --prompt "Answer the user question."` | offline rewrite, token estimate, and diff |
+| Guard an agent prompt | `pcl guard --prompt "Fix this bug" --profile coding --policy examples/guard.policy.yaml` | action, risk level, policy violations, improved prompt |
+| Run quick evaluation | `pcl analyze --config promptcontrol.example.yaml --out runs/quick` | split, metrics, stats, explanation, gate, report |
+| Check model provenance | `pcl model-detect --response response.json --provider openai` | public model id, provenance level, warnings |
+| Audit model drift | `pcl model-drift --run runs/current --history runs/previous` | same/different model/provider and alias risk |
+| Audit an agent diff | `pcl audit-diff --before HEAD~1 --after HEAD --out runs/audit` | touched files, changed lines, dangerous paths, tests, SARIF-ready findings |
+| Build run history | `pcl history index --runs runs/ --out runs/history_index.json` | local run index for UI trends |
+| Export reviewer bundle | `pcl export-report --run runs/quick --out runs/quick/report.zip` | zip of recognized artifacts |
+
+Research diagnostics beyond output scores:
 
 ```bash
 pcl soft-hard --soft soft_prompt.npz --vocab vocab_embeddings.npz --out runs/candidate/diagnostics
-```
-
-Hidden-state trajectory:
-
-```bash
-pcl extract-hidden \
-  --model Qwen/Qwen2.5-0.5B \
-  --prompts examples/tasks.jsonl \
-  --out runs/candidate/inputs/hidden_states.npz \
-  --pool last-token \
-  --max-items 32
-
-pcl trajectory \
-  --states runs/candidate/inputs/hidden_states.npz \
-  --out runs/candidate/diagnostics
-```
-
-`extract-hidden` is optional and requires `pip install -e ".[hf]"`. It writes
-`hidden_states.npz` plus `hidden_states.npz.metadata.json`, so open-model users can produce the
-artifact that `trajectory`, `riccati --trajectory`, and `diagnose` expect.
-
-Riccati surrogate:
-
-```bash
+pcl extract-hidden --model Qwen/Qwen2.5-0.5B --prompts examples/tasks.jsonl --out runs/candidate/inputs/hidden_states.npz --max-items 32
+pcl trajectory --states runs/candidate/inputs/hidden_states.npz --out runs/candidate/diagnostics
 pcl riccati --matrices surrogate_mats.npz --out runs/candidate/diagnostics
-```
-
-Time-varying soft-control lane:
-
-```bash
 pcl tv-soft --predictions method_predictions.jsonl --out runs/candidate/diagnostics
 ```
-
-What it means:
-
-These commands move beyond output scores. They inspect soft-to-hard deployment risk,
-hidden-state drift, fitted surrogate stability, and whether time-varying gains look like
-temporal structure or just extra capacity.
 
 ![prompt_control_lab diagnostics](docs/assets/diagnostics.svg)
 
