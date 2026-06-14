@@ -22,7 +22,9 @@ pcl diagnose --run runs/research-demo
 pcl ui --runs runs/ --policy examples/guard.policy.yaml --port 8501
 ```
 
-## 它补上了什么
+## 常用命令
+
+它补上了什么：论文诊断核心、证据桥接、Agent 应用层。
 
 ```bash
 # 论文诊断核心
@@ -52,6 +54,6 @@ pcl audit-diff --before HEAD~1 --after HEAD --out runs/audit
 
 ## 文档
 
-[论文功能映射](docs/research_from_paper.zh.md) | [教程](docs/tutorial.zh.md) | [Artifacts](docs/artifacts.zh.md) | [生态桥接](docs/ecosystem_bridge.zh.md) | [决策指南](docs/decision_guide.zh.md) | [对比](docs/comparison.zh.md) | [安装/发布](docs/release_install.zh.md) | [插件](plugins/)
+[论文功能映射](docs/research_from_paper.zh.md) | [教程](docs/tutorial.zh.md) | [Artifacts](docs/artifacts.zh.md) | [生态桥接](docs/ecosystem_bridge.zh.md) | [决策指南](docs/decision_guide.zh.md) | [对比](docs/comparison.zh.md) | [production pilot](docs/production_pilot.zh.md) | [preflight pilot](docs/case_studies/agent_guard_pilot.zh.md) | [paired pilot](docs/case_studies/agent_guard_paired_pilot.zh.md) | [scorecard](docs/assets/ecosystem_scorecard.zh.svg) | [证据矩阵](docs/assets/ecosystem_evidence_matrix.zh.svg) | [安装/发布](docs/release_install.zh.md) | [插件](plugins/)
 
 Apache-2.0。见 [LICENSE](LICENSE)。
