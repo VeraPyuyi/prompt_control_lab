@@ -84,6 +84,14 @@ pcl source-verify --run runs/from-promptfoo-audit
 `pcl evidence-audit` 已经会写出 `source_input_verification.json`、`.md` 和 `.html`；
 单独的 `source-verify` 命令用于后续刷新这项检查。它检查外部源文件本身；
 `pcl research-bundle --verify` 检查由这些源文件生成的 PCL 证据 artifact。
+当这项检查需要作为 CI 门禁时，使用 strict 模式：
+
+```bash
+pcl source-verify --run runs/from-promptfoo-audit --strict
+```
+
+strict 模式仍会写出同样的 JSON、Markdown 和 HTML 证据，但只要任何 source export 被改动、
+缺失或无法检查，就会返回非零退出码。
 
 ## 更低层的桥接命令
 

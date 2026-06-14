@@ -660,6 +660,11 @@ def build_parser() -> argparse.ArgumentParser:
         default=None,
         help="Optional JSON output path. Markdown/HTML siblings are written next to it.",
     )
+    source_verify_parser.add_argument(
+        "--strict",
+        action="store_true",
+        help="Return a non-zero exit code when source verification does not pass.",
+    )
     source_verify_parser.set_defaults(func=_cmd_source_verify)
 
     ecosystem_demo_parser = subcommands.add_parser(
@@ -1328,6 +1333,15 @@ def _cmd_evidence_audit(args: argparse.Namespace) -> None:
 def _cmd_source_verify(args: argparse.Namespace) -> None:
     payload = verify_source_inputs(run_dir=args.run, out_path=args.out)
     print(json.dumps(payload, indent=2, ensure_ascii=False, sort_keys=True))
+    if args.strict and payload.get("status") != "pass":
+        msg = (
+            "Source input verification failed in strict mode: "
+            f"status={payload.get('status')}, "
+            f"mismatches={payload.get('mismatch_count')}, "
+            f"missing={payload.get('missing_count')}, "
+            f"unchecked={payload.get('unchecked_count')}"
+        )
+        raise PromptControlLabError(msg)
 
 
 def _cmd_ecosystem_demo(args: argparse.Namespace) -> None:

@@ -234,6 +234,7 @@ def test_source_verify_detects_changed_external_export(tmp_path: Path) -> None:
     assert verification["ok_count"] == 2
     assert verification["mismatch_count"] == 0
     assert (out_dir / "source_input_verification.html").exists()
+    assert main(["source-verify", "--run", str(out_dir), "--strict"]) == 0
 
     source.write_text(source.read_text(encoding="utf-8") + "\n", encoding="utf-8")
 
@@ -245,6 +246,7 @@ def test_source_verify_detects_changed_external_export(tmp_path: Path) -> None:
     markdown = (out_dir / "source_input_verification.md").read_text(encoding="utf-8")
     assert "Source Input Verification" in markdown
     assert "mismatch" in markdown
+    assert main(["source-verify", "--run", str(out_dir), "--strict"]) == 2
 
 
 def test_source_verify_uses_resolved_path_after_cwd_changes(

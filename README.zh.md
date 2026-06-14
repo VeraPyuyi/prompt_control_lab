@@ -211,6 +211,12 @@ pcl source-verify --run runs/from-promptfoo-audit
 `research-bundle --verify` 是互补关系：source verification 验证原始 Promptfoo /
 DeepEval / Langfuse / LangSmith 导出文件，`research-bundle --verify` 验证由这些导出生成的
 PCL 证据 artifact。
+如果要在 CI 或 reviewer gate 中阻断被改动、缺失或无法检查的原始导出文件，可以加
+`--strict`。它仍会先写出同样的 JSON / Markdown / HTML 证据，再用非零退出码表示失败：
+
+```bash
+pcl source-verify --run runs/from-promptfoo-audit --strict
+```
 
 竞争切口：Promptfoo、DeepEval、LangSmith 和 Langfuse 已经在 security testing、本地 eval、tracing、observability、prompt management 和生产工作流上形成很强能力。PCL 更应该赢在它们通常不覆盖的 **研究证据层**：成对不确定性、prompt-only 有效性、evidence card、claim check、soft-hard gap、hidden-state trajectory、Riccati surrogate、time-varying control evidence，以及现在用 `pcl gap-status` 检查导入之后的论文诊断缺口是否真正补齐。
 

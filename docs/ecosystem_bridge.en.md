@@ -145,6 +145,14 @@ pcl source-verify --run runs/from-promptfoo-audit
 The standalone command refreshes the check later. It checks the external source exports
 themselves; `pcl research-bundle --verify` checks the PCL evidence artifacts created from those
 exports.
+Use strict mode when this check should act as a CI gate:
+
+```bash
+pcl source-verify --run runs/from-promptfoo-audit --strict
+```
+
+Strict mode still writes the same JSON, Markdown, and HTML evidence, but returns a non-zero exit
+code if any source export is changed, missing, or unchecked.
 
 The demo automatically audits the bundle against the paper-derived evidence map.
 To regenerate that diagnosis after editing the bundle, run:

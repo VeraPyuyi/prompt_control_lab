@@ -183,6 +183,8 @@ artifact 是否已经存在。它适合用来确认“证据缺口是否真的�
 ## `source_input_verification.json` / `.md` / `.html`
 
 由 `pcl evidence-audit` 自动写出；也可以用 `pcl source-verify --run <run>` 刷新。
+如果要让 source verification 在 CI 或 reviewer gate 中阻断被改动、缺失或无法检查的
+source input，可以使用 `pcl source-verify --run <run> --strict`。
 
 说明什么问题：原始外部 baseline / candidate 导出文件是否仍然匹配
 `pcl evidence-from` 或 `pcl evidence-audit` 记录在 `source_inputs` 里的 SHA-256 哈希。

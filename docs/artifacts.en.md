@@ -306,6 +306,8 @@ one-command audit in a browser. Use `evidence_audit_result.json` for automation.
 ## `source_input_verification.json` / `.md` / `.html`
 
 Written automatically by `pcl evidence-audit`; refreshed by `pcl source-verify --run <run>`.
+Use `pcl source-verify --run <run> --strict` when source verification should fail CI or a
+reviewer gate if any source input is changed, missing, or unchecked.
 
 What it explains: whether the original external baseline/candidate export files still match the
 `source_inputs` hashes recorded by `pcl evidence-from` or `pcl evidence-audit`.

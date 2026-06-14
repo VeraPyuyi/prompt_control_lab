@@ -219,6 +219,12 @@ working directory. It complements
 `research-bundle --verify`: source verification checks the original Promptfoo / DeepEval /
 Langfuse / LangSmith exports, while bundle verification checks the PCL evidence artifacts created
 from those exports.
+For CI or reviewer gates, add `--strict` so a changed, missing, or unchecked source export returns
+a non-zero exit code after writing the same JSON/Markdown/HTML evidence:
+
+```bash
+pcl source-verify --run runs/from-promptfoo-audit --strict
+```
 
 After running the suggested diagnostic commands, check closure with:
 
