@@ -204,6 +204,51 @@ def test_research_bundle_refresh_writes_hashes(tmp_path: Path) -> None:
     assert main(["research-bundle", "--run", str(run_dir), "--verify", "--strict"]) == 2
 
 
+def test_research_bundle_indexes_prompt_optimizer_eval_scaffold(tmp_path: Path) -> None:
+    run_dir = tmp_path / "from-prompt-optimizer"
+    scaffold_dir = run_dir / "eval_scaffold"
+    prompts_dir = scaffold_dir / "prompts"
+    prompts_dir.mkdir(parents=True)
+    files = {
+        "eval_scaffold/README.md": "# scaffold\n",
+        "eval_scaffold/prompt_optimizer_eval_scaffold.json": (
+            '{"kind":"prompt_optimizer_eval_scaffold"}'
+        ),
+        "eval_scaffold/promptcontrol.prompt_optimizer.example.yaml": "metric: exact_match\n",
+        "eval_scaffold/tasks.template.jsonl": (
+            '{"id":"1","input":"x","expected":"y","slice":"demo"}\n'
+        ),
+        "eval_scaffold/baseline_predictions.template.jsonl": (
+            '{"id":"1","output":"x","provider":"demo","model":"demo"}\n'
+        ),
+        "eval_scaffold/candidate_predictions.template.jsonl": (
+            '{"id":"1","output":"y","provider":"demo","model":"demo"}\n'
+        ),
+        "eval_scaffold/scaffold_check.html": "<h1>check</h1>\n",
+        "eval_scaffold/scaffold_check.md": "# check\n",
+        "eval_scaffold/scaffold_check.json": '{"status":"pass"}',
+        "eval_scaffold/prompts/strict-format.txt": "Answer with JSON only.\n",
+    }
+    for relative, content in files.items():
+        path = run_dir / relative
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(content, encoding="utf-8")
+
+    assert main(["research-bundle", "--run", str(run_dir)]) == 0
+
+    bundle = read_json(run_dir / "research_bundle.json")
+    for relative in files:
+        row = _artifact(bundle, relative)
+        assert row["exists"] is True
+        assert row["hash_status"] == "hashed"
+        assert row["sha256"].startswith("sha256:")
+
+    assert main(["research-bundle", "--run", str(run_dir), "--verify", "--strict"]) == 0
+    verification = read_json(run_dir / "research_bundle_verification.json")
+    assert verification["status"] == "pass"
+    assert verification["checked_count"] >= len(files)
+
+
 def test_diagnose_reuses_research_demo_inputs(tmp_path: Path) -> None:
     pytest.importorskip("numpy")
     run_dir = tmp_path / "research-demo"

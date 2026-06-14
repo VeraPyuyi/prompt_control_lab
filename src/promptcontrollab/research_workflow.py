@@ -893,8 +893,29 @@ def _bundle_artifacts(run_dir: Path) -> list[JsonDict]:
         "research_gap_status.json",
         "report.html",
         "report.md",
+        "eval_scaffold/README.md",
+        "eval_scaffold/prompt_optimizer_eval_scaffold.json",
+        "eval_scaffold/promptcontrol.prompt_optimizer.example.yaml",
+        "eval_scaffold/tasks.template.jsonl",
+        "eval_scaffold/baseline_predictions.template.jsonl",
+        "eval_scaffold/candidate_predictions.template.jsonl",
+        "eval_scaffold/scaffold_check.html",
+        "eval_scaffold/scaffold_check.md",
+        "eval_scaffold/scaffold_check.json",
     ]
+    names.extend(_eval_scaffold_prompt_artifacts(run_dir))
     return [_bundle_artifact_row(run_dir=run_dir, name=name) for name in names]
+
+
+def _eval_scaffold_prompt_artifacts(run_dir: Path) -> list[str]:
+    prompt_dir = run_dir / "eval_scaffold" / "prompts"
+    if not prompt_dir.exists():
+        return []
+    return [
+        str(path.relative_to(run_dir)).replace("\\", "/")
+        for path in sorted(prompt_dir.glob("*.txt"))
+        if path.is_file()
+    ]
 
 
 def _bundle_artifact_row(*, run_dir: Path, name: str) -> JsonDict:
