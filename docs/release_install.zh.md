@@ -56,6 +56,17 @@ pcl install-plugin all --target ./tmp-pcl-templates
 预期结果：CLI 可用，`pcl doctor` 能运行，模板安装器可以写出 Codex、Cursor、
 Claude Code 和 GitHub Action 模板。
 
+如果当前环境已经安装了 `research` extra，也要用构建出的 wheel 验证论文研究流程：
+
+```bash
+python -m pip install --force-reinstall --no-deps dist/promptcontrollab-0.1.0-py3-none-any.whl
+pcl research-demo --out ./tmp-pcl-research-demo
+pcl diagnose --run ./tmp-pcl-research-demo
+```
+
+预期结果：wheel 安装后的包可以生成 `research_bundle.html`、`research_diagnostics.html`、
+`evidence_card.html` 和 `claim_check.html`。
+
 ## uv / uvx 说明
 
 开发环境可以用：

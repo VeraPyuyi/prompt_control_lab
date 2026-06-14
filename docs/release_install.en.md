@@ -59,6 +59,19 @@ pcl install-plugin all --target ./tmp-pcl-templates
 Expected result: the CLI is available, `pcl doctor` runs, and template installers
 can write Codex, Cursor, Claude Code, and GitHub Action templates.
 
+When the current environment already has the `research` extra installed, also
+verify the paper-derived workflow from the built wheel:
+
+```bash
+python -m pip install --force-reinstall --no-deps dist/promptcontrollab-0.1.0-py3-none-any.whl
+pcl research-demo --out ./tmp-pcl-research-demo
+pcl diagnose --run ./tmp-pcl-research-demo
+```
+
+Expected result: `research_bundle.html`, `research_diagnostics.html`,
+`evidence_card.html`, and `claim_check.html` are generated from the wheel-installed
+package.
+
 ## uv / uvx Notes
 
 For editable development:
