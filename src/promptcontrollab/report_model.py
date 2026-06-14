@@ -39,6 +39,7 @@ class ReportModel:
     ecosystem_scorecard: JsonDict
     prompt_assets: JsonDict
     prompt_optimizer_gap_plan: JsonDict
+    scaffold_check: JsonDict
     diagnostics: dict[str, JsonDict]
     artifacts: list[str]
     candidate_score: float | None
@@ -83,6 +84,7 @@ class ReportModel:
             ecosystem_scorecard=_read_optional(run_dir / "ecosystem_scorecard.json"),
             prompt_assets=_read_optional(run_dir / "prompt_assets.json"),
             prompt_optimizer_gap_plan=_read_optional(run_dir / "prompt_optimizer_gap_plan.json"),
+            scaffold_check=_read_optional(run_dir / "eval_scaffold" / "scaffold_check.json"),
             diagnostics=diagnostics,
             artifacts=artifacts,
             candidate_score=_first_score(candidate_metrics, root_metrics),
@@ -194,6 +196,14 @@ def _existing_artifacts(run_dir: Path, diagnostics: dict[str, JsonDict]) -> list
         "prompt_optimizer_gap_plan.json",
         "prompt_optimizer_gap_plan.md",
         "prompt_optimizer_gap_plan.html",
+        "eval_scaffold/scaffold_check.json",
+        "eval_scaffold/scaffold_check.md",
+        "eval_scaffold/scaffold_check.html",
+        "eval_scaffold/prompt_optimizer_eval_scaffold.json",
+        "eval_scaffold/promptcontrol.prompt_optimizer.example.yaml",
+        "eval_scaffold/tasks.template.jsonl",
+        "eval_scaffold/baseline_predictions.template.jsonl",
+        "eval_scaffold/candidate_predictions.template.jsonl",
         "inputs/hidden_states.npz",
         "inputs/hidden_states.npz.metadata.json",
         "report.md",

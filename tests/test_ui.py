@@ -46,6 +46,9 @@ from promptcontrollab.ui.data import (
     research_gap_script_rows,
     research_gap_status_rows,
     research_status_counts,
+    scaffold_check_action_rows,
+    scaffold_check_issue_rows,
+    scaffold_check_summary,
 )
 
 
@@ -652,6 +655,82 @@ def test_ui_recognizes_prompt_optimizer_asset_imports(tmp_path: Path) -> None:
     assert gaps[0]["missing_evidence"].startswith("No paired baseline")
     assert gaps[0]["suggested_command"].startswith("pcl analyze")
     assert gaps[1]["suggested_command"] == ""
+
+
+def test_ui_reads_prompt_optimizer_scaffold_check(tmp_path: Path) -> None:
+    root = tmp_path / "runs"
+    imported = root / "from-prompt-optimizer"
+    _write_json(
+        imported / "prompt_assets.json",
+        {
+            "schema": "prompt_control_lab.prompt_assets.v1",
+            "source_tool": "prompt-optimizer",
+            "artifact_type": "prompt_assets",
+            "evaluation_status": "not_scored",
+            "asset_count": 1,
+            "assets": [],
+        },
+    )
+    _write_json(
+        imported / "eval_scaffold" / "scaffold_check.json",
+        {
+            "kind": "prompt_optimizer_eval_scaffold_check",
+            "schema": "prompt_control_lab.prompt_optimizer_eval_scaffold_check.v1",
+            "status": "needs_input",
+            "task_count": 2,
+            "baseline_prediction_count": 2,
+            "candidate_prediction_count": 2,
+            "prompt_file_count": 1,
+            "issues": [
+                {
+                    "severity": "medium",
+                    "code": "placeholder_value",
+                    "path": "tasks.template.jsonl",
+                    "message": "Replace placeholder expected values.",
+                }
+            ],
+            "next_actions": [
+                "Fill tasks.template.jsonl with real inputs and expected answers.",
+                "Then rerun pcl scaffold-check before running pcl analyze.",
+            ],
+            "boundary": "This check validates scaffold completeness only.",
+        },
+    )
+    (imported / "eval_scaffold" / "scaffold_check.html").write_text(
+        "<h1>scaffold</h1>\n",
+        encoding="utf-8",
+    )
+
+    detail = load_run_detail(imported)
+    model = ReportModel.from_run(imported)
+    summary = scaffold_check_summary(detail)
+    issues = scaffold_check_issue_rows(detail)
+    actions = scaffold_check_action_rows(detail)
+
+    assert list_runs(root) == [{"name": "from-prompt-optimizer", "path": str(imported)}]
+    assert "eval_scaffold/scaffold_check.json" in detail["artifacts"]
+    assert "eval_scaffold/scaffold_check.html" in model.artifacts
+    assert detail["scaffold_check"]["status"] == "needs_input"
+    assert model.scaffold_check["task_count"] == 2
+    assert summary == {
+        "status": "needs_input",
+        "issue_count": 1,
+        "task_count": 2,
+        "baseline_prediction_count": 2,
+        "candidate_prediction_count": 2,
+        "prompt_file_count": 1,
+        "boundary": "This check validates scaffold completeness only.",
+        "html_path": "eval_scaffold/scaffold_check.html",
+    }
+    assert issues == [
+        {
+            "severity": "medium",
+            "code": "placeholder_value",
+            "path": "tasks.template.jsonl",
+            "message": "Replace placeholder expected values.",
+        }
+    ]
+    assert actions[0]["next_action"].startswith("Fill tasks")
 
 
 def test_ui_summarizes_external_evidence_gap_diagnostics(tmp_path: Path) -> None:

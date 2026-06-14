@@ -64,6 +64,9 @@ from promptcontrollab.ui.data import (
     research_gap_script_rows,
     research_gap_status_rows,
     research_status_counts,
+    scaffold_check_action_rows,
+    scaffold_check_issue_rows,
+    scaffold_check_summary,
     slice_rows,
 )
 from promptcontrollab.ui.workflows import (
@@ -125,6 +128,12 @@ TEXT = {
         "prompt_assets_summary": "Imported prompt candidates",
         "prompt_assets_gap_plan": "Evidence gaps before claiming improvement",
         "prompt_assets_missing": "No prompt-optimizer asset import found.",
+        "scaffold_check": "Eval scaffold check",
+        "scaffold_check_missing": "No scaffold_check.json found yet.",
+        "scaffold_check_command": "pcl scaffold-check --run <selected-run>",
+        "scaffold_status": "Scaffold status",
+        "scaffold_issues": "Scaffold issues",
+        "scaffold_next_actions": "Scaffold next actions",
         "evidence_gap_diagnosis": "Paper evidence gap diagnosis",
         "evidence_gap_actions": "How to close these gaps",
         "research_gap_plan": "Research gap plan",
@@ -346,6 +355,12 @@ TEXT = {
         "prompt_assets_summary": "已导入的 prompt 候选",
         "prompt_assets_gap_plan": "声称优化有效前缺少的证据",
         "prompt_assets_missing": "当前还没有 prompt-optimizer 资产导入 artifact。",
+        "scaffold_check": "评测 scaffold 检查",
+        "scaffold_check_missing": "当前还没有 scaffold_check.json。",
+        "scaffold_check_command": "pcl scaffold-check --run <选中的 run>",
+        "scaffold_status": "Scaffold 状态",
+        "scaffold_issues": "Scaffold 问题",
+        "scaffold_next_actions": "Scaffold 下一步",
         "evidence_gap_diagnosis": "论文证据缺口诊断",
         "evidence_gap_actions": "如何补齐这些缺口",
         "research_gap_plan": "研究证据缺口计划",
@@ -1386,6 +1401,9 @@ def _render_research_overview_tab(st: Any, text: dict[str, str], detail: JsonDic
     asset_summary = prompt_asset_summary(detail)
     asset_rows = prompt_asset_rows(detail)
     asset_gap_rows = prompt_optimizer_gap_rows(detail)
+    scaffold_summary = scaffold_check_summary(detail)
+    scaffold_issue_rows = scaffold_check_issue_rows(detail)
+    scaffold_action_rows = scaffold_check_action_rows(detail)
     gap_rows = evidence_gap_rows(detail)
     gap_action_rows = evidence_gap_action_rows(detail)
     gap_plan_rows = research_gap_plan_rows(detail)
@@ -1493,6 +1511,31 @@ def _render_research_overview_tab(st: Any, text: dict[str, str], detail: JsonDic
                 unsafe_allow_html=True,
             )
             st.dataframe(asset_gap_rows, use_container_width=True)
+        st.markdown(
+            f'<div class="pcl-section-title">{html.escape(text["scaffold_check"])}</div>',
+            unsafe_allow_html=True,
+        )
+        if scaffold_summary:
+            st.caption(str(scaffold_summary.get("boundary", "")))
+            metric_cards(
+                st,
+                [
+                    (text["scaffold_status"], str(scaffold_summary.get("status", ""))),
+                    (text["scaffold_issues"], str(scaffold_summary.get("issue_count", 0))),
+                    ("tasks", str(scaffold_summary.get("task_count", 0))),
+                    ("prompts", str(scaffold_summary.get("prompt_file_count", 0))),
+                ],
+            )
+            if scaffold_issue_rows:
+                st.dataframe(scaffold_issue_rows, use_container_width=True)
+            if scaffold_action_rows:
+                st.markdown(
+                    f'<div class="pcl-section-title">{html.escape(text["scaffold_next_actions"])}</div>',
+                    unsafe_allow_html=True,
+                )
+                st.dataframe(scaffold_action_rows, use_container_width=True)
+        else:
+            empty_state(st, text["scaffold_check_missing"], text["scaffold_check_command"])
 
     if gap_rows:
         st.markdown(

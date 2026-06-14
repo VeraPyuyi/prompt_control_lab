@@ -46,6 +46,8 @@ RUN_ARTIFACTS = [
     "prompt_assets.html",
     "prompt_optimizer_gap_plan.json",
     "prompt_optimizer_gap_plan.html",
+    "eval_scaffold/scaffold_check.json",
+    "eval_scaffold/scaffold_check.html",
 ]
 
 RUN_LEVEL_ARTIFACTS = [
@@ -83,6 +85,8 @@ RUN_LEVEL_ARTIFACTS = [
     "prompt_assets.html",
     "prompt_optimizer_gap_plan.json",
     "prompt_optimizer_gap_plan.html",
+    "eval_scaffold/scaffold_check.json",
+    "eval_scaffold/scaffold_check.html",
 ]
 
 
@@ -139,6 +143,7 @@ def load_run_detail(run_dir: Path) -> JsonDict:
         "ecosystem_scorecard": model.ecosystem_scorecard,
         "prompt_assets": model.prompt_assets,
         "prompt_optimizer_gap_plan": model.prompt_optimizer_gap_plan,
+        "scaffold_check": model.scaffold_check,
         "diagnostics": model.diagnostics,
         "baseline_metrics": model.baseline_metrics,
         "candidate_metrics": model.candidate_metrics,
@@ -627,6 +632,62 @@ def prompt_optimizer_gap_rows(detail: JsonDict) -> list[JsonDict]:
             }
         )
     return rows
+
+
+def scaffold_check_summary(detail: JsonDict) -> JsonDict:
+    """Return a compact scaffold readiness summary for prompt-optimizer imports."""
+
+    payload = detail.get("scaffold_check")
+    if not isinstance(payload, dict) or not payload:
+        return {}
+    issues = payload.get("issues")
+    issue_count = len(issues) if isinstance(issues, list) else 0
+    return {
+        "status": payload.get("status", "unknown"),
+        "issue_count": issue_count,
+        "task_count": payload.get("task_count", 0),
+        "baseline_prediction_count": payload.get("baseline_prediction_count", 0),
+        "candidate_prediction_count": payload.get("candidate_prediction_count", 0),
+        "prompt_file_count": payload.get("prompt_file_count", 0),
+        "boundary": payload.get("boundary", ""),
+        "html_path": payload.get("html_path", "eval_scaffold/scaffold_check.html"),
+    }
+
+
+def scaffold_check_issue_rows(detail: JsonDict) -> list[JsonDict]:
+    """Return scaffold check issues for display."""
+
+    payload = detail.get("scaffold_check")
+    if not isinstance(payload, dict):
+        return []
+    issues = payload.get("issues")
+    if not isinstance(issues, list):
+        return []
+    rows: list[JsonDict] = []
+    for item in issues:
+        if not isinstance(item, dict):
+            continue
+        rows.append(
+            {
+                "severity": item.get("severity", ""),
+                "code": item.get("code", ""),
+                "path": item.get("path", ""),
+                "message": item.get("message", ""),
+            }
+        )
+    return rows
+
+
+def scaffold_check_action_rows(detail: JsonDict) -> list[JsonDict]:
+    """Return next actions from a scaffold check artifact."""
+
+    payload = detail.get("scaffold_check")
+    if not isinstance(payload, dict):
+        return []
+    actions = payload.get("next_actions")
+    if not isinstance(actions, list):
+        return []
+    return [{"next_action": str(action)} for action in actions]
 
 
 def evidence_gap_rows(detail: JsonDict) -> list[JsonDict]:
