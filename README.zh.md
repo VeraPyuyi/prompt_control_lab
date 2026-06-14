@@ -131,19 +131,20 @@ pcl evidence-from \
   --out runs/from-promptfoo-evidence
 
 # 一般先用这个：PCL 会自动识别 Promptfoo、DeepEval、Langfuse 或 LangSmith 导出。
-pcl ingest auto --input results.json --out runs/from-external --score-name exact_match
+# `pcl import` 是更直白的入口；`pcl ingest` 仍保留给旧脚本。
+pcl import auto --input results.json --out runs/from-external --score-name exact_match
 pcl report --run runs/from-external
 
 # 需要工具专属过滤条件时，再使用显式导入命令。
-pcl ingest promptfoo --input results.json --out runs/from-promptfoo --prompt-id candidate
+pcl import promptfoo --input results.json --out runs/from-promptfoo --prompt-id candidate
 
-pcl ingest langfuse --input langfuse-export.json --out runs/from-langfuse \
+pcl import langfuse --input langfuse-export.json --out runs/from-langfuse \
   --name candidate --score-name exact_match
 
-pcl ingest langsmith --input langsmith-runs.csv --out runs/from-langsmith \
+pcl import langsmith --input langsmith-runs.csv --out runs/from-langsmith \
   --experiment candidate --score-name exact_match
 
-pcl ingest deepeval --input deepeval-test-run.json --out runs/from-deepeval \
+pcl import deepeval --input deepeval-test-run.json --out runs/from-deepeval \
   --score-name exact_match
 
 # 有了两个已经导入 / 打分的 run 之后，可以一条命令生成比较证据包。
@@ -323,7 +324,7 @@ pcl doctor
 | 跨工具定位表 | `pcl ecosystem-scorecard` | 重新生成 Promptfoo / DeepEval / Langfuse / LangSmith 与 PCL 的分工、证据缺口和补齐命令。 |
 | 外部证据审计闭环 | `pcl evidence-audit` | 导入外部 export，补上 PCL 证据，检查论文诊断缺口，验证原始 source inputs，并验证 research bundle。 |
 | 一键外部证据包 | `pcl evidence-from` | 导入外部 baseline / candidate export，并一键生成 PCL evidence card。 |
-| 生态桥接 | `pcl ingest auto` / `promptfoo` / `deepeval` / `langfuse` / `langsmith` | 导入外部 eval / trace artifact，再接 PCL 的比较有效性和研究诊断。 |
+| 生态桥接 | `pcl import auto` / `promptfoo` / `deepeval` / `langfuse` / `langsmith` | 导入外部 eval / trace artifact，再接 PCL 的比较有效性和研究诊断。`pcl ingest` 作为兼容别名保留。 |
 | 一键 run 比较 | `pcl compare-runs` | 把两个导入 / 打分后的 run 变成 stats、comparison_validity 和报告。 |
 | 报告和解释 | `pcl report` / `pcl explain` / `pcl gate` | 把 artifact 转成可读结论和策略判断。 |
 | Agent 应用层 | `pcl guard` / `pcl audit-diff` | 把研究证据链应用到 coding agent 的执行前后。 |
@@ -364,6 +365,8 @@ pcl install-plugin github-action
 它与 promptfoo、DeepEval、LangSmith、Langfuse 互补：那些工具更偏 eval、red-team、observability 或 prompt management；`prompt_control_lab` 更偏论文所述的 prompt optimization 诊断，包括 tri-split 协议、成对统计、soft-hard gap、hidden-state trajectory、Riccati surrogate 和 time-varying soft-control。
 
 Agent guard、model provenance、diff audit 和插件仍然有价值，但它们是围绕研究诊断做出的工程应用层，不是项目重心。
+导入单个外部 run 时优先用 `pcl import ...`；需要 reviewer-facing 证据包时优先用
+`pcl evidence-audit ...`，它会同时检查 source hash、claim 支持、诊断缺口和 bundle 完整性。
 
 ![prompt_control_lab 生态定位](docs/assets/ecosystem.zh.svg)
 

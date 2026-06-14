@@ -138,6 +138,7 @@ def build_parser() -> argparse.ArgumentParser:
 
     ingest_parser = subcommands.add_parser(
         "ingest",
+        aliases=["import"],
         help="Import external eval-tool results into PromptControlLab artifacts.",
     )
     ingest_subcommands = ingest_parser.add_subparsers(dest="ingest_command", required=True)

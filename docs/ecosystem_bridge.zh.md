@@ -90,21 +90,23 @@ pcl source-verify --run runs/from-promptfoo-audit
 如果你希望分步骤控制，可以先导入外部结果：
 
 ```bash
-pcl ingest auto --input results.json --out runs/from-external --score-name exact_match
+pcl import auto --input results.json --out runs/from-external --score-name exact_match
 ```
+
+`pcl import` 是更直白的外部证据导入入口；`pcl ingest` 仍作为旧脚本兼容别名保留。
 
 也可以使用明确的导入器：
 
 ```bash
-pcl ingest promptfoo --input results.json --out runs/from-promptfoo --prompt-id candidate
+pcl import promptfoo --input results.json --out runs/from-promptfoo --prompt-id candidate
 
-pcl ingest langfuse --input langfuse-export.json --out runs/from-langfuse \
+pcl import langfuse --input langfuse-export.json --out runs/from-langfuse \
   --name candidate --score-name exact_match
 
-pcl ingest langsmith --input langsmith-runs.csv --out runs/from-langsmith \
+pcl import langsmith --input langsmith-runs.csv --out runs/from-langsmith \
   --experiment candidate --score-name exact_match
 
-pcl ingest deepeval --input deepeval-test-run.json --out runs/from-deepeval \
+pcl import deepeval --input deepeval-test-run.json --out runs/from-deepeval \
   --score-name exact_match
 ```
 

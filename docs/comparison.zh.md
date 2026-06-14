@@ -14,8 +14,12 @@
 | Langfuse | 开源 observability、prompt management、evaluation、成本跟踪、SDK/OpenTelemetry/LiteLLM 集成、自托管。 | 通用 tracing、prompt registry、成本 dashboard、RBAC、托管观测平台。 | 补上 observability 工具通常不覆盖的研究诊断：soft-hard 部署 gap、hidden-state trajectory、Riccati surrogate、time-varying control evidence 和 claim 支持边界。 |
 
 当前产品定位和定价来源：
+[Promptfoo intro](https://www.promptfoo.dev/docs/intro/)、
+[Promptfoo CI/CD docs](https://www.promptfoo.dev/docs/integrations/ci-cd/)、
 [Promptfoo pricing](https://www.promptfoo.dev/pricing)、
+[LangSmith observability](https://www.langchain.com/langsmith/observability)、
 [LangSmith pricing](https://www.langchain.com/pricing)、
+[Langfuse docs](https://langfuse.com/docs)、
 [Langfuse pricing](https://langfuse.com/pricing)。
 
 ## 最值得押注的切口
@@ -37,6 +41,30 @@ pcl evidence-audit \
 这条命令会导入外部导出结果，生成成对统计，检查比较是否真的是 prompt-only，
 写出 evidence card，检查当前证据能支持的 claim，报告还缺哪些论文诊断，并验证
 浏览器优先的 research bundle 哈希。
+
+如果只想导入一个外部 run，可以用更直白的 import 入口：
+
+```bash
+pcl import promptfoo --input results.json --out runs/from-promptfoo --prompt-id candidate
+pcl import langfuse --input langfuse-export.json --out runs/from-langfuse --name candidate
+pcl import langsmith --input langsmith-runs.csv --out runs/from-langsmith --experiment candidate
+```
+
+`pcl ingest ...` 仍然作为兼容旧脚本的别名保留。
+
+## 不重造竞品，也能超过它们的方式
+
+1. **把证据来源做得更严谨。** 外部工具可以给出分数和 trace；PCL 应该保存原始 source
+   文件、source hash、resolved path、导入筛选条件和生成后的 bundle hash。
+2. **把 prompt-only 有效性显式化。** 每次比较都应该说明 model、provider、metric、split、
+   prompt identity 或 source 文件有没有变化；如果变了，就标记为 confounded，而不是只展示
+   “candidate 分数更高”。
+3. **把论文诊断变成 checklist。** `gap-status` 和 `evidence-audit` 应该告诉用户还缺哪些诊断：
+   soft-hard gap、hidden-state trajectory、Riccati surrogate、time-varying control evidence。
+4. **自动收窄可声明的结论。** `claim-check` 应该防止用户在只有成对比较或外部导入不完整证据时，
+   直接声称完整研究结果。
+5. **保持本地、可组合。** 最容易被采用的路线不是托管大平台，而是一个可以接在
+   Promptfoo、Langfuse、LangSmith、DeepEval、notebook 或自定义 eval 脚本后面的本地 Python 工具。
 
 ## 用户应该从 PCL 得到什么答案
 

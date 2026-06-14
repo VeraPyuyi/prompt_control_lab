@@ -54,3 +54,29 @@ def test_research_from_paper_docs_map_concepts_to_commands() -> None:
     assert "hidden-state trajectory" in doc_zh
     assert "Riccati surrogate" in doc_zh
     assert "time-varying soft-control" in doc_zh
+
+
+def test_competitive_positioning_stays_evidence_layer_first() -> None:
+    readme = Path("README.md").read_text(encoding="utf-8")
+    readme_zh = Path("README.zh.md").read_text(encoding="utf-8")
+    comparison = Path("docs/comparison.en.md").read_text(encoding="utf-8")
+    comparison_zh = Path("docs/comparison.zh.md").read_text(encoding="utf-8")
+
+    assert "pcl import promptfoo" in readme
+    assert "pcl import promptfoo" in readme_zh
+    assert "pcl ingest` is kept as the backward-compatible alias" in readme
+    assert "兼容别名" in readme_zh
+
+    for text in [comparison, comparison_zh]:
+        assert "Promptfoo" in text
+        assert "LangSmith" in text
+        assert "Langfuse" in text
+        assert "evidence-audit" in text
+        assert "claim-check" in text
+        assert "gap-status" in text
+
+    assert "How PCL Can Beat Adjacent Tools Without Rebuilding Them" in comparison
+    assert "不重造竞品" in comparison_zh
+    assert "超过它们的方式" in comparison_zh
+    assert "Promptfoo intro" in comparison
+    assert "Langfuse docs" in comparison

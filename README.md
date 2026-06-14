@@ -138,19 +138,20 @@ pcl evidence-from \
   --out runs/from-promptfoo-evidence
 
 # Lower-level import: PCL detects Promptfoo, DeepEval, Langfuse, or LangSmith exports.
-pcl ingest auto --input results.json --out runs/from-external --score-name exact_match
+# `pcl import` is the readable alias; `pcl ingest` remains supported for scripts.
+pcl import auto --input results.json --out runs/from-external --score-name exact_match
 pcl report --run runs/from-external
 
 # Use explicit importers when you need tool-specific filters.
-pcl ingest promptfoo --input results.json --out runs/from-promptfoo --prompt-id candidate
+pcl import promptfoo --input results.json --out runs/from-promptfoo --prompt-id candidate
 
-pcl ingest langfuse --input langfuse-export.json --out runs/from-langfuse \
+pcl import langfuse --input langfuse-export.json --out runs/from-langfuse \
   --name candidate --score-name exact_match
 
-pcl ingest langsmith --input langsmith-runs.csv --out runs/from-langsmith \
+pcl import langsmith --input langsmith-runs.csv --out runs/from-langsmith \
   --experiment candidate --score-name exact_match
 
-pcl ingest deepeval --input deepeval-test-run.json --out runs/from-deepeval \
+pcl import deepeval --input deepeval-test-run.json --out runs/from-deepeval \
   --score-name exact_match
 
 # Once you have two imported/scored runs, compare them as one evidence bundle.
@@ -307,7 +308,7 @@ The repository includes narrated 4K hands-on demo videos generated from real UI 
 12. `pcl ecosystem-scorecard`: regenerate the cross-tool Promptfoo/DeepEval/Langfuse/LangSmith positioning scorecard.
 13. `pcl evidence-audit`: import external exports, add PCL evidence, check gaps, verify source inputs, and verify the research bundle.
 14. `pcl evidence-from`: import external baseline/candidate exports and generate a PCL evidence card in one command.
-15. `pcl ingest auto` / `promptfoo` / `deepeval` / `langfuse` / `langsmith`: import external eval/trace artifacts into PCL research artifacts.
+15. `pcl import auto` / `promptfoo` / `deepeval` / `langfuse` / `langsmith`: import external eval/trace artifacts into PCL research artifacts. `pcl ingest` is kept as the backward-compatible alias.
 16. `pcl compare-runs`: turn two imported/scored runs into stats, validity, and a report in one command.
 17. `pcl claim-check`: say what claim the current evidence tier can safely support.
 18. `pcl report` / `pcl explain` / `pcl gate`: turn artifacts into readable decisions.
@@ -1091,6 +1092,9 @@ the research diagnostics rather than the center of gravity.
 
 The ecosystem bridge is deliberately narrow: import external eval/trace evidence first, then run
 PCL's comparison validity and paper-derived diagnostics on top.
+Use `pcl import ...` for a single external run and `pcl evidence-audit ...` when you need a
+reviewer-facing evidence package that also checks source hashes, claim support, diagnostic gaps,
+and bundle integrity.
 
 ![prompt_control_lab ecosystem position](docs/assets/ecosystem.svg)
 

@@ -88,6 +88,34 @@ def test_ingest_promptfoo_cli_filters_prompt_and_provider(tmp_path: Path) -> Non
     }
 
 
+def test_import_alias_matches_ingest_cli(tmp_path: Path) -> None:
+    source = tmp_path / "promptfoo-results.json"
+    out_dir = tmp_path / "runs" / "import-alias"
+    source.write_text(json.dumps(_promptfoo_v3_payload()), encoding="utf-8")
+
+    assert (
+        main(
+            [
+                "import",
+                "promptfoo",
+                "--input",
+                str(source),
+                "--out",
+                str(out_dir),
+                "--prompt-id",
+                "candidate",
+            ]
+        )
+        == 0
+    )
+
+    predictions = read_jsonl(out_dir / "predictions.jsonl")
+    assert len(predictions) == 2
+    manifest = read_json(out_dir / "manifest.json")
+    assert manifest["mode"] == "promptfoo_ingest"
+    assert manifest["source_tool"] == "promptfoo"
+
+
 def test_ingest_promptfoo_requires_filter_for_multiple_prompt_ids(tmp_path: Path) -> None:
     source = tmp_path / "promptfoo-results.json"
     payload = _promptfoo_v3_payload()
