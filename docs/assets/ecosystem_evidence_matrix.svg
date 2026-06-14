@@ -1,0 +1,92 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="640" viewBox="0 0 1280 640" role="img" aria-labelledby="title desc">
+  <title id="title">prompt_control_lab PCL-added evidence matrix</title>
+  <desc id="desc">A cross-tool matrix showing what prompt_control_lab adds on top of Promptfoo, Langfuse, LangSmith, and DeepEval exports.</desc>
+  <defs>
+    <style>
+      .bg{fill:#f8fafc}.title{font:700 32px Arial,sans-serif;fill:#102033}.sub{font:400 16px Arial,sans-serif;fill:#52616f}
+      .panel{fill:#fff;stroke:#cbd5e1;stroke-width:2}.head{fill:#ecfeff;stroke:#0e7490;stroke-width:2}.tool{fill:#eef2ff;stroke:#6366f1;stroke-width:2}
+      .h{font:700 16px Arial,sans-serif;fill:#102033}.t{font:400 13px Arial,sans-serif;fill:#405160}.small{font:400 12px Arial,sans-serif;fill:#52616f}
+      .mono{font:700 12px Consolas,monospace;fill:#102033}.pill{rx:12;ry:12}.ok{fill:#dcfce7;stroke:#86efac}.warn{fill:#fff7df;stroke:#fbbf24}.need{fill:#feecec;stroke:#fca5a5}
+      .okText{font:700 11px Arial,sans-serif;fill:#166534}.warnText{font:700 11px Arial,sans-serif;fill:#92400e}.needText{font:700 11px Arial,sans-serif;fill:#991b1b}
+      .line{stroke:#d9e1ec;stroke-width:2}.arrow{stroke:#64748b;stroke-width:2.4;fill:none;marker-end:url(#arrow)}
+    </style>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto">
+      <path d="M0,0 L0,6 L9,3 z" fill="#64748b"/>
+    </marker>
+  </defs>
+  <rect class="bg" width="1280" height="640"/>
+  <text x="48" y="52" class="title">PCL-added Evidence Matrix</text>
+  <text x="48" y="82" class="sub">Use Promptfoo, Langfuse, LangSmith, or DeepEval as source systems. Use prompt_control_lab to audit prompt-optimization evidence.</text>
+
+  <rect x="48" y="122" width="1184" height="430" rx="16" class="panel"/>
+  <rect x="48" y="122" width="1184" height="58" rx="16" class="head"/>
+  <text x="78" y="158" class="h">External tool</text>
+  <text x="260" y="158" class="h">Native strength</text>
+  <text x="520" y="158" class="h">prompt_control_lab evidence columns</text>
+  <text x="1054" y="158" class="h">Reviewer action</text>
+
+  <line x1="48" y1="180" x2="1232" y2="180" class="line"/>
+  <line x1="224" y1="122" x2="224" y2="552" class="line"/>
+  <line x1="484" y1="122" x2="484" y2="552" class="line"/>
+  <line x1="1030" y1="122" x2="1030" y2="552" class="line"/>
+
+  <g transform="translate(0,0)">
+    <text x="78" y="222" class="h">Promptfoo</text>
+    <text x="260" y="210" class="t">LLM evals, red-team,</text>
+    <text x="260" y="230" class="t">provider comparison</text>
+    <rect x="520" y="198" width="92" height="26" class="pill ok"/><text x="537" y="216" class="okText">validity</text>
+    <rect x="622" y="198" width="96" height="26" class="pill ok"/><text x="640" y="216" class="okText">paired stats</text>
+    <rect x="728" y="198" width="98" height="26" class="pill ok"/><text x="743" y="216" class="okText">evidence card</text>
+    <rect x="836" y="198" width="92" height="26" class="pill warn"/><text x="852" y="216" class="warnText">claim check</text>
+    <rect x="938" y="198" width="70" height="26" class="pill need"/><text x="952" y="216" class="needText">gaps</text>
+    <text x="1054" y="210" class="mono">pcl gap-status</text>
+    <text x="1054" y="230" class="small">close missing diagnostics</text>
+  </g>
+  <line x1="48" y1="262" x2="1232" y2="262" class="line"/>
+
+  <g transform="translate(0,82)">
+    <text x="78" y="222" class="h">Langfuse</text>
+    <text x="260" y="210" class="t">Open traces, costs,</text>
+    <text x="260" y="230" class="t">scores, prompt versions</text>
+    <rect x="520" y="198" width="92" height="26" class="pill warn"/><text x="537" y="216" class="warnText">validity</text>
+    <rect x="622" y="198" width="96" height="26" class="pill ok"/><text x="640" y="216" class="okText">paired stats</text>
+    <rect x="728" y="198" width="98" height="26" class="pill ok"/><text x="743" y="216" class="okText">evidence card</text>
+    <rect x="836" y="198" width="92" height="26" class="pill warn"/><text x="852" y="216" class="warnText">claim check</text>
+    <rect x="938" y="198" width="70" height="26" class="pill need"/><text x="952" y="216" class="needText">gaps</text>
+    <text x="1054" y="210" class="mono">verify bundle</text>
+    <text x="1054" y="230" class="small">separate trace vs prompt effects</text>
+  </g>
+  <line x1="48" y1="344" x2="1232" y2="344" class="line"/>
+
+  <g transform="translate(0,164)">
+    <text x="78" y="222" class="h">LangSmith</text>
+    <text x="260" y="210" class="t">Agent traces, datasets,</text>
+    <text x="260" y="230" class="t">experiments, debugging</text>
+    <rect x="520" y="198" width="92" height="26" class="pill warn"/><text x="537" y="216" class="warnText">validity</text>
+    <rect x="622" y="198" width="96" height="26" class="pill ok"/><text x="640" y="216" class="okText">paired stats</text>
+    <rect x="728" y="198" width="98" height="26" class="pill ok"/><text x="743" y="216" class="okText">evidence card</text>
+    <rect x="836" y="198" width="92" height="26" class="pill warn"/><text x="852" y="216" class="warnText">claim check</text>
+    <rect x="938" y="198" width="70" height="26" class="pill need"/><text x="952" y="216" class="needText">gaps</text>
+    <text x="1054" y="210" class="mono">open claim_check</text>
+    <text x="1054" y="230" class="small">avoid overclaiming improvements</text>
+  </g>
+  <line x1="48" y1="426" x2="1232" y2="426" class="line"/>
+
+  <g transform="translate(0,246)">
+    <text x="78" y="222" class="h">DeepEval</text>
+    <text x="260" y="210" class="t">Local test-run JSON,</text>
+    <text x="260" y="230" class="t">assertions, metric scores</text>
+    <rect x="520" y="198" width="92" height="26" class="pill warn"/><text x="537" y="216" class="warnText">validity</text>
+    <rect x="622" y="198" width="96" height="26" class="pill ok"/><text x="640" y="216" class="okText">paired stats</text>
+    <rect x="728" y="198" width="98" height="26" class="pill ok"/><text x="743" y="216" class="okText">evidence card</text>
+    <rect x="836" y="198" width="92" height="26" class="pill warn"/><text x="852" y="216" class="warnText">claim check</text>
+    <rect x="938" y="198" width="70" height="26" class="pill need"/><text x="952" y="216" class="needText">gaps</text>
+    <text x="1054" y="210" class="mono">run diagnose</text>
+    <text x="1054" y="230" class="small">add paper-derived probes</text>
+  </g>
+
+  <path d="M204 576 H1030" class="arrow"/>
+  <text x="48" y="582" class="small">Matrix output</text>
+  <text x="1054" y="582" class="mono">ecosystem_scorecard.json:pcl_evidence_matrix</text>
+  <text x="48" y="614" class="sub">The point is not to replace these tools; it is to make prompt optimization claims auditable.</text>
+</svg>

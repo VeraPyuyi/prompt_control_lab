@@ -96,6 +96,10 @@ prompt-only 比较有效性、`evidence_card.json` / `.md` / `.html`、
 
 ![prompt_control_lab 生态证据闭环](docs/assets/ecosystem_scorecard.zh.svg)
 
+定位表还会写出一张可机器读取的补充证据矩阵。它会直接说明 PCL 在外部工具结果之上补了哪些证据：比较有效性、成对不确定性、证据卡、主张检查、剩余缺口，以及下一步该运行的诊断命令。
+
+![prompt_control_lab 生态补充证据矩阵](docs/assets/ecosystem_evidence_matrix.zh.svg)
+
 ```bash
 # 一次性运行仓库自带的 Promptfoo / DeepEval / Langfuse / LangSmith 风格导出示例。
 pcl ecosystem-demo --examples examples/external --out runs/ecosystem-demo

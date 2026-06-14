@@ -103,6 +103,12 @@ research diagnostics layer on top:
 
 ![prompt_control_lab ecosystem scorecard flow](docs/assets/ecosystem_scorecard.svg)
 
+The scorecard also writes a machine-readable evidence matrix. It makes the extra PCL layer explicit:
+validity checks, paired uncertainty, evidence cards, claim checks, remaining gaps, and the next
+diagnostic command to run.
+
+![prompt_control_lab ecosystem evidence matrix](docs/assets/ecosystem_evidence_matrix.svg)
+
 ```bash
 # Fast all-tools demo with bundled Promptfoo/DeepEval/Langfuse/LangSmith-style exports.
 pcl ecosystem-demo --examples examples/external --out runs/ecosystem-demo

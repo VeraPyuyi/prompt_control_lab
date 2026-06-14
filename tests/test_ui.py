@@ -1173,18 +1173,22 @@ def test_ecosystem_scorecard_svg_assets_exist_and_are_linked() -> None:
     readme_zh = Path("README.zh.md").read_text(encoding="utf-8")
     assert "docs/assets/ecosystem_scorecard.svg" in readme
     assert "docs/assets/ecosystem_scorecard.zh.svg" in readme_zh
+    assert "docs/assets/ecosystem_evidence_matrix.svg" in readme
+    assert "docs/assets/ecosystem_evidence_matrix.zh.svg" in readme_zh
     assets = [
-        ("ecosystem_scorecard.svg", "Ecosystem Evidence Closure"),
-        ("ecosystem_scorecard.zh.svg", "生态证据闭环"),
+        ("ecosystem_scorecard.svg", "Ecosystem Evidence Closure", 'viewBox="0 0 1200 560"'),
+        ("ecosystem_scorecard.zh.svg", "生态证据闭环", 'viewBox="0 0 1200 560"'),
+        ("ecosystem_evidence_matrix.svg", "PCL-added Evidence Matrix", 'viewBox="0 0 1280 640"'),
+        ("ecosystem_evidence_matrix.zh.svg", "PCL 补充证据矩阵", 'viewBox="0 0 1280 640"'),
     ]
-    for name, expected in assets:
+    for name, expected, viewbox in assets:
         path = Path("docs") / "assets" / name
         assert path.exists(), name
         text = path.read_text(encoding="utf-8")
         assert expected in text
         assert "prompt_control_lab" in text
         assert "promptcontrollab" not in text
-        assert 'viewBox="0 0 1200 560"' in text
+        assert viewbox in text
 
 
 def test_tutorial_svg_renderer_reads_utf8_svg(tmp_path: Path) -> None:

@@ -1,0 +1,92 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="640" viewBox="0 0 1280 640" role="img" aria-labelledby="title desc">
+  <title id="title">prompt_control_lab PCL 补充证据矩阵</title>
+  <desc id="desc">展示 Promptfoo、Langfuse、LangSmith 和 DeepEval 导出后，prompt_control_lab 补充的 prompt optimization 证据列。</desc>
+  <defs>
+    <style>
+      .bg{fill:#f8fafc}.title{font:700 32px Arial,"Microsoft YaHei",sans-serif;fill:#102033}.sub{font:400 16px Arial,"Microsoft YaHei",sans-serif;fill:#52616f}
+      .panel{fill:#fff;stroke:#cbd5e1;stroke-width:2}.head{fill:#ecfeff;stroke:#0e7490;stroke-width:2}.tool{fill:#eef2ff;stroke:#6366f1;stroke-width:2}
+      .h{font:700 16px Arial,"Microsoft YaHei",sans-serif;fill:#102033}.t{font:400 13px Arial,"Microsoft YaHei",sans-serif;fill:#405160}.small{font:400 12px Arial,"Microsoft YaHei",sans-serif;fill:#52616f}
+      .mono{font:700 12px Consolas,monospace;fill:#102033}.pill{rx:12;ry:12}.ok{fill:#dcfce7;stroke:#86efac}.warn{fill:#fff7df;stroke:#fbbf24}.need{fill:#feecec;stroke:#fca5a5}
+      .okText{font:700 11px Arial,"Microsoft YaHei",sans-serif;fill:#166534}.warnText{font:700 11px Arial,"Microsoft YaHei",sans-serif;fill:#92400e}.needText{font:700 11px Arial,"Microsoft YaHei",sans-serif;fill:#991b1b}
+      .line{stroke:#d9e1ec;stroke-width:2}.arrow{stroke:#64748b;stroke-width:2.4;fill:none;marker-end:url(#arrow)}
+    </style>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto">
+      <path d="M0,0 L0,6 L9,3 z" fill="#64748b"/>
+    </marker>
+  </defs>
+  <rect class="bg" width="1280" height="640"/>
+  <text x="48" y="52" class="title">PCL 补充证据矩阵</text>
+  <text x="48" y="82" class="sub">外部工具继续做评测、观测和测试；prompt_control_lab 负责把 prompt 优化主张变成可审查证据。</text>
+
+  <rect x="48" y="122" width="1184" height="430" rx="16" class="panel"/>
+  <rect x="48" y="122" width="1184" height="58" rx="16" class="head"/>
+  <text x="78" y="158" class="h">外部工具</text>
+  <text x="260" y="158" class="h">原生强项</text>
+  <text x="520" y="158" class="h">prompt_control_lab 补充证据列</text>
+  <text x="1054" y="158" class="h">审查下一步</text>
+
+  <line x1="48" y1="180" x2="1232" y2="180" class="line"/>
+  <line x1="224" y1="122" x2="224" y2="552" class="line"/>
+  <line x1="484" y1="122" x2="484" y2="552" class="line"/>
+  <line x1="1030" y1="122" x2="1030" y2="552" class="line"/>
+
+  <g transform="translate(0,0)">
+    <text x="78" y="222" class="h">Promptfoo</text>
+    <text x="260" y="210" class="t">LLM 评测、红队、</text>
+    <text x="260" y="230" class="t">provider 对比和 CI</text>
+    <rect x="520" y="198" width="92" height="26" class="pill ok"/><text x="538" y="216" class="okText">有效性</text>
+    <rect x="622" y="198" width="96" height="26" class="pill ok"/><text x="642" y="216" class="okText">成对统计</text>
+    <rect x="728" y="198" width="98" height="26" class="pill ok"/><text x="750" y="216" class="okText">证据卡</text>
+    <rect x="836" y="198" width="92" height="26" class="pill warn"/><text x="854" y="216" class="warnText">主张检查</text>
+    <rect x="938" y="198" width="70" height="26" class="pill need"/><text x="952" y="216" class="needText">缺口</text>
+    <text x="1054" y="210" class="mono">pcl gap-status</text>
+    <text x="1054" y="230" class="small">补齐缺失诊断</text>
+  </g>
+  <line x1="48" y1="262" x2="1232" y2="262" class="line"/>
+
+  <g transform="translate(0,82)">
+    <text x="78" y="222" class="h">Langfuse</text>
+    <text x="260" y="210" class="t">开源 traces、成本、</text>
+    <text x="260" y="230" class="t">分数和 prompt 版本</text>
+    <rect x="520" y="198" width="92" height="26" class="pill warn"/><text x="538" y="216" class="warnText">有效性</text>
+    <rect x="622" y="198" width="96" height="26" class="pill ok"/><text x="642" y="216" class="okText">成对统计</text>
+    <rect x="728" y="198" width="98" height="26" class="pill ok"/><text x="750" y="216" class="okText">证据卡</text>
+    <rect x="836" y="198" width="92" height="26" class="pill warn"/><text x="854" y="216" class="warnText">主张检查</text>
+    <rect x="938" y="198" width="70" height="26" class="pill need"/><text x="952" y="216" class="needText">缺口</text>
+    <text x="1054" y="210" class="mono">verify bundle</text>
+    <text x="1054" y="230" class="small">区分 trace 与 prompt 影响</text>
+  </g>
+  <line x1="48" y1="344" x2="1232" y2="344" class="line"/>
+
+  <g transform="translate(0,164)">
+    <text x="78" y="222" class="h">LangSmith</text>
+    <text x="260" y="210" class="t">Agent trace、数据集、</text>
+    <text x="260" y="230" class="t">实验和调试</text>
+    <rect x="520" y="198" width="92" height="26" class="pill warn"/><text x="538" y="216" class="warnText">有效性</text>
+    <rect x="622" y="198" width="96" height="26" class="pill ok"/><text x="642" y="216" class="okText">成对统计</text>
+    <rect x="728" y="198" width="98" height="26" class="pill ok"/><text x="750" y="216" class="okText">证据卡</text>
+    <rect x="836" y="198" width="92" height="26" class="pill warn"/><text x="854" y="216" class="warnText">主张检查</text>
+    <rect x="938" y="198" width="70" height="26" class="pill need"/><text x="952" y="216" class="needText">缺口</text>
+    <text x="1054" y="210" class="mono">open claim_check</text>
+    <text x="1054" y="230" class="small">避免过度宣称提升</text>
+  </g>
+  <line x1="48" y1="426" x2="1232" y2="426" class="line"/>
+
+  <g transform="translate(0,246)">
+    <text x="78" y="222" class="h">DeepEval</text>
+    <text x="260" y="210" class="t">本地 TestRun JSON、</text>
+    <text x="260" y="230" class="t">断言和指标分数</text>
+    <rect x="520" y="198" width="92" height="26" class="pill warn"/><text x="538" y="216" class="warnText">有效性</text>
+    <rect x="622" y="198" width="96" height="26" class="pill ok"/><text x="642" y="216" class="okText">成对统计</text>
+    <rect x="728" y="198" width="98" height="26" class="pill ok"/><text x="750" y="216" class="okText">证据卡</text>
+    <rect x="836" y="198" width="92" height="26" class="pill warn"/><text x="854" y="216" class="warnText">主张检查</text>
+    <rect x="938" y="198" width="70" height="26" class="pill need"/><text x="952" y="216" class="needText">缺口</text>
+    <text x="1054" y="210" class="mono">run diagnose</text>
+    <text x="1054" y="230" class="small">补充论文诊断探针</text>
+  </g>
+
+  <path d="M204 576 H1030" class="arrow"/>
+  <text x="48" y="582" class="small">矩阵输出</text>
+  <text x="1054" y="582" class="mono">ecosystem_scorecard.json:pcl_evidence_matrix</text>
+  <text x="48" y="614" class="sub">重点不是替代这些工具，而是让 prompt optimization 主张可被审查。</text>
+</svg>
