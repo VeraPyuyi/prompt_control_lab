@@ -94,9 +94,19 @@ def _copy_resource_dir(relative: str, destination: Path, *, force: bool) -> None
     destination.mkdir(parents=True, exist_ok=True)
     with resources.as_file(source) as source_path:
         for item in source_path.rglob("*"):
-            if item.is_dir():
+            if item.is_dir() or _is_generated_python_cache(item):
                 continue
             relative_path = item.relative_to(source_path)
             out = destination / relative_path
             out.parent.mkdir(parents=True, exist_ok=True)
             shutil.copyfile(item, out)
+
+
+def _is_generated_python_cache(path: Path) -> bool:
+    """Skip interpreter cache files when installing human-facing templates."""
+
+    return (
+        "__pycache__" in path.parts
+        or path.suffix in {".pyc", ".pyo"}
+        or path.name.endswith("$py.class")
+    )

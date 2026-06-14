@@ -551,6 +551,9 @@ def test_install_plugin_all_uses_target_as_root(tmp_path: Path) -> None:
     assert (target / "cursor" / "prompt_control_lab.mdc").exists()
     assert (target / "claude-code" / "prompt_guard.py").exists()
     assert (target / "github-action" / "prompt-control-lab-gate.yml").exists()
+    copied_names = [path.name for path in target.rglob("*")]
+    assert "__pycache__" not in copied_names
+    assert not any(path.suffix == ".pyc" for path in target.rglob("*"))
 
 
 def test_template_data_is_available_as_package_resource() -> None:

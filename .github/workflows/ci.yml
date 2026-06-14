@@ -22,3 +22,16 @@ jobs:
         run: mypy
       - name: Tests
         run: pytest
+      - name: Wheel smoke
+        run: |
+          python -m build --wheel --no-isolation
+          python -m venv .wheel-smoke
+          . .wheel-smoke/bin/activate
+          python -m pip install --no-index --find-links dist promptcontrollab
+          pcl --help
+          pcl install-plugin all --target .wheel-smoke/templates
+          test -f .wheel-smoke/templates/codex/SKILL.md
+          test -f .wheel-smoke/templates/cursor/prompt_control_lab.mdc
+          test -f .wheel-smoke/templates/claude-code/prompt_guard.py
+          test -f .wheel-smoke/templates/github-action/prompt-control-lab-gate.yml
+          test -z "$(find .wheel-smoke/templates -name __pycache__ -o -name '*.pyc')"
