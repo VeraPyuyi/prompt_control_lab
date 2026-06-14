@@ -23,6 +23,7 @@ from promptcontrollab.ui.data import (
     claim_check_summary,
     claim_evidence_ladder,
     ecosystem_demo_rows,
+    ecosystem_evidence_matrix_rows,
     ecosystem_scorecard_rows,
     evidence_card_rows,
     evidence_gap_action_rows,
@@ -483,6 +484,22 @@ def test_ui_recognizes_ecosystem_demo_root_and_summarizes_tools(tmp_path: Path) 
         {
             "kind": "ecosystem_scorecard",
             "positioning": "PCL adds the research evidence layer.",
+            "pcl_evidence_matrix": [
+                {
+                    "tool": "promptfoo",
+                    "display_name": "Promptfoo",
+                    "prompt_only_validity": "needs_review",
+                    "paired_stats": "recorded",
+                    "evidence_card": "present",
+                    "claim_check": "pass",
+                    "research_bundle": "present",
+                    "bundle_verification": "pass",
+                    "gap_status": "needs_work",
+                    "missing_paper_diagnostic_count": 1,
+                    "missing_paper_diagnostics": ["hidden-state trajectory"],
+                    "next_command": "pcl gap-status --run promptfoo",
+                }
+            ],
             "rows": [
                 {
                     "tool": "promptfoo",
@@ -508,6 +525,7 @@ def test_ui_recognizes_ecosystem_demo_root_and_summarizes_tools(tmp_path: Path) 
     detail = load_run_detail(demo)
     rows = ecosystem_demo_rows(detail)
     scorecard_rows = ecosystem_scorecard_rows(detail)
+    matrix_rows = ecosystem_evidence_matrix_rows(detail)
 
     assert "ecosystem_demo.json" in detail["artifacts"]
     assert "ecosystem_scorecard.json" in detail["artifacts"]
@@ -531,6 +549,21 @@ def test_ui_recognizes_ecosystem_demo_root_and_summarizes_tools(tmp_path: Path) 
     ]
     assert [row["tool"] for row in rows] == ["promptfoo", "langfuse", "langsmith"]
     assert rows[0]["open_first"] == "promptfoo/bridge_summary.md"
+    assert matrix_rows == [
+        {
+            "tool": "Promptfoo",
+            "prompt_only_validity": "needs_review",
+            "paired_stats": "recorded",
+            "evidence_card": "present",
+            "claim_check": "pass",
+            "research_bundle": "present",
+            "bundle_verification": "pass",
+            "gap_status": "needs_work",
+            "missing_count": 1,
+            "missing_paper_diagnostics": "hidden-state trajectory",
+            "next_command": "pcl gap-status --run promptfoo",
+        }
+    ]
 
 
 def test_ui_summarizes_external_evidence_gap_diagnostics(tmp_path: Path) -> None:

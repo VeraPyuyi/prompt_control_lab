@@ -408,6 +408,18 @@ def test_cli_ecosystem_demo_runs_all_external_bridge_examples(tmp_path: Path) ->
         scorecard["rows"][0]["research_bundle_integrity"]["verification_status"]
         == "not_checked"
     )
+    matrix = scorecard["pcl_evidence_matrix"]
+    assert [item["tool"] for item in matrix] == [
+        "promptfoo",
+        "langfuse",
+        "langsmith",
+        "deepeval",
+    ]
+    assert matrix[0]["evidence_card"] == "present"
+    assert matrix[0]["claim_check"] == "needs_review"
+    assert matrix[0]["research_bundle"] == "present"
+    assert matrix[0]["bundle_verification"] == "not_checked"
+    assert matrix[0]["missing_paper_diagnostic_count"] > 0
     promptfoo_links = scorecard["rows"][0]["artifact_links"]
     assert {"label": "Bridge summary", "path": "promptfoo/bridge_summary.html"} in promptfoo_links
     assert {"label": "Research bundle", "path": "promptfoo/research_bundle.html"} in promptfoo_links
@@ -416,6 +428,8 @@ def test_cli_ecosystem_demo_runs_all_external_bridge_examples(tmp_path: Path) ->
     assert {"label": "HTML report", "path": "promptfoo/report.html"} in promptfoo_links
     scorecard_markdown = (out / "ecosystem_scorecard.md").read_text(encoding="utf-8")
     assert "research evidence layer" in scorecard_markdown
+    assert "PCL-added evidence matrix" in scorecard_markdown
+    assert "Prompt-only validity" in scorecard_markdown
     assert "pcl gap-status" in scorecard_markdown
     assert "Bundle integrity" in scorecard_markdown
     assert "hashed; present" in scorecard_markdown
@@ -426,6 +440,8 @@ def test_cli_ecosystem_demo_runs_all_external_bridge_examples(tmp_path: Path) ->
     assert "[Claim check](promptfoo/claim_check.html)" in scorecard_markdown
     scorecard_html = (out / "ecosystem_scorecard.html").read_text(encoding="utf-8")
     assert "Ecosystem Scorecard" in scorecard_html
+    assert "PCL-added evidence matrix" in scorecard_html
+    assert "Prompt-only validity" in scorecard_html
     assert "DeepEval" in scorecard_html
     assert "promptfoo/bridge_summary.html" in scorecard_html
     assert "Bundle integrity" in scorecard_html

@@ -40,6 +40,7 @@ from promptcontrollab.ui.data import (
     claim_check_summary,
     claim_evidence_ladder,
     ecosystem_demo_rows,
+    ecosystem_evidence_matrix_rows,
     ecosystem_scorecard_rows,
     evidence_card_rows,
     evidence_gap_action_rows,
@@ -115,6 +116,7 @@ TEXT = {
         "claim_check_next_missing": "Missing for next tier",
         "ecosystem_bridge": "Ecosystem bridge",
         "ecosystem_scorecard": "Ecosystem scorecard",
+        "ecosystem_evidence_matrix": "PCL-added evidence matrix",
         "ecosystem_demo": "Ecosystem demo bundles",
         "evidence_gap_diagnosis": "Paper evidence gap diagnosis",
         "evidence_gap_actions": "How to close these gaps",
@@ -331,6 +333,7 @@ TEXT = {
         "claim_check_next_missing": "下一层级缺失证据",
         "ecosystem_bridge": "生态桥接",
         "ecosystem_scorecard": "生态证据总览",
+        "ecosystem_evidence_matrix": "PCL 补充证据矩阵",
         "ecosystem_demo": "生态 demo 证据包",
         "evidence_gap_diagnosis": "论文证据缺口诊断",
         "evidence_gap_actions": "如何补齐这些缺口",
@@ -1367,6 +1370,7 @@ def _render_research_overview_tab(st: Any, text: dict[str, str], detail: JsonDic
     claim_ladder = claim_evidence_ladder(detail)
     bridge = external_bridge_summary(detail)
     scorecard_rows = ecosystem_scorecard_rows(detail)
+    scorecard_matrix_rows = ecosystem_evidence_matrix_rows(detail)
     ecosystem_rows = ecosystem_demo_rows(detail)
     gap_rows = evidence_gap_rows(detail)
     gap_action_rows = evidence_gap_action_rows(detail)
@@ -1425,6 +1429,12 @@ def _render_research_overview_tab(st: Any, text: dict[str, str], detail: JsonDic
         scorecard = detail.get("ecosystem_scorecard")
         scorecard_dict = scorecard if isinstance(scorecard, dict) else {}
         st.caption(str(scorecard_dict.get("positioning", "")))
+        if scorecard_matrix_rows:
+            st.markdown(
+                f'<div class="pcl-section-title">{html.escape(text["ecosystem_evidence_matrix"])}</div>',
+                unsafe_allow_html=True,
+            )
+            st.dataframe(scorecard_matrix_rows, use_container_width=True)
         st.dataframe(scorecard_rows, use_container_width=True)
 
     if ecosystem_rows:

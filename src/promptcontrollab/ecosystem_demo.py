@@ -196,6 +196,7 @@ def _write_scorecard(
     out_path: Path | None = None,
 ) -> JsonDict:
     rows = _scorecard_rows(out_dir=out_dir, payload=payload, diagnostics=diagnostics)
+    evidence_matrix = _pcl_evidence_matrix(rows)
     json_path = _scorecard_json_path(out_dir=out_dir, out_path=out_path)
     ensure_dir(json_path.parent)
     md_path = json_path.with_suffix(".md")
@@ -209,6 +210,7 @@ def _write_scorecard(
         ),
         "tool_count": len(rows),
         "rows": rows,
+        "pcl_evidence_matrix": evidence_matrix,
         "recommended_review_order": [
             "Open ecosystem_scorecard.html for the cross-tool summary.",
             "Use ecosystem_scorecard.md for plain-text review.",
@@ -321,6 +323,55 @@ def _preferred_artifact(tool_dir: Path, stem: str, *suffixes: str) -> Path:
         if path.exists():
             return path
     return tool_dir / f"{stem}.{suffixes[-1] if suffixes else 'md'}"
+
+
+def _pcl_evidence_matrix(rows: list[JsonDict]) -> list[JsonDict]:
+    """Return a compact matrix of PCL-added evidence per external tool."""
+
+    matrix: list[JsonDict] = []
+    for row in rows:
+        missing = row.get("missing_paper_diagnostics")
+        missing_list = missing if isinstance(missing, list) else []
+        integrity = row.get("research_bundle_integrity")
+        integrity_dict = integrity if isinstance(integrity, dict) else {}
+        evidence_card = _artifact_status(row, "Evidence card")
+        claim_check = _artifact_status(row, "Claim check")
+        research_bundle = _artifact_status(row, "Research bundle")
+        matrix.append(
+            {
+                "tool": row.get("tool", ""),
+                "display_name": row.get("display_name", ""),
+                "prompt_only_validity": row.get("validity") or "unknown",
+                "paired_stats": "recorded"
+                if row.get("paired_n") is not None or row.get("mean_delta") is not None
+                else "unknown",
+                "evidence_card": evidence_card["status"],
+                "evidence_card_path": evidence_card["path"],
+                "claim_check": row.get("claim_check_status") or claim_check["status"],
+                "claim_check_path": claim_check["path"],
+                "research_bundle": research_bundle["status"],
+                "research_bundle_path": research_bundle["path"],
+                "bundle_hash_status": integrity_dict.get("status", "unknown"),
+                "bundle_verification": integrity_dict.get("verification_status", "not_checked"),
+                "gap_status": row.get("gap_status") or "not_checked",
+                "missing_paper_diagnostic_count": len(missing_list),
+                "missing_paper_diagnostics": list(missing_list),
+                "next_command": row.get("gap_status_command", ""),
+            }
+        )
+    return matrix
+
+
+def _artifact_status(row: JsonDict, label: str) -> JsonDict:
+    links = row.get("artifact_links")
+    if not isinstance(links, list):
+        return {"status": "missing", "path": ""}
+    for item in links:
+        if not isinstance(item, dict):
+            continue
+        if item.get("label") == label and item.get("path"):
+            return {"status": "present", "path": item.get("path")}
+    return {"status": "missing", "path": ""}
 
 
 def _gap_status_summary(tool_dir: Path) -> JsonDict:
@@ -450,14 +501,65 @@ def _render_scorecard(payload: JsonDict) -> str:
         "",
         str(payload.get("positioning", "")),
         "",
-        "## Cross-tool summary",
+        "## PCL-added evidence matrix",
         "",
         (
-            "| Tool | External strength | What PCL adds | Validity | Evidence tier | "
-            "Gap status | Bundle integrity | Reviewer artifacts | Missing paper diagnostics |"
+            "| Tool | Prompt-only validity | Paired stats | Evidence card | Claim check | "
+            "Research bundle | Bundle verification | Gap status | Missing diagnostics | "
+            "Next command |"
         ),
-        "|---|---|---|---|---|---|---|---|---|",
+        "|---|---|---|---|---|---|---|---|---|---|",
     ]
+    matrix_rows = payload.get("pcl_evidence_matrix")
+    if isinstance(matrix_rows, list):
+        for row in matrix_rows:
+            if not isinstance(row, dict):
+                continue
+            missing = row.get("missing_paper_diagnostics")
+            missing_text = (
+                ", ".join(str(item) for item in missing)
+                if isinstance(missing, list)
+                else str(missing or "")
+            )
+            lines.append(
+                "| "
+                + " | ".join(
+                    [
+                        str(row.get("display_name", "")),
+                        str(row.get("prompt_only_validity", "")),
+                        str(row.get("paired_stats", "")),
+                        _artifact_status_markdown(
+                            row.get("evidence_card"),
+                            row.get("evidence_card_path"),
+                        ),
+                        _artifact_status_markdown(
+                            row.get("claim_check"),
+                            row.get("claim_check_path"),
+                        ),
+                        _artifact_status_markdown(
+                            row.get("research_bundle"),
+                            row.get("research_bundle_path"),
+                        ),
+                        str(row.get("bundle_verification", "")),
+                        str(row.get("gap_status", "")),
+                        missing_text,
+                        f"`{row.get('next_command', '')}`",
+                    ]
+                )
+                + " |"
+            )
+    lines.extend(
+        [
+            "",
+            "## Cross-tool summary",
+            "",
+            (
+                "| Tool | External strength | What PCL adds | Validity | Evidence tier | "
+                "Gap status | Bundle integrity | Reviewer artifacts | Missing paper diagnostics |"
+            ),
+            "|---|---|---|---|---|---|---|---|---|",
+        ]
+    )
     rows = payload.get("rows")
     if isinstance(rows, list):
         for row in rows:
@@ -529,6 +631,14 @@ def _render_scorecard(payload: JsonDict) -> str:
     return "\n".join(lines)
 
 
+def _artifact_status_markdown(status: object, path: object) -> str:
+    status_text = str(status or "")
+    path_text = str(path or "")
+    if path_text:
+        return f"{status_text}: [{path_text}]({path_text})"
+    return status_text
+
+
 def _artifact_links_markdown(value: object) -> str:
     if not isinstance(value, list):
         return ""
@@ -545,7 +655,9 @@ def _artifact_links_markdown(value: object) -> str:
 
 def _render_scorecard_html(payload: JsonDict) -> str:
     rows = _scorecard_html_rows(payload.get("rows"))
+    matrix_rows = _scorecard_html_rows(payload.get("pcl_evidence_matrix"))
     summary = _scorecard_summary(rows)
+    matrix_table_rows = "\n".join(_render_matrix_html_row(row) for row in matrix_rows)
     table_rows = "\n".join(_render_scorecard_html_row(row) for row in rows)
     review_items = "\n".join(
         f"<li>{_html_text(item)}</li>"
@@ -709,6 +821,29 @@ def _render_scorecard_html(payload: JsonDict) -> str:
       </div>
     </section>
 
+    <h2>PCL-added evidence matrix</h2>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Tool</th>
+            <th>Prompt-only validity</th>
+            <th>Paired stats</th>
+            <th>Evidence card</th>
+            <th>Claim check</th>
+            <th>Research bundle</th>
+            <th>Bundle verification</th>
+            <th>Gap status</th>
+            <th>Missing diagnostics</th>
+            <th>Next command</th>
+          </tr>
+        </thead>
+        <tbody>
+          {matrix_table_rows}
+        </tbody>
+      </table>
+    </div>
+
     <h2>Cross-tool positioning</h2>
     <div class="table-wrap">
       <table>
@@ -770,6 +905,31 @@ def _scorecard_summary(rows: list[JsonDict]) -> JsonDict:
     }
 
 
+def _render_matrix_html_row(row: JsonDict) -> str:
+    missing = row.get("missing_paper_diagnostics")
+    missing_text = (
+        ", ".join(str(item) for item in missing)
+        if isinstance(missing, list)
+        else str(missing or "")
+    )
+    return (
+        "<tr>"
+        f"<td><strong>{_html_text(row.get('display_name', ''))}</strong></td>"
+        f"<td>{_html_badge(row.get('prompt_only_validity'))}</td>"
+        f"<td>{_html_badge(row.get('paired_stats'))}</td>"
+        f"<td>{_html_artifact_status(row.get('evidence_card'), row.get('evidence_card_path'))}</td>"
+        f"<td>{_html_artifact_status(row.get('claim_check'), row.get('claim_check_path'))}</td>"
+        "<td>"
+        f"{_html_artifact_status(row.get('research_bundle'), row.get('research_bundle_path'))}"
+        "</td>"
+        f"<td>{_html_badge(row.get('bundle_verification'))}</td>"
+        f"<td>{_html_badge(row.get('gap_status'))}</td>"
+        f"<td class=\"muted\">{_html_text(missing_text)}</td>"
+        f"<td><code>{_html_text(row.get('next_command', ''))}</code></td>"
+        "</tr>"
+    )
+
+
 def _render_scorecard_html_row(row: JsonDict) -> str:
     missing = row.get("missing_paper_diagnostics")
     missing_text = (
@@ -809,6 +969,14 @@ def _html_artifact_links(value: object) -> str:
         if label and path:
             links.append(_html_link_with_label(path=path, label=label))
     return "<br>".join(links)
+
+
+def _html_artifact_status(status: object, path: object) -> str:
+    status_html = _html_badge(status)
+    path_text = str(path or "")
+    if not path_text:
+        return status_html
+    return f"{status_html}<br>{_html_link(path_text)}"
 
 
 def _bundle_integrity_markdown(value: object) -> str:

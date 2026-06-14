@@ -241,6 +241,8 @@ PCL 补了哪些证据、主要成对统计、prompt-only 比较有效性、论�
 
 说明什么问题：Promptfoo、DeepEval、Langfuse 和 LangSmith 各自擅长什么，PCL 在其上补了
 什么研究证据层，当前比较的 validity / evidence tier 是什么，还缺哪些论文诊断。
+JSON 中的 `pcl_evidence_matrix` 会按工具列出 prompt-only validity、paired stats、证据卡、
+主张检查、research bundle、bundle verification 和 gap status，方便 UI、CI 或 reviewer 直接读取。
 
 ## `model_identity.json` / `model_drift.json`
 

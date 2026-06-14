@@ -369,6 +369,8 @@ missing paper diagnostics, and the `pcl gap-status` command to run after closing
 This is the recommended first file to open when showing why PCL complements existing eval,
 observability, and security-testing tools. Each row also links to the tool-specific bridge
 summary, evidence card, claim check, HTML report, and gap artifacts when those files exist.
+The JSON includes `pcl_evidence_matrix`, a compact per-tool table of prompt-only validity,
+paired stats, evidence card, claim check, research bundle, bundle verification, and gap status.
 The HTML version is the reviewer-facing dashboard artifact; the Markdown version is easier to
 review in plain text, and the JSON version is for automation.
 
