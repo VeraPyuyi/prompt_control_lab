@@ -236,6 +236,12 @@ def test_ingest_prompt_optimizer_favorites_write_prompt_assets(tmp_path: Path) -
     assert main(["scaffold-check", "--run", str(out_dir)]) == 0
     scaffold_check = read_json(out_dir / "eval_scaffold" / "scaffold_check.json")
     assert scaffold_check["status"] == "needs_input"
+    assert scaffold_check["html_path"].endswith("scaffold_check.html")
+    scaffold_html = (out_dir / "eval_scaffold" / "scaffold_check.html").read_text(
+        encoding="utf-8"
+    )
+    assert "Prompt Optimizer Eval Scaffold Check" in scaffold_html
+    assert "needs_input" in scaffold_html
     assert any(issue["code"] == "placeholder_value" for issue in scaffold_check["issues"])
     assert main(["scaffold-check", "--run", str(out_dir), "--strict"]) == 2
 
@@ -320,6 +326,7 @@ def test_scaffold_check_passes_after_templates_are_filled(tmp_path: Path) -> Non
     payload = read_json(scaffold_dir / "scaffold_check.json")
     assert payload["status"] == "pass"
     assert payload["issues"] == []
+    assert (scaffold_dir / "scaffold_check.html").exists()
 
 
 def test_import_prompt_optimizer_cli_filters_asset(tmp_path: Path) -> None:

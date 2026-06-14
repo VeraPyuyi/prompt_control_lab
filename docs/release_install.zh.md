@@ -57,7 +57,7 @@ pcl scaffold-check --run ./tmp-pcl-prompt-optimizer
 
 预期结果：CLI 可用，`pcl doctor` 能运行，模板安装器可以写出 Codex、Cursor、
 Claude Code 和 GitHub Action 模板。prompt-optimizer 桥接也能通过 wheel 安装后的包写出
-`eval_scaffold/scaffold_check.json`。
+`eval_scaffold/scaffold_check.json` 和 `.html`。
 
 如果当前环境已经安装了 `research` extra，也要用构建出的 wheel 验证论文研究流程：
 

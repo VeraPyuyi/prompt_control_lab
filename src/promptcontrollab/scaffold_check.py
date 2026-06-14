@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import html
 from pathlib import Path
 
 from promptcontrollab.files import JsonDict, ensure_dir, read_json, read_jsonl, write_json
@@ -82,16 +83,19 @@ def write_scaffold_check(
     scaffold_dir: Path,
     out_path: Path | None = None,
 ) -> JsonDict:
-    """Write JSON/Markdown scaffold check artifacts."""
+    """Write JSON/Markdown/HTML scaffold check artifacts."""
 
     payload = check_prompt_optimizer_eval_scaffold(scaffold_dir=scaffold_dir)
     json_path = out_path or scaffold_dir / "scaffold_check.json"
     md_path = json_path.with_suffix(".md")
+    html_path = json_path.with_suffix(".html")
     ensure_dir(json_path.parent)
     write_json(json_path, payload)
     md_path.write_text(render_scaffold_check_markdown(payload), encoding="utf-8")
+    html_path.write_text(render_scaffold_check_html(payload), encoding="utf-8")
     payload["json_path"] = str(json_path)
     payload["markdown_path"] = str(md_path)
+    payload["html_path"] = str(html_path)
     write_json(json_path, payload)
     return payload
 
@@ -129,6 +133,111 @@ def render_scaffold_check_markdown(payload: JsonDict) -> str:
         lines.extend(f"- {item}" for item in actions)
     lines.append("")
     return "\n".join(lines)
+
+
+def render_scaffold_check_html(payload: JsonDict) -> str:
+    """Render a reviewer-facing scaffold check page."""
+
+    status = str(payload.get("status", "unknown"))
+    status_class = {
+        "pass": "pass",
+        "needs_input": "review",
+        "fail": "fail",
+    }.get(status, "review")
+    issue_rows = _issue_rows_html(payload.get("issues"))
+    action_items = "\n".join(
+        f"<li>{_html_text(action)}</li>" for action in _string_list(payload.get("next_actions"))
+    )
+    return f"""<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Prompt Optimizer Eval Scaffold Check</title>
+  <style>
+    body {{ font-family: Inter, Segoe UI, Arial, sans-serif; margin: 32px; color: #172033; }}
+    .hero {{ border: 1px solid #d8dee9; border-radius: 10px; padding: 18px; background: #fbfcff; }}
+    .status {{
+      display: inline-block;
+      border-radius: 999px;
+      padding: 5px 12px;
+      font-weight: 700;
+    }}
+    .pass {{ background: #dcfce7; color: #166534; }}
+    .review {{ background: #fef3c7; color: #92400e; }}
+    .fail {{ background: #fee2e2; color: #991b1b; }}
+    .grid {{
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 12px;
+      margin: 16px 0;
+    }}
+    .card {{ border: 1px solid #d8dee9; border-radius: 8px; padding: 12px; background: #ffffff; }}
+    .num {{ font-size: 24px; font-weight: 800; }}
+    table {{ border-collapse: collapse; width: 100%; margin-top: 14px; }}
+    th, td {{
+      border: 1px solid #d8dee9;
+      padding: 8px 10px;
+      text-align: left;
+      vertical-align: top;
+    }}
+    th {{ background: #f5f7fb; }}
+    code {{ background: #eef2f7; padding: 2px 4px; border-radius: 4px; }}
+    .muted {{ color: #64748b; }}
+  </style>
+</head>
+<body>
+  <h1>Prompt Optimizer Eval Scaffold Check</h1>
+  <div class="hero">
+    <p><span class="status {status_class}">{_html_text(status)}</span></p>
+    <p><strong>Scaffold:</strong> <code>{_html_text(payload.get('scaffold_dir'))}</code></p>
+    <p class="muted">{_html_text(payload.get('boundary'))}</p>
+  </div>
+  <div class="grid">
+    {_metric_card_html(payload.get('task_count'), 'Tasks')}
+    {_metric_card_html(payload.get('baseline_prediction_count'), 'Baseline predictions')}
+    {_metric_card_html(payload.get('candidate_prediction_count'), 'Candidate predictions')}
+    {_metric_card_html(payload.get('prompt_file_count'), 'Prompt files')}
+  </div>
+  <h2>Issues</h2>
+  {issue_rows}
+  <h2>Next actions</h2>
+  <ul>{action_items}</ul>
+</body>
+</html>
+"""
+
+
+def _metric_card_html(value: object, label: str) -> str:
+    return (
+        '<div class="card">'
+        f'<div class="num">{_html_text(value)}</div>'
+        f"<div>{_html_text(label)}</div>"
+        "</div>"
+    )
+
+
+def _issue_rows_html(raw_issues: object) -> str:
+    issues = raw_issues if isinstance(raw_issues, list) else []
+    if not issues:
+        return "<p>No scaffold issues found.</p>"
+    rows = []
+    for issue in issues:
+        if not isinstance(issue, dict):
+            continue
+        rows.append(
+            "<tr>"
+            f"<td><code>{_html_text(issue.get('severity'))}</code></td>"
+            f"<td><code>{_html_text(issue.get('code'))}</code></td>"
+            f"<td>{_html_text(issue.get('message'))}</td>"
+            f"<td><code>{_html_text(issue.get('path', ''))}</code></td>"
+            "</tr>"
+        )
+    return (
+        "<table><thead><tr><th>Severity</th><th>Code</th><th>Message</th><th>Path</th>"
+        "</tr></thead><tbody>"
+        + "\n".join(rows)
+        + "</tbody></table>"
+    )
 
 
 def _read_json_file(path: Path, *, issues: list[JsonDict]) -> JsonDict:
@@ -248,6 +357,16 @@ def _prompt_files(scaffold: JsonDict) -> list[str]:
         if isinstance(item, dict) and isinstance(item.get("path"), str):
             files.append(item["path"])
     return files
+
+
+def _string_list(value: object) -> list[str]:
+    if not isinstance(value, list):
+        return []
+    return [str(item) for item in value]
+
+
+def _html_text(value: object) -> str:
+    return html.escape("" if value is None else str(value), quote=True)
 
 
 def _has_placeholder(value: str) -> bool:
