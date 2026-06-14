@@ -8,14 +8,9 @@
 
 **Control-theoretic diagnostics and reproducible evidence for prompt optimization.**
 
-`prompt_control_lab` turns prompt experiments into auditable evidence: clean splits, paired
-statistics, prompt-only validity checks, soft-to-hard gap analysis, hidden-state trajectory
-diagnostics, Riccati surrogate probes, and time-varying soft-control comparisons. It also includes
-practical agent tooling around that evidence layer: policy guardrails, model provenance, diff
-audit, local UI, and IDE/GitHub templates.
+`prompt_control_lab` turns prompt experiments into auditable evidence: clean splits, paired statistics, prompt-only validity, soft-to-hard gap analysis, hidden-state trajectory diagnostics, Riccati surrogate probes, and time-varying soft-control comparisons. It also includes policy guardrails, model provenance, diff audit, local UI, and IDE/GitHub templates around that evidence layer.
 
-Package name: `promptcontrollab`. Repository name: `prompt_control_lab`.
-Chinese documentation: [README.zh.md](README.zh.md).
+Package name: `promptcontrollab`. Repository name: `prompt_control_lab`. Chinese documentation: [README.zh.md](README.zh.md).
 
 ## Quick Start
 
@@ -23,14 +18,12 @@ Chinese documentation: [README.zh.md](README.zh.md).
 git clone https://github.com/VeraPyuyi/prompt_control_lab.git
 cd prompt_control_lab
 pip install -e ".[research,ui]"
-
 pcl research-demo --out runs/research-demo
 pcl diagnose --run runs/research-demo
 pcl ui --runs runs/ --policy examples/guard.policy.yaml --port 8501
 ```
 
-You get local artifacts for protocol hygiene, diagnostics, reports, and dashboard review. The UI
-reads local files only.
+You get local artifacts for protocol hygiene, diagnostics, reports, and dashboard review. The UI reads local files only.
 
 ![prompt_control_lab workflow](docs/assets/workflow.svg)
 
@@ -49,21 +42,11 @@ Full paper mapping: [Research From The Paper](docs/research_from_paper.en.md).
 ## Common Commands
 
 ```bash
-# Research workflow from the paper
 pcl research-demo --out runs/research-demo
 pcl diagnose --run runs/research-demo
-
-# Local UI
-pip install -e ".[ui]"
-pcl ui --runs runs/ --policy examples/guard.policy.yaml --port 8501
-
-# External tool bridge
-pcl ecosystem-demo --examples examples/external --out runs/ecosystem-demo
 pcl import promptfoo --input results.json --out runs/from-promptfoo --prompt-id candidate
 pcl import prompt-optimizer --input favorites.json --out runs/from-prompt-optimizer
 pcl evidence-audit --tool promptfoo --baseline-input results.json --candidate-input results.json --out runs/from-promptfoo-audit
-
-# Agent governance helpers
 pcl guard --prompt "Fix this bug" --profile coding --policy examples/guard.policy.yaml
 pcl model-detect --response response.json --provider openai
 pcl audit-diff --before HEAD~1 --after HEAD --out runs/audit
@@ -74,35 +57,23 @@ pcl export-report --run runs/quick --out runs/quick/report.zip
 
 ## UI And Demos
 
-Views: Research Overview, Tutorial, Workflows, Guard Prompt, Run Report, Model Drift, Agent Diff
-Audit, and History.
+Views: Research Overview, Tutorial, Workflows, Guard Prompt, Run Report, Model Drift, Agent Diff Audit, and History.
 
 ![prompt_control_lab UI workflows tutorial screenshot](docs/assets/tutorial_workflows.en.png)
 
-4K demos: [English MP4](docs/assets/demo/prompt_control_lab_demo.en.mp4) |
-[Chinese MP4](docs/assets/demo/prompt_control_lab_demo.zh.mp4).
+4K demos: [English MP4](docs/assets/demo/prompt_control_lab_demo.en.mp4) | [Chinese MP4](docs/assets/demo/prompt_control_lab_demo.zh.mp4).
 
 ## Evidence Boundaries
 
-- Model provenance records public model IDs and evidence levels; it does not prove hidden provider
-  weight versions. See [Decision Guide](docs/decision_guide.en.md).
-- Local paired pilots are transparent small samples, not as universal benchmarks:
-  [preflight pilot](docs/case_studies/agent_guard_pilot.en.md),
-  [paired agent pilot](docs/case_studies/agent_guard_paired_pilot.en.md),
-  [production pilot protocol](docs/production_pilot.en.md).
-- `pcl guard` and `pcl audit-diff` are heuristic preflight/governance tools. They reduce obvious
-  risk and produce audit artifacts; they do not prove an agent action is safe.
+- Model provenance records public model IDs and evidence levels; it does not prove hidden provider weight versions. See [Decision Guide](docs/decision_guide.en.md).
+- Local paired pilots are transparent small samples, not as universal benchmarks: [preflight pilot](docs/case_studies/agent_guard_pilot.en.md), [paired agent pilot](docs/case_studies/agent_guard_paired_pilot.en.md), [production pilot protocol](docs/production_pilot.en.md).
+- `pcl guard` and `pcl audit-diff` are heuristic preflight/governance tools. They reduce obvious risk and produce audit artifacts; they do not prove an agent action is safe.
 
 ## More Docs
 
-Ecosystem notes: [Ecosystem Bridge](docs/ecosystem_bridge.en.md), [Comparison](docs/comparison.en.md),
-[ecosystem scorecard](docs/assets/ecosystem_scorecard.svg),
-[PCL-added evidence matrix](docs/assets/ecosystem_evidence_matrix.svg).
+Ecosystem: [Ecosystem Bridge](docs/ecosystem_bridge.en.md), [Comparison](docs/comparison.en.md), [ecosystem scorecard](docs/assets/ecosystem_scorecard.svg), [PCL-added evidence matrix](docs/assets/ecosystem_evidence_matrix.svg).
 
-Usage docs: [Background](docs/background.en.md), [Users](docs/users.en.md),
-[Tutorial](docs/tutorial.en.md), [Artifacts](docs/artifacts.en.md),
-[Innovation](docs/innovation.en.md), [Release/install](docs/release_install.en.md),
-[Plugin adapters](plugins/).
+Usage: [Background](docs/background.en.md), [Users](docs/users.en.md), [Tutorial](docs/tutorial.en.md), [Artifacts](docs/artifacts.en.md), [Innovation](docs/innovation.en.md), [Release/install](docs/release_install.en.md), [Plugin adapters](plugins/).
 
 ## License
 
