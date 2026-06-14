@@ -257,6 +257,10 @@ PCL 会记录 prompt 内容哈希，写出证据缺口计划，并生成 `eval_s
 这个 scaffold 本身不是证据。它的作用是把 prompt 资产推进到成对评测协议，
 让用户知道下一步要补哪些任务、输出和模型信息，之后才能主张 prompt 真的变好。
 
+评分前建议运行 `pcl scaffold-check --run <prompt-optimizer-import>`。它会写出
+`eval_scaffold/scaffold_check.json` 和 `.md`，检查缺失文件、模板占位符、model/provider
+空缺和成对 id 不一致；配合 `--strict` 可以作为 CI 检查。
+
 ## `model_identity.json` / `model_drift.json`
 
 由 `pcl model-detect` 和 `pcl model-drift` 写出。

@@ -233,6 +233,93 @@ def test_ingest_prompt_optimizer_favorites_write_prompt_assets(tmp_path: Path) -
         "eval_scaffold/promptcontrol.prompt_optimizer.example.yaml" in command
         for command in gap_plan["recommended_commands"]
     )
+    assert main(["scaffold-check", "--run", str(out_dir)]) == 0
+    scaffold_check = read_json(out_dir / "eval_scaffold" / "scaffold_check.json")
+    assert scaffold_check["status"] == "needs_input"
+    assert any(issue["code"] == "placeholder_value" for issue in scaffold_check["issues"])
+    assert main(["scaffold-check", "--run", str(out_dir), "--strict"]) == 2
+
+
+def test_scaffold_check_passes_after_templates_are_filled(tmp_path: Path) -> None:
+    source = tmp_path / "prompt-optimizer-favorites.json"
+    out_dir = tmp_path / "runs" / "from-prompt-optimizer"
+    source.write_text(json.dumps(_prompt_optimizer_favorites_payload()), encoding="utf-8")
+    ingest_prompt_optimizer_assets(source_path=source, out_dir=out_dir)
+    scaffold_dir = out_dir / "eval_scaffold"
+    (scaffold_dir / "tasks.template.jsonl").write_text(
+        "\n".join(
+            [
+                json.dumps(
+                    {
+                        "id": "case-1",
+                        "input": "Return the exact label POSITIVE.",
+                        "expected": "POSITIVE",
+                        "slice": "format",
+                    }
+                ),
+                json.dumps(
+                    {
+                        "id": "case-2",
+                        "input": "What is 2 + 2?",
+                        "expected": "4",
+                        "slice": "arithmetic",
+                    }
+                ),
+            ]
+        ),
+        encoding="utf-8",
+    )
+    (scaffold_dir / "baseline_predictions.template.jsonl").write_text(
+        "\n".join(
+            [
+                json.dumps(
+                    {
+                        "id": "case-1",
+                        "output": "positive",
+                        "provider": "openai",
+                        "model": "gpt-4o-mini",
+                    }
+                ),
+                json.dumps(
+                    {
+                        "id": "case-2",
+                        "output": "5",
+                        "provider": "openai",
+                        "model": "gpt-4o-mini",
+                    }
+                ),
+            ]
+        ),
+        encoding="utf-8",
+    )
+    (scaffold_dir / "candidate_predictions.template.jsonl").write_text(
+        "\n".join(
+            [
+                json.dumps(
+                    {
+                        "id": "case-1",
+                        "output": "POSITIVE",
+                        "provider": "openai",
+                        "model": "gpt-4o-mini",
+                    }
+                ),
+                json.dumps(
+                    {
+                        "id": "case-2",
+                        "output": "4",
+                        "provider": "openai",
+                        "model": "gpt-4o-mini",
+                    }
+                ),
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    assert main(["scaffold-check", "--scaffold", str(scaffold_dir), "--strict"]) == 0
+    payload = read_json(scaffold_dir / "scaffold_check.json")
+    assert payload["status"] == "pass"
+    assert payload["issues"] == []
 
 
 def test_import_prompt_optimizer_cli_filters_asset(tmp_path: Path) -> None:

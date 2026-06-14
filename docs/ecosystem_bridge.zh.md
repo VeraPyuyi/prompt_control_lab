@@ -200,3 +200,5 @@ pcl import prompt-optimizer \
 `eval_scaffold/` 模板。用户补齐 `tasks.template.jsonl`、
 `baseline_predictions.template.jsonl` 和 `candidate_predictions.template.jsonl`
 之后，再运行生成的 analyze 配置，就能把 prompt 资产推进到成对评测证据。
+评分前可以先运行 `pcl scaffold-check --run runs/from-prompt-optimizer`，提前发现模板占位符、
+缺失的 model/provider 字段和不能成对比较的 id。

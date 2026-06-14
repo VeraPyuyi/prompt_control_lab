@@ -42,6 +42,8 @@ Paper mapping: [Research From The Paper](docs/research_from_paper.en.md). Ecosys
 ```bash
 pcl guard --prompt "Fix this bug" --profile coding --policy examples/guard.policy.yaml
 pcl import promptfoo --input results.json --out runs/from-promptfoo --prompt-id candidate
+pcl import prompt-optimizer --input favorites.json --out runs/from-prompt-optimizer
+pcl scaffold-check --run runs/from-prompt-optimizer
 pcl evidence-audit --tool promptfoo --baseline-input results.json --candidate-input results.json --out runs/audit
 pcl model-detect --response response.json --provider openai
 pcl audit-diff --before HEAD~1 --after HEAD --out runs/audit

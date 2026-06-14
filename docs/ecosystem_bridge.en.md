@@ -284,6 +284,8 @@ assets/favorites/templates, not paired scored eval results. PCL records asset ha
 a gap plan, and creates `eval_scaffold/` templates so the next scoring step is concrete:
 fill `tasks.template.jsonl`, `baseline_predictions.template.jsonl`, and
 `candidate_predictions.template.jsonl`, then run the generated analyze config.
+Before scoring, run `pcl scaffold-check --run runs/from-prompt-optimizer` to catch placeholders,
+missing model/provider fields, and non-paired ids.
 
 ## Pairing Rule
 

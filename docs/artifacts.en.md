@@ -387,6 +387,10 @@ text files, and `promptcontrol.prompt_optimizer.example.yaml`.
 The scaffold is not evidence by itself. It is a bridge from prompt assets to the paired evaluation
 protocol required before making an improvement claim.
 
+Run `pcl scaffold-check --run <prompt-optimizer-import>` before scoring. It writes
+`eval_scaffold/scaffold_check.json` and `.md`, reports missing files, placeholder fields, model /
+provider gaps, and paired-id mismatches, and can be used with `--strict` in CI.
+
 ## `research_bundle.json` / `research_bundle.html`
 
 Written by `pcl research-demo`, `pcl diagnose`, `pcl evidence-from`, and refreshed by

@@ -67,6 +67,7 @@ from promptcontrollab.research_workflow import (
 )
 from promptcontrollab.riccati import analyze_riccati
 from promptcontrollab.run_comparison import compare_runs
+from promptcontrollab.scaffold_check import write_scaffold_check
 from promptcontrollab.soft_hard import analyze_soft_hard
 from promptcontrollab.splitting import load_tasks, make_split, write_split
 from promptcontrollab.statistics import compare_prediction_files
@@ -312,6 +313,34 @@ def build_parser() -> argparse.ArgumentParser:
         help="Optional asset id or title to import from a multi-asset export.",
     )
     prompt_optimizer_ingest.set_defaults(func=_cmd_ingest_prompt_optimizer)
+
+    scaffold_check_parser = subcommands.add_parser(
+        "scaffold-check",
+        help="Check whether a generated eval scaffold is ready for paired scoring.",
+    )
+    scaffold_source = scaffold_check_parser.add_mutually_exclusive_group(required=True)
+    scaffold_source.add_argument(
+        "--run",
+        type=Path,
+        help="Run directory containing eval_scaffold/.",
+    )
+    scaffold_source.add_argument(
+        "--scaffold",
+        type=Path,
+        help="Path to an eval_scaffold directory.",
+    )
+    scaffold_check_parser.add_argument(
+        "--out",
+        type=Path,
+        default=None,
+        help="Optional JSON output path. Defaults to <eval_scaffold>/scaffold_check.json.",
+    )
+    scaffold_check_parser.add_argument(
+        "--strict",
+        action="store_true",
+        help="Return non-zero unless the scaffold status is pass.",
+    )
+    scaffold_check_parser.set_defaults(func=_cmd_scaffold_check)
 
     improve_parser = subcommands.add_parser(
         "improve",
@@ -1356,6 +1385,15 @@ def _cmd_ingest_prompt_optimizer(args: argparse.Namespace) -> None:
         asset_id=args.asset_id,
     )
     print(json.dumps(payload, indent=2, ensure_ascii=False, sort_keys=True))
+
+
+def _cmd_scaffold_check(args: argparse.Namespace) -> None:
+    scaffold_dir = args.scaffold if args.scaffold is not None else args.run / "eval_scaffold"
+    payload = write_scaffold_check(scaffold_dir=scaffold_dir, out_path=args.out)
+    print(json.dumps(payload, indent=2, ensure_ascii=False, sort_keys=True))
+    if args.strict and payload.get("status") != "pass":
+        msg = f"Scaffold check failed in strict mode: status={payload.get('status')}"
+        raise PromptControlLabError(msg)
 
 
 def _cmd_evidence_from(args: argparse.Namespace) -> None:
