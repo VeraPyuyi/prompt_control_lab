@@ -32,18 +32,26 @@ PAIRED_FIELDS = [
 
 
 def test_core_chinese_docs_do_not_contain_mojibake() -> None:
-    for path in [
-        Path("README.zh.md"),
-        Path("docs/case_studies/agent_guard_pilot.zh.md"),
-        Path("docs/case_studies/agent_guard_paired_pilot.zh.md"),
-    ]:
+    public_chinese_docs = [Path("README.zh.md"), *sorted(Path("docs").rglob("*.zh.md"))]
+    bad_markers = [
+        "\ufffd",
+        "???",
+        "銆",
+        "鐨",
+        "锛",
+        "闈",
+        "乚",
+    ]
+    assert public_chinese_docs
+    for path in public_chinese_docs:
         text = path.read_text(encoding="utf-8")
-        assert "\ufffd" not in text
+        for marker in bad_markers:
+            assert marker not in text, f"{path} contains mojibake marker {marker!r}"
 
     readme_zh = Path("README.zh.md").read_text(encoding="utf-8")
     assert "面向 prompt 优化的控制论诊断与可复现证据工具。" in readme_zh
     assert "它补上了什么" in readme_zh
-    assert "研究流程" in readme_zh
+    assert "常用命令" in readme_zh
     assert "证据边界" in readme_zh
 
 
