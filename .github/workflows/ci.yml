@@ -35,6 +35,11 @@ jobs:
           test -f .wheel-smoke/templates/claude-code/prompt_guard.py
           test -f .wheel-smoke/templates/github-action/prompt-control-lab-gate.yml
           test -z "$(find .wheel-smoke/templates -name __pycache__ -o -name '*.pyc')"
+          pcl import prompt-optimizer \
+            --input examples/external/prompt_optimizer_favorites.json \
+            --out .wheel-smoke/from-prompt-optimizer
+          pcl scaffold-check --run .wheel-smoke/from-prompt-optimizer
+          test -f .wheel-smoke/from-prompt-optimizer/eval_scaffold/scaffold_check.json
       - name: Wheel research smoke
         run: |
           python -m pip install --force-reinstall --no-deps dist/*.whl

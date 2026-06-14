@@ -54,10 +54,13 @@ pipx install dist/promptcontrollab-0.1.0-py3-none-any.whl
 pcl --help
 pcl doctor
 pcl install-plugin all --target ./tmp-pcl-templates
+pcl import prompt-optimizer --input examples/external/prompt_optimizer_favorites.json --out ./tmp-pcl-prompt-optimizer
+pcl scaffold-check --run ./tmp-pcl-prompt-optimizer
 ```
 
 Expected result: the CLI is available, `pcl doctor` runs, and template installers
-can write Codex, Cursor, Claude Code, and GitHub Action templates.
+can write Codex, Cursor, Claude Code, and GitHub Action templates. The prompt-optimizer bridge
+also writes `eval_scaffold/scaffold_check.json` from the wheel-installed package.
 
 When the current environment already has the `research` extra installed, also
 verify the paper-derived workflow from the built wheel:
