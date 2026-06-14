@@ -1,4 +1,4 @@
-# 与 Promptfoo、LangSmith、Langfuse 的对比
+# 与 Promptfoo、LangSmith、Langfuse 和 Prompt Optimizer 的对比
 
 这份文档说明 `prompt_control_lab` 应该在哪里竞争，在哪里集成。
 
@@ -12,15 +12,39 @@
 | Promptfoo | LLM 评测、红队/安全测试、guardrails、provider 覆盖、CI 和安全报告。 | 红队插件数量、provider 矩阵深度、企业安全 dashboard。 | 导入 Promptfoo 结果后，补上成对不确定性、prompt-only 有效性、evidence card、claim check、论文诊断缺口闭环和可验证研究证据包。 |
 | LangSmith | Agent trace、在线/离线评测、Prompt Hub/Playground、监控、部署、sandbox、人工标注流程。 | LangChain/LangGraph 原生 trace UI、部署基础设施、sandbox runtime、标注队列产品。 | 把 experiment export 转成 prompt optimization 证据包，区分 prompt 效果和 model、metric、split、统计显著性等混杂因素。 |
 | Langfuse | 开源 observability、prompt management、evaluation、成本跟踪、SDK/OpenTelemetry/LiteLLM 集成、自托管。 | 通用 tracing、prompt registry、成本 dashboard、RBAC、托管观测平台。 | 补上 observability 工具通常不覆盖的研究诊断：soft-hard 部署 gap、hidden-state trajectory、Riccati surrogate、time-varying control evidence 和 claim 支持边界。 |
+| linshenkx/prompt-optimizer | 面向普通用户的 prompt 改写产品，覆盖 Web、桌面端、Chrome 扩展、Docker、MCP、多模型、Prompt Garden、收藏、图像生成模式和交互式测试。 | 成熟 prompt 编辑器体验、prompt 资产管理、浏览器/桌面分发、prompt marketplace/garden、模型调用应用和通用一键 prompt 改写。 | 验证优化后的 prompt 是否真的可靠：tri-split 协议、prompt-only 比较有效性、成对不确定性、claim 边界、soft-hard 部署 gap、trajectory/Riccati/tv-soft 诊断，以及 reviewer-facing 证据包。 |
 
-当前产品定位和定价来源：
+当前定位和相关定价来源：
 [Promptfoo intro](https://www.promptfoo.dev/docs/intro/)、
 [Promptfoo CI/CD docs](https://www.promptfoo.dev/docs/integrations/ci-cd/)、
 [Promptfoo pricing](https://www.promptfoo.dev/pricing)、
 [LangSmith observability](https://www.langchain.com/langsmith/observability)、
 [LangSmith pricing](https://www.langchain.com/pricing)、
 [Langfuse docs](https://langfuse.com/docs)、
-[Langfuse pricing](https://langfuse.com/pricing)。
+[Langfuse pricing](https://langfuse.com/pricing)、
+[linshenkx/prompt-optimizer README](https://github.com/linshenkx/prompt-optimizer)。
+
+## 与 linshenkx/prompt-optimizer 的具体区别
+
+`linshenkx/prompt-optimizer` 更像一个成熟的通用 prompt 写作和优化产品。它有更完整的用户界面和分发路径：Web app、桌面端、Chrome 扩展、Docker、MCP server、多模型设置、Prompt Garden 导入、智能收藏、图像生成模式、变量测试和多轮 prompt 测试。
+
+PCL 不应该靠“我也能一键改 prompt”去和它正面竞争。那会让 PCL 变成一个更小、更不成熟的 prompt editor。
+
+PCL 更应该赢在更窄但更有壁垒的位置：
+
+| 用户真正想问的问题 | prompt-optimizer 更适合 | PCL 更适合 |
+|---|---|---|
+| “帮我把这句 prompt 改得更好用。” | 是。它就是为交互式 prompt 改写和 prompt 资产管理设计的。 | PCL 有 `pcl improve`，但这是轻量入口，不是项目中心。 |
+| “新 prompt 是否在干净协议下真的变好？” | 它有 analysis 和 compare evaluation，但产品中心仍然是 prompt optimization。 | PCL 把这件事放在中心：tri-split、成对统计、prompt-only 有效性、split/model/prompt provenance。 |
+| “我最多能从这个结果声称什么？” | 不是它的主线。 | `pcl claim-check` 和 `pcl evidence-card` 会收束可支持的主张。 |
+| “soft prompt 转 hard prompt 后风险多大？” | 不是它的主线。 | `pcl soft-hard` 报告 projection gap 和部署风险。 |
+| “hidden-state trajectory 是否漂移？” | 不是它的主线。 | `pcl extract-hidden` 和 `pcl trajectory` 生成内部轨迹诊断。 |
+| “拟合出的控制 surrogate 是否稳定？” | 不是它的主线。 | `pcl riccati` 报告 Riccati / DARE surrogate 诊断。 |
+| “time-varying prompt 的收益来自时序结构吗？” | 不是它的主线。 | `pcl tv-soft` 比较 static、time-varying、shuffled 和 random lanes。 |
+
+实际传播时可以这样说：
+
+> 想写出更好的 prompt，用 prompt-optimizer。想证明 prompt optimization 结果是否可复现、可部署、不过度声称，用 PCL。
 
 ## 最值得押注的切口
 
@@ -84,11 +108,13 @@ PCL 应该回答大多数 eval / observability 工具不会直接回答的问题
    `research-bundle --verify` 保持为一等入口。
 2. 把 `guard`、`audit-diff` 和 PR 工具视为工程应用层，而不是项目主身份。
 3. 优先增强真实 Promptfoo、LangSmith、Langfuse 导出的导入能力，而不是重造它们的平台。
-4. 把 reviewer-facing HTML artifact 做成主要体验：`evidence_audit_result.html`、
+4. 不要重造 prompt-optimizer 的 prompt 编辑器。`pcl improve` 保持轻量入口，真正让用户留下来的应该是
+   `research-demo`、`diagnose` 和证据 artifact。
+5. 把 reviewer-facing HTML artifact 做成主要体验：`evidence_audit_result.html`、
    `bridge_summary.html`、`research_bundle.html`、`evidence_card.html`、
    `claim_check.html`、`research_gap_status.html` 和
    `research_bundle_verification.html`。
-5. 用浅显语言解释研究术语：部署 gap、内部轨迹稳定性、surrogate 稳定性、
+6. 用浅显语言解释研究术语：部署 gap、内部轨迹稳定性、surrogate 稳定性、
    time-varying evidence 和 claim 边界。
 
 ## 边界

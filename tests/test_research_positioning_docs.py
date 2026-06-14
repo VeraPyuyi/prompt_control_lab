@@ -71,12 +71,19 @@ def test_competitive_positioning_stays_evidence_layer_first() -> None:
         assert "Promptfoo" in text
         assert "LangSmith" in text
         assert "Langfuse" in text
+        assert "prompt-optimizer" in text
         assert "evidence-audit" in text
         assert "claim-check" in text
         assert "gap-status" in text
 
     assert "How PCL Can Beat Adjacent Tools Without Rebuilding Them" in comparison
+    assert "Do not rebuild prompt-optimizer's prompt editor" in comparison
+    assert "Use prompt-optimizer when you want a better prompt writing interface" in comparison
     assert "不重造竞品" in comparison_zh
     assert "超过它们的方式" in comparison_zh
+    assert "不要重造 prompt-optimizer 的 prompt 编辑器" in comparison_zh
+    assert "想写出更好的 prompt" in comparison_zh
+    assert "用 prompt-optimizer" in comparison_zh
     assert "Promptfoo intro" in comparison
     assert "Langfuse docs" in comparison
+    assert "linshenkx/prompt-optimizer README" in comparison

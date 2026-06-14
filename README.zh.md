@@ -127,7 +127,7 @@ pcl import promptfoo --input results.json --out runs/from-promptfoo --prompt-id 
 pcl import auto --input results.json --out runs/from-external --score-name exact_match
 ```
 
-`pcl ingest` 作为兼容别名保留。导入之后，如果需要 reviewer 或 CI 检查，可以继续运行 `pcl research-bundle --verify`、`pcl source-verify --strict`、`pcl evidence-gate --strict` 和 `pcl gap-status`。完整 walkthrough 和各工具导入示例见 [生态桥接教程](docs/ecosystem_bridge.zh.md)、[与 Promptfoo、LangSmith、Langfuse 的对比](docs/comparison.zh.md) 和 [examples/external](examples/external/)。
+`pcl ingest` 作为兼容别名保留。导入之后，如果需要 reviewer 或 CI 检查，可以继续运行 `pcl research-bundle --verify`、`pcl source-verify --strict`、`pcl evidence-gate --strict` 和 `pcl gap-status`。完整 walkthrough 和各工具导入示例见 [生态桥接教程](docs/ecosystem_bridge.zh.md)、[与 Promptfoo、LangSmith、Langfuse 和 Prompt Optimizer 的对比](docs/comparison.zh.md) 和 [examples/external](examples/external/)。
 
 竞争切口：相邻工具已经覆盖 security testing、本地 eval、tracing、observability、prompt management 和生产工作流。PCL 更应该赢在 **研究证据层**：成对不确定性、prompt-only 有效性、evidence card、claim check、soft-hard gap、hidden-state trajectory、Riccati surrogate 和 time-varying control evidence。
 ## 工程应用层
@@ -291,7 +291,7 @@ Agent guard、model provenance、diff audit 和插件仍然有价值，但它们
 - [Artifact 说明](docs/artifacts.zh.md)
 - [论文功能映射](docs/research_from_paper.zh.md)
 - [生态桥接](docs/ecosystem_bridge.zh.md)
-- [与 Promptfoo、LangSmith、Langfuse 的对比](docs/comparison.zh.md)
+- [与 Promptfoo、LangSmith、Langfuse 和 Prompt Optimizer 的对比](docs/comparison.zh.md)
 - [创新点和贡献](docs/innovation.zh.md)
 - [决策指南](docs/decision_guide.zh.md)
 - [Agent guard 试点 case study](docs/case_studies/agent_guard_pilot.zh.md)

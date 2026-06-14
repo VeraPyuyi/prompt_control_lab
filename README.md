@@ -139,8 +139,8 @@ pcl import auto --input results.json --out runs/from-external --score-name exact
 `pcl ingest` is kept as the backward-compatible alias. Use `pcl research-bundle --verify`,
 `pcl source-verify --strict`, `pcl evidence-gate --strict`, and `pcl gap-status` when you need
 reviewer/CI checks after the import. For the full walkthrough and tool-specific import examples,
-see [Ecosystem Bridge](docs/ecosystem_bridge.en.md), [Comparison With Promptfoo, LangSmith, and
-Langfuse](docs/comparison.en.md), and [examples/external](examples/external/).
+see [Ecosystem Bridge](docs/ecosystem_bridge.en.md), [Comparison With Promptfoo, LangSmith,
+Langfuse, and Prompt Optimizer](docs/comparison.en.md), and [examples/external](examples/external/).
 
 Competitive wedge: adjacent tools already cover security testing, local eval, tracing,
 observability, prompt management, and production workflows. PCL should win as the **research
@@ -527,7 +527,7 @@ and bundle integrity.
 - [Artifacts](docs/artifacts.en.md)
 - [Research From The Paper](docs/research_from_paper.en.md)
 - [Ecosystem Bridge](docs/ecosystem_bridge.en.md)
-- [Comparison With Promptfoo, LangSmith, and Langfuse](docs/comparison.en.md)
+- [Comparison With Promptfoo, LangSmith, Langfuse, and Prompt Optimizer](docs/comparison.en.md)
 - [Agent guard pilot case study](docs/case_studies/agent_guard_pilot.en.md)
 - [Real paired agent pilot case study](docs/case_studies/agent_guard_paired_pilot.en.md)
 - [Production pilot protocol](docs/production_pilot.en.md)
