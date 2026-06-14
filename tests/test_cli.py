@@ -1567,10 +1567,11 @@ def test_cli_start_interactive_guard_menu(
     capsys: pytest.CaptureFixture[str],
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.setattr("sys.stdin", io.StringIO("2\nFix this bug\n"))
+    monkeypatch.setattr("sys.stdin", io.StringIO("3\nFix this bug\n"))
     assert main(["start"]) == 0
     output = capsys.readouterr().out
     assert "What do you want to do?" in output
+    assert "1) Run a paper-style prompt optimization research demo" in output
     assert "Beginner mode: guard a prompt" in output
     assert "Plain summary:" in output
 

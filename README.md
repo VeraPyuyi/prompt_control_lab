@@ -28,6 +28,9 @@ Chinese documentation is available in [README.zh.md](README.zh.md).
 pip install -e ".[research,ui]"
 
 # 1. Run a paper-style research diagnostics demo.
+pcl start --choice research --out runs/research-demo
+
+# Same workflow, explicit expert command.
 pcl research-demo --out runs/research-demo
 
 # 2. Re-run the unified diagnostics report from demo inputs.

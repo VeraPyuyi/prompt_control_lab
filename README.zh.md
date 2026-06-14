@@ -26,6 +26,9 @@ English documentation is available in [README.md](README.md).
 pip install -e ".[research,ui]"
 
 # 1. 运行一套论文风格的研究诊断 demo。
+pcl start --choice research --out runs/research-demo
+
+# 同一个流程，也可以用显式专家命令运行。
 pcl research-demo --out runs/research-demo
 
 # 2. 从 demo inputs 重新生成统一诊断报告。

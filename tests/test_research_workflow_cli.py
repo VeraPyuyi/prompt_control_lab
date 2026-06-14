@@ -9,6 +9,28 @@ from promptcontrollab.cli import main
 from promptcontrollab.files import read_json, write_json
 
 
+def test_start_research_runs_paper_diagnostics_demo(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    pytest.importorskip("numpy")
+    run_dir = tmp_path / "research-start"
+
+    assert main(["start", "--choice", "research", "--out", str(run_dir), "--seed", "7"]) == 0
+
+    out = capsys.readouterr().out
+    assert "Beginner mode: run the paper-style research diagnostics demo" in out
+    assert "Evidence card:" in out
+    assert "Claim check:" in out
+    assert (run_dir / "research_diagnostics.html").exists()
+    assert (run_dir / "evidence_card.html").exists()
+    assert (run_dir / "claim_check.html").exists()
+    assert (run_dir / "diagnostics" / "soft_hard.json").exists()
+    assert (run_dir / "diagnostics" / "trajectory.json").exists()
+    assert (run_dir / "diagnostics" / "riccati.json").exists()
+    assert (run_dir / "diagnostics" / "tv_soft.json").exists()
+
+
 def test_research_demo_generates_paper_diagnostics(tmp_path: Path) -> None:
     pytest.importorskip("numpy")
     run_dir = tmp_path / "research-demo"

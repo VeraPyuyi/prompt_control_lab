@@ -109,7 +109,7 @@ def build_parser() -> argparse.ArgumentParser:
     )
     start_parser.add_argument(
         "--choice",
-        choices=["improve", "guard", "analyze"],
+        choices=["research", "improve", "guard", "analyze"],
         default=None,
         help="Skip the menu and choose a beginner scenario.",
     )
@@ -132,6 +132,7 @@ def build_parser() -> argparse.ArgumentParser:
     )
     start_parser.add_argument("--max-tokens", type=int, default=None)
     start_parser.add_argument("--config", type=Path, default=None, help="Config for analyze mode.")
+    start_parser.add_argument("--seed", type=int, default=0, help="Synthetic fixture seed.")
     start_parser.set_defaults(func=_cmd_start)
 
     init_parser = subcommands.add_parser("init", help="Create an example project.")
@@ -1425,6 +1426,20 @@ def _cmd_ecosystem_scorecard(args: argparse.Namespace) -> None:
 
 def _cmd_start(args: argparse.Namespace) -> None:
     choice = _start_choice(args.choice)
+    if choice == "research":
+        out_dir = args.out or Path("runs") / "research-demo"
+        print("Beginner mode: run the paper-style research diagnostics demo")
+        payload = write_research_demo(out_dir=out_dir, seed=args.seed)
+        diagnostics = payload.get("diagnostics", {})
+        diagnostic_names = sorted(diagnostics) if isinstance(diagnostics, dict) else []
+        print(f"Wrote research demo to {out_dir}")
+        print(f"Diagnostics: {', '.join(diagnostic_names)}")
+        print(f"Research report: {out_dir / 'research_diagnostics.html'}")
+        print(f"Evidence card: {out_dir / 'evidence_card.html'}")
+        print(f"Claim check: {out_dir / 'claim_check.html'}")
+        print("Next: run `pcl ui --runs runs/` to inspect the research evidence map.")
+        return
+
     if choice == "improve":
         prompt = _read_start_prompt(args.prompt, args.prompt_file)
         print("Beginner mode: improve a prompt")
@@ -2212,23 +2227,26 @@ def _start_choice(value: str | None) -> str:
         "\n".join(
             [
                 "What do you want to do?",
-                "1) Make my prompt clearer",
-                "2) Check a prompt before sending it to an AI tool",
-                "3) Compare prompts and create a report",
+                "1) Run a paper-style prompt optimization research demo",
+                "2) Make my prompt clearer",
+                "3) Check a prompt before sending it to an AI tool",
+                "4) Compare prompts and create a report",
             ]
         )
     )
-    raw = input("Choose 1, 2, or 3: ").strip().lower()
+    raw = input("Choose 1, 2, 3, or 4: ").strip().lower()
     choices = {
-        "1": "improve",
+        "1": "research",
+        "research": "research",
+        "2": "improve",
         "improve": "improve",
-        "2": "guard",
+        "3": "guard",
         "guard": "guard",
-        "3": "analyze",
+        "4": "analyze",
         "analyze": "analyze",
     }
     if raw not in choices:
-        msg = "Choose 1, 2, or 3"
+        msg = "Choose 1, 2, 3, or 4"
         raise ValueError(msg)
     return choices[raw]
 
