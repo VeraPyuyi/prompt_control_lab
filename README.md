@@ -233,6 +233,18 @@ a non-zero exit code after writing the same JSON/Markdown/HTML evidence:
 pcl source-verify --run runs/from-promptfoo-audit --strict
 ```
 
+When CI or a reviewer wants one command that checks both original source exports and the local
+research evidence bundle, use the combined evidence gate:
+
+```bash
+pcl evidence-gate --run runs/from-promptfoo-audit --strict
+```
+
+`evidence-gate` writes `evidence_gate_result.json/md/html`. It treats source-input hash failures
+and research-bundle hash failures as required checks. Paper diagnostic gap status and claim-check
+status are included as advisory evidence so they remain visible without making a small external
+smoke export pretend to contain hidden-state, Riccati, or time-varying-control measurements.
+
 After running the suggested diagnostic commands, check closure with:
 
 ```bash

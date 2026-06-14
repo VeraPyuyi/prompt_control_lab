@@ -93,6 +93,17 @@ pcl source-verify --run runs/from-promptfoo-audit --strict
 strict 模式仍会写出同样的 JSON、Markdown 和 HTML 证据，但只要任何 source export 被改动、
 缺失或无法检查，就会返回非零退出码。
 
+如果想给 reviewer 或 CI 一个组合门禁，同时检查原始 source export 和本地 research bundle，可以运行：
+
+```bash
+pcl evidence-gate --run runs/from-promptfoo-audit --strict
+```
+
+这会写出 `evidence_gate_result.json`、`.md` 和 `.html`。source-input verification
+和 research-bundle verification 是必须通过的检查；gap status 和 claim-check status
+会作为 advisory check 展示，方便 reviewer 看到论文诊断缺口，但不会把小型外部 smoke export
+误包装成完整 hidden-state 或控制论研究。
+
 ## 更低层的桥接命令
 
 如果你希望分步骤控制，可以先导入外部结果：

@@ -154,6 +154,18 @@ pcl source-verify --run runs/from-promptfoo-audit --strict
 Strict mode still writes the same JSON, Markdown, and HTML evidence, but returns a non-zero exit
 code if any source export is changed, missing, or unchecked.
 
+For a single reviewer or CI gate that checks both original source exports and the local research
+bundle, run:
+
+```bash
+pcl evidence-gate --run runs/from-promptfoo-audit --strict
+```
+
+This writes `evidence_gate_result.json`, `.md`, and `.html`. Source-input verification and
+research-bundle verification are required checks. Gap status and claim-check status are included
+as advisory checks so reviewers can see missing paper diagnostics without treating a small external
+smoke export as a complete hidden-state or control-theoretic study.
+
 The demo automatically audits the bundle against the paper-derived evidence map.
 To regenerate that diagnosis after editing the bundle, run:
 

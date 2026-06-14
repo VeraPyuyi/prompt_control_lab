@@ -324,6 +324,27 @@ This complements `research_bundle_verification.*`. Source verification checks th
 Promptfoo, DeepEval, Langfuse, or LangSmith export files; bundle verification checks the PCL
 evidence artifacts created from those exports.
 
+## `evidence_gate_result.json` / `.md` / `.html`
+
+Written by `pcl evidence-gate --run <run>`. Use
+`pcl evidence-gate --run <run> --strict` when CI or a reviewer should fail unless the required
+evidence checks pass.
+
+What it explains: whether the run still has reproducible local evidence. The required checks are
+source-input verification, when source inputs are recorded, and research-bundle verification. Gap
+status and claim-check status are recorded as advisory checks so missing research diagnostics stay
+visible without being confused with source or bundle tampering.
+
+Important fields:
+
+- `status`: `pass`, `needs_review`, or `fail`
+- `required_checks.source_inputs`: source-input hash result, or `skipped` when this run has no
+  external source inputs and `--require-source` was not used
+- `required_checks.research_bundle`: research bundle hash verification result
+- `advisory_checks.gap_status` / `advisory_checks.claim_check`: non-blocking research evidence
+  context
+- `next_actions`: files or commands a reviewer should open next
+
 ## `bridge_summary.json` / `bridge_summary.md` / `bridge_summary.html`
 
 Written by `pcl evidence-from` and updated by `pcl evidence-audit`.

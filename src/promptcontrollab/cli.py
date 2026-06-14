@@ -29,6 +29,7 @@ from promptcontrollab.ecosystem_demo import run_ecosystem_demo, write_ecosystem_
 from promptcontrollab.errors import PromptControlLabError
 from promptcontrollab.evaluation import run_import_eval
 from promptcontrollab.evidence_card import write_evidence_card
+from promptcontrollab.evidence_gate import run_evidence_gate
 from promptcontrollab.explain import generate_explanation
 from promptcontrollab.external_evidence import (
     build_external_evidence,
@@ -666,6 +667,39 @@ def build_parser() -> argparse.ArgumentParser:
         help="Return a non-zero exit code when source verification does not pass.",
     )
     source_verify_parser.set_defaults(func=_cmd_source_verify)
+
+    evidence_gate_parser = subcommands.add_parser(
+        "evidence-gate",
+        help="Run a CI/reviewer gate over source and research-bundle evidence.",
+    )
+    evidence_gate_parser.add_argument(
+        "--run",
+        type=Path,
+        required=True,
+        help="Run directory containing PCL evidence artifacts.",
+    )
+    evidence_gate_parser.add_argument(
+        "--out",
+        type=Path,
+        default=None,
+        help="Optional JSON output path. Markdown/HTML siblings are written next to it.",
+    )
+    evidence_gate_parser.add_argument(
+        "--require-source",
+        action="store_true",
+        help="Fail when source input provenance is absent or not pass.",
+    )
+    evidence_gate_parser.add_argument(
+        "--allow-missing-bundle",
+        action="store_true",
+        help="Return needs_review instead of fail when research_bundle.json is absent.",
+    )
+    evidence_gate_parser.add_argument(
+        "--strict",
+        action="store_true",
+        help="Return a non-zero exit code when the evidence gate status is not pass.",
+    )
+    evidence_gate_parser.set_defaults(func=_cmd_evidence_gate)
 
     ecosystem_demo_parser = subcommands.add_parser(
         "ecosystem-demo",
@@ -1346,6 +1380,19 @@ def _cmd_source_verify(args: argparse.Namespace) -> None:
             f"missing={payload.get('missing_count')}, "
             f"unchecked={payload.get('unchecked_count')}"
         )
+        raise PromptControlLabError(msg)
+
+
+def _cmd_evidence_gate(args: argparse.Namespace) -> None:
+    payload = run_evidence_gate(
+        run_dir=args.run,
+        out_path=args.out,
+        require_source=args.require_source,
+        allow_missing_bundle=args.allow_missing_bundle,
+    )
+    print(json.dumps(payload, indent=2, ensure_ascii=False, sort_keys=True))
+    if args.strict and payload.get("status") != "pass":
+        msg = f"Evidence gate failed in strict mode: status={payload.get('status')}"
         raise PromptControlLabError(msg)
 
 

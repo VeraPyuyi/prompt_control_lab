@@ -225,6 +225,17 @@ PCL 证据 artifact。
 pcl source-verify --run runs/from-promptfoo-audit --strict
 ```
 
+如果 CI 或 reviewer 想用一条命令同时检查“原始外部导出文件”和“本地研究证据包”，可以使用组合门禁：
+
+```bash
+pcl evidence-gate --run runs/from-promptfoo-audit --strict
+```
+
+`evidence-gate` 会写出 `evidence_gate_result.json/md/html`。它把 source-input hash
+失败和 research-bundle hash 失败作为必须处理的检查；论文诊断缺口和 claim-check 状态会作为
+advisory evidence 展示出来，避免把一个小型外部 smoke export 伪装成已经包含
+hidden-state、Riccati 或 time-varying-control 诊断的完整论文实验。
+
 竞争切口：Promptfoo、DeepEval、LangSmith 和 Langfuse 已经在 security testing、本地 eval、tracing、observability、prompt management 和生产工作流上形成很强能力。PCL 更应该赢在它们通常不覆盖的 **研究证据层**：成对不确定性、prompt-only 有效性、evidence card、claim check、soft-hard gap、hidden-state trajectory、Riccati surrogate、time-varying control evidence，以及现在用 `pcl gap-status` 检查导入之后的论文诊断缺口是否真正补齐。
 
 如果想直接复制示例命令，请看 [生态桥接教程](docs/ecosystem_bridge.zh.md) 和

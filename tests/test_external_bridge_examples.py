@@ -249,6 +249,96 @@ def test_source_verify_detects_changed_external_export(tmp_path: Path) -> None:
     assert main(["source-verify", "--run", str(out_dir), "--strict"]) == 2
 
 
+def test_evidence_gate_strict_passes_for_verified_external_evidence(tmp_path: Path) -> None:
+    source = Path("examples") / "external" / "promptfoo_results.json"
+    out_dir = tmp_path / "runs" / "from-promptfoo-audit"
+
+    assert (
+        main(
+            [
+                "evidence-audit",
+                "--tool",
+                "promptfoo",
+                "--baseline-input",
+                str(source),
+                "--candidate-input",
+                str(source),
+                "--baseline-prompt-id",
+                "baseline",
+                "--candidate-prompt-id",
+                "candidate",
+                "--provider",
+                "openai:gpt-4o-mini-20260601",
+                "--split-hash",
+                "external-demo-split",
+                "--bootstrap-samples",
+                "20",
+                "--permutation-samples",
+                "100",
+                "--out",
+                str(out_dir),
+            ]
+        )
+        == 0
+    )
+
+    assert main(["evidence-gate", "--run", str(out_dir), "--strict"]) == 0
+    gate = read_json(out_dir / "evidence_gate_result.json")
+    assert gate["kind"] == "evidence_gate_result"
+    assert gate["status"] == "pass"
+    assert gate["required_checks"]["source_inputs"]["status"] == "pass"
+    assert gate["required_checks"]["research_bundle"]["status"] == "pass"
+    assert gate["advisory_checks"]["gap_status"]["status"] == "needs_work"
+    assert (out_dir / "evidence_gate_result.md").exists()
+    assert (out_dir / "evidence_gate_result.html").exists()
+
+
+def test_evidence_gate_strict_fails_when_source_export_changes(tmp_path: Path) -> None:
+    source = tmp_path / "promptfoo_results.json"
+    source.write_text(
+        (Path("examples") / "external" / "promptfoo_results.json").read_text(encoding="utf-8"),
+        encoding="utf-8",
+    )
+    out_dir = tmp_path / "runs" / "from-promptfoo-audit"
+
+    assert (
+        main(
+            [
+                "evidence-audit",
+                "--tool",
+                "promptfoo",
+                "--baseline-input",
+                str(source),
+                "--candidate-input",
+                str(source),
+                "--baseline-prompt-id",
+                "baseline",
+                "--candidate-prompt-id",
+                "candidate",
+                "--provider",
+                "openai:gpt-4o-mini-20260601",
+                "--split-hash",
+                "external-demo-split",
+                "--bootstrap-samples",
+                "20",
+                "--permutation-samples",
+                "100",
+                "--out",
+                str(out_dir),
+            ]
+        )
+        == 0
+    )
+
+    source.write_text(source.read_text(encoding="utf-8") + "\n", encoding="utf-8")
+
+    assert main(["evidence-gate", "--run", str(out_dir)]) == 0
+    gate = read_json(out_dir / "evidence_gate_result.json")
+    assert gate["status"] == "fail"
+    assert gate["required_checks"]["source_inputs"]["status"] == "fail"
+    assert main(["evidence-gate", "--run", str(out_dir), "--strict"]) == 2
+
+
 def test_source_verify_uses_resolved_path_after_cwd_changes(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,

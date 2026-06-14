@@ -114,6 +114,26 @@ def test_research_demo_generates_complete_evidence_chain(tmp_path: Path) -> None
     assert len(candidate_manifest["prompt"]["prompt_hash"]) == len("sha256:") + 64
 
 
+def test_evidence_gate_accepts_research_demo_without_external_source_by_default(
+    tmp_path: Path,
+) -> None:
+    pytest.importorskip("numpy")
+    run_dir = tmp_path / "research-demo"
+    assert main(["research-demo", "--out", str(run_dir)]) == 0
+
+    assert main(["evidence-gate", "--run", str(run_dir), "--strict"]) == 0
+    gate = read_json(run_dir / "evidence_gate_result.json")
+    assert gate["status"] == "pass"
+    assert gate["required_checks"]["source_inputs"]["status"] == "skipped"
+    assert gate["required_checks"]["research_bundle"]["status"] == "pass"
+
+    assert main(["evidence-gate", "--run", str(run_dir), "--require-source"]) == 0
+    require_source_gate = read_json(run_dir / "evidence_gate_result.json")
+    assert require_source_gate["status"] == "fail"
+    assert require_source_gate["required_checks"]["source_inputs"]["status"] == "fail"
+    assert main(["evidence-gate", "--run", str(run_dir), "--require-source", "--strict"]) == 2
+
+
 def test_research_bundle_refresh_writes_hashes(tmp_path: Path) -> None:
     run_dir = tmp_path / "run"
     run_dir.mkdir()

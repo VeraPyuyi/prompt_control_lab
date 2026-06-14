@@ -203,6 +203,24 @@ source input，可以使用 `pcl source-verify --run <run> --strict`。
 DeepEval / Langfuse / LangSmith 导出文件；`research-bundle --verify` 验证由这些导出生成的
 PCL 证据 artifact。
 
+## `evidence_gate_result.json` / `.md` / `.html`
+
+由 `pcl evidence-gate --run <run>` 写出。如果希望 CI 或 reviewer 在必要证据检查不通过时失败，
+可以使用 `pcl evidence-gate --run <run> --strict`。
+
+说明什么问题：这个 run 当前的本地证据是否仍然可复核。必须检查项包括：已经记录 source input
+时的 source-input verification，以及 research-bundle verification。gap status 和 claim-check
+status 会作为 advisory check 记录，方便 reviewer 看到论文诊断缺口，但不会把缺少研究诊断和
+source/bundle 篡改混为一谈。
+
+重要字段：
+- `status`：`pass`、`needs_review` 或 `fail`。
+- `required_checks.source_inputs`：source-input hash 检查结果；如果这个 run 没有外部 source
+  input，且没有使用 `--require-source`，则为 `skipped`。
+- `required_checks.research_bundle`：research bundle hash verification 结果。
+- `advisory_checks.gap_status` / `advisory_checks.claim_check`：非阻断性的研究证据上下文。
+- `next_actions`：reviewer 下一步应该打开的文件或执行的动作。
+
 ## `bridge_summary.json` / `bridge_summary.md` / `bridge_summary.html`
 
 由 `pcl evidence-from` 写出，并会被 `pcl evidence-audit` 刷新。
