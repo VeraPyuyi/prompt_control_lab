@@ -71,6 +71,7 @@ comparison-validity 审计、explanation、gate 结果、报告 artifact 和本�
 | 成对统计比较 | `pcl stats`、`stats.json` | prompt 改动是否在 bootstrap CI、permutation p-value 和 Holm correction 下仍然可靠。 |
 | prompt-only 比较有效性 | `pcl validity`、`comparison_validity.json` | baseline / candidate 的结果是否真的是干净的 prompt-only 证据，而不是模型、切分或指标变化导致。 |
 | prompt 优化证据卡 | `pcl evidence-card`、`evidence_card.json/md/html` | 把协议卫生、成对统计、比较有效性、部署风险、hidden-state 诊断、Riccati 和 time-varying 证据压缩成一张可审查卡片。 |
+| 证据门禁 | `pcl evidence-gate`、`evidence_gate_result.json/md/html` | 给 reviewer 或 CI 检查 source-input hash 和 research-bundle verification；gap 与 claim 作为 advisory context 保留。 |
 | prompt 优化主张检查 | `pcl claim-check`、`claim_check.json/md/html` | 判断当前证据最多能支持 paired、partial-research 还是 full-research 层级的主张。 |
 | soft-to-hard 部署 gap | `pcl soft-hard`、`diagnostics/soft_hard.json` | soft prompt 的收益转成 hard token 后损失多大。 |
 | HuggingFace hidden-state 提取 | `pcl extract-hidden`、`hidden_states.npz` | 把开源模型 prompt 转成 trajectory 可直接读取的 hidden-state artifact。 |
@@ -82,9 +83,10 @@ comparison-validity 审计、explanation、gate 结果、报告 artifact 和本�
 `pcl research-demo --out runs/research-demo`。如果已经有自己的 soft prompt、hidden states、
 surrogate matrices 或 method predictions，可以用 `pcl diagnose` 统一生成诊断报告。现在
 research-demo 还会写出 synthetic tri-split、baseline / candidate scored runs、成对统计、
-prompt-only 比较有效性、`evidence_card.json` / `.md` / `.html` 和 `claim_check.json` / `.md` / `.html`，
-本地 UI 的研究总览页也会直接展示研究证据地图、证据卡和主张证据阶梯，方便 reviewer 判断当前证据链
-是否覆盖协议、诊断和 paired、partial-research、full-research 等主张层级。
+prompt-only 比较有效性、`evidence_card.json` / `.md` / `.html`、
+`evidence_gate_result.json` / `.md` / `.html` 和 `claim_check.json` / `.md` / `.html`，
+本地 UI 的研究总览页也会直接展示研究证据地图、证据门禁状态、证据卡和主张证据阶梯，方便 reviewer 判断当前证据链
+是否覆盖 source/bundle 可复现证据、协议、诊断和 paired、partial-research、full-research 等主张层级。
 
 完整对应关系见 [论文功能映射](docs/research_from_paper.zh.md)。
 

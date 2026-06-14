@@ -44,6 +44,8 @@ from promptcontrollab.ui.data import (
     evidence_card_rows,
     evidence_gap_action_rows,
     evidence_gap_rows,
+    evidence_gate_rows,
+    evidence_gate_summary,
     external_bridge_summary,
     filter_history_rows,
     first_comparison,
@@ -96,6 +98,11 @@ TEXT = {
         "evidence_card": "Evidence card",
         "evidence_card_missing": "No evidence_card.json found yet.",
         "evidence_card_command": "pcl evidence-card --run <selected-run>",
+        "evidence_gate": "Evidence gate",
+        "evidence_gate_missing": "No evidence_gate_result.json found yet.",
+        "evidence_gate_command": "pcl evidence-gate --run <selected-run> --strict",
+        "evidence_gate_status": "Evidence gate status",
+        "evidence_gate_required": "Required checks",
         "claim_check": "Claim check",
         "claim_ladder": "Evidence ladder",
         "claim_check_missing": "No claim_check.json found yet.",
@@ -307,6 +314,11 @@ TEXT = {
         "evidence_card": "证据卡",
         "evidence_card_missing": "当前还没有 evidence_card.json。",
         "evidence_card_command": "pcl evidence-card --run <选中的 run>",
+        "evidence_gate": "证据门禁",
+        "evidence_gate_missing": "当前还没有 evidence_gate_result.json。",
+        "evidence_gate_command": "pcl evidence-gate --run <选中的 run> --strict",
+        "evidence_gate_status": "证据门禁状态",
+        "evidence_gate_required": "必要检查",
         "claim_check": "主张检查",
         "claim_ladder": "证据阶梯",
         "claim_check_missing": "当前还没有 claim_check.json。",
@@ -1348,6 +1360,8 @@ def _render_research_overview_tab(st: Any, text: dict[str, str], detail: JsonDic
     evidence_card = detail.get("evidence_card")
     evidence_dict = evidence_card if isinstance(evidence_card, dict) else {}
     evidence_recommendation = evidence_dict.get("recommendation", "missing")
+    evidence_gate = evidence_gate_summary(detail)
+    evidence_gate_status = evidence_gate.get("status", "missing")
     claim_check = claim_check_summary(detail)
     claim_status = claim_check.get("status", "missing")
     claim_ladder = claim_evidence_ladder(detail)
@@ -1375,6 +1389,11 @@ def _render_research_overview_tab(st: Any, text: dict[str, str], detail: JsonDic
             text["evidence_recommendation"],
             evidence_recommendation,
             text["evidence_card"],
+        )
+        + stat_card_html(
+            text["evidence_gate_status"],
+            str(evidence_gate_status),
+            text["evidence_gate_required"],
         )
         + stat_card_html(
             text["claim_check_status"],
@@ -1456,6 +1475,18 @@ def _render_research_overview_tab(st: Any, text: dict[str, str], detail: JsonDic
         st.dataframe(gap_status_rows, use_container_width=True)
 
     _render_external_bridge_section(st, text, bridge)
+
+    st.markdown(
+        f'<div class="pcl-section-title">{html.escape(text["evidence_gate"])}</div>',
+        unsafe_allow_html=True,
+    )
+    if evidence_gate:
+        st.write(f"**{text['evidence_summary']}:** {evidence_gate.get('summary', '')}")
+        gate_rows = evidence_gate_rows(detail)
+        if gate_rows:
+            st.dataframe(gate_rows, use_container_width=True)
+    else:
+        empty_state(st, text["evidence_gate_missing"], text["evidence_gate_command"])
 
     st.markdown(
         f'<div class="pcl-section-title">{html.escape(text["evidence_card"])}</div>',

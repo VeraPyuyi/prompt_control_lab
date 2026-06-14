@@ -30,6 +30,9 @@ RUN_ARTIFACTS = [
     "research_gap_plan.json",
     "research_gap_status.json",
     "evidence_card.json",
+    "evidence_gate_result.json",
+    "evidence_gate_result.md",
+    "evidence_gate_result.html",
     "claim_check.json",
     "evidence_from_result.json",
     "evidence_audit_result.json",
@@ -60,6 +63,9 @@ RUN_LEVEL_ARTIFACTS = [
     "research_gap_plan.json",
     "research_gap_status.json",
     "evidence_card.json",
+    "evidence_gate_result.json",
+    "evidence_gate_result.md",
+    "evidence_gate_result.html",
     "claim_check.json",
     "evidence_from_result.json",
     "evidence_audit_result.json",
@@ -117,6 +123,7 @@ def load_run_detail(run_dir: Path) -> JsonDict:
         "research_gap_plan": model.research_gap_plan,
         "research_gap_status": model.research_gap_status,
         "evidence_card": model.evidence_card,
+        "evidence_gate": model.evidence_gate,
         "claim_check": model.claim_check,
         "external_evidence": model.external_evidence,
         "bridge_summary": model.bridge_summary,
@@ -245,6 +252,7 @@ def research_evidence_map(detail: JsonDict) -> list[JsonDict]:
     validity = detail.get("comparison_validity")
     validity_dict = validity if isinstance(validity, dict) else {}
     claim = claim_check_summary(detail)
+    gate = evidence_gate_summary(detail)
     return [
         _map_node(
             key="tri_split",
@@ -289,6 +297,12 @@ def research_evidence_map(detail: JsonDict) -> list[JsonDict]:
             summary=_tv_soft_signal(diagnostics_dict.get("tv_soft", {})),
         ),
         _map_node(
+            key="evidence_gate",
+            label="Evidence gate",
+            status=_evidence_gate_map_status(gate),
+            summary=str(gate.get("summary") or gate.get("status") or "not run"),
+        ),
+        _map_node(
             key="claim_check",
             label="Claim",
             status=_claim_map_status(claim),
@@ -317,6 +331,44 @@ def evidence_card_rows(detail: JsonDict) -> list[JsonDict]:
                 "signal": _evidence_signal(str(name), raw_section),
             }
         )
+    return rows
+
+
+def evidence_gate_summary(detail: JsonDict) -> JsonDict:
+    """Return the required/advisory evidence-gate status for the research overview."""
+
+    payload = detail.get("evidence_gate")
+    if not isinstance(payload, dict) or not payload:
+        return {}
+    required = payload.get("required_checks")
+    advisory = payload.get("advisory_checks")
+    return {
+        "status": payload.get("status"),
+        "summary": payload.get("summary"),
+        "required_checks": required if isinstance(required, dict) else {},
+        "advisory_checks": advisory if isinstance(advisory, dict) else {},
+    }
+
+
+def evidence_gate_rows(detail: JsonDict) -> list[JsonDict]:
+    """Return rows for evidence-gate required and advisory checks."""
+
+    summary = evidence_gate_summary(detail)
+    rows: list[JsonDict] = []
+    for group in ["required_checks", "advisory_checks"]:
+        checks = summary.get(group)
+        if not isinstance(checks, dict):
+            continue
+        for name, raw_check in checks.items():
+            check = raw_check if isinstance(raw_check, dict) else {}
+            rows.append(
+                {
+                    "group": group.replace("_", " "),
+                    "check": str(name).replace("_", " "),
+                    "status": check.get("status", "unknown"),
+                    "summary": check.get("summary", ""),
+                }
+            )
     return rows
 
 
@@ -719,6 +771,19 @@ def _claim_map_status(claim: JsonDict) -> str:
     if status == "fail":
         return "blocked"
     if status == "needs_review":
+        return "needs-review"
+    return "missing"
+
+
+def _evidence_gate_map_status(gate: JsonDict) -> str:
+    if not gate:
+        return "missing"
+    status = str(gate.get("status") or "").lower()
+    if status == "pass":
+        return "ready"
+    if status == "fail":
+        return "blocked"
+    if status in {"needs_review", "needs-review"}:
         return "needs-review"
     return "missing"
 

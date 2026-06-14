@@ -31,6 +31,7 @@ class ReportModel:
     research_gap_plan: JsonDict
     research_gap_status: JsonDict
     evidence_card: JsonDict
+    evidence_gate: JsonDict
     claim_check: JsonDict
     external_evidence: JsonDict
     bridge_summary: JsonDict
@@ -72,6 +73,7 @@ class ReportModel:
             research_gap_plan=_read_optional(run_dir / "research_gap_plan.json"),
             research_gap_status=_read_optional(run_dir / "research_gap_status.json"),
             evidence_card=_read_optional(run_dir / "evidence_card.json"),
+            evidence_gate=_read_optional(run_dir / "evidence_gate_result.json"),
             claim_check=_read_optional(run_dir / "claim_check.json"),
             external_evidence=_read_optional(run_dir / "evidence_from_result.json"),
             bridge_summary=_read_optional(run_dir / "bridge_summary.json"),
@@ -165,6 +167,9 @@ def _existing_artifacts(run_dir: Path, diagnostics: dict[str, JsonDict]) -> list
         "evidence_card.json",
         "evidence_card.md",
         "evidence_card.html",
+        "evidence_gate_result.json",
+        "evidence_gate_result.md",
+        "evidence_gate_result.html",
         "claim_check.json",
         "claim_check.md",
         "claim_check.html",

@@ -27,6 +27,8 @@ from promptcontrollab.ui.data import (
     evidence_card_rows,
     evidence_gap_action_rows,
     evidence_gap_rows,
+    evidence_gate_rows,
+    evidence_gate_summary,
     external_bridge_summary,
     filter_history_rows,
     first_comparison,
@@ -358,6 +360,47 @@ def test_report_model_and_ui_detail_read_evidence_card(tmp_path: Path) -> None:
     assert ladder[-1]["requested"] is True
 
 
+def test_report_model_and_ui_detail_read_evidence_gate(tmp_path: Path) -> None:
+    run = tmp_path / "runs" / "research-demo"
+    _write_json(
+        run / "evidence_gate_result.json",
+        {
+            "kind": "evidence_gate_result",
+            "status": "pass",
+            "summary": "Evidence gate pass: required checks are clean.",
+            "required_checks": {
+                "source_inputs": {"status": "pass", "summary": "source export hash matched"},
+                "research_bundle": {"status": "pass", "summary": "bundle verification passed"},
+            },
+            "advisory_checks": {
+                "claim_scope": {
+                    "status": "needs_review",
+                    "summary": "full claim needs hidden states",
+                },
+            },
+        },
+    )
+    (run / "evidence_gate_result.md").write_text("# gate\n", encoding="utf-8")
+    (run / "evidence_gate_result.html").write_text("<h1>gate</h1>\n", encoding="utf-8")
+
+    model = ReportModel.from_run(run)
+    detail = load_run_detail(run)
+    summary = evidence_gate_summary(detail)
+    rows = evidence_gate_rows(detail)
+    map_rows = research_evidence_map(detail)
+
+    assert model.evidence_gate["status"] == "pass"
+    assert detail["evidence_gate"]["summary"].startswith("Evidence gate pass")
+    assert "evidence_gate_result.json" in model.artifacts
+    assert "evidence_gate_result.md" in model.artifacts
+    assert "evidence_gate_result.html" in model.artifacts
+    assert summary["status"] == "pass"
+    assert {row["check"] for row in rows} == {"source inputs", "research bundle", "claim scope"}
+    gate_node = next(row for row in map_rows if row["key"] == "evidence_gate")
+    assert gate_node["status"] == "ready"
+    assert "required checks" in gate_node["summary"]
+
+
 def test_report_model_and_ui_detail_read_external_bridge_artifacts(tmp_path: Path) -> None:
     run = tmp_path / "runs" / "from-promptfoo-evidence"
     _write_json(
@@ -644,6 +687,14 @@ def test_research_evidence_map_links_protocol_diagnostics_and_claim(tmp_path: Pa
     _write_json(run / "diagnostics" / "riccati.json", {"stable_surrogate": True})
     _write_json(run / "diagnostics" / "tv_soft.json", {"delta_vs_baseline": {"time_varying": 0.1}})
     _write_json(
+        run / "evidence_gate_result.json",
+        {
+            "status": "pass",
+            "summary": "Evidence gate pass.",
+            "required_checks": {"research_bundle": {"status": "pass"}},
+        },
+    )
+    _write_json(
         run / "claim_check.json",
         {
             "requested_claim": "full-research",
@@ -663,6 +714,7 @@ def test_research_evidence_map_links_protocol_diagnostics_and_claim(tmp_path: Pa
         "trajectory",
         "riccati",
         "tv_soft",
+        "evidence_gate",
         "claim_check",
     ]
     assert all(row["status"] == "ready" for row in rows)
@@ -927,6 +979,15 @@ def test_ui_list_runs_prefers_child_runs_when_root_has_claim_check(tmp_path: Pat
     rows = list_runs(runs)
 
     assert [row["name"] for row in rows] == ["quick", "research-demo"]
+
+
+def test_ui_list_runs_recognizes_evidence_gate_only_run(tmp_path: Path) -> None:
+    run = tmp_path / "runs" / "evidence-check"
+    _write_json(run / "evidence_gate_result.json", {"status": "pass"})
+
+    rows = list_runs(tmp_path / "runs")
+
+    assert rows == [{"name": "evidence-check", "path": str(run)}]
 
 
 def test_ui_list_runs_keeps_current_run_when_it_has_manifest(tmp_path: Path) -> None:

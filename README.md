@@ -74,6 +74,7 @@ These are the paper-derived capabilities that drive the project:
 | Paired statistical comparison | `pcl stats`, `stats.json` | Whether a prompt change is reliable under bootstrap CI, permutation p-value, and Holm correction. |
 | Prompt-only comparison validity | `pcl validity`, `comparison_validity.json` | Whether a baseline/candidate result is clean prompt-only evidence rather than a model, split, or metric confound. |
 | Prompt optimization evidence card | `pcl evidence-card`, `evidence_card.json/md/html` | One compact audit card for protocol hygiene, paired stats, comparison validity, deployment risk, hidden-state diagnostics, Riccati, and time-varying control evidence. |
+| Evidence gate | `pcl evidence-gate`, `evidence_gate_result.json/md/html` | A reviewer/CI gate for source-input hashes and research-bundle verification, with gap and claim checks kept as advisory context. |
 | Prompt optimization claim check | `pcl claim-check`, `claim_check.json/md/html` | Whether the recorded evidence supports a paired, partial-research, or full-research claim. |
 | Soft-to-hard deployment gap | `pcl soft-hard`, `diagnostics/soft_hard.json` | Whether soft prompt gains survive nearest-token hard projection. |
 | HuggingFace hidden-state extraction | `pcl extract-hidden`, `hidden_states.npz` | Turns open-model prompts into trajectory-ready hidden-state artifacts. |
@@ -85,10 +86,11 @@ To experience the whole research stack without preparing model artifacts first, 
 `pcl research-demo --out runs/research-demo`. To apply the same unified diagnostic report to your
 own soft prompts, hidden states, matrices, and method predictions, use `pcl diagnose`. Research
 demo now also writes a synthetic tri-split, baseline/candidate scored runs, paired statistics,
-prompt-only comparison validity, `evidence_card.json` / `.md` / `.html`, and
-`claim_check.json` / `.md` / `.html`. The local UI surfaces a research evidence map, the evidence card, and a claim
-evidence ladder in the Research Overview, so reviewers can see whether the bundle has protocol
-evidence, diagnostics, and claim support for paired, partial-research, or full-research claims.
+prompt-only comparison validity, `evidence_card.json` / `.md` / `.html`,
+`evidence_gate_result.json` / `.md` / `.html`, and `claim_check.json` / `.md` / `.html`.
+The local UI surfaces a research evidence map, evidence gate status, the evidence card, and a claim
+evidence ladder in the Research Overview, so reviewers can see whether the bundle has reproducible
+source/bundle evidence, diagnostics, and claim support for paired, partial-research, or full-research claims.
 
 See [Research From The Paper](docs/research_from_paper.en.md) for the direct mapping from paper
 ideas to commands, inputs, outputs, and interpretation boundaries.
