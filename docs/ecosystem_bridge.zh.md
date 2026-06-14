@@ -156,7 +156,7 @@ pcl claim-check \
 | DeepEval | 本地 eval runner、metric、测试风格输出。 | 把测试结果升级为 prompt optimization 证据卡片和 claim 边界。 |
 | Langfuse | tracing、prompt management、eval、成本追踪、自托管 observability。 | 对导出结果补 soft-hard、trajectory、Riccati、tv-soft 等研究诊断路径。 |
 | LangSmith | agent tracing、experiment、dataset、online/offline eval。 | 检查实验导出是否能支持干净 prompt-only 比较和统计可靠结论。 |
-| prompt-optimizer | prompt ??????????????????????? | ? prompt ??????????????? hash???? claim ???????? |
+| prompt-optimizer | prompt 改写、prompt 收藏/模板、交互式测试和 prompt 资产管理。 | 把 prompt 资产导入为可审计候选，记录内容哈希，并生成声称优化有效之前需要补齐的 evidence gap plan。 |
 
 ## 打开哪个文件
 
@@ -186,7 +186,7 @@ benchmark 或完整论文结论。
 PCL 的目标不是更大、更全，而是更审慎、更可复现。它应该成为外部 eval /
 observability 工具之后的研究证据层。
 
-## prompt-optimizer ????
+## prompt-optimizer 资产桥接
 
 ```bash
 pcl import prompt-optimizer \
@@ -194,5 +194,7 @@ pcl import prompt-optimizer \
   --out runs/from-prompt-optimizer
 ```
 
-????????? `evidence-from`?prompt-optimizer ?????? prompt
-??????????????????PCL ????? hash???? gap plan????????????????
+这一步不是 `evidence-from`：prompt-optimizer 导出的是 prompt 候选、收藏或模板，而不是已经成对打分的
+评测证据。PCL 会记录 prompt 内容哈希，生成 `prompt_assets.json/html` 和
+`prompt_optimizer_gap_plan.json/html`，并说明要支持“这个 prompt 确实更好”还需要补充哪些
+split、prediction、统计和诊断 artifact。
