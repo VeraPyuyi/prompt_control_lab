@@ -186,6 +186,13 @@ pcl research-bundle --run runs/from-promptfoo-evidence --verify
 和 `sha256`，方便 reviewer 判断共享之后证据包是否发生过变化。
 `--verify` 模式不会先刷新哈希；它会验证现有 bundle，并写出
 `research_bundle_verification.json/md/html`，让篡改或误改显示为 mismatch。
+如果要在 CI 或 reviewer gate 中阻断 bundle mismatch 或缺失 artifact，可以加 `--strict`。
+它仍会先写出 verification 证据，再用非零退出码表示失败：
+
+```bash
+pcl research-bundle --run runs/from-promptfoo-evidence --verify --strict
+```
+
 `bridge_summary.html` 和 `ecosystem_scorecard.html` 也会展示这份 bundle integrity 摘要，让跨工具视图不仅说明 PCL 补了什么，还说明被链接的证据包是否已哈希、最近一次验证是否通过。
 
 运行建议的诊断命令之后，可以用下面的命令检查缺口是否真的补齐：

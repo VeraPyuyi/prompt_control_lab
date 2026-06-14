@@ -155,6 +155,15 @@ pcl claim-check \
 - `research_gap_status.html`：论文诊断缺口是否已补齐。
 - `research_bundle_verification.html`：证据包哈希是否仍然匹配。
 
+如果要把 bundle 哈希验证作为 CI 或 reviewer gate，可以使用 strict 模式：
+
+```bash
+pcl research-bundle --run runs/ecosystem-demo --verify --strict
+```
+
+strict 模式仍会写出 `research_bundle_verification.json`、`.md` 和 `.html`，然后在证据文件
+被改动、缺失或无法检查时返回非零退出码。
+
 ## 解读边界
 
 示例文件通常很小，所以 evidence card 或 claim check 显示 `needs_review` 是正常的。

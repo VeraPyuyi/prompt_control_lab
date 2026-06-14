@@ -184,6 +184,15 @@ pcl research-bundle --run runs/ecosystem-demo
 This rewrites `research_bundle.html` and `research_bundle.json`. The JSON inventory includes
 `bytes` and `sha256` for linked evidence files, while the self-generated bundle index files are
 marked as generated index artifacts to avoid unstable self-referential hashes.
+To use the recorded bundle hashes as a CI or reviewer gate, verify without refreshing and enable
+strict mode:
+
+```bash
+pcl research-bundle --run runs/ecosystem-demo --verify --strict
+```
+
+Strict mode still writes `research_bundle_verification.json`, `.md`, and `.html`, then returns a
+non-zero exit code if linked evidence files changed, disappeared, or cannot be checked.
 
 Promptfoo:
 

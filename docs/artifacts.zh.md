@@ -140,6 +140,9 @@ artifact 是否已经存在。它适合用来确认“证据缺口是否真的�
 
 说明什么问题：验证 `research_bundle.json` 中记录的哈希是否仍然匹配当前文件。它不能防止
 所有篡改，但可以让误改或分享后修改变得可见。
+如果要把这项验证用作 CI 或 reviewer gate，可以运行
+`pcl research-bundle --run <run> --verify --strict`。只要任何证据 artifact 被改动、
+缺失或无法检查，命令就会返回非零退出码。
 
 ## `evidence_from_result.json`
 

@@ -374,6 +374,8 @@ The `--verify` mode reads the existing `research_bundle.json` without refreshing
 `ok_count`, `mismatch_count`, `missing_count`, and one row per recorded hash. Use it after sharing a
 bundle to detect local edits or stale evidence files. It is tamper-evidence for the recorded local
 artifacts, not a cryptographic signature.
+Use `pcl research-bundle --run <run> --verify --strict` when this verification should fail CI or a
+reviewer gate if any linked evidence artifact changed, disappeared, or cannot be checked.
 
 ## `research_gap_plan.json` / `research_gap_plan.md` / `research_gap_plan.html`
 

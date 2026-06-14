@@ -197,6 +197,13 @@ The refreshed `research_bundle.json` records the visible artifact inventory plus
 shared.
 The `--verify` mode does not refresh hashes first; it verifies the existing bundle and writes
 `research_bundle_verification.json/md/html` so tampering or accidental edits show up as mismatches.
+For CI or reviewer gates, add `--strict` so bundle mismatches or missing artifacts return a
+non-zero exit code after writing the verification evidence:
+
+```bash
+pcl research-bundle --run runs/from-promptfoo-evidence --verify --strict
+```
+
 `bridge_summary.html` and `ecosystem_scorecard.html` surface this bundle integrity summary so the
 cross-tool view shows not only what PCL adds, but whether the linked evidence package is hashed and
 whether the last verification passed.

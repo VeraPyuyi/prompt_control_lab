@@ -879,6 +879,11 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Verify hashes in the existing bundle instead of refreshing it.",
     )
+    research_bundle_parser.add_argument(
+        "--strict",
+        action="store_true",
+        help="With --verify, return a non-zero exit code when bundle verification does not pass.",
+    )
     research_bundle_parser.set_defaults(func=_cmd_research_bundle)
 
     diagnose_parser = subcommands.add_parser(
@@ -1712,11 +1717,23 @@ def _cmd_research_demo(args: argparse.Namespace) -> None:
 
 
 def _cmd_research_bundle(args: argparse.Namespace) -> None:
+    if args.strict and not args.verify:
+        msg = "research-bundle --strict must be used together with --verify"
+        raise PromptControlLabError(msg)
     if args.verify:
         payload = verify_research_bundle_index(args.run)
     else:
         payload = write_research_bundle_index(args.run)
     print(json.dumps(payload, indent=2, ensure_ascii=False, sort_keys=True))
+    if args.strict and payload.get("status") != "pass":
+        msg = (
+            "Research bundle verification failed in strict mode: "
+            f"status={payload.get('status')}, "
+            f"mismatches={payload.get('mismatch_count')}, "
+            f"missing={payload.get('missing_count')}, "
+            f"unchecked={payload.get('unchecked_count')}"
+        )
+        raise PromptControlLabError(msg)
 
 
 def _cmd_diagnose(args: argparse.Namespace) -> None:
