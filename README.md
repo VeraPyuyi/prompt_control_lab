@@ -201,16 +201,18 @@ cross-tool view shows not only what PCL adds, but whether the linked evidence pa
 whether the last verification passed.
 
 Use `pcl evidence-audit` when you want this bridge in one pass: it runs the external import,
-paired comparison, research diagnostics, gap-status check, bundle index, and bundle verification,
-then writes `evidence_audit_result.html` / `.md` / `.json` as the reviewer-facing audit summary.
-If you need to prove that the original external export files still match the recorded source-input
-hashes, run:
+paired comparison, research diagnostics, gap-status check, source-input verification, bundle index,
+and bundle verification, then writes `evidence_audit_result.html` / `.md` / `.json` as the
+reviewer-facing audit summary.
+If you later need to re-check that the original external export files still match the recorded
+source-input hashes, run:
 
 ```bash
 pcl source-verify --run runs/from-promptfoo-audit
 ```
 
-This writes `source_input_verification.json/md/html`. It complements
+`evidence-audit` already writes `source_input_verification.json/md/html`; the standalone
+`source-verify` command refreshes that check after files move or change. It complements
 `research-bundle --verify`: source verification checks the original Promptfoo / DeepEval /
 Langfuse / LangSmith exports, while bundle verification checks the PCL evidence artifacts created
 from those exports.
@@ -301,7 +303,7 @@ The repository includes narrated 4K hands-on demo videos generated from real UI 
 10. `pcl tv-soft`: static/time-varying/shuffled/random soft-control comparison.
 11. `pcl ecosystem-demo`: run all bundled external-tool bridge examples as one comparison bundle.
 12. `pcl ecosystem-scorecard`: regenerate the cross-tool Promptfoo/DeepEval/Langfuse/LangSmith positioning scorecard.
-13. `pcl evidence-audit`: import external exports, add PCL evidence, check gaps, and verify the research bundle.
+13. `pcl evidence-audit`: import external exports, add PCL evidence, check gaps, verify source inputs, and verify the research bundle.
 14. `pcl evidence-from`: import external baseline/candidate exports and generate a PCL evidence card in one command.
 15. `pcl ingest auto` / `promptfoo` / `deepeval` / `langfuse` / `langsmith`: import external eval/trace artifacts into PCL research artifacts.
 16. `pcl compare-runs`: turn two imported/scored runs into stats, validity, and a report in one command.

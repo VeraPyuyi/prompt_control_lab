@@ -280,7 +280,8 @@ PromptControlLab prompt-optimization evidence bundle without replacing the exter
 ## `evidence_audit_result.json` / `evidence_audit_result.md` / `evidence_audit_result.html`
 
 Written by `pcl evidence-audit`. It runs the same import and comparison workflow as
-`pcl evidence-from`, then immediately runs `pcl gap-status` and `pcl research-bundle --verify`.
+`pcl evidence-from`, then immediately runs `pcl gap-status`, source-input verification,
+and `pcl research-bundle --verify`.
 
 Important fields:
 
@@ -289,7 +290,9 @@ Important fields:
   detected tool names, and imported row counts
 - `claim_scope` / `evidence_tier` / `validity`: the prompt-optimization claim boundary
 - `gap_status`: whether paper-derived diagnostics are present or still missing
+- `source_verification`: whether original external export files still match recorded hashes
 - `bundle_verification`: whether linked evidence artifacts still match the recorded hashes
+- `source_input_verification_path`: browser summary for original export hash verification
 - `html_path` / `markdown_path`: browser and text summaries for human review
 - `next_actions`: reviewer-first files to open next
 
@@ -302,7 +305,7 @@ one-command audit in a browser. Use `evidence_audit_result.json` for automation.
 
 ## `source_input_verification.json` / `.md` / `.html`
 
-Written by `pcl source-verify --run <run>`.
+Written automatically by `pcl evidence-audit`; refreshed by `pcl source-verify --run <run>`.
 
 What it explains: whether the original external baseline/candidate export files still match the
 `source_inputs` hashes recorded by `pcl evidence-from` or `pcl evidence-audit`.

@@ -285,6 +285,7 @@ def build_external_evidence_audit(
     gap_status = write_research_gap_status(run_dir=out_dir)
     bridge_summary_path = out_dir / "bridge_summary.json"
     bridge_summary = read_json(bridge_summary_path) if bridge_summary_path.exists() else {}
+    source_verification = verify_source_inputs(run_dir=out_dir)
     payload: JsonDict = {
         "kind": "external_evidence_audit",
         "tool": tool,
@@ -298,6 +299,7 @@ def build_external_evidence_audit(
         "research_bundle_path": str(out_dir / "research_bundle.html"),
         "research_diagnostics_path": str(out_dir / "research_diagnostics.html"),
         "research_gap_status_path": str(out_dir / "research_gap_status.html"),
+        "source_input_verification_path": str(out_dir / "source_input_verification.html"),
         "research_bundle_verification_path": str(
             out_dir / "research_bundle_verification.html"
         ),
@@ -311,6 +313,7 @@ def build_external_evidence_audit(
             "complete_count": gap_status.get("complete_count"),
             "missing_count": gap_status.get("missing_count"),
         },
+        "source_verification": _source_verification_summary(source_verification),
         "bundle_verification": {},
         "missing_paper_diagnostics": bridge_summary.get("missing_paper_diagnostics", []),
         "next_actions": [
@@ -323,6 +326,10 @@ def build_external_evidence_audit(
             (
                 "Open research_gap_status.html to see which paper-derived diagnostics "
                 "are still missing."
+            ),
+            (
+                "Open source_input_verification.html to confirm the original external "
+                "exports still match recorded hashes."
             ),
             (
                 "Open research_bundle_verification.html to confirm the linked evidence "
@@ -354,6 +361,7 @@ def build_external_evidence_audit(
                 "mismatch_count": verification.get("mismatch_count"),
                 "missing_count": verification.get("missing_count"),
             },
+            "source_verification": _source_verification_summary(source_verification),
         }
     )
     _write_evidence_audit_artifacts(out_dir, payload)
@@ -582,6 +590,19 @@ def _research_bundle_verification_summary(run_dir: Path) -> JsonDict:
         "verification_checked_count": payload.get("checked_count"),
         "verification_mismatch_count": payload.get("mismatch_count"),
         "verification_missing_count": payload.get("missing_count"),
+    }
+
+
+def _source_verification_summary(payload: JsonDict) -> JsonDict:
+    return {
+        "status": payload.get("status"),
+        "checked_count": payload.get("checked_count"),
+        "ok_count": payload.get("ok_count"),
+        "mismatch_count": payload.get("mismatch_count"),
+        "missing_count": payload.get("missing_count"),
+        "unchecked_count": payload.get("unchecked_count"),
+        "html_path": payload.get("html_path"),
+        "json_path": payload.get("json_path"),
     }
 
 
@@ -1053,8 +1074,10 @@ def _render_bridge_summary(payload: JsonDict) -> str:
 def _render_evidence_audit_markdown(payload: JsonDict) -> str:
     gap = payload.get("gap_status")
     verification = payload.get("bundle_verification")
+    source_verification = payload.get("source_verification")
     gap_summary = gap if isinstance(gap, dict) else {}
     verification_summary = verification if isinstance(verification, dict) else {}
+    source_summary = source_verification if isinstance(source_verification, dict) else {}
     lines = [
         "# External Evidence Audit Summary",
         "",
@@ -1064,6 +1087,12 @@ def _render_evidence_audit_markdown(payload: JsonDict) -> str:
         f"- Prompt-only validity: `{payload.get('validity')}`",
         f"- Gap status: `{gap_summary.get('status')}`",
         f"- Missing paper diagnostics: `{payload.get('missing_paper_diagnostics', [])}`",
+        f"- Source input verification: `{source_summary.get('status')}`",
+        (
+            f"- Source verification counts: checked `{source_summary.get('checked_count')}`, "
+            f"mismatch `{source_summary.get('mismatch_count')}`, "
+            f"missing `{source_summary.get('missing_count')}`"
+        ),
         f"- Bundle verification: `{verification_summary.get('status')}`",
         (
             f"- Verification counts: checked `{verification_summary.get('checked_count')}`, "
@@ -1084,6 +1113,7 @@ def _render_evidence_audit_markdown(payload: JsonDict) -> str:
         f"- Research bundle: `{payload.get('research_bundle_path')}`",
         f"- Research diagnostics: `{payload.get('research_diagnostics_path')}`",
         f"- Gap status: `{payload.get('research_gap_status_path')}`",
+        f"- Source input verification: `{payload.get('source_input_verification_path')}`",
         f"- Bundle verification: `{payload.get('research_bundle_verification_path')}`",
         "",
         "## What this audit did",
@@ -1092,6 +1122,7 @@ def _render_evidence_audit_markdown(payload: JsonDict) -> str:
         "- Built paired prompt-optimization comparison evidence.",
         "- Checked whether the comparison is valid as prompt-only evidence.",
         "- Checked paper-derived diagnostic gaps.",
+        "- Verified original external export files against recorded source-input hashes.",
         "- Verified the research bundle against recorded artifact hashes.",
         "",
         "## Next actions",
@@ -1111,8 +1142,10 @@ def render_evidence_audit_html(payload: JsonDict) -> str:
 
     gap = payload.get("gap_status")
     verification = payload.get("bundle_verification")
+    source_verification = payload.get("source_verification")
     gap_summary = gap if isinstance(gap, dict) else {}
     verification_summary = verification if isinstance(verification, dict) else {}
+    source_summary = source_verification if isinstance(source_verification, dict) else {}
     cards = "\n".join(
         [
             _html_card("Tool", payload.get("tool")),
@@ -1120,6 +1153,7 @@ def render_evidence_audit_html(payload: JsonDict) -> str:
             _html_card("Validity", payload.get("validity")),
             _html_card("Gap status", gap_summary.get("status")),
             _html_card("Missing diagnostics", gap_summary.get("missing_count")),
+            _html_card("Source verification", source_summary.get("status")),
             _html_card("Bundle verification", verification_summary.get("status")),
         ]
     )
@@ -1130,6 +1164,10 @@ def render_evidence_audit_html(payload: JsonDict) -> str:
             _html_link(payload.get("research_bundle_path"), "Research bundle"),
             _html_link(payload.get("research_diagnostics_path"), "Research diagnostics"),
             _html_link(payload.get("research_gap_status_path"), "Gap status"),
+            _html_link(
+                payload.get("source_input_verification_path"),
+                "Source input verification",
+            ),
             _html_link(
                 payload.get("research_bundle_verification_path"),
                 "Bundle verification",
@@ -1147,6 +1185,7 @@ def render_evidence_audit_html(payload: JsonDict) -> str:
         "Built paired prompt-optimization comparison evidence.",
         "Checked whether the comparison is valid as prompt-only evidence.",
         "Checked paper-derived diagnostic gaps.",
+        "Verified original external export files against recorded source-input hashes.",
         "Verified the research bundle against recorded artifact hashes.",
     ]
     steps_html = "".join(f"<li>{_html_text(item)}</li>" for item in audit_steps)
@@ -1158,6 +1197,11 @@ def render_evidence_audit_html(payload: JsonDict) -> str:
         f"checked {verification_summary.get('checked_count')}, "
         f"mismatch {verification_summary.get('mismatch_count')}, "
         f"missing {verification_summary.get('missing_count')}"
+    )
+    source_counts = (
+        f"checked {source_summary.get('checked_count')}, "
+        f"mismatch {source_summary.get('mismatch_count')}, "
+        f"missing {source_summary.get('missing_count')}"
     )
     body = f"""
     <section class="hero">
@@ -1181,6 +1225,7 @@ def render_evidence_audit_html(payload: JsonDict) -> str:
     <section>
       <h2>Paper Diagnostic Gaps</h2>
       <p><strong>Missing paper diagnostics:</strong> {missing}</p>
+      <p><strong>Source verification counts:</strong> {_html_text(source_counts)}</p>
       <p><strong>Bundle verification counts:</strong> {_html_text(verification_counts)}</p>
     </section>
     <section>

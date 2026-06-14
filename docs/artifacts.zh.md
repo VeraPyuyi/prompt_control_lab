@@ -159,7 +159,7 @@ artifact 是否已经存在。它适合用来确认“证据缺口是否真的�
 ## `evidence_audit_result.json` / `evidence_audit_result.md` / `evidence_audit_result.html`
 
 由 `pcl evidence-audit` 写出。它会先运行和 `pcl evidence-from` 相同的导入与比较流程，
-然后立刻运行 `pcl gap-status` 和 `pcl research-bundle --verify`。
+然后立刻运行 `pcl gap-status`、source-input verification 和 `pcl research-bundle --verify`。
 
 重要字段：
 
@@ -168,7 +168,9 @@ artifact 是否已经存在。它适合用来确认“证据缺口是否真的�
   检测到的工具名和导入行数。
 - `claim_scope` / `evidence_tier` / `validity`：当前 prompt optimization 证据能支持的主张边界。
 - `gap_status`：论文诊断是已经存在，还是仍有缺口。
+- `source_verification`：原始外部导出文件是否仍然匹配记录哈希。
 - `bundle_verification`：被链接的证据 artifact 是否仍然匹配已记录哈希。
+- `source_input_verification_path`：原始导出哈希验证的浏览器报告路径。
 - `html_path` / `markdown_path`：给人工审查使用的浏览器摘要和文本摘要。
 - `next_actions`：建议 reviewer 下一步打开的文件。
 
@@ -180,7 +182,7 @@ artifact 是否已经存在。它适合用来确认“证据缺口是否真的�
 
 ## `source_input_verification.json` / `.md` / `.html`
 
-由 `pcl source-verify --run <run>` 写出。
+由 `pcl evidence-audit` 自动写出；也可以用 `pcl source-verify --run <run>` 刷新。
 
 说明什么问题：原始外部 baseline / candidate 导出文件是否仍然匹配
 `pcl evidence-from` 或 `pcl evidence-audit` 记录在 `source_inputs` 里的 SHA-256 哈希。

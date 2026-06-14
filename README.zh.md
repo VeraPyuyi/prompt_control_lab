@@ -195,16 +195,17 @@ pcl gap-status --run runs/from-promptfoo-evidence
 
 导入后的 run 会包含 `predictions.jsonl`、`metrics.json` 和 `manifest.json`，因此可以继续接 `pcl compare-runs`、`pcl stats`、`pcl validity` 和后续报告。`compare-runs` 会写出一个独立比较目录，里面包含成对统计、prompt-only 比较有效性、candidate metrics 快照、源 run 快照以及 Markdown / HTML 报告。`evidence-card` 会继续把这条研究证据链压缩成一份 reviewer 更容易看的卡片。请使用新的或空的 `--out` 目录，避免旧 artifact 污染审计结果。这个能力的定位是桥接 Promptfoo / DeepEval / Langfuse / LangSmith 生态，而不是替代 Promptfoo 的 red-team / provider 生态、DeepEval 的本地 eval runner、Langfuse 的 tracing 平台或 LangSmith 的观测/评测工作流。
 
-如果希望一条命令完成整个闭环，可以用 `pcl evidence-audit`：它会依次运行外部导入、成对比较、研究诊断、gap-status、bundle index 和 bundle verification，并写出 `evidence_audit_result.html` / `.md` / `.json` 作为 reviewer 优先的审计摘要。
+如果希望一条命令完成整个闭环，可以用 `pcl evidence-audit`：它会依次运行外部导入、成对比较、研究诊断、gap-status、source-input verification、bundle index 和 bundle verification，并写出 `evidence_audit_result.html` / `.md` / `.json` 作为 reviewer 优先的审计摘要。
 
-如果还需要确认原始外部导出文件本身没有被替换或改动，可以运行：
+如果后续还需要重新确认原始外部导出文件本身没有被替换或改动，可以运行：
 
 ```bash
 pcl source-verify --run runs/from-promptfoo-audit
 ```
 
-它会写出 `source_input_verification.json/md/html`。这个检查和
-`research-bundle --verify` 是互补关系：`source-verify` 验证原始 Promptfoo /
+`evidence-audit` 已经会写出 `source_input_verification.json/md/html`；单独的
+`source-verify` 命令用于在文件移动或改动之后刷新这项检查。这个检查和
+`research-bundle --verify` 是互补关系：source verification 验证原始 Promptfoo /
 DeepEval / Langfuse / LangSmith 导出文件，`research-bundle --verify` 验证由这些导出生成的
 PCL 证据 artifact。
 
@@ -318,7 +319,7 @@ pcl doctor
 | time-varying control | `pcl tv-soft` | 比较 static、time-varying、shuffled、random control lane。 |
 | 生态桥接 demo | `pcl ecosystem-demo` | 一次性跑完 Promptfoo、DeepEval、Langfuse、LangSmith 样例，并生成 PCL evidence bundle。 |
 | 跨工具定位表 | `pcl ecosystem-scorecard` | 重新生成 Promptfoo / DeepEval / Langfuse / LangSmith 与 PCL 的分工、证据缺口和补齐命令。 |
-| 外部证据审计闭环 | `pcl evidence-audit` | 导入外部 export，补上 PCL 证据，检查论文诊断缺口，并验证 research bundle。 |
+| 外部证据审计闭环 | `pcl evidence-audit` | 导入外部 export，补上 PCL 证据，检查论文诊断缺口，验证原始 source inputs，并验证 research bundle。 |
 | 一键外部证据包 | `pcl evidence-from` | 导入外部 baseline / candidate export，并一键生成 PCL evidence card。 |
 | 生态桥接 | `pcl ingest auto` / `promptfoo` / `deepeval` / `langfuse` / `langsmith` | 导入外部 eval / trace artifact，再接 PCL 的比较有效性和研究诊断。 |
 | 一键 run 比较 | `pcl compare-runs` | 把两个导入 / 打分后的 run 变成 stats、comparison_validity 和报告。 |

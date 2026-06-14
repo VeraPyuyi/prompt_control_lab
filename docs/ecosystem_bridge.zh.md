@@ -57,6 +57,7 @@ pcl evidence-audit \
 - `evidence_audit_result.html` / `.md` / `.json`
 - `bridge_summary.html` / `.md` / `.json`
 - `research_bundle.html` / `.json`
+- `source_input_verification.html` / `.md` / `.json`
 - `research_bundle_verification.html` / `.md` / `.json`
 - `research_gap_status.html` / `.md` / `.json`
 - `evidence_card.html`
@@ -65,7 +66,8 @@ pcl evidence-audit \
 - `imports/` 目录下的 baseline / candidate 导入快照
 
 说明什么问题：这条命令把外部 eval / trace 导出转换成一个可审查的 PCL evidence bundle，
-同时告诉你还缺哪些论文诊断，以及当前证据包的哈希验证是否通过。
+同时告诉你还缺哪些论文诊断、原始外部导出文件的哈希是否仍然匹配，以及当前证据包的
+哈希验证是否通过。
 
 人工审查建议先打开 `evidence_audit_result.html`；自动化流程读取
 `evidence_audit_result.json`。
@@ -79,7 +81,8 @@ PCL 证据包到底基于哪两个外部导出文件生成。
 pcl source-verify --run runs/from-promptfoo-audit
 ```
 
-它会写出 `source_input_verification.json`、`.md` 和 `.html`。这个命令检查外部源文件本身；
+`pcl evidence-audit` 已经会写出 `source_input_verification.json`、`.md` 和 `.html`；
+单独的 `source-verify` 命令用于后续刷新这项检查。它检查外部源文件本身；
 `pcl research-bundle --verify` 检查由这些源文件生成的 PCL 证据 artifact。
 
 ## 更低层的桥接命令

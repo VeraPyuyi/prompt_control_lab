@@ -111,7 +111,8 @@ for review.
 
 For a single external tool export, the recommended reviewer-first entry point is
 `pcl evidence-audit`. It imports the external baseline/candidate export, writes the PCL comparison
-evidence, checks paper-diagnostic gaps, and verifies the local research bundle hashes in one pass:
+evidence, checks paper-diagnostic gaps, verifies the original source export hashes, and verifies
+the local research bundle hashes in one pass:
 
 ```bash
 pcl evidence-audit \
@@ -127,8 +128,8 @@ pcl evidence-audit \
 
 Open `evidence_audit_result.html` first when a human reviewer needs the one-command audit
 summary. Use `evidence_audit_result.json` when automation needs the same status. Then open
-`bridge_summary.html`, `research_gap_status.html`, and `research_bundle_verification.html` for the
-full evidence trail.
+`bridge_summary.html`, `research_gap_status.html`, `source_input_verification.html`, and
+`research_bundle_verification.html` for the full evidence trail.
 
 The audit also records source input provenance for the external baseline and candidate exports:
 path, byte size, SHA-256 hash, detected tool, and imported row count. This lets reviewers verify
@@ -139,9 +140,10 @@ To re-check those original exports later, run:
 pcl source-verify --run runs/from-promptfoo-audit
 ```
 
-This writes `source_input_verification.json`, `.md`, and `.html`. It checks the external source
-exports themselves; `pcl research-bundle --verify` checks the PCL evidence artifacts created from
-those exports.
+`pcl evidence-audit` already writes `source_input_verification.json`, `.md`, and `.html`.
+The standalone command refreshes the check later. It checks the external source exports
+themselves; `pcl research-bundle --verify` checks the PCL evidence artifacts created from those
+exports.
 
 The demo automatically audits the bundle against the paper-derived evidence map.
 To regenerate that diagnosis after editing the bundle, run:
