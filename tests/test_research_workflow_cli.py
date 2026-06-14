@@ -20,8 +20,10 @@ def test_start_research_runs_paper_diagnostics_demo(
 
     out = capsys.readouterr().out
     assert "Beginner mode: run the paper-style research diagnostics demo" in out
+    assert f"Open first: {run_dir / 'research_bundle.html'}" in out
     assert "Evidence card:" in out
     assert "Claim check:" in out
+    assert f"UI: pcl ui --runs {tmp_path}" in out
     assert (run_dir / "research_diagnostics.html").exists()
     assert (run_dir / "evidence_card.html").exists()
     assert (run_dir / "claim_check.html").exists()
@@ -31,11 +33,17 @@ def test_start_research_runs_paper_diagnostics_demo(
     assert (run_dir / "diagnostics" / "tv_soft.json").exists()
 
 
-def test_research_demo_generates_paper_diagnostics(tmp_path: Path) -> None:
+def test_research_demo_generates_paper_diagnostics(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
     pytest.importorskip("numpy")
     run_dir = tmp_path / "research-demo"
 
     assert main(["research-demo", "--out", str(run_dir)]) == 0
+    out = capsys.readouterr().out
+    assert f"Open first: {run_dir / 'research_bundle.html'}" in out
+    assert f"UI: pcl ui --runs {tmp_path}" in out
 
     assert (run_dir / "inputs" / "soft_prompt.npz").exists()
     assert (run_dir / "inputs" / "vocab_embeddings.npz").exists()

@@ -1428,16 +1428,9 @@ def _cmd_start(args: argparse.Namespace) -> None:
     choice = _start_choice(args.choice)
     if choice == "research":
         out_dir = args.out or Path("runs") / "research-demo"
-        print("Beginner mode: run the paper-style research diagnostics demo")
         payload = write_research_demo(out_dir=out_dir, seed=args.seed)
-        diagnostics = payload.get("diagnostics", {})
-        diagnostic_names = sorted(diagnostics) if isinstance(diagnostics, dict) else []
-        print(f"Wrote research demo to {out_dir}")
-        print(f"Diagnostics: {', '.join(diagnostic_names)}")
-        print(f"Research report: {out_dir / 'research_diagnostics.html'}")
-        print(f"Evidence card: {out_dir / 'evidence_card.html'}")
-        print(f"Claim check: {out_dir / 'claim_check.html'}")
-        print("Next: run `pcl ui --runs runs/` to inspect the research evidence map.")
+        print("Beginner mode: run the paper-style research diagnostics demo")
+        print(_format_research_demo_output(out_dir=out_dir, payload=payload))
         return
 
     if choice == "improve":
@@ -1781,11 +1774,24 @@ def _cmd_export_report(args: argparse.Namespace) -> None:
 
 def _cmd_research_demo(args: argparse.Namespace) -> None:
     payload = write_research_demo(out_dir=args.out, seed=args.seed)
+    print(_format_research_demo_output(out_dir=args.out, payload=payload))
+
+
+def _format_research_demo_output(*, out_dir: Path, payload: JsonDict) -> str:
     diagnostics = payload.get("diagnostics", {})
     diagnostic_names = sorted(diagnostics) if isinstance(diagnostics, dict) else []
-    print(f"Wrote research demo to {args.out}")
-    print(f"Diagnostics: {', '.join(diagnostic_names)}")
-    print(f"Report: {args.out / 'research_diagnostics.html'}")
+    ui_runs_dir = out_dir.parent if out_dir.parent != Path("") else Path(".")
+    lines = [
+        f"Wrote research demo to {out_dir}",
+        f"Diagnostics: {', '.join(diagnostic_names)}",
+        f"Open first: {out_dir / 'research_bundle.html'}",
+        f"Research diagnostics: {out_dir / 'research_diagnostics.html'}",
+        f"Evidence card: {out_dir / 'evidence_card.html'}",
+        f"Claim check: {out_dir / 'claim_check.html'}",
+        f"Evidence gate: {out_dir / 'evidence_gate_result.html'}",
+        f"UI: pcl ui --runs {ui_runs_dir}",
+    ]
+    return "\n".join(lines)
 
 
 def _cmd_research_bundle(args: argparse.Namespace) -> None:
