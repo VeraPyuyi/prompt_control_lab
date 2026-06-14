@@ -247,6 +247,62 @@ def test_source_verify_detects_changed_external_export(tmp_path: Path) -> None:
     assert "mismatch" in markdown
 
 
+def test_source_verify_uses_resolved_path_after_cwd_changes(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    source_dir = tmp_path / "exports"
+    source_dir.mkdir()
+    source = source_dir / "promptfoo_results.json"
+    source.write_text(
+        (Path("examples") / "external" / "promptfoo_results.json").read_text(encoding="utf-8"),
+        encoding="utf-8",
+    )
+    out_dir = tmp_path / "runs" / "from-relative-promptfoo-audit"
+
+    monkeypatch.chdir(source_dir)
+    assert (
+        main(
+            [
+                "evidence-audit",
+                "--tool",
+                "promptfoo",
+                "--baseline-input",
+                "promptfoo_results.json",
+                "--candidate-input",
+                "promptfoo_results.json",
+                "--baseline-prompt-id",
+                "baseline",
+                "--candidate-prompt-id",
+                "candidate",
+                "--provider",
+                "openai:gpt-4o-mini-20260601",
+                "--split-hash",
+                "external-demo-split",
+                "--bootstrap-samples",
+                "20",
+                "--permutation-samples",
+                "100",
+                "--out",
+                str(out_dir),
+            ]
+        )
+        == 0
+    )
+    audit = read_json(out_dir / "evidence_audit_result.json")
+    assert audit["source_inputs"][0]["path"] == "promptfoo_results.json"
+    assert audit["source_inputs"][0]["path_kind"] == "relative"
+    assert audit["source_inputs"][0]["resolved_path"] == str(source.resolve())
+
+    other_dir = tmp_path / "other-cwd"
+    other_dir.mkdir()
+    monkeypatch.chdir(other_dir)
+    assert main(["source-verify", "--run", str(out_dir)]) == 0
+    verification = read_json(out_dir / "source_input_verification.json")
+    assert verification["status"] == "pass"
+    assert {row["resolved_path"] for row in verification["results"]} == {str(source.resolve())}
+
+
 def test_evidence_from_langfuse_pairs_by_example_id(tmp_path: Path) -> None:
     source = tmp_path / "langfuse-export.json"
     source.write_text(json.dumps(_langfuse_paired_payload()), encoding="utf-8")

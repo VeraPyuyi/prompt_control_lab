@@ -132,8 +132,9 @@ summary. Use `evidence_audit_result.json` when automation needs the same status.
 `research_bundle_verification.html` for the full evidence trail.
 
 The audit also records source input provenance for the external baseline and candidate exports:
-path, byte size, SHA-256 hash, detected tool, and imported row count. This lets reviewers verify
-which external export files the PCL evidence bundle was built from.
+original path, path kind, resolved absolute path, byte size, SHA-256 hash, detected tool, and
+imported row count. This lets reviewers verify which external export files the PCL evidence bundle
+was built from, even if they later run verification from a different working directory.
 To re-check those original exports later, run:
 
 ```bash

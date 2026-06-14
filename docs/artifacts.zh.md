@@ -150,8 +150,8 @@ artifact 是否已经存在。它适合用来确认“证据缺口是否真的�
 
 重要字段：
 
-- `source_inputs`：baseline 和 candidate 外部导出文件的路径、字节数、SHA-256 哈希、
-  检测到的工具名和导入行数。
+- `source_inputs`：baseline 和 candidate 外部导出文件的原始路径、路径类型、解析后的绝对路径、
+  字节数、SHA-256 哈希、检测到的工具名和导入行数。
 - `baseline_import` / `candidate_import`：导入计数、均值和筛选条件。
 - `comparison`：stats、comparison validity、evidence card 和 report 的路径。
 - `bridge_summary`：推荐结论、evidence tier、claim scope、validity 和缺失证据。
@@ -164,8 +164,8 @@ artifact 是否已经存在。它适合用来确认“证据缺口是否真的�
 重要字段：
 
 - `detected_tools`：导入时识别到的外部工具来源。
-- `source_inputs`：baseline 和 candidate 外部导出文件的路径、字节数、SHA-256 哈希、
-  检测到的工具名和导入行数。
+- `source_inputs`：baseline 和 candidate 外部导出文件的原始路径、路径类型、解析后的绝对路径、
+  字节数、SHA-256 哈希、检测到的工具名和导入行数。
 - `claim_scope` / `evidence_tier` / `validity`：当前 prompt optimization 证据能支持的主张边界。
 - `gap_status`：论文诊断是已经存在，还是仍有缺口。
 - `source_verification`：原始外部导出文件是否仍然匹配记录哈希。
@@ -192,7 +192,7 @@ artifact 是否已经存在。它适合用来确认“证据缺口是否真的�
 - `status`：`pass`、`fail`、`needs_review` 或 `missing_source_inputs`。
 - `source_artifact`：这次验证读取的是哪一个 PCL artifact 里的 `source_inputs`。
 - `checked_count` / `ok_count` / `mismatch_count` / `missing_count` / `unchecked_count`。
-- `results`：每个外部源文件的 expected / actual SHA-256 对比。
+- `results`：每个外部源文件的原始路径、实际解析路径，以及 expected / actual SHA-256 对比。
 
 它和 `research_bundle_verification.*` 是互补关系。`source-verify` 验证原始 Promptfoo /
 DeepEval / Langfuse / LangSmith 导出文件；`research-bundle --verify` 验证由这些导出生成的

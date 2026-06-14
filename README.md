@@ -212,7 +212,9 @@ pcl source-verify --run runs/from-promptfoo-audit
 ```
 
 `evidence-audit` already writes `source_input_verification.json/md/html`; the standalone
-`source-verify` command refreshes that check after files move or change. It complements
+`source-verify` command refreshes that check after files move or change. Source provenance records
+both the original path and the resolved absolute path, so verification is not tied to the original
+working directory. It complements
 `research-bundle --verify`: source verification checks the original Promptfoo / DeepEval /
 Langfuse / LangSmith exports, while bundle verification checks the PCL evidence artifacts created
 from those exports.

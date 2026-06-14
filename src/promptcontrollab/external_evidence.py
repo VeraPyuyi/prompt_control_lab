@@ -463,11 +463,14 @@ def _load_source_inputs(run_dir: Path) -> tuple[list[object], str | None]:
 def _verify_source_input(*, run_dir: Path, item: JsonDict) -> JsonDict:
     role = item.get("role")
     path_text = str(item.get("path") or "")
+    resolved_path_text = str(item.get("resolved_path") or "")
     expected = item.get("sha256")
     base: JsonDict = {
         "role": role,
         "source_tool": item.get("source_tool"),
         "path": path_text,
+        "recorded_resolved_path": resolved_path_text,
+        "path_kind": item.get("path_kind"),
         "expected_sha256": expected,
         "import_count": item.get("import_count"),
     }
@@ -475,7 +478,11 @@ def _verify_source_input(*, run_dir: Path, item: JsonDict) -> JsonDict:
         return {**base, "status": "unchecked", "reason": "no source path recorded"}
     if not isinstance(expected, str) or not expected:
         return {**base, "status": "unchecked", "reason": "no recorded sha256"}
-    path = _resolve_source_path(path_text=path_text, run_dir=run_dir)
+    path = _resolve_source_path(
+        path_text=path_text,
+        run_dir=run_dir,
+        resolved_path_text=resolved_path_text,
+    )
     if not path.exists() or not path.is_file():
         return {
             **base,
@@ -493,7 +500,11 @@ def _verify_source_input(*, run_dir: Path, item: JsonDict) -> JsonDict:
     }
 
 
-def _resolve_source_path(*, path_text: str, run_dir: Path) -> Path:
+def _resolve_source_path(*, path_text: str, run_dir: Path, resolved_path_text: str = "") -> Path:
+    if resolved_path_text:
+        resolved_path = Path(resolved_path_text)
+        if resolved_path.is_absolute() and resolved_path.exists():
+            return resolved_path
     path = Path(path_text)
     if path.is_absolute() or path.exists():
         return path
@@ -710,9 +721,12 @@ def _source_input_provenance(
 ) -> JsonDict:
     """Record immutable provenance for an external source export."""
 
+    resolved_path = source_path.resolve()
     payload: JsonDict = {
         "role": role,
         "path": str(source_path),
+        "resolved_path": str(resolved_path),
+        "path_kind": "absolute" if source_path.is_absolute() else "relative",
         "bytes": source_path.stat().st_size,
         "sha256": f"sha256:{_sha256_file(source_path)}",
     }
@@ -977,8 +991,8 @@ def _render_bridge_summary(payload: JsonDict) -> str:
         "",
         "## Source input provenance",
         "",
-        "| Role | Tool | Path | Bytes | SHA-256 | Imported rows |",
-        "|---|---|---|---:|---|---:|",
+        "| Role | Tool | Path | Path kind | Resolved path | Bytes | SHA-256 | Imported rows |",
+        "|---|---|---|---|---|---:|---|---:|",
         *_source_input_markdown_rows(payload.get("source_inputs")),
         "",
         "## Tool roles",
@@ -1102,8 +1116,8 @@ def _render_evidence_audit_markdown(payload: JsonDict) -> str:
         "",
         "## Source input provenance",
         "",
-        "| Role | Tool | Path | Bytes | SHA-256 | Imported rows |",
-        "|---|---|---|---:|---|---:|",
+        "| Role | Tool | Path | Path kind | Resolved path | Bytes | SHA-256 | Imported rows |",
+        "|---|---|---|---|---|---:|---|---:|",
         *_source_input_markdown_rows(payload.get("source_inputs")),
         "",
         "## Reviewer links",
@@ -1176,7 +1190,7 @@ def render_evidence_audit_html(payload: JsonDict) -> str:
         if item
     )
     source_table = _html_table(
-        ["Role", "Tool", "Path", "Bytes", "SHA-256", "Imported rows"],
+        ["Role", "Tool", "Path", "Path kind", "Resolved path", "Bytes", "SHA-256", "Imported rows"],
         _source_input_html_rows(payload.get("source_inputs")),
         empty="No source input provenance recorded.",
     )
@@ -1254,8 +1268,11 @@ def _render_source_input_verification_markdown(payload: JsonDict) -> str:
         "",
         "## Results",
         "",
-        "| Role | Tool | Status | Path | Expected SHA-256 | Actual SHA-256 | Bytes |",
-        "|---|---|---|---|---|---|---:|",
+        (
+            "| Role | Tool | Status | Path | Resolved path | Expected SHA-256 | "
+            "Actual SHA-256 | Bytes |"
+        ),
+        "|---|---|---|---|---|---|---|---:|",
         *_source_verification_markdown_rows(payload.get("results")),
         "",
         "## Boundary",
@@ -1281,7 +1298,16 @@ def render_source_input_verification_html(payload: JsonDict) -> str:
     )
     rows = _source_verification_html_rows(payload.get("results"))
     table = _html_table(
-        ["Role", "Tool", "Status", "Path", "Expected SHA-256", "Actual SHA-256", "Bytes"],
+        [
+            "Role",
+            "Tool",
+            "Status",
+            "Path",
+            "Resolved path",
+            "Expected SHA-256",
+            "Actual SHA-256",
+            "Bytes",
+        ],
         rows,
         empty="No source input verification rows recorded.",
     )
@@ -1327,7 +1353,7 @@ def render_bridge_summary_html(payload: JsonDict) -> str:
         empty="No external tool roles recorded.",
     )
     source_table = _html_table(
-        ["Role", "Tool", "Path", "Bytes", "SHA-256", "Imported rows"],
+        ["Role", "Tool", "Path", "Path kind", "Resolved path", "Bytes", "SHA-256", "Imported rows"],
         _source_input_html_rows(payload.get("source_inputs")),
         empty="No source input provenance recorded.",
     )
@@ -1566,7 +1592,7 @@ def _remediation_html_rows(value: object) -> list[str]:
 
 def _source_input_markdown_rows(value: object) -> list[str]:
     if not isinstance(value, list):
-        return ["| _missing_ |  |  |  |  |  |"]
+        return ["| _missing_ |  |  |  |  |  |  |  |"]
     rows: list[str] = []
     for item in value:
         if not isinstance(item, dict):
@@ -1576,11 +1602,13 @@ def _source_input_markdown_rows(value: object) -> list[str]:
             f"{_markdown_cell(item.get('role'))} | "
             f"{_markdown_cell(item.get('source_tool'))} | "
             f"`{_markdown_cell(item.get('path'))}` | "
+            f"{_markdown_cell(item.get('path_kind'))} | "
+            f"`{_markdown_cell(item.get('resolved_path'))}` | "
             f"{_markdown_cell(item.get('bytes'))} | "
             f"`{_markdown_cell(item.get('sha256'))}` | "
             f"{_markdown_cell(item.get('import_count'))} |"
         )
-    return rows or ["| _missing_ |  |  |  |  |  |"]
+    return rows or ["| _missing_ |  |  |  |  |  |  |  |"]
 
 
 def _source_input_html_rows(value: object) -> list[str]:
@@ -1595,6 +1623,8 @@ def _source_input_html_rows(value: object) -> list[str]:
             f"<td>{_html_text(item.get('role'))}</td>"
             f"<td>{_html_text(item.get('source_tool'))}</td>"
             f"<td><code>{_html_text(item.get('path'))}</code></td>"
+            f"<td>{_html_text(item.get('path_kind'))}</td>"
+            f"<td><code>{_html_text(item.get('resolved_path'))}</code></td>"
             f"<td>{_html_text(item.get('bytes'))}</td>"
             f"<td><code>{_html_text(item.get('sha256'))}</code></td>"
             f"<td>{_html_text(item.get('import_count'))}</td>"
@@ -1605,7 +1635,7 @@ def _source_input_html_rows(value: object) -> list[str]:
 
 def _source_verification_markdown_rows(value: object) -> list[str]:
     if not isinstance(value, list):
-        return ["| _missing_ |  |  |  |  |  |  |"]
+        return ["| _missing_ |  |  |  |  |  |  |  |"]
     rows: list[str] = []
     for item in value:
         if not isinstance(item, dict):
@@ -1616,11 +1646,12 @@ def _source_verification_markdown_rows(value: object) -> list[str]:
             f"{_markdown_cell(item.get('source_tool'))} | "
             f"{_markdown_cell(item.get('status'))} | "
             f"`{_markdown_cell(item.get('path'))}` | "
+            f"`{_markdown_cell(item.get('resolved_path'))}` | "
             f"`{_markdown_cell(item.get('expected_sha256'))}` | "
             f"`{_markdown_cell(item.get('actual_sha256'))}` | "
             f"{_markdown_cell(item.get('bytes'))} |"
         )
-    return rows or ["| _missing_ |  |  |  |  |  |  |"]
+    return rows or ["| _missing_ |  |  |  |  |  |  |  |"]
 
 
 def _source_verification_html_rows(value: object) -> list[str]:
@@ -1636,6 +1667,7 @@ def _source_verification_html_rows(value: object) -> list[str]:
             f"<td>{_html_text(item.get('source_tool'))}</td>"
             f"<td><strong>{_html_text(item.get('status'))}</strong></td>"
             f"<td><code>{_html_text(item.get('path'))}</code></td>"
+            f"<td><code>{_html_text(item.get('resolved_path'))}</code></td>"
             f"<td><code>{_html_text(item.get('expected_sha256'))}</code></td>"
             f"<td><code>{_html_text(item.get('actual_sha256'))}</code></td>"
             f"<td>{_html_text(item.get('bytes'))}</td>"

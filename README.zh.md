@@ -204,7 +204,9 @@ pcl source-verify --run runs/from-promptfoo-audit
 ```
 
 `evidence-audit` 已经会写出 `source_input_verification.json/md/html`；单独的
-`source-verify` 命令用于在文件移动或改动之后刷新这项检查。这个检查和
+`source-verify` 命令用于在文件移动或改动之后刷新这项检查。source provenance 会同时记录
+用户输入的原始路径和解析后的绝对路径，因此后续验证不必依赖当初运行命令时的工作目录。
+这个检查和
 `research-bundle --verify` 是互补关系：source verification 验证原始 Promptfoo /
 DeepEval / Langfuse / LangSmith 导出文件，`research-bundle --verify` 验证由这些导出生成的
 PCL 证据 artifact。

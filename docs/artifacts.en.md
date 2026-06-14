@@ -263,8 +263,8 @@ paper-evidence gap coverage.
 Important fields:
 
 - `tool`: `auto`, `promptfoo`, `deepeval`, `langfuse`, or `langsmith`
-- `source_inputs`: baseline and candidate export paths, byte sizes, SHA-256 hashes,
-  detected tool names, and imported row counts
+- `source_inputs`: baseline and candidate export paths, path kind, resolved absolute paths, byte
+  sizes, SHA-256 hashes, detected tool names, and imported row counts
 - `baseline_import` / `candidate_import`: counts, mean scores, and selected filters from import
 - `comparison_dir`: the self-contained PCL comparison run
 - `comparison`: paths to stats, prompt-only validity, evidence card, and reports
@@ -286,8 +286,8 @@ and `pcl research-bundle --verify`.
 Important fields:
 
 - `detected_tools`: external export source detected during import
-- `source_inputs`: baseline and candidate export paths, byte sizes, SHA-256 hashes,
-  detected tool names, and imported row counts
+- `source_inputs`: baseline and candidate export paths, path kind, resolved absolute paths, byte
+  sizes, SHA-256 hashes, detected tool names, and imported row counts
 - `claim_scope` / `evidence_tier` / `validity`: the prompt-optimization claim boundary
 - `gap_status`: whether paper-derived diagnostics are present or still missing
 - `source_verification`: whether original external export files still match recorded hashes
@@ -315,7 +315,8 @@ Important fields:
 - `status`: `pass`, `fail`, `needs_review`, or `missing_source_inputs`
 - `source_artifact`: which PCL artifact supplied the recorded `source_inputs`
 - `checked_count` / `ok_count` / `mismatch_count` / `missing_count` / `unchecked_count`
-- `results`: one row per external source export with expected and actual SHA-256 values
+- `results`: one row per external source export with the displayed path, resolved path, and
+  expected/actual SHA-256 values
 
 This complements `research_bundle_verification.*`. Source verification checks the original
 Promptfoo, DeepEval, Langfuse, or LangSmith export files; bundle verification checks the PCL

@@ -73,8 +73,8 @@ pcl evidence-audit \
 `evidence_audit_result.json`。
 
 审计结果还会记录外部 baseline 和 candidate 导出文件的 source input provenance：
-路径、字节数、SHA-256 哈希、检测到的工具名和导入行数。这样 reviewer 可以确认
-PCL 证据包到底基于哪两个外部导出文件生成。
+原始路径、路径类型、解析后的绝对路径、字节数、SHA-256 哈希、检测到的工具名和导入行数。
+这样 reviewer 即使后续换了工作目录，也可以确认 PCL 证据包到底基于哪两个外部导出文件生成。
 如果后续需要重新确认这些原始导出文件没有被替换或改动，可以运行：
 
 ```bash
