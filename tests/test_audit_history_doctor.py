@@ -538,7 +538,11 @@ def test_github_action_example_exists_and_uses_real_cli() -> None:
     assert "pull_request" in text
     assert "pcl analyze --config promptcontrol.example.yaml --out runs/quick" in text
     assert "pcl gate --run runs/quick --policy examples/gate.policy.yaml" in text
+    assert "pcl evidence-gate --run runs/quick --strict" in text
     assert "pcl audit-diff" in text
+    assert "--evidence-gate runs/quick/evidence_gate_result.json" in text
+    assert "<!-- prompt-control-lab-summary -->" in text
+    assert "updateComment" in text
     assert "gate_result.json was not found" in text
     assert "cat > runs/quick/manifest.json" in text
     assert "[ -f runs/quick/candidate/metrics.json ]" in text
@@ -548,6 +552,9 @@ def test_github_action_example_exists_and_uses_real_cli() -> None:
     template_text = template.read_text(encoding="utf-8")
     assert "cat > runs/quick/manifest.json" in template_text
     assert "[ -f runs/quick/candidate/metrics.json ]" in template_text
+    assert "pcl evidence-gate --run runs/quick --strict" in template_text
+    assert "<!-- prompt-control-lab-summary -->" in template_text
+    assert "updateComment" in template_text
 
 
 def _make_git_repo(tmp_path: Path) -> Path:

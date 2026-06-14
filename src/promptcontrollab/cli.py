@@ -843,6 +843,12 @@ def build_parser() -> argparse.ArgumentParser:
     summary_parser.add_argument("--audit", type=Path, default=None, help="audit_result.json path.")
     summary_parser.add_argument("--gate", type=Path, default=None, help="gate_result.json path.")
     summary_parser.add_argument(
+        "--evidence-gate",
+        type=Path,
+        default=None,
+        help="evidence_gate_result.json path.",
+    )
+    summary_parser.add_argument(
         "--agent-run",
         type=Path,
         default=None,
@@ -1672,6 +1678,7 @@ def _cmd_pr_summary(args: argparse.Namespace) -> None:
     payload = write_pr_summary(
         audit_path=args.audit,
         gate_path=args.gate,
+        evidence_gate_path=args.evidence_gate,
         agent_run_path=args.agent_run,
         markdown_path=args.out,
         json_path=args.json_out,

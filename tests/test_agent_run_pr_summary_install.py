@@ -238,6 +238,7 @@ def test_agent_run_promotes_high_risk_audit_findings(tmp_path: Path) -> None:
 def test_pr_summary_cli_and_github_app_helpers(tmp_path: Path) -> None:
     audit = tmp_path / "audit_result.json"
     gate = tmp_path / "gate_result.json"
+    evidence_gate = tmp_path / "evidence_gate_result.json"
     agent_run = tmp_path / "agent_run.json"
     _write_json(
         audit,
@@ -250,6 +251,7 @@ def test_pr_summary_cli_and_github_app_helpers(tmp_path: Path) -> None:
         },
     )
     _write_json(gate, {"status": "fail", "plain_summary": "Candidate failed policy."})
+    _write_json(evidence_gate, {"status": "pass", "summary": "Evidence gate passed."})
     _write_json(agent_run, {"agent": "codex", "model": "gpt-5.2"})
     md = tmp_path / "summary.md"
     js = tmp_path / "summary.json"
@@ -262,6 +264,8 @@ def test_pr_summary_cli_and_github_app_helpers(tmp_path: Path) -> None:
                 str(audit),
                 "--gate",
                 str(gate),
+                "--evidence-gate",
+                str(evidence_gate),
                 "--agent-run",
                 str(agent_run),
                 "--out",
@@ -275,6 +279,8 @@ def test_pr_summary_cli_and_github_app_helpers(tmp_path: Path) -> None:
 
     payload = _read_json(js)
     assert payload["status"] == "fail"
+    assert payload["coverage"]["evidence_gate"] is True
+    assert payload["evidence_gate_status"] == "pass"
     assert "prompt-control-lab:needs-review" in payload["labels"]
     assert "prompt-control-lab:gate-failed" in payload["labels"]
     assert "auth/session.py" in md.read_text(encoding="utf-8")
@@ -375,13 +381,44 @@ def test_pr_summary_records_artifact_coverage_warning_for_gate_only(tmp_path: Pa
     payload = build_pr_summary(gate_path=gate)
 
     assert payload["status"] == "pass"
-    assert payload["coverage"] == {"gate": True, "audit": False, "agent_run": False}
+    assert payload["coverage"] == {
+        "gate": True,
+        "evidence_gate": False,
+        "audit": False,
+        "agent_run": False,
+    }
     assert payload["warnings"] == [
-        "No audit artifact was provided; diff-level PR risk was not checked."
+        "No audit artifact was provided; diff-level PR risk was not checked.",
+        "No evidence gate artifact was provided; source/bundle evidence was not checked.",
     ]
     markdown = render_pr_summary_markdown(payload)
     assert "Coverage" in markdown
+    assert "Evidence gate" in markdown
     assert "Warnings" in markdown
+
+
+def test_pr_summary_uses_evidence_gate_failure(tmp_path: Path) -> None:
+    evidence_gate = tmp_path / "evidence_gate_result.json"
+    js = tmp_path / "summary.json"
+    _write_json(
+        evidence_gate,
+        {
+            "status": "fail",
+            "summary": "Evidence gate fail: source_inputs=pass, research_bundle=fail.",
+        },
+    )
+
+    assert (
+        main(["pr-summary", "--evidence-gate", str(evidence_gate), "--json-out", str(js)])
+        == 0
+    )
+
+    payload = _read_json(js)
+    assert payload["status"] == "fail"
+    assert payload["coverage"]["evidence_gate"] is True
+    assert payload["evidence_gate_status"] == "fail"
+    assert "prompt-control-lab:evidence-failed" in payload["labels"]
+    assert "research_bundle=fail" in payload["reasons"][0]
 
 
 def test_github_app_upserts_existing_summary_comment() -> None:

@@ -54,6 +54,15 @@ jobs:
           else
             echo "Skipping gate because runs/quick does not contain metrics artifacts."
           fi
+      - name: Run PromptControlLab evidence gate
+        if: always()
+        shell: bash
+        run: |
+          if [ -f runs/quick/research_bundle.json ]; then
+            pcl evidence-gate --run runs/quick --strict
+          else
+            echo "Skipping evidence gate because runs/quick has no research_bundle.json."
+          fi
       - name: Audit PR diff
         if: always()
         run: |
@@ -67,5 +76,42 @@ jobs:
           pcl pr-summary \
             --audit runs/agent-audit/audit_result.json \
             --gate runs/quick/gate_result.json \
+            --evidence-gate runs/quick/evidence_gate_result.json \
             --out runs/pr_summary.md \
             --json-out runs/pr_summary.json
+      - name: Post PromptControlLab summary
+        if: always()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require("fs");
+            const marker = "<!-- prompt-control-lab-summary -->";
+            let body = "## PromptControlLab Gate\n\nNo summary artifact was generated.";
+            try {
+              body = fs.readFileSync("runs/pr_summary.md", "utf8");
+            } catch (error) {
+              body = "## PromptControlLab Gate\n\npr_summary.md was not found; check the prepare/gate/audit steps.";
+            }
+            body = `${marker}\n${body}`;
+            const comments = await github.paginate(github.rest.issues.listComments, {
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              per_page: 100,
+            });
+            const existing = comments.find(comment => comment.body && comment.body.includes(marker));
+            if (existing) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: existing.id,
+                body,
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body,
+              });
+            }

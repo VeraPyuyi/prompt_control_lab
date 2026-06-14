@@ -378,7 +378,7 @@ pcl install-plugin claude-code
 pcl install-plugin github-action
 ```
 
-这些模板都围绕 `pcl guard --json` 和 policy gate 工作。GitHub Action 示例可以运行 `pcl gate`、可选 `pcl audit-diff`，并发布 PR summary。
+这些模板都围绕 `pcl guard --json` 和 policy gate 工作。GitHub Action 示例可以运行 `pcl gate`，在存在 research bundle 时运行 `pcl evidence-gate`，再用 `pcl audit-diff` 审计 PR diff，并发布 PR summary。
 
 ## 生态定位
 

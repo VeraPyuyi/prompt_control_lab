@@ -11,17 +11,25 @@ def build_pr_summary(
     *,
     audit_path: Path | None = None,
     gate_path: Path | None = None,
+    evidence_gate_path: Path | None = None,
     agent_run_path: Path | None = None,
 ) -> JsonDict:
     """Build a concise PR review summary from local artifacts."""
 
     audit = _read_optional(audit_path)
     gate = _read_optional(gate_path)
+    evidence_gate = _read_optional(evidence_gate_path)
     agent_run = _read_optional(agent_run_path)
     has_artifacts = any(
-        path is not None and path.exists() for path in [audit_path, gate_path, agent_run_path]
+        path is not None and path.exists()
+        for path in [audit_path, gate_path, evidence_gate_path, agent_run_path]
     )
-    coverage = {"gate": bool(gate), "audit": bool(audit), "agent_run": bool(agent_run)}
+    coverage = {
+        "gate": bool(gate),
+        "evidence_gate": bool(evidence_gate),
+        "audit": bool(audit),
+        "agent_run": bool(agent_run),
+    }
     labels: list[str] = []
     reasons: list[str] = []
     warnings: list[str] = []
@@ -32,7 +40,12 @@ def build_pr_summary(
         reasons.append("No PromptControlLab artifacts were provided.")
     elif not coverage["audit"]:
         warnings.append("No audit artifact was provided; diff-level PR risk was not checked.")
+    if coverage["gate"] and not coverage["evidence_gate"]:
+        warnings.append(
+            "No evidence gate artifact was provided; source/bundle evidence was not checked."
+        )
     gate_status = gate.get("status")
+    evidence_status = evidence_gate.get("status")
     if gate_status == "fail":
         status = "fail"
         labels.append("prompt-control-lab:gate-failed")
@@ -43,6 +56,15 @@ def build_pr_summary(
         status = "needs_review"
         labels.append("prompt-control-lab:needs-review")
         reasons.append("Gate requires review.")
+    if evidence_status == "fail":
+        status = "fail"
+        labels.append("prompt-control-lab:evidence-failed")
+        reasons.append(str(evidence_gate.get("summary") or "Evidence gate failed."))
+    elif evidence_status == "needs_review":
+        if status == "pass":
+            status = "needs_review"
+        labels.append("prompt-control-lab:needs-review")
+        reasons.append("Evidence gate requires review.")
     if audit.get("human_review_required"):
         if status == "pass":
             status = "needs_review"
@@ -84,6 +106,7 @@ def build_pr_summary(
         "coverage": coverage,
         "warnings": warnings,
         "gate_status": gate_status,
+        "evidence_gate_status": evidence_status,
         "human_review_required": bool(audit.get("human_review_required") or agent_review_required),
         "agent_risk_level": agent_risk,
         "dangerous_paths": audit.get("dangerous_paths", []),
@@ -100,6 +123,7 @@ def write_pr_summary(
     *,
     audit_path: Path | None,
     gate_path: Path | None,
+    evidence_gate_path: Path | None = None,
     agent_run_path: Path | None,
     markdown_path: Path | None,
     json_path: Path | None,
@@ -109,6 +133,7 @@ def write_pr_summary(
     payload = build_pr_summary(
         audit_path=audit_path,
         gate_path=gate_path,
+        evidence_gate_path=evidence_gate_path,
         agent_run_path=agent_run_path,
     )
     if json_path is not None:
@@ -132,6 +157,7 @@ def render_pr_summary_markdown(payload: JsonDict) -> str:
         "",
         "### Coverage",
         f"- Gate: `{_yes_no(_coverage_value(payload, 'gate'))}`",
+        f"- Evidence gate: `{_yes_no(_coverage_value(payload, 'evidence_gate'))}`",
         f"- Audit: `{_yes_no(_coverage_value(payload, 'audit'))}`",
         f"- Agent run: `{_yes_no(_coverage_value(payload, 'agent_run'))}`",
         "",

@@ -692,8 +692,9 @@ The repository includes a copy-ready workflow template:
 examples/github-action/prompt-control-lab-gate.yml
 ```
 
-Copy it into `.github/workflows/` when you want PRs to run `pcl gate`, optionally audit the PR
-diff with `pcl audit-diff`, and post a short prompt_control_lab result comment.
+Copy it into `.github/workflows/` when you want PRs to run `pcl gate`, verify research evidence
+with `pcl evidence-gate` when a bundle exists, audit the PR diff with `pcl audit-diff`, and post a
+short prompt_control_lab result comment.
 
 For a reusable local summary artifact:
 
@@ -701,6 +702,7 @@ For a reusable local summary artifact:
 pcl pr-summary \
   --audit runs/agent-audit/audit_result.json \
   --gate runs/quick/gate_result.json \
+  --evidence-gate runs/quick/evidence_gate_result.json \
   --out runs/pr_summary.md \
   --json-out runs/pr_summary.json
 ```
