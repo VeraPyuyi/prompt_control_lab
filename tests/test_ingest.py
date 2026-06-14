@@ -252,6 +252,81 @@ def test_scaffold_check_passes_after_templates_are_filled(tmp_path: Path) -> Non
     source.write_text(json.dumps(_prompt_optimizer_favorites_payload()), encoding="utf-8")
     ingest_prompt_optimizer_assets(source_path=source, out_dir=out_dir)
     scaffold_dir = out_dir / "eval_scaffold"
+    _fill_prompt_optimizer_scaffold(scaffold_dir)
+
+    assert main(["scaffold-check", "--scaffold", str(scaffold_dir), "--strict"]) == 0
+    payload = read_json(scaffold_dir / "scaffold_check.json")
+    assert payload["status"] == "pass"
+    assert payload["issues"] == []
+    assert (scaffold_dir / "scaffold_check.html").exists()
+
+
+def test_evidence_gate_requires_prompt_optimizer_scaffold_readiness(tmp_path: Path) -> None:
+    source = tmp_path / "prompt-optimizer-favorites.json"
+    out_dir = tmp_path / "runs" / "from-prompt-optimizer"
+    source.write_text(json.dumps(_prompt_optimizer_favorites_payload()), encoding="utf-8")
+    ingest_prompt_optimizer_assets(source_path=source, out_dir=out_dir)
+
+    assert main(["scaffold-check", "--run", str(out_dir)]) == 0
+    assert main(["research-bundle", "--run", str(out_dir)]) == 0
+    assert main(["evidence-gate", "--run", str(out_dir)]) == 0
+    needs_review = read_json(out_dir / "evidence_gate_result.json")
+    assert needs_review["status"] == "needs_review"
+    assert needs_review["required_checks"]["eval_scaffold"]["status"] == "needs_review"
+    assert "scaffold" in needs_review["summary"]
+    assert main(["evidence-gate", "--run", str(out_dir), "--strict"]) == 2
+
+    _fill_prompt_optimizer_scaffold(out_dir / "eval_scaffold")
+    assert main(["scaffold-check", "--run", str(out_dir), "--strict"]) == 0
+    assert main(["research-bundle", "--run", str(out_dir)]) == 0
+    assert main(["evidence-gate", "--run", str(out_dir), "--strict"]) == 0
+    passed = read_json(out_dir / "evidence_gate_result.json")
+    assert passed["status"] == "pass"
+    assert passed["required_checks"]["eval_scaffold"]["status"] == "pass"
+
+
+def test_import_prompt_optimizer_cli_filters_asset(tmp_path: Path) -> None:
+    source = tmp_path / "prompt-optimizer-favorites.json"
+    out_dir = tmp_path / "runs" / "filtered-prompt-optimizer"
+    source.write_text(json.dumps(_prompt_optimizer_favorites_payload()), encoding="utf-8")
+
+    assert (
+        main(
+            [
+                "import",
+                "prompt-optimizer",
+                "--input",
+                str(source),
+                "--out",
+                str(out_dir),
+                "--asset-id",
+                "strict-format",
+            ]
+        )
+        == 0
+    )
+
+    assets = read_json(out_dir / "prompt_assets.json")
+    assert assets["asset_count"] == 1
+    assert assets["assets"][0]["id"] == "strict-format"
+    manifest = read_json(out_dir / "manifest.json")
+    assert manifest["asset_filter"] == "strict-format"
+
+
+def test_ingest_auto_detects_prompt_optimizer_favorites(tmp_path: Path) -> None:
+    source = tmp_path / "prompt-optimizer-favorites.json"
+    out_dir = tmp_path / "runs" / "auto-prompt-optimizer"
+    source.write_text(json.dumps(_prompt_optimizer_favorites_payload()), encoding="utf-8")
+
+    payload = ingest_auto_results(source_path=source, out_dir=out_dir)
+
+    assert payload["source_tool"] == "prompt-optimizer"
+    assert payload["artifact_type"] == "prompt_assets"
+    manifest = read_json(out_dir / "manifest.json")
+    assert manifest["mode"] == "prompt_optimizer_asset_import"
+
+
+def _fill_prompt_optimizer_scaffold(scaffold_dir: Path) -> None:
     (scaffold_dir / "tasks.template.jsonl").write_text(
         "\n".join(
             [
@@ -321,53 +396,6 @@ def test_scaffold_check_passes_after_templates_are_filled(tmp_path: Path) -> Non
         ),
         encoding="utf-8",
     )
-
-    assert main(["scaffold-check", "--scaffold", str(scaffold_dir), "--strict"]) == 0
-    payload = read_json(scaffold_dir / "scaffold_check.json")
-    assert payload["status"] == "pass"
-    assert payload["issues"] == []
-    assert (scaffold_dir / "scaffold_check.html").exists()
-
-
-def test_import_prompt_optimizer_cli_filters_asset(tmp_path: Path) -> None:
-    source = tmp_path / "prompt-optimizer-favorites.json"
-    out_dir = tmp_path / "runs" / "filtered-prompt-optimizer"
-    source.write_text(json.dumps(_prompt_optimizer_favorites_payload()), encoding="utf-8")
-
-    assert (
-        main(
-            [
-                "import",
-                "prompt-optimizer",
-                "--input",
-                str(source),
-                "--out",
-                str(out_dir),
-                "--asset-id",
-                "strict-format",
-            ]
-        )
-        == 0
-    )
-
-    assets = read_json(out_dir / "prompt_assets.json")
-    assert assets["asset_count"] == 1
-    assert assets["assets"][0]["id"] == "strict-format"
-    manifest = read_json(out_dir / "manifest.json")
-    assert manifest["asset_filter"] == "strict-format"
-
-
-def test_ingest_auto_detects_prompt_optimizer_favorites(tmp_path: Path) -> None:
-    source = tmp_path / "prompt-optimizer-favorites.json"
-    out_dir = tmp_path / "runs" / "auto-prompt-optimizer"
-    source.write_text(json.dumps(_prompt_optimizer_favorites_payload()), encoding="utf-8")
-
-    payload = ingest_auto_results(source_path=source, out_dir=out_dir)
-
-    assert payload["source_tool"] == "prompt-optimizer"
-    assert payload["artifact_type"] == "prompt_assets"
-    manifest = read_json(out_dir / "manifest.json")
-    assert manifest["mode"] == "prompt_optimizer_asset_import"
 
 
 def test_ingest_prompt_optimizer_template_export(tmp_path: Path) -> None:

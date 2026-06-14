@@ -46,6 +46,7 @@ def run_evidence_gate(
     required_checks = {
         "source_inputs": source_check,
         "research_bundle": bundle_check,
+        "eval_scaffold": _scaffold_check(run_dir),
     }
     status = _overall_status(required_checks)
     markdown_path = json_path.with_suffix(".md")
@@ -206,6 +207,60 @@ def _claim_check(run_dir: Path) -> JsonDict:
     }
 
 
+def _scaffold_check(run_dir: Path) -> JsonDict:
+    scaffold_dir = run_dir / "eval_scaffold"
+    check_path = scaffold_dir / "scaffold_check.json"
+    has_prompt_optimizer_context = any(
+        path.exists()
+        for path in [
+            run_dir / "prompt_assets.json",
+            run_dir / "prompt_optimizer_gap_plan.json",
+            scaffold_dir,
+        ]
+    )
+    if not has_prompt_optimizer_context:
+        return {
+            "status": "skipped",
+            "severity": "info",
+            "reason": "No prompt-optimizer eval scaffold was recorded for this run.",
+        }
+    if not check_path.exists():
+        return {
+            "status": "needs_review",
+            "severity": "required",
+            "reason": "Prompt-optimizer eval scaffold exists but scaffold_check.json is missing.",
+            "json_path": str(check_path),
+        }
+    payload = read_json(check_path)
+    scaffold_status = str(payload.get("status") or "unknown")
+    issues = payload.get("issues")
+    issue_count = len(issues) if isinstance(issues, list) else 0
+    base = {
+        "scaffold_status": scaffold_status,
+        "issue_count": issue_count,
+        "task_count": payload.get("task_count"),
+        "baseline_prediction_count": payload.get("baseline_prediction_count"),
+        "candidate_prediction_count": payload.get("candidate_prediction_count"),
+        "prompt_file_count": payload.get("prompt_file_count"),
+        "json_path": str(check_path),
+    }
+    if scaffold_status == "pass":
+        return {**base, "status": "pass", "severity": "required"}
+    if scaffold_status == "fail":
+        return {
+            **base,
+            "status": "fail",
+            "severity": "required",
+            "reason": "Prompt-optimizer eval scaffold check failed.",
+        }
+    return {
+        **base,
+        "status": "needs_review",
+        "severity": "required",
+        "reason": "Prompt-optimizer eval scaffold is not ready for paired scoring.",
+    }
+
+
 def _overall_status(required_checks: dict[str, JsonDict]) -> str:
     statuses = [str(item.get("status") or "unknown") for item in required_checks.values()]
     if "fail" in statuses:
@@ -237,6 +292,7 @@ def _next_actions(
     actions: list[str] = []
     source_status = required_checks["source_inputs"].get("status")
     bundle_status = required_checks["research_bundle"].get("status")
+    scaffold_status = required_checks["eval_scaffold"].get("status")
     if source_status == "fail":
         actions.append(
             "Open source_input_verification.html and restore or re-import source exports."
@@ -252,6 +308,12 @@ def _next_actions(
     if bundle_status == "needs_review":
         actions.append(
             "Create or refresh research_bundle.json before using this run as reviewer evidence."
+        )
+    if scaffold_status == "fail":
+        actions.append("Open eval_scaffold/scaffold_check.html and fix failed scaffold checks.")
+    if scaffold_status == "needs_review":
+        actions.append(
+            "Run `pcl scaffold-check --run <run>` and fill real tasks/predictions before scoring."
         )
     if advisory_checks["gap_status"].get("status") == "needs_work":
         actions.append(
@@ -375,7 +437,9 @@ def _detail(check: JsonDict) -> str:
     for key in [
         "source_status",
         "bundle_status",
+        "scaffold_status",
         "checked_count",
+        "issue_count",
         "mismatch_count",
         "ignored_dynamic_mismatch_count",
         "missing_count",
