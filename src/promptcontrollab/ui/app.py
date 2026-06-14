@@ -55,6 +55,9 @@ from promptcontrollab.ui.data import (
     list_runs,
     load_run_detail,
     model_rows,
+    prompt_asset_rows,
+    prompt_asset_summary,
+    prompt_optimizer_gap_rows,
     research_diagnostic_rows,
     research_evidence_map,
     research_gap_plan_rows,
@@ -118,6 +121,10 @@ TEXT = {
         "ecosystem_scorecard": "Ecosystem scorecard",
         "ecosystem_evidence_matrix": "PCL-added evidence matrix",
         "ecosystem_demo": "Ecosystem demo bundles",
+        "prompt_assets": "Prompt optimizer assets",
+        "prompt_assets_summary": "Imported prompt candidates",
+        "prompt_assets_gap_plan": "Evidence gaps before claiming improvement",
+        "prompt_assets_missing": "No prompt-optimizer asset import found.",
         "evidence_gap_diagnosis": "Paper evidence gap diagnosis",
         "evidence_gap_actions": "How to close these gaps",
         "research_gap_plan": "Research gap plan",
@@ -335,6 +342,10 @@ TEXT = {
         "ecosystem_scorecard": "生态证据总览",
         "ecosystem_evidence_matrix": "PCL 补充证据矩阵",
         "ecosystem_demo": "生态 demo 证据包",
+        "prompt_assets": "Prompt optimizer 资产",
+        "prompt_assets_summary": "已导入的 prompt 候选",
+        "prompt_assets_gap_plan": "声称优化有效前缺少的证据",
+        "prompt_assets_missing": "当前还没有 prompt-optimizer 资产导入 artifact。",
         "evidence_gap_diagnosis": "论文证据缺口诊断",
         "evidence_gap_actions": "如何补齐这些缺口",
         "research_gap_plan": "研究证据缺口计划",
@@ -1372,6 +1383,9 @@ def _render_research_overview_tab(st: Any, text: dict[str, str], detail: JsonDic
     scorecard_rows = ecosystem_scorecard_rows(detail)
     scorecard_matrix_rows = ecosystem_evidence_matrix_rows(detail)
     ecosystem_rows = ecosystem_demo_rows(detail)
+    asset_summary = prompt_asset_summary(detail)
+    asset_rows = prompt_asset_rows(detail)
+    asset_gap_rows = prompt_optimizer_gap_rows(detail)
     gap_rows = evidence_gap_rows(detail)
     gap_action_rows = evidence_gap_action_rows(detail)
     gap_plan_rows = research_gap_plan_rows(detail)
@@ -1409,6 +1423,11 @@ def _render_research_overview_tab(st: Any, text: dict[str, str], detail: JsonDic
             str(bridge.get("tool") or "none"),
             f"{bridge.get('pcl_added_count', 0)} {text['pcl_added_evidence']}",
         )
+        + stat_card_html(
+            text["prompt_assets"],
+            str(asset_summary.get("asset_count", 0) if asset_summary else 0),
+            str(asset_summary.get("evaluation_status") or text["prompt_assets_missing"]),
+        )
         + "</div>",
         unsafe_allow_html=True,
     )
@@ -1443,6 +1462,37 @@ def _render_research_overview_tab(st: Any, text: dict[str, str], detail: JsonDic
             unsafe_allow_html=True,
         )
         st.dataframe(ecosystem_rows, use_container_width=True)
+
+    if asset_rows:
+        st.markdown(
+            f'<div class="pcl-section-title">{html.escape(text["prompt_assets"])}</div>',
+            unsafe_allow_html=True,
+        )
+        st.caption(str(asset_summary.get("boundary", "")))
+        metric_cards(
+            st,
+            [
+                (
+                    text["prompt_assets_summary"],
+                    str(asset_summary.get("asset_count", 0)),
+                ),
+                (
+                    text["evidence_summary"],
+                    str(asset_summary.get("evaluation_status", "")),
+                ),
+            ],
+        )
+        source_tool = str(asset_summary.get("source_tool", ""))
+        source_sha = str(asset_summary.get("source_sha256", ""))
+        if source_tool or source_sha:
+            st.caption(f"{source_tool} {source_sha[:24]}".strip())
+        st.dataframe(asset_rows, use_container_width=True)
+        if asset_gap_rows:
+            st.markdown(
+                f'<div class="pcl-section-title">{html.escape(text["prompt_assets_gap_plan"])}</div>',
+                unsafe_allow_html=True,
+            )
+            st.dataframe(asset_gap_rows, use_container_width=True)
 
     if gap_rows:
         st.markdown(

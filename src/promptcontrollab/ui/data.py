@@ -42,6 +42,10 @@ RUN_ARTIFACTS = [
     "ecosystem_demo.json",
     "ecosystem_scorecard.json",
     "ecosystem_scorecard.html",
+    "prompt_assets.json",
+    "prompt_assets.html",
+    "prompt_optimizer_gap_plan.json",
+    "prompt_optimizer_gap_plan.html",
 ]
 
 RUN_LEVEL_ARTIFACTS = [
@@ -75,6 +79,10 @@ RUN_LEVEL_ARTIFACTS = [
     "ecosystem_demo.json",
     "ecosystem_scorecard.json",
     "ecosystem_scorecard.html",
+    "prompt_assets.json",
+    "prompt_assets.html",
+    "prompt_optimizer_gap_plan.json",
+    "prompt_optimizer_gap_plan.html",
 ]
 
 
@@ -129,6 +137,8 @@ def load_run_detail(run_dir: Path) -> JsonDict:
         "bridge_summary": model.bridge_summary,
         "ecosystem_demo": model.ecosystem_demo,
         "ecosystem_scorecard": model.ecosystem_scorecard,
+        "prompt_assets": model.prompt_assets,
+        "prompt_optimizer_gap_plan": model.prompt_optimizer_gap_plan,
         "diagnostics": model.diagnostics,
         "baseline_metrics": model.baseline_metrics,
         "candidate_metrics": model.candidate_metrics,
@@ -546,6 +556,74 @@ def ecosystem_evidence_matrix_rows(detail: JsonDict) -> list[JsonDict]:
                 if isinstance(missing, list)
                 else str(missing or ""),
                 "next_command": item.get("next_command", ""),
+            }
+        )
+    return rows
+
+
+def prompt_asset_summary(detail: JsonDict) -> JsonDict:
+    """Return a compact summary for prompt-optimizer asset import runs."""
+
+    bundle = detail.get("prompt_assets")
+    if not isinstance(bundle, dict) or not bundle:
+        return {}
+    return {
+        "source_tool": bundle.get("source_tool", ""),
+        "asset_count": bundle.get("asset_count", 0),
+        "evaluation_status": bundle.get("evaluation_status", ""),
+        "source_sha256": bundle.get("source_sha256", ""),
+        "boundary": bundle.get("boundary", ""),
+    }
+
+
+def prompt_asset_rows(detail: JsonDict) -> list[JsonDict]:
+    """Return one row per imported prompt asset candidate."""
+
+    bundle = detail.get("prompt_assets")
+    if not isinstance(bundle, dict):
+        return []
+    assets = bundle.get("assets")
+    if not isinstance(assets, list):
+        return []
+    rows: list[JsonDict] = []
+    for item in assets:
+        if not isinstance(item, dict):
+            continue
+        tags = item.get("tags")
+        model_or_source = item.get("model_or_source")
+        model_dict = model_or_source if isinstance(model_or_source, dict) else {}
+        rows.append(
+            {
+                "id": item.get("id", ""),
+                "title": item.get("title", ""),
+                "type": item.get("source_type", ""),
+                "tags": ", ".join(str(part) for part in tags) if isinstance(tags, list) else "",
+                "model": model_dict.get("model_name", ""),
+                "use_count": item.get("use_count", ""),
+                "has_original": item.get("has_original_content", False),
+                "content_hash": item.get("content_hash", ""),
+            }
+        )
+    return rows
+
+
+def prompt_optimizer_gap_rows(detail: JsonDict) -> list[JsonDict]:
+    """Return evidence gaps for prompt-optimizer asset imports."""
+
+    plan = detail.get("prompt_optimizer_gap_plan")
+    if not isinstance(plan, dict):
+        return []
+    missing = plan.get("missing_evidence")
+    if not isinstance(missing, list):
+        return []
+    commands = plan.get("recommended_commands")
+    command_list = [str(item) for item in commands] if isinstance(commands, list) else []
+    rows: list[JsonDict] = []
+    for index, item in enumerate(missing):
+        rows.append(
+            {
+                "missing_evidence": str(item),
+                "suggested_command": command_list[index] if index < len(command_list) else "",
             }
         )
     return rows

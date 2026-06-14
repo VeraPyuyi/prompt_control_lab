@@ -37,6 +37,8 @@ class ReportModel:
     bridge_summary: JsonDict
     ecosystem_demo: JsonDict
     ecosystem_scorecard: JsonDict
+    prompt_assets: JsonDict
+    prompt_optimizer_gap_plan: JsonDict
     diagnostics: dict[str, JsonDict]
     artifacts: list[str]
     candidate_score: float | None
@@ -79,6 +81,8 @@ class ReportModel:
             bridge_summary=_read_optional(run_dir / "bridge_summary.json"),
             ecosystem_demo=_read_optional(run_dir / "ecosystem_demo.json"),
             ecosystem_scorecard=_read_optional(run_dir / "ecosystem_scorecard.json"),
+            prompt_assets=_read_optional(run_dir / "prompt_assets.json"),
+            prompt_optimizer_gap_plan=_read_optional(run_dir / "prompt_optimizer_gap_plan.json"),
             diagnostics=diagnostics,
             artifacts=artifacts,
             candidate_score=_first_score(candidate_metrics, root_metrics),
@@ -184,6 +188,12 @@ def _existing_artifacts(run_dir: Path, diagnostics: dict[str, JsonDict]) -> list
         "ecosystem_scorecard.json",
         "ecosystem_scorecard.md",
         "ecosystem_scorecard.html",
+        "prompt_assets.json",
+        "prompt_assets.md",
+        "prompt_assets.html",
+        "prompt_optimizer_gap_plan.json",
+        "prompt_optimizer_gap_plan.md",
+        "prompt_optimizer_gap_plan.html",
         "inputs/hidden_states.npz",
         "inputs/hidden_states.npz.metadata.json",
         "report.md",

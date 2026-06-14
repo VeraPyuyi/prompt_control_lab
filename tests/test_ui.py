@@ -37,6 +37,9 @@ from promptcontrollab.ui.data import (
     history_rows,
     list_runs,
     load_run_detail,
+    prompt_asset_rows,
+    prompt_asset_summary,
+    prompt_optimizer_gap_rows,
     research_diagnostic_rows,
     research_evidence_map,
     research_gap_plan_rows,
@@ -564,6 +567,91 @@ def test_ui_recognizes_ecosystem_demo_root_and_summarizes_tools(tmp_path: Path) 
             "next_command": "pcl gap-status --run promptfoo",
         }
     ]
+
+
+def test_ui_recognizes_prompt_optimizer_asset_imports(tmp_path: Path) -> None:
+    root = tmp_path / "runs"
+    imported = root / "from-prompt-optimizer"
+    _write_json(
+        imported / "manifest.json",
+        {
+            "mode": "prompt_optimizer_asset_import",
+            "source_tool": "prompt-optimizer",
+            "artifact_type": "prompt_assets",
+            "asset_count": 1,
+        },
+    )
+    _write_json(
+        imported / "prompt_assets.json",
+        {
+            "schema": "prompt_control_lab.prompt_assets.v1",
+            "source_tool": "prompt-optimizer",
+            "artifact_type": "prompt_assets",
+            "evaluation_status": "not_scored",
+            "asset_count": 1,
+            "source_sha256": "sha256:abc",
+            "boundary": "This import does not prove that any prompt improved.",
+            "assets": [
+                {
+                    "id": "strict-format",
+                    "title": "Strict format answer",
+                    "source_type": "favorite",
+                    "tags": ["format", "deployment"],
+                    "model_or_source": {"model_name": "gpt-4o-mini"},
+                    "use_count": 3,
+                    "has_original_content": True,
+                    "content_hash": "sha256:def",
+                }
+            ],
+        },
+    )
+    _write_json(
+        imported / "prompt_optimizer_gap_plan.json",
+        {
+            "kind": "prompt_optimizer_gap_plan",
+            "status": "not_scored",
+            "missing_evidence": [
+                "No paired baseline/candidate prediction file was imported.",
+                "No paired bootstrap confidence interval or permutation p-value exists yet.",
+            ],
+            "recommended_commands": [
+                "pcl analyze --config promptcontrol.example.yaml --out runs/quick",
+            ],
+        },
+    )
+    (imported / "prompt_assets.html").write_text("<h1>assets</h1>\n", encoding="utf-8")
+    (imported / "prompt_optimizer_gap_plan.html").write_text(
+        "<h1>gap plan</h1>\n",
+        encoding="utf-8",
+    )
+
+    assert list_runs(root) == [{"name": "from-prompt-optimizer", "path": str(imported)}]
+    detail = load_run_detail(imported)
+    model = ReportModel.from_run(imported)
+    summary = prompt_asset_summary(detail)
+    rows = prompt_asset_rows(detail)
+    gaps = prompt_optimizer_gap_rows(detail)
+
+    assert "prompt_assets.json" in detail["artifacts"]
+    assert "prompt_optimizer_gap_plan.json" in model.artifacts
+    assert detail["prompt_assets"]["asset_count"] == 1
+    assert model.prompt_assets["source_tool"] == "prompt-optimizer"
+    assert summary["evaluation_status"] == "not_scored"
+    assert rows == [
+        {
+            "id": "strict-format",
+            "title": "Strict format answer",
+            "type": "favorite",
+            "tags": "format, deployment",
+            "model": "gpt-4o-mini",
+            "use_count": 3,
+            "has_original": True,
+            "content_hash": "sha256:def",
+        }
+    ]
+    assert gaps[0]["missing_evidence"].startswith("No paired baseline")
+    assert gaps[0]["suggested_command"].startswith("pcl analyze")
+    assert gaps[1]["suggested_command"] == ""
 
 
 def test_ui_summarizes_external_evidence_gap_diagnostics(tmp_path: Path) -> None:
