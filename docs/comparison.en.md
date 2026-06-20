@@ -40,6 +40,24 @@ Sources for current positioning and pricing where relevant:
 [Langfuse pricing](https://langfuse.com/pricing), and
 [linshenkx/prompt-optimizer README](https://github.com/linshenkx/prompt-optimizer).
 
+## Extended Market Map
+
+These tools are not the first comparison a new PCL user needs, but they will come up in buyer or
+research conversations:
+
+| Tool | Strong lane | What PCL should learn | What PCL should still own |
+|---|---|---|---|
+| Braintrust | AI evals, observability, prompt updates, logs, and IDE/MCP-connected workflows. | Make the workflow feel close to where developers already work. Keep artifacts easy to review by non-research users. | Local, source-controlled evidence bundles for prompt optimization claims, with paper-diagnostic gap checks. |
+| Arize Phoenix | Open-source AI observability and evaluation: traces, OpenTelemetry/OpenInference, troubleshooting, and local/self-hosted workflows. | Lean into open standards and clear trace/eval import paths. | Control-theoretic prompt diagnostics, prompt-only validity, and claim-boundary review after traces/evals are exported. |
+| OpenAI Evals | Evaluation framework and registry for testing LLMs and LLM systems. | Keep custom eval ingestion simple and reproducible. | Convert eval outputs into paired evidence, provenance, research bundles, and paper-derived diagnostic checklists. |
+| Humanloop | Historical reference for prompt management, evals, and observability; its docs now note the platform sunset on September 8, 2025. | Treat hosted prompt/eval platforms as migration/export sources, not permanent assumptions. | Durable local artifacts that remain useful after a vendor product changes or sunsets. |
+
+Extra sources: [Braintrust](https://www.braintrust.dev/),
+[Phoenix docs](https://arize.com/docs/phoenix),
+[Phoenix GitHub](https://github.com/arize-ai/phoenix),
+[OpenAI Evals GitHub](https://github.com/openai/evals), and
+[Humanloop overview](https://humanloop.com/docs/getting-started/overview).
+
 ## Compared With linshenkx/prompt-optimizer
 
 `linshenkx/prompt-optimizer` is much stronger as a general-purpose prompt writing product. It has

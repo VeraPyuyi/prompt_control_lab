@@ -40,6 +40,23 @@
 [Langfuse pricing](https://langfuse.com/pricing)、
 [linshenkx/prompt-optimizer README](https://github.com/linshenkx/prompt-optimizer)。
 
+## 扩展市场地图
+
+这些工具不一定是新用户第一眼最需要比较的对象，但在采购、研究或团队选型时很容易被问到：
+
+| 工具 | 强项 | PCL 应该学习什么 | PCL 仍然应该守住什么 |
+|---|---|---|---|
+| Braintrust | AI eval、observability、prompt 更新、日志和 IDE/MCP 连接工作流。 | 让工作流贴近开发者已有环境，让非研究用户也容易 review artifact。 | 本地、可进版本库的 prompt optimization 证据包，以及论文诊断缺口检查。 |
+| Arize Phoenix | 开源 AI observability 和 evaluation：trace、OpenTelemetry/OpenInference、排障、本地/自托管流程。 | 拥抱开放标准，提供清晰的 trace/eval 导入路径。 | 在 trace/eval 导出之后补控制论 prompt 诊断、prompt-only 有效性和 claim 边界审查。 |
+| OpenAI Evals | 用于测试 LLM 和 LLM 系统的 evaluation framework 与 registry。 | 让自定义 eval 导入足够简单、可复现。 | 把 eval 输出转成成对证据、provenance、research bundle 和论文诊断 checklist。 |
+| Humanloop | prompt management、eval 和 observability 的历史参考；其官方文档已说明平台在 2025-09-08 sunset。 | 把托管 prompt/eval 平台视为迁移和导出来源，而不是永久假设。 | 即使供应商产品变化或停止服务，本地证据 artifact 仍然可用。 |
+
+补充来源：[Braintrust](https://www.braintrust.dev/)、
+[Phoenix docs](https://arize.com/docs/phoenix)、
+[Phoenix GitHub](https://github.com/arize-ai/phoenix)、
+[OpenAI Evals GitHub](https://github.com/openai/evals)、
+[Humanloop overview](https://humanloop.com/docs/getting-started/overview)。
+
 ## 与 linshenkx/prompt-optimizer 的具体区别
 
 `linshenkx/prompt-optimizer` 更像一个成熟的通用 prompt 写作和优化产品。它有更完整的用户界面和分发路径：Web app、桌面端、Chrome 扩展、Docker、MCP server、多模型设置、Prompt Garden 导入、智能收藏、图像生成模式、变量测试和多轮 prompt 测试。

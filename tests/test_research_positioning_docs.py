@@ -89,3 +89,9 @@ def test_competitive_positioning_stays_evidence_layer_first() -> None:
     assert "DeepEval introduction" in comparison
     assert "Langfuse docs" in comparison
     assert "linshenkx/prompt-optimizer README" in comparison
+    assert "Extended Market Map" in comparison
+    assert "Braintrust" in comparison
+    assert "Arize Phoenix" in comparison
+    assert "OpenAI Evals" in comparison
+    assert "Humanloop" in comparison
+    assert "2025-09-08 sunset" in comparison_zh
