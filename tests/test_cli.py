@@ -1657,8 +1657,10 @@ def test_cli_start_interactive_menu_supports_chinese(
     assert "你想先做什么?" in output
     assert "创建一个可直接运行的 demo 项目" in output
     assert "新手模式: 创建可运行 demo 项目" in output
-    assert (tmp_path / "research-demo" / "README.md").exists()
+    assert "已创建 PromptControlLab 示例项目" in output
+    assert "下一步:" in output
     assert "pcl start --guide --language zh" in output
+    assert (tmp_path / "research-demo" / "README.md").exists()
 
 
 def test_cli_start_guard_passes_policy(

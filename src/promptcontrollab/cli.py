@@ -1324,8 +1324,23 @@ def _cmd_init(args: argparse.Namespace) -> None:
     print(_format_init_output(args.path))
 
 
-def _format_init_output(path: Path) -> str:
+def _format_init_output(path: Path, *, language: str = "en") -> str:
     """Return concise next steps after creating an example project."""
+
+    if language == "zh":
+        return "\n".join(
+            [
+                f"已创建 PromptControlLab 示例项目: {path}",
+                "",
+                "下一步:",
+                f"  cd {path}",
+                "  pcl start --guide --language zh",
+                "  pcl analyze --config promptcontrol.example.yaml --out runs/quick",
+                "  pcl ui --runs runs --policy examples/guard.policy.yaml",
+                "",
+                "打开该目录里的 README.md, 可以查看文件说明和可复制命令。",
+            ]
+        )
 
     return "\n".join(
         [
@@ -1545,7 +1560,7 @@ def _cmd_start(args: argparse.Namespace) -> None:
             print("新手模式: 创建可运行 demo 项目")
         else:
             print("Beginner mode: create a runnable demo project")
-        print(_format_init_output(out_dir))
+        print(_format_init_output(out_dir, language=args.language))
         return
 
     if choice == "research":
