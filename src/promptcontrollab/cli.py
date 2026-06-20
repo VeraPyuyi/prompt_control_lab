@@ -2394,8 +2394,10 @@ def _format_start_guide(language: str = "en") -> str:
         rows = [
             (
                 "先看产品长什么样",
-                "pcl ui --runs runs/ --policy examples/guard.policy.yaml --port 8501",
-                "在 UI 里打开“工作流”, 点击“创建演示数据”。",
+                "pcl init --path demo",
+                "进入 `demo`, 运行 "
+                "`pcl analyze --config promptcontrol.example.yaml --out runs/quick`, "
+                "再打开 `pcl ui --runs runs --policy examples/guard.policy.yaml`。",
             ),
             (
                 "运行论文里的 prompt optimization 诊断",
@@ -2428,8 +2430,10 @@ def _format_start_guide(language: str = "en") -> str:
         rows = [
             (
                 "See the product first",
-                "pcl ui --runs runs/ --policy examples/guard.policy.yaml --port 8501",
-                "In the UI, open Workflows and click Create demo artifacts.",
+                "pcl init --path demo",
+                "Enter `demo`, run "
+                "`pcl analyze --config promptcontrol.example.yaml --out runs/quick`, "
+                "then open `pcl ui --runs runs --policy examples/guard.policy.yaml`.",
             ),
             (
                 "Run the paper-derived prompt optimization diagnostics",
