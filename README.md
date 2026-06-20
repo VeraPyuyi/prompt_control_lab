@@ -7,6 +7,7 @@ Paper-derived prompt diagnostics plus local eval, provenance, and agent-audit ar
 ```bash
 pip install -e ".[research,ui]"
 pcl start --guide
+pcl choose --need "security evals and red-team checks"
 pcl start --choice demo --out demo
 pcl research-demo --out runs/research-demo && pcl diagnose --run runs/research-demo
 ```

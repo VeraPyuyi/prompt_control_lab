@@ -22,9 +22,11 @@ def test_beginner_guide_is_visible_from_readmes_and_tutorials() -> None:
     ]:
         assert "pcl start --guide" in path.read_text(encoding="utf-8")
         assert "pcl start --choice demo" in path.read_text(encoding="utf-8")
+        assert "pcl choose --need" in path.read_text(encoding="utf-8")
     for path in [Path("README.zh.md"), Path("docs/tutorial.zh.md")]:
         assert "pcl start --guide --language zh" in path.read_text(encoding="utf-8")
         assert "pcl start --choice demo --language zh" in path.read_text(encoding="utf-8")
+        assert "pcl choose --need" in path.read_text(encoding="utf-8")
 
 
 def test_public_markdown_local_links_resolve() -> None:

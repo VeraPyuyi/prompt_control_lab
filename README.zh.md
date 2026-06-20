@@ -7,6 +7,7 @@
 ```bash
 pip install -e ".[research,ui]"
 pcl start --guide --language zh
+pcl choose --need "安全评测和红队检查" --language zh
 pcl start --choice demo --language zh --out demo
 pcl research-demo --out runs/research-demo && pcl diagnose --run runs/research-demo
 ```
