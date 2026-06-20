@@ -1627,6 +1627,8 @@ def test_cli_start_guide_prints_goal_based_paths(capsys: pytest.CaptureFixture[s
     assert "pcl start --choice demo --out demo" in output
     assert "open `runs/quick/report.html`" in output
     assert "paper-derived prompt optimization diagnostics" in output
+    assert "Compare adjacent tools and PCL-added evidence" in output
+    assert "pcl start --choice ecosystem --out runs/ecosystem-demo" in output
     assert "Import external eval results as evidence" in output
     assert "pcl start --choice import --tool auto --input results.json" in output
     assert "Guard a coding-agent prompt" in output
@@ -1667,6 +1669,7 @@ def test_cli_start_interactive_guard_menu(
     assert "1) Create a runnable demo project" in output
     assert "2) Run a paper-style prompt optimization research demo" in output
     assert "3) Import external eval results as evidence" in output
+    assert "7) Generate an ecosystem comparison demo" in output
     assert "pcl start --guide" in output
     assert "Beginner mode: guard a prompt" in output
     assert "Plain summary:" in output
@@ -1683,6 +1686,23 @@ def test_cli_start_interactive_import_menu_prints_bridge_commands(
     assert "pcl start --choice import --tool auto --input results.json" in output
     assert "prompt-optimizer favorites" in output
     assert "pcl evidence-audit" in output
+
+
+def test_cli_start_choice_ecosystem_writes_comparison_demo(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    out = tmp_path / "runs" / "ecosystem-demo"
+
+    assert main(["start", "--choice", "ecosystem", "--out", str(out)]) == 0
+    output = capsys.readouterr().out
+
+    assert "Beginner mode: compare adjacent ecosystem tools" in output
+    assert "Generated ecosystem comparison demo" in output
+    assert "Open first:" in output
+    assert (out / "ecosystem_demo.json").exists()
+    assert (out / "ecosystem_scorecard.html").exists()
+    assert (out / "research_bundle.html").exists()
 
 
 def test_cli_start_choice_import_promptfoo_writes_run(

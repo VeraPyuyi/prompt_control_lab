@@ -111,7 +111,16 @@ def build_parser() -> argparse.ArgumentParser:
     )
     start_parser.add_argument(
         "--choice",
-        choices=["demo", "research", "import", "evidence", "improve", "guard", "analyze"],
+        choices=[
+            "demo",
+            "research",
+            "ecosystem",
+            "import",
+            "evidence",
+            "improve",
+            "guard",
+            "analyze",
+        ],
         default=None,
         help="Skip the menu and choose a beginner scenario.",
     )
@@ -1719,6 +1728,27 @@ def _cmd_start(args: argparse.Namespace) -> None:
         print(_format_research_demo_output(out_dir=out_dir, payload=payload))
         return
 
+    if choice == "ecosystem":
+        out_dir = args.out or Path("runs") / "ecosystem-demo"
+        payload = run_ecosystem_demo(
+            examples_dir=Path("examples") / "external",
+            out_dir=out_dir,
+            split_hash="external-demo-split",
+            provider=args.provider or "openai",
+            model=args.model or "gpt-4o-mini-20260601",
+            bootstrap_samples=50,
+            permutation_samples=50,
+        )
+        print("Beginner mode: compare adjacent ecosystem tools")
+        print(
+            _format_start_ecosystem_result(
+                out_dir=out_dir,
+                payload=payload,
+                language=args.language,
+            )
+        )
+        return
+
     if choice == "import":
         if args.input is None:
             print(_format_start_import_guide(args.language))
@@ -1891,6 +1921,42 @@ def _run_start_import(args: argparse.Namespace, *, out_dir: Path) -> JsonDict:
         source_path=source_path,
         out_dir=out_dir,
         asset_id=args.asset_id,
+    )
+
+
+def _format_start_ecosystem_result(
+    *,
+    out_dir: Path,
+    payload: JsonDict,
+    language: str = "en",
+) -> str:
+    runs = payload.get("runs")
+    run_count = len(runs) if isinstance(runs, list) else 0
+    scorecard = payload.get("ecosystem_scorecard_html_path") or str(
+        out_dir / "ecosystem_scorecard.html"
+    )
+    bundle = out_dir / "research_bundle.html"
+    if language == "zh":
+        return "\n".join(
+            [
+                f"已生成生态对比 demo: {out_dir}",
+                f"- 工具证据包数量: {run_count}",
+                f"- 先打开: {scorecard}",
+                f"- 研究证据包: {bundle}",
+                "- 下一步: 打开 scorecard, 看每个外部工具强项和 PCL 补充的证据层。",
+            ]
+        )
+    return "\n".join(
+        [
+            f"Generated ecosystem comparison demo: {out_dir}",
+            f"- Tool bundles: {run_count}",
+            f"- Open first: {scorecard}",
+            f"- Research bundle: {bundle}",
+            (
+                "- Next: open the scorecard to see each external tool's strength "
+                "and PCL-added evidence."
+            ),
+        ]
     )
 
 
@@ -2726,12 +2792,13 @@ def _start_choice(value: str | None, *, language: str = "en") -> str:
                     "4) Make my prompt clearer",
                     "5) Check a prompt before sending it to an AI tool",
                     "6) Compare prompts and create a report",
+                    "7) Generate an ecosystem comparison demo",
                     "",
                     "Tip: run `pcl start --guide` if you are unsure which path fits your goal.",
                 ]
             )
         )
-        raw = input("Choose 1, 2, 3, 4, 5, or 6: ").strip().lower()
+        raw = input("Choose 1, 2, 3, 4, 5, 6, or 7: ").strip().lower()
     choices = {
         "1": "demo",
         "demo": "demo",
@@ -2746,12 +2813,15 @@ def _start_choice(value: str | None, *, language: str = "en") -> str:
         "guard": "guard",
         "6": "analyze",
         "analyze": "analyze",
+        "7": "ecosystem",
+        "ecosystem": "ecosystem",
+        "ecosystem-demo": "ecosystem",
     }
     if raw not in choices:
         msg = (
             "请选择 1、2、3、4、5 或 6"
             if language == "zh"
-            else "Choose 1, 2, 3, 4, 5, or 6"
+            else "Choose 1, 2, 3, 4, 5, 6, or 7"
         )
         raise ValueError(msg)
     return choices[raw]
@@ -2762,6 +2832,11 @@ def _format_start_guide(language: str = "en") -> str:
 
     if language == "zh":
         rows = [
+            (
+                "对比相邻工具和 PCL 补充证据",
+                "pcl start --choice ecosystem --out runs/ecosystem-demo",
+                "打开 `ecosystem_scorecard.html`, 看外部工具强项和 PCL 证据缺口。",
+            ),
             (
                 "先看产品长什么样",
                 "pcl start --choice demo --language zh --out demo",
@@ -2813,6 +2888,14 @@ def _format_start_guide(language: str = "en") -> str:
                 "Run the paper-derived prompt optimization diagnostics",
                 "pcl research-demo --out runs/research-demo",
                 "Then run `pcl diagnose --run runs/research-demo` and open research_bundle.html.",
+            ),
+            (
+                "Compare adjacent tools and PCL-added evidence",
+                "pcl start --choice ecosystem --out runs/ecosystem-demo",
+                (
+                    "Open `ecosystem_scorecard.html` to see external-tool strengths "
+                    "and PCL evidence gaps."
+                ),
             ),
             (
                 "Import external eval results as evidence",
