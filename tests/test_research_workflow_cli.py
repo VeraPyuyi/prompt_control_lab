@@ -20,8 +20,10 @@ def test_start_research_runs_paper_diagnostics_demo(
 
     out = capsys.readouterr().out
     assert "Beginner mode: run the paper-style research diagnostics demo" in out
+    assert "What it did: generated a small synthetic evidence bundle" in out
     assert f"Open first: {run_dir / 'research_bundle.html'}" in out
     assert "At a glance: diagnostics=4/4; claim=pass" in out
+    assert "How to read the outputs:" in out
     assert "Next action: Share the research bundle" in out
     assert "Evidence card:" in out
     assert "Claim check:" in out
@@ -44,9 +46,12 @@ def test_research_demo_generates_paper_diagnostics(
 
     assert main(["research-demo", "--out", str(run_dir)]) == 0
     out = capsys.readouterr().out
+    assert "soft-hard gap" in out
+    assert "time-varying soft-control" in out
     assert f"Open first: {run_dir / 'research_bundle.html'}" in out
     assert "At a glance: diagnostics=4/4; claim=pass" in out
     assert f"Open first from summary: {run_dir / 'research_bundle.html'}" in out
+    assert "Shows the strongest claim this run can safely support." in out
     assert "Next action: Share the research bundle" in out
     assert f"UI: pcl ui --runs {tmp_path}" in out
 

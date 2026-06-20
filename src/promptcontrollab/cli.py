@@ -2544,18 +2544,38 @@ def _format_research_demo_output(*, out_dir: Path, payload: JsonDict) -> str:
     diagnostics = payload.get("diagnostics", {})
     diagnostic_names = sorted(diagnostics) if isinstance(diagnostics, dict) else []
     ui_runs_dir = out_dir.parent if out_dir.parent != Path("") else Path(".")
+    readable_diagnostics = _readable_research_diagnostic_names(diagnostic_names)
     lines = [
         f"Wrote research demo to {out_dir}",
+        "What it did: generated a small synthetic evidence bundle for the paper "
+        f"diagnostics ({readable_diagnostics}).",
         f"Diagnostics: {', '.join(diagnostic_names)}",
         f"Open first: {out_dir / 'research_bundle.html'}",
         *_research_cli_summary_lines(summary_dir=out_dir, payload=payload),
+        "",
+        "How to read the outputs:",
         f"Research diagnostics: {out_dir / 'research_diagnostics.html'}",
+        "  Explains each paper-derived diagnostic in plain language.",
         f"Evidence card: {out_dir / 'evidence_card.html'}",
+        "  Summarizes what evidence exists for a prompt-optimization claim.",
         f"Claim check: {out_dir / 'claim_check.html'}",
+        "  Shows the strongest claim this run can safely support.",
         f"Evidence gate: {out_dir / 'evidence_gate_result.html'}",
+        "  Checks whether required research artifacts are present and linked.",
         f"UI: pcl ui --runs {ui_runs_dir}",
     ]
     return "\n".join(lines)
+
+
+def _readable_research_diagnostic_names(names: list[str]) -> str:
+    labels = {
+        "soft_hard": "soft-hard gap",
+        "trajectory": "hidden-state trajectory",
+        "riccati": "Riccati surrogate",
+        "tv_soft": "time-varying soft-control",
+    }
+    readable = [labels.get(name, name.replace("_", "-")) for name in names]
+    return ", ".join(readable) if readable else "none"
 
 
 def _research_cli_summary_lines(*, summary_dir: Path, payload: JsonDict) -> list[str]:
@@ -2564,16 +2584,31 @@ def _research_cli_summary_lines(*, summary_dir: Path, payload: JsonDict) -> list
     diagnostics_ready = summary.get("diagnostics_ready", "unknown")
     claim_status = summary.get("claim_status", "unknown")
     evidence_tier = summary.get("evidence_tier", "unknown")
+    readable_tier = _readable_evidence_tier(str(evidence_tier))
     next_action = summary.get("next_action")
     open_first = summary.get("open_first")
     lines = [
-        f"At a glance: diagnostics={diagnostics_ready}; claim={claim_status}; tier={evidence_tier}",
+        (
+            "At a glance: "
+            f"diagnostics={diagnostics_ready}; claim={claim_status}; "
+            f"evidence tier={readable_tier}"
+        ),
     ]
     if isinstance(open_first, str) and open_first:
         lines.append(f"Open first from summary: {summary_dir / open_first}")
     if isinstance(next_action, str) and next_action:
         lines.append(f"Next action: {next_action}")
     return lines
+
+
+def _readable_evidence_tier(value: str) -> str:
+    labels = {
+        "tier_1_paired": "paired comparison only",
+        "tier_2_partial_research": "partial research diagnostics",
+        "tier_3_research_ready": "research-ready evidence",
+        "tier_4_full_research_diagnostics": "full research diagnostics",
+    }
+    return labels.get(value, value.replace("_", " "))
 
 
 def _cmd_research_bundle(args: argparse.Namespace) -> None:
