@@ -75,6 +75,10 @@ def _write_scored_run(
 def test_cli_example_flow(tmp_path: Path) -> None:
     demo = tmp_path / "demo"
     assert main(["init", "--path", str(demo)]) == 0
+    demo_readme = (demo / "README.md").read_text(encoding="utf-8")
+    assert "pcl start --guide" in demo_readme
+    assert "pcl analyze --config promptcontrol.example.yaml --out runs/quick" in demo_readme
+    assert "pcl ui --runs runs --policy examples/guard.policy.yaml" in demo_readme
     assert (
         main(
             [
