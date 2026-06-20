@@ -2239,6 +2239,9 @@ def _render_tool_choice_advisor(st: Any, text: dict[str, str], language: str) ->
     avoid = (
         recommendation.get("avoid_zh") if language == "zh" else recommendation.get("avoid")
     ) or recommendation.get("avoid", "")
+    action_key = "market_gap_action_zh" if language == "zh" else "market_gap_action"
+    selected_action = recommendation.get(action_key)
+    selected_action = selected_action if isinstance(selected_action, dict) else {}
     st.markdown(
         '<div class="pcl-grid">'
         + stat_card_html(
@@ -2256,6 +2259,14 @@ def _render_tool_choice_advisor(st: Any, text: dict[str, str], language: str) ->
     )
     rows = [
         {"field": text["tool_choice_why"], "value": why},
+        {
+            "field": text["tool_choice_gap_command"],
+            "value": str(selected_action.get("command") or ""),
+        },
+        {
+            "field": text["tool_choice_gap_open"],
+            "value": str(selected_action.get("open") or ""),
+        },
         {"field": text["tool_choice_avoid"], "value": avoid},
     ]
     st.dataframe(rows, use_container_width=True)

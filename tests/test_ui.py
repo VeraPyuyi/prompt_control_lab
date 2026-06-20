@@ -1499,6 +1499,7 @@ def test_ui_tool_choice_advisor_recommends_promptfoo_for_security() -> None:
     assert "red-team/security testing" in combined_frames
     assert "Scores exist, but paired uncertainty" in combined_frames
     assert "prompt_optimizer_gap_plan.html" in combined_frames
+    assert "evidence_audit_result.html" in combined_frames
     assert "pcl import promptfoo" in combined_code
     assert "pcl evidence-audit" in combined_code
     assert {download["file_name"] for download in downloads} == {
