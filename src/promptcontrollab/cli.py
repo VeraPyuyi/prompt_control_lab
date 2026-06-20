@@ -2773,6 +2773,12 @@ def _format_start_guide(language: str = "en") -> str:
         lines = ["PromptControlLab 新手路径指南", "", "选择最符合你目标的路径:", ""]
         start_label = "起点"
         next_label = "下一步"
+        ecosystem_lines = [
+            "生态选择地图:",
+            "  Promptfoo -> eval / CI / red-team; PCL 补成对统计和 claim 边界。",
+            "  LangSmith / Langfuse -> trace / observability; PCL 补 prompt-only 证据和论文诊断。",
+            "  prompt-optimizer -> prompt 写作; PCL 证明优化是否可靠。",
+        ]
         final_lines = ["如果想用交互菜单, 运行:", "  pcl start --language zh"]
     else:
         rows = [
@@ -2813,6 +2819,14 @@ def _format_start_guide(language: str = "en") -> str:
         ]
         start_label = "Start"
         next_label = "Next"
+        ecosystem_lines = [
+            "Ecosystem choice map:",
+            "  Promptfoo -> eval / CI / red-team; PCL adds paired stats and claim boundaries.",
+            "  LangSmith / Langfuse -> traces / observability; "
+            "PCL adds prompt-only evidence and paper diagnostics.",
+            "  prompt-optimizer -> prompt writing; "
+            "PCL proves whether the optimization is reliable.",
+        ]
         final_lines = ["If you prefer an interactive menu, run:", "  pcl start"]
     for index, (goal, command, next_step) in enumerate(rows, start=1):
         lines.extend(
@@ -2823,6 +2837,7 @@ def _format_start_guide(language: str = "en") -> str:
                 "",
             ]
         )
+    lines.extend([*ecosystem_lines, ""])
     lines.extend(final_lines)
     return "\n".join(lines)
 

@@ -1630,6 +1630,9 @@ def test_cli_start_guide_prints_goal_based_paths(capsys: pytest.CaptureFixture[s
     assert "Import external eval results as evidence" in output
     assert "Guard a coding-agent prompt" in output
     assert "Audit what an agent changed" in output
+    assert "Ecosystem choice map" in output
+    assert "Promptfoo -> eval / CI / red-team" in output
+    assert "prompt-optimizer -> prompt writing" in output
     assert "pcl start" in output
 
 
@@ -1645,6 +1648,9 @@ def test_cli_start_guide_supports_chinese(capsys: pytest.CaptureFixture[str]) ->
     assert "把外部评测结果导入成证据" in output
     assert "在 coding agent 执行前守护 prompt" in output
     assert "审计 agent 到底改了什么" in output
+    assert "生态选择地图" in output
+    assert "Promptfoo -> eval / CI / red-team" in output
+    assert "prompt-optimizer -> prompt 写作" in output
     assert "pcl start --language zh" in output
 
 
