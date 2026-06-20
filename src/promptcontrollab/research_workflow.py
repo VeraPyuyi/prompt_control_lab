@@ -554,6 +554,7 @@ def _run_external_bridge_diagnostics(
 
 def _write_research_outputs(*, summary_dir: Path, payload: JsonDict) -> None:
     ensure_dir(summary_dir)
+    payload["plain_language_insights"] = _plain_language_research_insights(payload)
     gap_plan = _build_research_gap_plan(payload)
     if gap_plan["actions"]:
         plan_json = summary_dir / "research_gap_plan.json"
@@ -1609,11 +1610,34 @@ def render_research_diagnostics_markdown(payload: JsonDict) -> str:
         "",
         "![Research overview](research_overview.svg)",
         "",
-        "## Paper Concept Map",
+        "## Plain-language interpretation",
         "",
-        "| Concept | Commands | Artifact | Meaning |",
-        "|---|---|---|---|",
+        "| Diagnostic | Checks | Result | Interpretation | Next action |",
+        "|---|---|---|---|---|",
     ]
+    for row in _plain_language_research_insights(payload):
+        lines.append(
+            "| "
+            + " | ".join(
+                [
+                    str(row.get("diagnostic", "")),
+                    str(row.get("checks", "")),
+                    str(row.get("result", "")),
+                    str(row.get("interpretation", "")),
+                    str(row.get("next_action", "")),
+                ]
+            )
+            + " |"
+        )
+    lines.extend(
+        [
+            "",
+            "## Paper Concept Map",
+            "",
+            "| Concept | Commands | Artifact | Meaning |",
+            "|---|---|---|---|",
+        ]
+    )
     for item in PAPER_MAPPING:
         lines.append(
             "| {concept} | `{commands}` | `{artifact}` | {meaning} |".format(
@@ -1762,6 +1786,22 @@ def render_research_diagnostics_html(payload: JsonDict) -> str:
             "Visual Overview",
             '<img class="overview" src="research_overview.svg" '
             'alt="Research diagnostic overview">',
+        ),
+        _section(
+            "Plain-language Interpretation",
+            _table(
+                ["Diagnostic", "Checks", "Result", "Interpretation", "Next action"],
+                [
+                    [
+                        row.get("diagnostic", ""),
+                        row.get("checks", ""),
+                        row.get("result", ""),
+                        row.get("interpretation", ""),
+                        row.get("next_action", ""),
+                    ]
+                    for row in _plain_language_research_insights(payload)
+                ],
+            ),
         ),
         _section(
             "Paper Concept Map",
@@ -2456,3 +2496,153 @@ def _interpret_diagnostics(diagnostics: JsonDict) -> list[str]:
             "Time-varying soft-control comparison recorded method means and deltas vs baseline."
         )
     return interpretations
+
+
+def _plain_language_research_insights(payload: JsonDict) -> list[JsonDict]:
+    diagnostics = payload.get("diagnostics")
+    diagnostics_dict = diagnostics if isinstance(diagnostics, dict) else {}
+    inputs = payload.get("inputs")
+    inputs_dict = inputs if isinstance(inputs, dict) else {}
+    hidden = inputs_dict.get("hidden_states")
+    hidden_dict = hidden if isinstance(hidden, dict) else {}
+    specs: list[tuple[str, str, JsonDict]] = [
+        ("soft_hard", "diagnostics/soft_hard.json", _payload_dict(diagnostics_dict, "soft_hard")),
+        ("hidden_states", "inputs/hidden_states.npz", hidden_dict),
+        (
+            "trajectory",
+            "diagnostics/trajectory.json",
+            _payload_dict(diagnostics_dict, "trajectory"),
+        ),
+        ("riccati", "diagnostics/riccati.json", _payload_dict(diagnostics_dict, "riccati")),
+        ("tv_soft", "diagnostics/tv_soft.json", _payload_dict(diagnostics_dict, "tv_soft")),
+    ]
+    return [
+        {
+            "diagnostic": _plain_diagnostic_label(key),
+            "checks": _plain_diagnostic_check(key),
+            "result": _plain_diagnostic_result(key, row_payload),
+            "interpretation": _plain_diagnostic_interpretation(key, row_payload),
+            "next_action": _plain_diagnostic_next_action(key, row_payload, artifact),
+        }
+        for key, artifact, row_payload in specs
+    ]
+
+
+def _payload_dict(payload: JsonDict, key: str) -> JsonDict:
+    value = payload.get(key)
+    return value if isinstance(value, dict) else {}
+
+
+def _plain_diagnostic_label(key: str) -> str:
+    return {
+        "soft_hard": "Soft-to-hard gap",
+        "hidden_states": "Hidden-state input",
+        "trajectory": "Trajectory stability",
+        "riccati": "Riccati surrogate",
+        "tv_soft": "Time-varying soft-control",
+    }[key]
+
+
+def _plain_diagnostic_check(key: str) -> str:
+    return {
+        "soft_hard": "Can a soft prompt be deployed as hard tokens without a large gap?",
+        "hidden_states": "Do we have explicit activation inputs for trajectory diagnostics?",
+        "trajectory": "Does the hidden-state path drift or show turnpike-like decay?",
+        "riccati": "Is the fitted finite-dimensional control surrogate internally stable?",
+        "tv_soft": "Does time-varying structure beat static, shuffled, or random controls?",
+    }[key]
+
+
+def _plain_diagnostic_result(key: str, payload: JsonDict) -> str:
+    if not payload:
+        return "not measured"
+    if key == "soft_hard":
+        return (
+            f"risk={payload.get('risk')}; "
+            f"mean distance={payload.get('mean_projection_distance')}"
+        )
+    if key == "hidden_states":
+        return (
+            f"source={payload.get('source')}; "
+            f"shape={payload.get('states_shape')}"
+        )
+    if key == "trajectory":
+        return (
+            f"turnpike={payload.get('turnpike_like_signal')}; "
+            f"slope={payload.get('log_decay_slope')}"
+        )
+    if key == "riccati":
+        return (
+            f"stable={payload.get('stable_surrogate')}; "
+            f"rho={payload.get('closed_loop_spectral_radius')}"
+        )
+    if key == "tv_soft":
+        return f"best delta={_best_delta_key(payload) or 'not isolated'}"
+    return "recorded"
+
+
+def _plain_diagnostic_interpretation(key: str, payload: JsonDict) -> str:
+    if not payload:
+        return "This paper-evidence column is still missing."
+    if key == "soft_hard":
+        risk = str(payload.get("risk") or "unknown").lower()
+        if risk in {"low", "pass", "safe"}:
+            return "Hard-token deployment looks less risky, but should still be retested."
+        return "Projection from soft vectors to hard tokens may lose quality."
+    if key == "hidden_states":
+        return "Trajectory and Riccati claims are easier to audit when this input is explicit."
+    if key == "trajectory":
+        if payload.get("turnpike_like_signal") is True:
+            return "The trace shows a stability-like signal worth checking by task slice."
+        return "The trace does not yet show a strong stability signature."
+    if key == "riccati":
+        radius = _float_or_none(payload.get("closed_loop_spectral_radius"))
+        if payload.get("stable_surrogate") is True or (radius is not None and radius < 1.0):
+            return "The fitted surrogate is internally stable on this reduced model."
+        return "The surrogate needs review before supporting a stability claim."
+    if key == "tv_soft":
+        best = _best_delta_key(payload)
+        if best and "time" in best:
+            return "Time-varying structure may explain part of the gain."
+        return "The current result does not isolate a time-varying advantage."
+    return "Recorded diagnostic evidence."
+
+
+def _plain_diagnostic_next_action(key: str, payload: JsonDict, artifact: str) -> str:
+    if not payload:
+        return f"Run `{_plain_missing_command(key)}` to create `{artifact}`."
+    if key == "soft_hard":
+        return "Retest the rounded hard prompt before deployment."
+    if key == "hidden_states":
+        return "Use the same hidden-state source for trajectory and Riccati follow-ups."
+    if key == "trajectory":
+        return "Compare decay slopes by task slice before making broad claims."
+    if key == "riccati":
+        return "Report this as a fitted surrogate probe, not a full-LM proof."
+    if key == "tv_soft":
+        return "Compare static, shuffled, random, and time-varying lanes side by side."
+    return "Keep this artifact with the run."
+
+
+def _plain_missing_command(key: str) -> str:
+    return {
+        "soft_hard": "pcl soft-hard --run <selected-run>",
+        "hidden_states": "pcl diagnose --run <selected-run>",
+        "trajectory": "pcl trajectory --states inputs/hidden_states.npz --out diagnostics",
+        "riccati": "pcl riccati --trajectory diagnostics/trajectory.json --out diagnostics",
+        "tv_soft": "pcl tv-soft --config promptcontrol.example.yaml --out diagnostics",
+    }[key]
+
+
+def _best_delta_key(payload: JsonDict) -> str:
+    deltas = payload.get("delta_vs_baseline")
+    if not isinstance(deltas, dict) or not deltas:
+        return ""
+    return str(max(deltas, key=lambda key: float(deltas.get(key) or 0.0)))
+
+
+def _float_or_none(value: object) -> float | None:
+    try:
+        return float(value)  # type: ignore[arg-type]
+    except (TypeError, ValueError):
+        return None

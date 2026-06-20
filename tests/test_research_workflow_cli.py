@@ -62,6 +62,8 @@ def test_research_demo_generates_paper_diagnostics(
     assert summary["inputs"]["hidden_states"]["source"] == "synthetic_demo"
     assert summary["inputs"]["hidden_states"]["states_shape"] == [6, 2]
     assert set(summary["diagnostics"]) == {"soft_hard", "trajectory", "riccati", "tv_soft"}
+    assert summary["plain_language_insights"][0]["diagnostic"] == "Soft-to-hard gap"
+    assert summary["plain_language_insights"][0]["next_action"]
     concept_names = {item["concept"] for item in _mapping(summary)}
     assert "tri-split withheld protocol" in concept_names
     assert "HuggingFace hidden-state extraction" in concept_names
@@ -71,12 +73,16 @@ def test_research_demo_generates_paper_diagnostics(
     report = (run_dir / "research_diagnostics.md").read_text(encoding="utf-8")
     assert "Research Diagnostics Report" in report
     assert "![Research overview](research_overview.svg)" in report
+    assert "## Plain-language interpretation" in report
+    assert "| Diagnostic | Checks | Result | Interpretation | Next action |" in report
     assert "Hidden-state input" in report
     assert "soft-to-hard projection gap" in report
     assert "Riccati surrogate" in report
     report_html = (run_dir / "research_diagnostics.html").read_text(encoding="utf-8")
     assert "Research Diagnostics Report" in report_html
     assert 'src="research_overview.svg"' in report_html
+    assert "Plain-language Interpretation" in report_html
+    assert "Next action" in report_html
     assert "Hidden-state Trajectory" in report_html
     overview_svg = (run_dir / "research_overview.svg").read_text(encoding="utf-8")
     assert "Paper-derived prompt-control evidence" in overview_svg
