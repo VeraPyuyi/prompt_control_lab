@@ -45,6 +45,14 @@ claim check 和论文诊断缺口。
 PCL 应该优先切入哪里、应该向相邻工具学习什么、暂时不要重复建设什么，以及 P1/P2 的下一步产品动作。
 再往下看完整矩阵，逐项确认每个外部工具的强项、PCL 补了什么证据、还缺哪些论文诊断。
 
+如果你只想在终端里看简短行动摘要，可以运行：
+
+```bash
+pcl ecosystem-scorecard --run runs/ecosystem-demo --summary
+```
+
+这个输出只显示 Market readiness 状态、优先用户、暂时不要做的方向和下一步动作，不会把完整 JSON 打满屏幕。
+
 ## 一条命令做完整外部证据审计
 
 当你已经有外部工具导出的 baseline / candidate 结果时，运行：

@@ -87,6 +87,7 @@ def test_competitive_positioning_stays_evidence_layer_first() -> None:
 
     for text in [ecosystem, ecosystem_zh]:
         assert "Market readiness" in text
+        assert "pcl ecosystem-scorecard --run runs/ecosystem-demo --summary" in text
 
     for text in [comparison, comparison_zh]:
         assert "evidence-audit" in text

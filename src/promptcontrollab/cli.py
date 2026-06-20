@@ -844,6 +844,11 @@ def build_parser() -> argparse.ArgumentParser:
             "<run>/ecosystem_scorecard.json."
         ),
     )
+    ecosystem_scorecard_parser.add_argument(
+        "--summary",
+        action="store_true",
+        help="Print a concise market-readiness summary instead of the full JSON payload.",
+    )
     ecosystem_scorecard_parser.set_defaults(func=_cmd_ecosystem_scorecard)
 
     audit_parser = subcommands.add_parser(
@@ -1674,7 +1679,58 @@ def _cmd_ecosystem_demo(args: argparse.Namespace) -> None:
 
 def _cmd_ecosystem_scorecard(args: argparse.Namespace) -> None:
     payload = write_ecosystem_scorecard(run_dir=args.run, out_path=args.out)
+    if args.summary:
+        print(_format_ecosystem_scorecard_summary(payload))
+        return
     print(json.dumps(payload, indent=2, ensure_ascii=False, sort_keys=True))
+
+
+def _format_ecosystem_scorecard_summary(payload: JsonDict) -> str:
+    readiness = payload.get("market_readiness")
+    readiness_dict = readiness if isinstance(readiness, dict) else {}
+    next_moves = readiness_dict.get("next_moves")
+    lines = [
+        "Ecosystem scorecard summary",
+        f"HTML: {payload.get('html_path', '')}",
+        f"Markdown: {payload.get('markdown_path', '')}",
+        "",
+        "Market readiness",
+        f"Status: {readiness_dict.get('status', 'unknown')}",
+    ]
+    positioning = str(readiness_dict.get("recommended_positioning") or "")
+    if positioning:
+        lines.append(f"Positioning: {positioning}")
+    first_users = _summary_string_items(readiness_dict.get("best_first_users"))
+    if first_users:
+        lines.extend(["", "Best first users:", *[f"- {item}" for item in first_users]])
+    do_not_build = _summary_string_items(readiness_dict.get("do_not_build"))
+    if do_not_build:
+        lines.extend(["", "Do not build:", *[f"- {item}" for item in do_not_build]])
+    lines.extend(["", "Next moves:"])
+    if isinstance(next_moves, list) and next_moves:
+        for item in next_moves:
+            if not isinstance(item, dict):
+                continue
+            lines.append(
+                "- "
+                f"{item.get('priority', '')} {item.get('tool', '')}: "
+                f"{item.get('move', '')}"
+            )
+    else:
+        lines.append("- No next moves recorded.")
+    lines.extend(
+        [
+            "",
+            "Boundary: positioning guidance only; imported rows remain the evidence.",
+        ]
+    )
+    return "\n".join(lines)
+
+
+def _summary_string_items(value: object) -> list[str]:
+    if not isinstance(value, list):
+        return []
+    return [str(item) for item in value if str(item)]
 
 
 def _cmd_start(args: argparse.Namespace) -> None:

@@ -115,10 +115,13 @@ scorecard without rebuilding the whole demo:
 
 ```bash
 pcl ecosystem-scorecard --run runs/ecosystem-demo
+pcl ecosystem-scorecard --run runs/ecosystem-demo --summary
 ```
 
 Use `--out <file-or-directory>` when you want to write a separate scorecard copy
-for review.
+for review. Use `--summary` when you want the terminal output to show only the
+Market readiness status, first users, do-not-build list, and next moves instead
+of the full JSON payload.
 
 For a single external tool export, the recommended reviewer-first entry point is
 `pcl evidence-audit`. It imports the external baseline/candidate export, writes the PCL comparison

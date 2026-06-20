@@ -388,7 +388,10 @@ def test_cli_compare_runs_generates_stats_validity_and_report(tmp_path: Path) ->
     assert "Full Markdown Audit" in html
 
 
-def test_cli_ecosystem_demo_runs_all_external_bridge_examples(tmp_path: Path) -> None:
+def test_cli_ecosystem_demo_runs_all_external_bridge_examples(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
     demo = tmp_path / "demo"
     out = demo / "runs" / "ecosystem-demo"
     assert main(["init", "--path", str(demo)]) == 0
@@ -575,6 +578,15 @@ def test_cli_ecosystem_demo_runs_all_external_bridge_examples(tmp_path: Path) ->
     assert (scorecard_dir / "ecosystem_scorecard.json").exists()
     assert (scorecard_dir / "ecosystem_scorecard.md").exists()
     assert (scorecard_dir / "ecosystem_scorecard.html").exists()
+    capsys.readouterr()
+    assert main(["ecosystem-scorecard", "--run", str(out), "--summary"]) == 0
+    summary_output = capsys.readouterr().out
+    assert "Ecosystem scorecard summary" in summary_output
+    assert "Market readiness" in summary_output
+    assert "Next moves:" in summary_output
+    assert "P1 Braintrust" in summary_output
+    assert "positioning guidance only" in summary_output
+    assert summary_output.lstrip()[0] != "{"
     assert [item["tool"] for item in summary["runs"]] == [
         "promptfoo",
         "langfuse",
