@@ -1,15 +1,18 @@
-# 与 Promptfoo、LangSmith、Langfuse 和 Prompt Optimizer 的对比
+# 与 Promptfoo、DeepEval、LangSmith、Langfuse 和 Prompt Optimizer 的对比
 
 这份文档说明 `prompt_control_lab` 应该在哪里竞争，在哪里集成。
 
 一句话版本：PCL 不应该做另一个大而全的 LLMOps 平台。它最强的位置是
 **prompt optimization 的研究证据层**。
 
+更直白地说：其他工具产出 prompt、trace、测试或安全结果；PCL 负责把这些结果整理成更干净、更可审查的证据。
+
 ## 30 秒选择指南
 
 | 用户想要什么 | 先用什么 | 什么时候加 PCL |
 |---|---|---|
 | 安全测试、红队用例、provider 评测矩阵 | Promptfoo | 结果还需要成对不确定性、prompt-only 有效性、claim 边界或论文诊断证据。 |
+| Pytest 风格 LLM 单元测试，以及大量现成指标 | DeepEval | 测试结果还需要 prompt / model / split provenance、成对不确定性或 claim 边界审查。 |
 | 生产 trace、agent debug、标注队列、LangChain/LangGraph 观测 | LangSmith | trace / eval 导出需要变成可复现的 prompt optimization 证据包。 |
 | 开源观测、prompt registry、成本跟踪、自托管 LLM monitoring | Langfuse | observability 还需要 soft-hard gap、hidden trajectory、Riccati 或 time-varying control 诊断。 |
 | 更顺手地改写 prompt、管理 prompt 资产 | prompt-optimizer | 优化后的 prompt 需要在部署或论文声称前证明“真的变好”。 |
@@ -20,6 +23,7 @@
 | 工具 | 强项 | PCL 不应该硬拼 | PCL 可以补上的东西 |
 |---|---|---|---|
 | Promptfoo | LLM 评测、红队/安全测试、guardrails、provider 覆盖、CI 和安全报告。 | 红队插件数量、provider 矩阵深度、企业安全 dashboard。 | 导入 Promptfoo 结果后，补上成对不确定性、prompt-only 有效性、evidence card、claim check、论文诊断缺口闭环和可验证研究证据包。 |
+| DeepEval | Pytest 风格 LLM 单元测试、丰富内置指标、合成数据、组件/端到端评测和本地 CI 工作流。 | 指标目录广度、LLM-as-judge 框架、合成数据流程、单元测试开发者体验。 | 给 DeepEval 风格结果加证据层：prompt identity、model identity、split hash、成对不确定性、evidence card 和论文诊断缺口状态。 |
 | LangSmith | Agent trace、在线/离线评测、Prompt Hub/Playground、监控、部署、sandbox、人工标注流程。 | LangChain/LangGraph 原生 trace UI、部署基础设施、sandbox runtime、标注队列产品。 | 把 experiment export 转成 prompt optimization 证据包，区分 prompt 效果和 model、metric、split、统计显著性等混杂因素。 |
 | Langfuse | 开源 observability、prompt management、evaluation、成本跟踪、SDK/OpenTelemetry/LiteLLM 集成、自托管。 | 通用 tracing、prompt registry、成本 dashboard、RBAC、托管观测平台。 | 补上 observability 工具通常不覆盖的研究诊断：soft-hard 部署 gap、hidden-state trajectory、Riccati surrogate、time-varying control evidence 和 claim 支持边界。 |
 | linshenkx/prompt-optimizer | 面向普通用户的 prompt 改写产品，覆盖 Web、桌面端、Chrome 扩展、Docker、MCP、多模型、Prompt Garden、收藏、图像生成模式和交互式测试。 | 成熟 prompt 编辑器体验、prompt 资产管理、浏览器/桌面分发、prompt marketplace/garden、模型调用应用和通用一键 prompt 改写。 | 验证优化后的 prompt 是否真的可靠：tri-split 协议、prompt-only 比较有效性、成对不确定性、claim 边界、soft-hard 部署 gap、trajectory/Riccati/tv-soft 诊断，以及 reviewer-facing 证据包。 |
@@ -28,6 +32,8 @@
 [Promptfoo intro](https://www.promptfoo.dev/docs/intro/)、
 [Promptfoo CI/CD docs](https://www.promptfoo.dev/docs/integrations/ci-cd/)、
 [Promptfoo pricing](https://www.promptfoo.dev/pricing)、
+[DeepEval introduction](https://deepeval.com/docs/introduction)、
+[DeepEval quickstart](https://deepeval.com/docs/getting-started)、
 [LangSmith observability](https://www.langchain.com/langsmith/observability)、
 [LangSmith pricing](https://www.langchain.com/pricing)、
 [Langfuse docs](https://langfuse.com/docs)、

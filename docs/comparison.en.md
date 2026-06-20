@@ -1,14 +1,18 @@
-# Comparison With Promptfoo, LangSmith, Langfuse, and Prompt Optimizer
+# Comparison With Promptfoo, DeepEval, LangSmith, Langfuse, and Prompt Optimizer
 
 This page explains where `prompt_control_lab` should compete and where it should integrate.
 The short version: PCL should not try to become another broad LLMOps platform. Its strongest lane is
 the research evidence layer for prompt optimization.
+
+The market-facing message should be blunt: PCL wins only if it is the clean evidence layer after
+other tools have produced prompts, traces, tests, or security results.
 
 ## 30-Second Choice Guide
 
 | If the user wants... | Start with... | Add PCL when... |
 |---|---|---|
 | Security testing, red-team suites, or provider-wide eval matrices | Promptfoo | The result needs paired uncertainty, prompt-only validity, claim boundaries, or paper-diagnostic evidence. |
+| Pytest-style LLM unit tests and many ready-made metrics | DeepEval | The test result needs prompt/model/split provenance, paired uncertainty, or claim-boundary review. |
 | Production traces, agent debugging, annotation queues, or LangChain/LangGraph observability | LangSmith | The trace/eval export must become a reproducible prompt-optimization evidence bundle. |
 | Open-source observability, prompt registry, cost tracking, or self-hosted LLM monitoring | Langfuse | Observability should be extended with soft-hard gap, hidden trajectory, Riccati, or time-varying control diagnostics. |
 | A polished app that rewrites prompts and manages prompt assets | prompt-optimizer | An optimized prompt needs proof that it improved under a clean protocol before deployment or publication. |
@@ -19,6 +23,7 @@ the research evidence layer for prompt optimization.
 | Tool | Strong lane | PCL should not copy | PCL can add |
 |---|---|---|---|
 | Promptfoo | LLM evals, red-team/security testing, guardrails, provider coverage, CI, and security reports. | Red-team plugin breadth, provider matrix depth, enterprise security dashboard. | Paired uncertainty, prompt-only validity, evidence cards, claim checks, paper-diagnostic gap closure, and tamper-evident research bundles after importing Promptfoo results. |
+| DeepEval | Pytest-style LLM unit testing, many built-in metrics, synthetic datasets, component/end-to-end evals, and local CI workflows. | Metric catalog breadth, LLM-as-judge framework, synthetic data workflow, unit-test developer ergonomics. | A provenance and claim layer around DeepEval-style results: prompt identity, model identity, split hash, paired uncertainty, evidence card, and paper-diagnostic gap status. |
 | LangSmith | Agent tracing, offline/online evals, Prompt Hub/Playground, monitoring, deployment, sandboxes, annotation workflows. | LangChain/LangGraph-native trace UI, deployment infrastructure, sandbox runtime, annotation queue product. | Convert experiment exports into prompt-optimization evidence bundles that separate prompt effects from model, metric, split, and statistical confounds. |
 | Langfuse | Open-source observability, prompt management, evaluation, cost tracking, SDK/OpenTelemetry/LiteLLM integrations, self-hosting. | General tracing, prompt registry, cost dashboards, RBAC, hosted observability. | Add diagnostics observability tools usually do not provide: soft-hard deployment gap, hidden-state trajectory probes, Riccati surrogates, time-varying control evidence, and claim support boundaries. |
 | linshenkx/prompt-optimizer | End-user prompt rewriting product with web, desktop, Chrome extension, Docker, MCP, multi-model support, Prompt Garden, favorites, image-generation modes, and interactive testing. | Mature prompt editor UX, prompt asset manager, browser/desktop distribution, prompt marketplace/garden, model-calling app, and general one-click prompt rewrite experience. | Validate whether an optimized prompt is reproducibly better: tri-split protocol, prompt-only comparison validity, paired uncertainty, claim boundary, soft-hard deployment gap, trajectory/Riccati/tv-soft diagnostics, and reviewer-facing evidence bundles. |
@@ -27,6 +32,8 @@ Sources for current positioning and pricing where relevant:
 [Promptfoo intro](https://www.promptfoo.dev/docs/intro/),
 [Promptfoo CI/CD docs](https://www.promptfoo.dev/docs/integrations/ci-cd/),
 [Promptfoo pricing](https://www.promptfoo.dev/pricing),
+[DeepEval introduction](https://deepeval.com/docs/introduction),
+[DeepEval quickstart](https://deepeval.com/docs/getting-started),
 [LangSmith observability](https://www.langchain.com/langsmith/observability),
 [LangSmith pricing](https://www.langchain.com/pricing),
 [Langfuse docs](https://langfuse.com/docs),

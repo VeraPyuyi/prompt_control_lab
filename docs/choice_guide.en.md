@@ -1,14 +1,18 @@
 # Which Tool Should I Use First?
 
 `prompt_control_lab` is not trying to replace Promptfoo, LangSmith, Langfuse, DeepEval, or
-prompt-optimizer. Use those tools for their strongest workflow, then use PCL when you need a
-reviewer-facing evidence layer for prompt optimization.
+prompt-optimizer. Use those tools for creation, tracing, testing, or security. Add PCL when the
+result needs to become reviewer-facing evidence for prompt optimization.
+
+One-sentence rule: **create and test elsewhere; use PCL when you need to prove what the result
+actually supports.**
 
 ## 30-Second Map
 
 | Your starting point | Use first | Add PCL when you need |
 |---|---|---|
 | You need eval matrices, CI checks, or red-team/security tests. | Promptfoo | Paired uncertainty, prompt-only validity, claim boundaries, and paper diagnostics. |
+| You want Pytest-style LLM unit tests and many ready-made metrics. | DeepEval | Prompt/model/split provenance, paired uncertainty, and claim checks around those test results. |
 | You need traces, agent debugging, datasets, or LangChain/LangGraph observability. | LangSmith | A reproducible evidence bundle that separates prompt effects from model, metric, and split changes. |
 | You need open-source tracing, prompt management, evals, cost, or self-hosting. | Langfuse | Soft-hard gap, trajectory/Riccati/tv-soft diagnostics, and bounded research claims. |
 | You want a polished prompt writing app. | prompt-optimizer | Proof that the optimized prompt is reproducibly better before deployment or publication. |
@@ -51,8 +55,13 @@ Use the adjacent tool for creation, tracing, or broad evaluation. Use PCL when s
 - What is the strongest claim this evidence can safely support?
 - Which paper-derived diagnostics are still missing?
 
+Do **not** start with PCL if you only need a nicer prompt editor, a hosted tracing dashboard, or a
+large red-team attack catalog. That is the adjacent tool's job. PCL's job is to make the evidence
+clean enough to trust.
+
 Sources for positioning: [Promptfoo intro](https://www.promptfoo.dev/docs/intro/),
 [Promptfoo CI/CD](https://www.promptfoo.dev/docs/integrations/ci-cd/),
+[DeepEval introduction](https://deepeval.com/docs/introduction),
 [LangSmith observability](https://www.langchain.com/langsmith/observability),
 [Langfuse docs](https://langfuse.com/docs),
 [Langfuse prompt management](https://langfuse.com/docs/prompt-management/overview), and

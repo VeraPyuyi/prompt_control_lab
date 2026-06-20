@@ -67,6 +67,7 @@ def test_competitive_positioning_stays_evidence_layer_first() -> None:
 
     for text in [comparison, comparison_zh, choice, choice_zh]:
         assert "Promptfoo" in text
+        assert "DeepEval" in text
         assert "LangSmith" in text
         assert "Langfuse" in text
         assert "prompt-optimizer" in text
@@ -85,5 +86,6 @@ def test_competitive_positioning_stays_evidence_layer_first() -> None:
     assert "Do not rebuild prompt-optimizer's prompt editor" in comparison
     assert "Use prompt-optimizer when you want a better prompt writing interface" in comparison
     assert "Promptfoo intro" in comparison
+    assert "DeepEval introduction" in comparison
     assert "Langfuse docs" in comparison
     assert "linshenkx/prompt-optimizer README" in comparison
