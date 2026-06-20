@@ -24,8 +24,8 @@ Agent guard 和 audit 很有用，但它们是应用层；项目的研究内核�
 如果你想先体验论文诊断流程，而不是立刻准备自己的模型 artifact，可以运行：
 
 ```bash
-pcl research-demo --out runs/research-demo
-pcl diagnose --run runs/research-demo
+pcl research-demo --out runs/research-demo --language zh
+pcl diagnose --run runs/research-demo --language zh
 ```
 
 这个命令会在 `runs/research-demo/inputs` 下写出 synthetic soft prompt vectors、

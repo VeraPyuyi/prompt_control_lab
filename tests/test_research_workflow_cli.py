@@ -37,6 +37,37 @@ def test_start_research_runs_paper_diagnostics_demo(
     assert (run_dir / "diagnostics" / "tv_soft.json").exists()
 
 
+def test_start_research_supports_chinese_output(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    pytest.importorskip("numpy")
+    run_dir = tmp_path / "research-start-zh"
+
+    assert (
+        main(
+            [
+                "start",
+                "--choice",
+                "research",
+                "--language",
+                "zh",
+                "--out",
+                str(run_dir),
+            ]
+        )
+        == 0
+    )
+
+    out = capsys.readouterr().out
+    assert "新手模式: 运行论文风格的 prompt optimization 诊断 demo" in out
+    assert "做了什么: 生成一个用于论文诊断的小型 synthetic 证据包" in out
+    assert "如何阅读输出:" in out
+    assert "研究诊断报告:" in out
+    assert "证据层级=完整研究诊断" in out
+    assert f"UI: pcl ui --runs {tmp_path} --language zh" in out
+
+
 def test_research_demo_generates_paper_diagnostics(
     tmp_path: Path,
     capsys: pytest.CaptureFixture[str],
@@ -179,6 +210,27 @@ def test_research_demo_generates_complete_evidence_chain(tmp_path: Path) -> None
     candidate_manifest = read_json(run_dir / "candidate" / "manifest.json")
     assert len(baseline_manifest["prompt"]["prompt_hash"]) == len("sha256:") + 64
     assert len(candidate_manifest["prompt"]["prompt_hash"]) == len("sha256:") + 64
+
+
+def test_research_demo_and_diagnose_can_print_chinese_guidance(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    pytest.importorskip("numpy")
+    run_dir = tmp_path / "research-demo-zh"
+
+    assert main(["research-demo", "--out", str(run_dir), "--language", "zh"]) == 0
+    out = capsys.readouterr().out
+    assert "已写出研究 demo:" in out
+    assert "诊断项:" in out
+    assert "主张检查:" in out
+
+    assert main(["diagnose", "--run", str(run_dir), "--language", "zh"]) == 0
+    out = capsys.readouterr().out
+    assert "已写出研究诊断:" in out
+    assert "报告:" in out
+    assert "摘要建议先打开:" in out
+    assert "证据门禁:" in out
 
 
 def test_evidence_gate_accepts_research_demo_without_external_source_by_default(

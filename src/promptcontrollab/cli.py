@@ -1079,6 +1079,7 @@ def build_parser() -> argparse.ArgumentParser:
     )
     research_demo_parser.add_argument("--out", type=Path, required=True, help="Demo run directory.")
     research_demo_parser.add_argument("--seed", type=int, default=0, help="Synthetic fixture seed.")
+    research_demo_parser.add_argument("--language", choices=["en", "zh"], default="en")
     research_demo_parser.set_defaults(func=_cmd_research_demo)
 
     research_bundle_parser = subcommands.add_parser(
@@ -1132,6 +1133,7 @@ def build_parser() -> argparse.ArgumentParser:
     diagnose_parser.add_argument("--baseline-method", default="static")
     diagnose_parser.add_argument("--tail", type=int, default=1)
     diagnose_parser.add_argument("--iterations", type=int, default=200)
+    diagnose_parser.add_argument("--language", choices=["en", "zh"], default="en")
     diagnose_parser.set_defaults(func=_cmd_diagnose)
 
     gap_status_parser = subcommands.add_parser(
@@ -1925,8 +1927,17 @@ def _cmd_start(args: argparse.Namespace) -> None:
     if choice == "research":
         out_dir = args.out or Path("runs") / "research-demo"
         payload = write_research_demo(out_dir=out_dir, seed=args.seed)
-        print("Beginner mode: run the paper-style research diagnostics demo")
-        print(_format_research_demo_output(out_dir=out_dir, payload=payload))
+        if args.language == "zh":
+            print("新手模式: 运行论文风格的 prompt optimization 诊断 demo")
+        else:
+            print("Beginner mode: run the paper-style research diagnostics demo")
+        print(
+            _format_research_demo_output(
+                out_dir=out_dir,
+                payload=payload,
+                language=args.language,
+            )
+        )
         return
 
     if choice == "choose":
@@ -2537,39 +2548,87 @@ def _cmd_export_report(args: argparse.Namespace) -> None:
 
 def _cmd_research_demo(args: argparse.Namespace) -> None:
     payload = write_research_demo(out_dir=args.out, seed=args.seed)
-    print(_format_research_demo_output(out_dir=args.out, payload=payload))
+    print(_format_research_demo_output(out_dir=args.out, payload=payload, language=args.language))
 
 
-def _format_research_demo_output(*, out_dir: Path, payload: JsonDict) -> str:
+def _format_research_demo_output(
+    *,
+    out_dir: Path,
+    payload: JsonDict,
+    language: str = "en",
+) -> str:
     diagnostics = payload.get("diagnostics", {})
     diagnostic_names = sorted(diagnostics) if isinstance(diagnostics, dict) else []
     ui_runs_dir = out_dir.parent if out_dir.parent != Path("") else Path(".")
-    readable_diagnostics = _readable_research_diagnostic_names(diagnostic_names)
+    readable_diagnostics = _readable_research_diagnostic_names(
+        diagnostic_names,
+        language=language,
+    )
+    if language == "zh":
+        lines = [
+            f"已写出研究 demo: {out_dir}",
+            "做了什么: 生成一个用于论文诊断的小型 synthetic 证据包"
+            f"({readable_diagnostics})。",
+            f"诊断项: {', '.join(diagnostic_names)}",
+            f"先打开: {out_dir / 'research_bundle.html'}",
+            *_research_cli_summary_lines(
+                summary_dir=out_dir,
+                payload=payload,
+                language=language,
+            ),
+            *_research_output_guide_lines(out_dir, language=language),
+            f"UI: pcl ui --runs {ui_runs_dir} --language zh",
+        ]
+        return "\n".join(lines)
     lines = [
         f"Wrote research demo to {out_dir}",
         "What it did: generated a small synthetic evidence bundle for the paper "
         f"diagnostics ({readable_diagnostics}).",
         f"Diagnostics: {', '.join(diagnostic_names)}",
         f"Open first: {out_dir / 'research_bundle.html'}",
-        *_research_cli_summary_lines(summary_dir=out_dir, payload=payload),
-        *_research_output_guide_lines(out_dir),
+        *_research_cli_summary_lines(summary_dir=out_dir, payload=payload, language=language),
+        *_research_output_guide_lines(out_dir, language=language),
         f"UI: pcl ui --runs {ui_runs_dir}",
     ]
     return "\n".join(lines)
 
 
-def _readable_research_diagnostic_names(names: list[str]) -> str:
-    labels = {
+def _readable_research_diagnostic_names(names: list[str], *, language: str = "en") -> str:
+    labels = _research_diagnostic_labels(language=language)
+    readable = [labels.get(name, name.replace("_", "-")) for name in names]
+    return ", ".join(readable) if readable else "none"
+
+
+def _research_diagnostic_labels(*, language: str = "en") -> dict[str, str]:
+    if language == "zh":
+        return {
+            "soft_hard": "soft-hard gap (soft prompt 转 hard prompt 的差距)",
+            "trajectory": "hidden-state trajectory (隐藏状态轨迹)",
+            "riccati": "Riccati surrogate (降维控制论替代模型)",
+            "tv_soft": "time-varying soft-control (时变 soft prompt 控制)",
+        }
+    return {
         "soft_hard": "soft-hard gap",
         "trajectory": "hidden-state trajectory",
         "riccati": "Riccati surrogate",
         "tv_soft": "time-varying soft-control",
     }
-    readable = [labels.get(name, name.replace("_", "-")) for name in names]
-    return ", ".join(readable) if readable else "none"
 
 
-def _research_output_guide_lines(out_dir: Path) -> list[str]:
+def _research_output_guide_lines(out_dir: Path, *, language: str = "en") -> list[str]:
+    if language == "zh":
+        return [
+            "",
+            "如何阅读输出:",
+            f"研究诊断报告: {out_dir / 'research_diagnostics.html'}",
+            "  用直白语言解释每个论文诊断。",
+            f"证据卡片: {out_dir / 'evidence_card.html'}",
+            "  总结当前 prompt optimization 主张有哪些证据支持。",
+            f"主张检查: {out_dir / 'claim_check.html'}",
+            "  说明当前证据最多能安全支持什么主张。",
+            f"证据门禁: {out_dir / 'evidence_gate_result.html'}",
+            "  检查论文证据 artifact 是否齐全、是否链接完整。",
+        ]
     return [
         "",
         "How to read the outputs:",
@@ -2584,15 +2643,33 @@ def _research_output_guide_lines(out_dir: Path) -> list[str]:
     ]
 
 
-def _research_cli_summary_lines(*, summary_dir: Path, payload: JsonDict) -> list[str]:
+def _research_cli_summary_lines(
+    *,
+    summary_dir: Path,
+    payload: JsonDict,
+    language: str = "en",
+) -> list[str]:
     at_a_glance = payload.get("at_a_glance")
     summary = at_a_glance if isinstance(at_a_glance, dict) else {}
     diagnostics_ready = summary.get("diagnostics_ready", "unknown")
     claim_status = summary.get("claim_status", "unknown")
     evidence_tier = summary.get("evidence_tier", "unknown")
-    readable_tier = _readable_evidence_tier(str(evidence_tier))
+    readable_tier = _readable_evidence_tier(str(evidence_tier), language=language)
     next_action = summary.get("next_action")
     open_first = summary.get("open_first")
+    if language == "zh":
+        lines = [
+            (
+                "概览: "
+                f"诊断={diagnostics_ready}; 主张检查={claim_status}; "
+                f"证据层级={readable_tier}"
+            ),
+        ]
+        if isinstance(open_first, str) and open_first:
+            lines.append(f"摘要建议先打开: {summary_dir / open_first}")
+        if isinstance(next_action, str) and next_action:
+            lines.append(f"下一步: {_translate_research_next_action(next_action)}")
+        return lines
     lines = [
         (
             "At a glance: "
@@ -2607,7 +2684,15 @@ def _research_cli_summary_lines(*, summary_dir: Path, payload: JsonDict) -> list
     return lines
 
 
-def _readable_evidence_tier(value: str) -> str:
+def _readable_evidence_tier(value: str, *, language: str = "en") -> str:
+    if language == "zh":
+        labels = {
+            "tier_1_paired": "仅成对比较",
+            "tier_2_partial_research": "部分研究诊断",
+            "tier_3_research_ready": "研究证据基本齐备",
+            "tier_4_full_research_diagnostics": "完整研究诊断",
+        }
+        return labels.get(value, value.replace("_", " "))
     labels = {
         "tier_1_paired": "paired comparison only",
         "tier_2_partial_research": "partial research diagnostics",
@@ -2615,6 +2700,12 @@ def _readable_evidence_tier(value: str) -> str:
         "tier_4_full_research_diagnostics": "full research diagnostics",
     }
     return labels.get(value, value.replace("_", " "))
+
+
+def _translate_research_next_action(value: str) -> str:
+    if value == "Share the research bundle, evidence card, and claim check together.":
+        return "把 research_bundle、evidence_card 和 claim_check 一起分享给审阅者。"
+    return value
 
 
 def _cmd_research_bundle(args: argparse.Namespace) -> None:
@@ -2653,11 +2744,23 @@ def _cmd_diagnose(args: argparse.Namespace) -> None:
         tail=args.tail,
         iterations=args.iterations,
     )
-    print(f"Wrote research diagnostics to {payload['diagnostics_dir']}")
     summary_dir_path = Path(str(payload["summary_dir"]))
-    print(f"Report: {summary_dir_path / 'research_diagnostics.html'}")
-    print("\n".join(_research_cli_summary_lines(summary_dir=summary_dir_path, payload=payload)))
-    print("\n".join(_research_output_guide_lines(summary_dir_path)))
+    if args.language == "zh":
+        print(f"已写出研究诊断: {payload['diagnostics_dir']}")
+        print(f"报告: {summary_dir_path / 'research_diagnostics.html'}")
+    else:
+        print(f"Wrote research diagnostics to {payload['diagnostics_dir']}")
+        print(f"Report: {summary_dir_path / 'research_diagnostics.html'}")
+    print(
+        "\n".join(
+            _research_cli_summary_lines(
+                summary_dir=summary_dir_path,
+                payload=payload,
+                language=args.language,
+            )
+        )
+    )
+    print("\n".join(_research_output_guide_lines(summary_dir_path, language=args.language)))
 
 
 def _cmd_gap_status(args: argparse.Namespace) -> None:
