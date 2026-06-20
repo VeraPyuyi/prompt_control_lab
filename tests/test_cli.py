@@ -460,6 +460,10 @@ def test_cli_ecosystem_demo_runs_all_external_bridge_examples(tmp_path: Path) ->
     ]
     assert all("not_imported" in item["status"] for item in market_map)
     assert market_map[-1]["status"] == "historical_sunset_reference_not_imported"
+    assert market_map[0]["pcl_product_move"] == (
+        "Improve reviewer workflow and experiment comparison UX."
+    )
+    assert market_map[0]["priority"] == "P1"
     promptfoo_links = scorecard["rows"][0]["artifact_links"]
     assert {"label": "Bridge summary", "path": "promptfoo/bridge_summary.html"} in promptfoo_links
     assert {"label": "Research bundle", "path": "promptfoo/research_bundle.html"} in promptfoo_links
@@ -504,6 +508,8 @@ def test_cli_ecosystem_demo_runs_all_external_bridge_examples(tmp_path: Path) ->
     assert "Extended market map (not imported in this demo)" in scorecard_markdown
     assert "Braintrust" in scorecard_markdown
     assert "not imported evidence bundles" in scorecard_markdown
+    assert "PCL product move" in scorecard_markdown
+    assert "Improve reviewer workflow" in scorecard_markdown
     scorecard_html = (out / "ecosystem_scorecard.html").read_text(encoding="utf-8")
     assert "Ecosystem Scorecard" in scorecard_html
     assert "PCL-added evidence matrix" in scorecard_html
@@ -523,6 +529,8 @@ def test_cli_ecosystem_demo_runs_all_external_bridge_examples(tmp_path: Path) ->
     assert "Extended market map (not imported in this demo)" in scorecard_html
     assert "OpenAI Evals" in scorecard_html
     assert "positioning_only_not_imported" in scorecard_html
+    assert "PCL product move" in scorecard_html
+    assert "P1" in scorecard_html
     assert main(["gap-status", "--run", str(out / "promptfoo")]) == 0
     assert main(["research-bundle", "--run", str(out / "promptfoo"), "--verify"]) == 0
     (out / "ecosystem_scorecard.json").unlink()

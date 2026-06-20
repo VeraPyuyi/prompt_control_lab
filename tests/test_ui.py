@@ -539,6 +539,8 @@ def test_ui_recognizes_ecosystem_demo_root_and_summarizes_tools(tmp_path: Path) 
                     "strong_lane": "Eval datasets and experiments",
                     "pcl_should_learn": "Fast experiment UX",
                     "pcl_owns": "Research evidence layer",
+                    "pcl_product_move": "Improve reviewer workflow",
+                    "priority": "P1",
                     "status": "positioning_only_not_imported",
                 }
             ],
@@ -596,6 +598,8 @@ def test_ui_recognizes_ecosystem_demo_root_and_summarizes_tools(tmp_path: Path) 
             "strong_lane": "Eval datasets and experiments",
             "pcl_should_learn": "Fast experiment UX",
             "pcl_still_owns": "Research evidence layer",
+            "pcl_product_move": "Improve reviewer workflow",
+            "priority": "P1",
             "status": "positioning_only_not_imported",
         }
     ]
@@ -1450,6 +1454,8 @@ def test_ui_market_map_display_rows_use_human_headers() -> None:
             "strong_lane": "Eval datasets and experiments",
             "pcl_should_learn": "Fast experiment UX",
             "pcl_still_owns": "Research evidence layer",
+            "pcl_product_move": "Improve reviewer workflow",
+            "priority": "P1",
             "status": "positioning_only_not_imported",
         }
     ]
@@ -1463,6 +1469,8 @@ def test_ui_market_map_display_rows_use_human_headers() -> None:
             "Strong lane": "Eval datasets and experiments",
             "What PCL should learn": "Fast experiment UX",
             "What PCL still owns": "Research evidence layer",
+            "PCL product move": "Improve reviewer workflow",
+            "Priority": "P1 - near-term",
             "Status": "Positioning only (not imported)",
         }
     ]
@@ -1472,6 +1480,8 @@ def test_ui_market_map_display_rows_use_human_headers() -> None:
             "强项": "评测数据集、实验、trace 与人工 review 工作流。",
             "PCL 应该学习什么": "快速实验体验和适合 reviewer 的对比页面。",
             "PCL 仍然负责什么": "prompt 优化主张的论文诊断证据。",
+            "PCL 下一步产品动作": "优化 reviewer 工作流和实验对比体验。",
+            "优先级": "P1 - 近期优先",
             "状态": "定位参考 - 未导入",
         }
     ]

@@ -1986,6 +1986,8 @@ def _market_map_display_rows(rows: list[JsonDict], language: str) -> list[JsonDi
             "strong_lane": "Strong lane",
             "pcl_should_learn": "What PCL should learn",
             "pcl_still_owns": "What PCL still owns",
+            "pcl_product_move": "PCL product move",
+            "priority": "Priority",
             "status": "Status",
         },
         "zh": {
@@ -1993,6 +1995,8 @@ def _market_map_display_rows(rows: list[JsonDict], language: str) -> list[JsonDi
             "strong_lane": "强项",
             "pcl_should_learn": "PCL 应该学习什么",
             "pcl_still_owns": "PCL 仍然负责什么",
+            "pcl_product_move": "PCL 下一步产品动作",
+            "priority": "优先级",
             "status": "状态",
         },
     }
@@ -2002,6 +2006,8 @@ def _market_map_display_rows(rows: list[JsonDict], language: str) -> list[JsonDi
         "strong_lane",
         "pcl_should_learn",
         "pcl_still_owns",
+        "pcl_product_move",
+        "priority",
         "status",
     ]
     return [
@@ -2026,6 +2032,16 @@ def _market_map_display_value(
     language: str,
 ) -> str:
     raw = str(value or "")
+    if key == "priority":
+        priority_labels = {
+            "P1": {"en": "P1 - near-term", "zh": "P1 - 近期优先"},
+            "P2": {"en": "P2 - next", "zh": "P2 - 下一阶段"},
+            "P3": {"en": "P3 - later", "zh": "P3 - 后续观察"},
+        }
+        mapped_priority = priority_labels.get(raw)
+        if mapped_priority:
+            return mapped_priority["zh" if language == "zh" else "en"]
+        return raw
     if key == "status":
         labels = {
             "positioning_only_not_imported": {
@@ -2048,21 +2064,25 @@ def _market_map_display_value(
             "strong_lane": "评测数据集、实验、trace 与人工 review 工作流。",
             "pcl_should_learn": "快速实验体验和适合 reviewer 的对比页面。",
             "pcl_still_owns": "prompt 优化主张的论文诊断证据。",
+            "pcl_product_move": "优化 reviewer 工作流和实验对比体验。",
         },
         "Arize Phoenix": {
             "strong_lane": "开源 observability、trace、评测和检索分析。",
             "pcl_should_learn": "trace-first 调试和丰富的本地排查视图。",
             "pcl_still_owns": "prompt-only 有效性、控制论诊断和 soft-hard 风险报告。",
+            "pcl_product_move": "深化 trace / audit UI，但不扩张成完整 tracing 平台。",
         },
         "OpenAI Evals": {
             "strong_lane": "标准化评测 harness 和可复用 benchmark 定义。",
             "pcl_should_learn": "可移植 eval schema，以及清楚的任务/结果分离。",
             "pcl_still_owns": "tri-split 协议、prompt 身份和围绕 eval 输出的证据卡。",
+            "pcl_product_move": "保持 import 与 scaffold 契约对 eval harness 友好。",
         },
         "Humanloop": {
             "strong_lane": "历史 prompt 管理与评测工作流参考。",
             "pcl_should_learn": "prompt 生命周期、registry 语言和 review 工作流。",
             "pcl_still_owns": "本地研究诊断和 provenance-first 导出 artifact。",
+            "pcl_product_move": "保持本地 registry 语言清楚，不做托管平台膨胀。",
         },
     }
     return zh_rows.get(tool, {}).get(key, raw)

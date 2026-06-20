@@ -534,6 +534,8 @@ def _extended_market_map() -> list[JsonDict]:
             "strong_lane": "Eval datasets, experiments, traces, and human review workflows.",
             "pcl_should_learn": "Fast experiment UX and reviewer-friendly comparison pages.",
             "pcl_owns": "Paper-diagnostic evidence for prompt optimization claims.",
+            "pcl_product_move": "Improve reviewer workflow and experiment comparison UX.",
+            "priority": "P1",
             "status": "positioning_only_not_imported",
         },
         {
@@ -543,6 +545,8 @@ def _extended_market_map() -> list[JsonDict]:
             ),
             "pcl_should_learn": "Trace-first debugging and rich local investigation views.",
             "pcl_owns": "Prompt-only validity, control diagnostics, and soft-hard risk reports.",
+            "pcl_product_move": "Deepen trace and audit UI without becoming a tracing platform.",
+            "priority": "P2",
             "status": "positioning_only_not_imported",
         },
         {
@@ -552,6 +556,8 @@ def _extended_market_map() -> list[JsonDict]:
             "pcl_owns": (
                 "Tri-split hygiene, prompt identity, and evidence cards around eval outputs."
             ),
+            "pcl_product_move": "Keep import and scaffold contracts portable for eval harnesses.",
+            "priority": "P1",
             "status": "positioning_only_not_imported",
         },
         {
@@ -559,6 +565,10 @@ def _extended_market_map() -> list[JsonDict]:
             "strong_lane": "Historical prompt management and evaluation workflow reference.",
             "pcl_should_learn": "Prompt lifecycle UX, registry language, and review workflows.",
             "pcl_owns": "Local research diagnostics and provenance-first export artifacts.",
+            "pcl_product_move": (
+                "Keep local registry language clear without hosted-platform sprawl."
+            ),
+            "priority": "P3",
             "status": "historical_sunset_reference_not_imported",
         },
     ]
@@ -836,8 +846,11 @@ def _render_scorecard(payload: JsonDict) -> str:
                 "bundles and should not be used as direct benchmark results."
             ),
             "",
-            "| Tool | Strong lane | What PCL should learn | What PCL still owns | Status |",
-            "|---|---|---|---|---|",
+            (
+                "| Tool | Strong lane | What PCL should learn | What PCL still owns | "
+                "PCL product move | Priority | Status |"
+            ),
+            "|---|---|---|---|---|---|---|",
         ]
     )
     if isinstance(market_map, list):
@@ -852,6 +865,8 @@ def _render_scorecard(payload: JsonDict) -> str:
                         str(row.get("strong_lane", "")),
                         str(row.get("pcl_should_learn", "")),
                         str(row.get("pcl_owns", "")),
+                        str(row.get("pcl_product_move", "")),
+                        str(row.get("priority", "")),
                         str(row.get("status", "")),
                     ]
                 )
@@ -1136,6 +1151,8 @@ def _render_scorecard_html(payload: JsonDict) -> str:
             <th>Strong lane</th>
             <th>What PCL should learn</th>
             <th>What PCL still owns</th>
+            <th>PCL product move</th>
+            <th>Priority</th>
             <th>Status</th>
           </tr>
         </thead>
@@ -1230,6 +1247,8 @@ def _render_market_map_html_row(row: JsonDict) -> str:
         f"<td>{_html_text(row.get('strong_lane', ''))}</td>"
         f"<td>{_html_text(row.get('pcl_should_learn', ''))}</td>"
         f"<td>{_html_text(row.get('pcl_owns', ''))}</td>"
+        f"<td>{_html_text(row.get('pcl_product_move', ''))}</td>"
+        f"<td>{_html_badge(row.get('priority'))}</td>"
         f"<td>{_html_badge(row.get('status'))}</td>"
         "</tr>"
     )

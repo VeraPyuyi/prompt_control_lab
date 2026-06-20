@@ -704,6 +704,8 @@ def ecosystem_market_map_rows(detail: JsonDict) -> list[JsonDict]:
                 "strong_lane": item.get("strong_lane", ""),
                 "pcl_should_learn": item.get("pcl_should_learn", ""),
                 "pcl_still_owns": item.get("pcl_owns", ""),
+                "pcl_product_move": item.get("pcl_product_move", ""),
+                "priority": item.get("priority", ""),
                 "status": item.get("status", ""),
             }
         )
