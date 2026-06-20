@@ -174,6 +174,10 @@ TEXT = {
         "tutorial_next_step": "Next step",
         "tutorial_command": "CLI equivalent",
         "tutorial_steps": "Steps",
+        "onboarding_title": "Choose the fastest path",
+        "onboarding_goal": "Goal",
+        "onboarding_start": "Start here",
+        "onboarding_next": "Then",
         "execution_mode": "Execution mode",
         "overwrite": "Overwrite existing artifacts",
         "allow_external_outputs": "Allow writing outside runs directory",
@@ -401,6 +405,10 @@ TEXT = {
         "tutorial_next_step": "下一步",
         "tutorial_command": "CLI 等价命令",
         "tutorial_steps": "操作步骤",
+        "onboarding_title": "先选最快路径",
+        "onboarding_goal": "目标",
+        "onboarding_start": "从这里开始",
+        "onboarding_next": "然后",
         "execution_mode": "执行模式",
         "overwrite": "覆盖已有 artifact",
         "allow_external_outputs": "允许写入 runs 目录之外",
@@ -704,6 +712,63 @@ TUTORIAL_STEPS = {
     },
 }
 
+ONBOARDING_PATHS = {
+    "en": [
+        {
+            "goal": "I am new and want to see the product first.",
+            "start": "Workflows -> Create demo artifacts",
+            "next": "Open Run Report, Model Drift, Audit, and History with real local artifacts.",
+        },
+        {
+            "goal": "I need the paper-derived prompt optimization diagnostics.",
+            "start": "Research Overview -> `pcl research-demo` -> `pcl diagnose`",
+            "next": "Check evidence card, claim-check, gap-status, soft-hard, trajectory, Riccati, and tv-soft readiness.",
+        },
+        {
+            "goal": "I already have eval outputs from Promptfoo, Langfuse, or LangSmith.",
+            "start": "Evidence bridge -> `pcl import` or `pcl evidence-audit`",
+            "next": "Use claim-check and gap-status to see what the evidence can safely support.",
+        },
+        {
+            "goal": "I want to stop vague or risky coding-agent prompts before they run.",
+            "start": "Guard Prompt -> choose coding profile and team policy",
+            "next": "Save `guard_result.json`, copy the improved prompt, or install IDE/CLI adapters.",
+        },
+        {
+            "goal": "I need to review what an agent changed in a repository.",
+            "start": "Agent Diff Audit -> `pcl audit-diff`",
+            "next": "Generate a PR summary, build `agent_run.json`, and track the run in History.",
+        },
+    ],
+    "zh": [
+        {
+            "goal": "我是新用户，想先看产品长什么样。",
+            "start": "工作流 -> 创建演示数据",
+            "next": "用真实本地 artifacts 打开运行报告、模型漂移、审计和历史。",
+        },
+        {
+            "goal": "我需要论文里的 prompt optimization 诊断能力。",
+            "start": "Research Overview -> `pcl research-demo` -> `pcl diagnose`",
+            "next": "检查 evidence card、claim-check、gap-status、soft-hard、trajectory、Riccati 和 tv-soft 是否就绪。",
+        },
+        {
+            "goal": "我已经有 Promptfoo、Langfuse 或 LangSmith 的评测导出。",
+            "start": "证据桥接 -> `pcl import` 或 `pcl evidence-audit`",
+            "next": "用 claim-check 和 gap-status 判断这些证据最多能支持什么结论。",
+        },
+        {
+            "goal": "我想在 coding agent 执行前拦住模糊或高风险 prompt。",
+            "start": "Prompt 守护 -> 选择编程场景和团队策略",
+            "next": "保存 `guard_result.json`，复制改写后的 prompt，或安装 IDE/CLI adapter。",
+        },
+        {
+            "goal": "我需要复查 agent 到底改了哪些代码。",
+            "start": "Agent 改动审计 -> `pcl audit-diff`",
+            "next": "生成 PR summary，构建 `agent_run.json`，并在历史页持续追踪。",
+        },
+    ],
+}
+
 TUTORIAL_SECTIONS = {
     "en": [
         {
@@ -887,6 +952,10 @@ TEXT["zh"].update(
         "tutorial_meaning": "说明什么问题",
         "tutorial_next_step": "下一步",
         "tutorial_command": "CLI 等价命令",
+        "onboarding_title": "先选最快路径",
+        "onboarding_goal": "目标",
+        "onboarding_start": "从这里开始",
+        "onboarding_next": "然后",
         "execution_mode": "执行模式",
         "overwrite": "覆盖已有 artifact",
         "allow_external_outputs": "允许写入 runs 目录之外",
@@ -1313,6 +1382,13 @@ def tutorial_sections(language: str) -> list[JsonDict]:
     return enriched
 
 
+def onboarding_paths(language: str) -> list[JsonDict]:
+    """Return role/goal-based starting paths for first-time UI users."""
+
+    rows = ONBOARDING_PATHS.get(language) or ONBOARDING_PATHS["en"]
+    return [dict(row) for row in rows]
+
+
 def tutorial_gallery_items(language: str) -> list[JsonDict]:
     """Return always-visible tutorial image cards for the selected language."""
 
@@ -1715,6 +1791,21 @@ def _render_external_bridge_section(
 
 def _render_tutorial_tab(st: Any, text: dict[str, str], language: str) -> None:
     st.markdown(text["tutorial_intro"])
+    st.markdown(
+        f'<div class="pcl-section-title">{html.escape(text["onboarding_title"])}</div>',
+        unsafe_allow_html=True,
+    )
+    st.dataframe(
+        [
+            {
+                text["onboarding_goal"]: row.get("goal", ""),
+                text["onboarding_start"]: row.get("start", ""),
+                text["onboarding_next"]: row.get("next", ""),
+            }
+            for row in onboarding_paths(language)
+        ],
+        use_container_width=True,
+    )
     overview = _tutorial_asset_path("overview", language)
     if overview.exists():
         _render_image(st, overview)

@@ -1278,6 +1278,32 @@ def test_ui_tutorial_sections_are_complete_and_localized() -> None:
     assert "三点菜单" not in str(app.TEXT["zh"])
 
 
+def test_ui_tutorial_onboarding_paths_cover_main_user_goals() -> None:
+    from promptcontrollab.ui import app
+
+    en_paths = app.onboarding_paths("en")
+    zh_paths = app.onboarding_paths("zh")
+
+    assert len(en_paths) == 5
+    assert len(zh_paths) == 5
+    for rows in [en_paths, zh_paths]:
+        for row in rows:
+            assert row["goal"]
+            assert row["start"]
+            assert row["next"]
+
+    combined_en = " ".join(str(row) for row in en_paths)
+    combined_zh = " ".join(str(row) for row in zh_paths)
+    assert "research-demo" in combined_en
+    assert "evidence-audit" in combined_en
+    assert "Guard Prompt" in combined_en
+    assert "audit-diff" in combined_en
+    assert "创建演示数据" in combined_zh
+    assert "证据桥接" in combined_zh
+    assert "Prompt 守护" in combined_zh
+    assert not _contains_replacement_character(zh_paths)
+
+
 def test_ui_tutorial_gallery_exposes_visible_images() -> None:
     from promptcontrollab.ui import app
 
