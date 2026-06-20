@@ -145,6 +145,24 @@ def test_cli_example_flow(tmp_path: Path) -> None:
     assert (demo / "runs" / "candidate" / "report.md").exists()
 
 
+def test_cli_init_prints_beginner_next_steps(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    demo = tmp_path / "demo"
+
+    assert main(["init", "--path", str(demo)]) == 0
+
+    output = capsys.readouterr().out
+    assert f"Created PromptControlLab example at {demo}" in output
+    assert "Next steps:" in output
+    assert f"cd {demo}" in output
+    assert "pcl start --guide" in output
+    assert "pcl analyze --config promptcontrol.example.yaml --out runs/quick" in output
+    assert "pcl ui --runs runs --policy examples/guard.policy.yaml" in output
+    assert "Open README.md" in output
+
+
 def test_cli_quick_analyze_explain_and_report(tmp_path: Path) -> None:
     demo = tmp_path / "demo"
     run = demo / "runs" / "quick"

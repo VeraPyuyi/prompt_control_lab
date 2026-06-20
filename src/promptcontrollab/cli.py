@@ -1321,7 +1321,25 @@ def build_parser() -> argparse.ArgumentParser:
 
 def _cmd_init(args: argparse.Namespace) -> None:
     write_example_project(args.path)
-    print(f"Created PromptControlLab example at {args.path}")
+    print(_format_init_output(args.path))
+
+
+def _format_init_output(path: Path) -> str:
+    """Return concise next steps after creating an example project."""
+
+    return "\n".join(
+        [
+            f"Created PromptControlLab example at {path}",
+            "",
+            "Next steps:",
+            f"  cd {path}",
+            "  pcl start --guide",
+            "  pcl analyze --config promptcontrol.example.yaml --out runs/quick",
+            "  pcl ui --runs runs --policy examples/guard.policy.yaml",
+            "",
+            "Open README.md in that folder for the file map and copy-paste paths.",
+        ]
+    )
 
 
 def _cmd_ingest_auto(args: argparse.Namespace) -> None:
