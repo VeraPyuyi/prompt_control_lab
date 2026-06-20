@@ -99,7 +99,14 @@ Chinese guide: [README.zh.md](README.zh.md).
 
 ## First step
 
-If you are not sure which workflow to run, start here:
+If you want a fresh project and report in one command, run this from outside
+this folder:
+
+```bash
+pcl start --choice demo --out demo
+```
+
+If you are already inside this folder and want help choosing another workflow, run:
 
 ```bash
 pcl start --guide
@@ -108,7 +115,7 @@ pcl start --guide
 ## Copy-paste paths
 
 ```bash
-# Quick report from the bundled predictions
+# Refresh the quick report from the bundled predictions
 pcl analyze --config promptcontrol.example.yaml --out runs/quick
 
 # Gate the quick report with the example policy
@@ -125,7 +132,7 @@ pcl ui --runs runs --policy examples/guard.policy.yaml
 - `examples/predictions_candidate.jsonl`: candidate prompt outputs.
 - `examples/guard.policy.yaml`: prompt preflight policy for `pcl guard`.
 - `examples/gate.policy.yaml`: report/model gate policy for `pcl gate`.
-- `promptcontrol.example.yaml`: one-command quick analysis config.
+- `promptcontrol.example.yaml`: quick analysis config.
 - `.promptcontrol.yaml`: project defaults for local commands.
 
 The example is intentionally small. Use it to learn the artifact shape, then
@@ -140,7 +147,13 @@ PROJECT_README_ZH_MD = """\
 
 ## 第一步
 
-如果你不确定该运行哪条流程, 先运行:
+如果你想一条命令创建新项目并直接生成报告, 在当前目录外运行:
+
+```bash
+pcl start --choice demo --language zh --out demo
+```
+
+如果你已经在这个目录里, 想继续选择其他流程, 运行:
 
 ```bash
 pcl start --guide --language zh
@@ -149,7 +162,7 @@ pcl start --guide --language zh
 ## 可复制命令
 
 ```bash
-# 使用内置预测结果生成 quick report
+# 使用内置预测结果刷新 quick report
 pcl analyze --config promptcontrol.example.yaml --out runs/quick
 
 # 用示例策略检查 quick report
@@ -166,7 +179,7 @@ pcl ui --runs runs --policy examples/guard.policy.yaml
 - `examples/predictions_candidate.jsonl`: candidate prompt 的输出。
 - `examples/guard.policy.yaml`: 给 `pcl guard` 用的执行前检查策略。
 - `examples/gate.policy.yaml`: 给 `pcl gate` 用的报告/模型门禁策略。
-- `promptcontrol.example.yaml`: 一条命令跑 quick analysis 的配置。
+- `promptcontrol.example.yaml`: quick analysis 配置。
 - `.promptcontrol.yaml`: 本项目的本地命令默认值。
 
 这个示例故意很小。先用它理解 artifact 长什么样, 然后把数据和预测结果替换成你自己的评测结果。

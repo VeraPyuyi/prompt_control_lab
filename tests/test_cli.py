@@ -77,10 +77,12 @@ def test_cli_example_flow(tmp_path: Path) -> None:
     assert main(["init", "--path", str(demo)]) == 0
     demo_readme = (demo / "README.md").read_text(encoding="utf-8")
     demo_readme_zh = (demo / "README.zh.md").read_text(encoding="utf-8")
+    assert "pcl start --choice demo --out demo" in demo_readme
     assert "pcl start --guide" in demo_readme
     assert "pcl analyze --config promptcontrol.example.yaml --out runs/quick" in demo_readme
     assert "pcl ui --runs runs --policy examples/guard.policy.yaml" in demo_readme
     assert "PromptControlLab 示例项目" in demo_readme_zh
+    assert "pcl start --choice demo --language zh --out demo" in demo_readme_zh
     assert "pcl start --guide --language zh" in demo_readme_zh
     assert "pcl analyze --config promptcontrol.example.yaml --out runs/quick" in demo_readme_zh
     assert (
