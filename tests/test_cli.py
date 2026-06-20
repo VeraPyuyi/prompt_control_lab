@@ -1809,6 +1809,11 @@ def test_cli_choose_recommends_adjacent_tool_paths(capsys: pytest.CaptureFixture
         assert payload["matched"] == matched
         assert payload["use_first"] == use_first
 
+    assert main(["choose", "--need", "prompt 写作和提示词模板", "--language", "zh"]) == 0
+    output = capsys.readouterr().out
+    assert "prompt-optimizer 更适合做成熟的 prompt 写作" in output
+    assert "PCL 应该证明它产出的 prompt 是否可靠提升" in output
+
 
 def test_cli_start_interactive_guard_menu(
     capsys: pytest.CaptureFixture[str],

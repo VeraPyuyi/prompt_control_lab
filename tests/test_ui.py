@@ -1502,6 +1502,7 @@ def test_ui_tool_choice_advisor_supports_chinese_prompt_writing() -> None:
 
     calls: list[dict[str, object]] = []
     code_blocks: list[str] = []
+    dataframes: list[object] = []
 
     class FakeStreamlit:
         def markdown(self, body: str, *, unsafe_allow_html: bool = False) -> None:
@@ -1510,8 +1511,8 @@ def test_ui_tool_choice_advisor_supports_chinese_prompt_writing() -> None:
         def text_input(self, *_args: object, **_kwargs: object) -> str:
             return "prompt 写作"
 
-        def dataframe(self, *_args: object, **_kwargs: object) -> None:
-            pass
+        def dataframe(self, data: object, *_args: object, **_kwargs: object) -> None:
+            dataframes.append(data)
 
         def caption(self, _body: object) -> None:
             pass
@@ -1523,7 +1524,10 @@ def test_ui_tool_choice_advisor_supports_chinese_prompt_writing() -> None:
 
     combined_markup = " ".join(str(call["body"]) for call in calls)
     combined_code = "\n".join(code_blocks)
+    combined_rows = " ".join(str(dataframe) for dataframe in dataframes)
     assert "linshenkx/prompt-optimizer" in combined_markup
+    assert "prompt-optimizer 更适合做成熟的 prompt 写作" in combined_rows
+    assert "PCL 应该证明它产出的 prompt 是否可靠提升" in combined_rows
     assert "pcl import prompt-optimizer" in combined_code
     assert "scaffold-check" in combined_code
 

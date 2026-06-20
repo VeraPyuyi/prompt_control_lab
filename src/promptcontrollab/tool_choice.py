@@ -29,9 +29,14 @@ def tool_choice_lanes() -> list[JsonDict]:
                 "Promptfoo is strongest for LLM eval matrices, CI checks, "
                 "and red-team/security testing."
             ),
+            "why_zh": "Promptfoo 更适合做 LLM 评测矩阵、CI 检查和红队/安全测试。",
             "pcl_adds": (
                 "Use PCL after Promptfoo when you need paired uncertainty, prompt-only validity, "
                 "claim boundaries, and paper-diagnostic evidence."
+            ),
+            "pcl_adds_zh": (
+                "当你需要成对不确定性、prompt-only 有效性、claim 边界和论文诊断证据时, "
+                "再把 Promptfoo 结果导入 PCL."
             ),
             "commands": [
                 (
@@ -44,6 +49,7 @@ def tool_choice_lanes() -> list[JsonDict]:
                 ),
             ],
             "avoid": "Do not ask PCL to replace Promptfoo's red-team plugin breadth.",
+            "avoid_zh": "不要让 PCL 替代 Promptfoo 的红队插件广度; PCL 更适合做证据审计.",
         },
         {
             "id": "unit-tests",
@@ -62,15 +68,21 @@ def tool_choice_lanes() -> list[JsonDict]:
                 "组件测试",
             ],
             "why": "DeepEval is strongest for Pytest-style LLM tests and ready-made metrics.",
+            "why_zh": "DeepEval 更适合写 Pytest 风格的 LLM 单元测试, 并直接使用现成指标.",
             "pcl_adds": (
                 "Use PCL around DeepEval results when you need prompt/model/split provenance, "
                 "paired uncertainty, and claim checks."
+            ),
+            "pcl_adds_zh": (
+                "当 DeepEval 的测试结果需要 prompt、模型、切分溯源, 以及成对不确定性和 "
+                "claim 检查时, 再用 PCL 包一层证据."
             ),
             "commands": [
                 "pcl import deepeval --input deepeval-results.json --out runs/from-deepeval",
                 "pcl evidence-card --run runs/from-deepeval",
             ],
             "avoid": "Do not ask PCL to become a broad LLM-as-judge metric catalog.",
+            "avoid_zh": "不要让 PCL 变成大型 LLM-as-judge 指标库; 这不是它最强的方向.",
         },
         {
             "id": "observability",
@@ -97,9 +109,14 @@ def tool_choice_lanes() -> list[JsonDict]:
                 "LangSmith and Langfuse are stronger for traces, monitoring, "
                 "prompt registries, and production observability."
             ),
+            "why_zh": "LangSmith 和 Langfuse 更适合 traces、监控、prompt registry 和生产可观测性。",
             "pcl_adds": (
                 "Use PCL when those exports need to become reproducible prompt-optimization "
                 "evidence with model provenance and research diagnostics."
+            ),
+            "pcl_adds_zh": (
+                "当这些 trace / eval 导出需要变成带模型溯源和研究诊断的可复现 prompt "
+                "优化证据时, 再用 PCL."
             ),
             "commands": [
                 (
@@ -112,6 +129,7 @@ def tool_choice_lanes() -> list[JsonDict]:
                 ),
             ],
             "avoid": "Do not ask PCL to replace hosted tracing dashboards or annotation queues.",
+            "avoid_zh": "不要让 PCL 替代托管 trace dashboard 或标注队列; PCL 负责证据层.",
         },
         {
             "id": "prompt-writing",
@@ -139,9 +157,14 @@ def tool_choice_lanes() -> list[JsonDict]:
                 "prompt-optimizer is stronger as a polished prompt writing, "
                 "prompt asset, and interactive testing product."
             ),
+            "why_zh": "prompt-optimizer 更适合做成熟的 prompt 写作、prompt 资产管理和交互测试。",
             "pcl_adds": (
                 "Use PCL after prompt-optimizer when an optimized prompt needs clean evaluation "
                 "evidence before deployment or publication."
+            ),
+            "pcl_adds_zh": (
+                "当优化后的 prompt 要上线、发表或给别人审查时, "
+                "用 PCL 验证它是否真的在干净协议下变好."
             ),
             "commands": [
                 (
@@ -153,6 +176,10 @@ def tool_choice_lanes() -> list[JsonDict]:
             "avoid": (
                 "Do not rebuild prompt-optimizer's prompt editor; "
                 "prove whether its outputs improved."
+            ),
+            "avoid_zh": (
+                "不要重做 prompt-optimizer 的编辑器; "
+                "PCL 应该证明它产出的 prompt 是否可靠提升."
             ),
         },
         {
@@ -183,9 +210,14 @@ def tool_choice_lanes() -> list[JsonDict]:
                 "PCL is strongest when the question is what a prompt optimization "
                 "result can safely claim."
             ),
+            "why_zh": "当问题是“这个 prompt 优化结果到底能安全说明什么”时, PCL 最合适.",
             "pcl_adds": (
                 "Start directly with PCL for tri-split evaluation, paired statistics, "
                 "soft-hard gap, trajectory, Riccati, and time-varying soft-control diagnostics."
+            ),
+            "pcl_adds_zh": (
+                "直接用 PCL 跑 tri-split 评测、成对统计、soft-hard gap、trajectory、Riccati "
+                "和 time-varying soft-control 诊断。"
             ),
             "commands": [
                 "pcl research-demo --out runs/research-demo",
@@ -195,6 +227,7 @@ def tool_choice_lanes() -> list[JsonDict]:
                 "Do not start with PCL if the only need is a nicer prompt editor "
                 "or tracing dashboard."
             ),
+            "avoid_zh": "如果你只想要更好看的 prompt 编辑器或 trace dashboard, 不要先从 PCL 开始.",
         },
     ]
 
@@ -227,9 +260,12 @@ def choose_tool_for_need(need: str) -> JsonDict:
         "confidence": "high" if best_score >= 2 else "medium" if best_score == 1 else "low",
         "use_first": best_lane["use_first"],
         "why": best_lane["why"],
+        "why_zh": best_lane.get("why_zh", best_lane["why"]),
         "pcl_adds": best_lane["pcl_adds"],
+        "pcl_adds_zh": best_lane.get("pcl_adds_zh", best_lane["pcl_adds"]),
         "commands": best_lane["commands"],
         "avoid": best_lane["avoid"],
+        "avoid_zh": best_lane.get("avoid_zh", best_lane["avoid"]),
     }
 
 
@@ -259,13 +295,13 @@ def format_tool_choice(payload: JsonDict, *, language: str = "en") -> str:
             f"匹配路线: {payload.get('matched', '')} ({payload.get('confidence', 'unknown')})",
             f"先用: {payload.get('use_first', '')}",
             "",
-            f"为什么: {payload.get('why', '')}",
-            f"PCL 补什么: {payload.get('pcl_adds', '')}",
+            f"为什么: {payload.get('why_zh') or payload.get('why', '')}",
+            f"PCL 补什么: {payload.get('pcl_adds_zh') or payload.get('pcl_adds', '')}",
             "",
             "可复制命令:",
         ]
         lines.extend(f"- {command}" for command in command_list)
-        lines.extend(["", f"不要做: {payload.get('avoid', '')}"])
+        lines.extend(["", f"不要做: {payload.get('avoid_zh') or payload.get('avoid', '')}"])
         return "\n".join(lines)
     lines = [
         "Tool choice recommendation",

@@ -204,6 +204,7 @@ TEXT = {
         "tool_choice_need": "Describe your need",
         "tool_choice_placeholder": "security evals, prompt writing, observability, research evidence...",
         "tool_choice_recommendation": "Recommendation",
+        "tool_choice_why": "Why",
         "tool_choice_commands": "Suggested PCL commands",
         "tool_choice_avoid": "Avoid",
         "execution_mode": "Execution mode",
@@ -460,6 +461,7 @@ TEXT = {
         "tool_choice_need": "描述你的目标",
         "tool_choice_placeholder": "安全评测、prompt 写作、观测、研究证据……",
         "tool_choice_recommendation": "推荐",
+        "tool_choice_why": "为什么",
         "tool_choice_commands": "建议使用的 PCL 命令",
         "tool_choice_avoid": "不要做",
         "execution_mode": "执行模式",
@@ -2252,6 +2254,17 @@ def _render_tool_choice_advisor(st: Any, text: dict[str, str], language: str) ->
     if not need:
         return
     recommendation = choose_tool_for_need(need)
+    pcl_adds = (
+        recommendation.get("pcl_adds_zh")
+        if language == "zh"
+        else recommendation.get("pcl_adds")
+    ) or recommendation.get("pcl_adds", "")
+    why = (
+        recommendation.get("why_zh") if language == "zh" else recommendation.get("why")
+    ) or recommendation.get("why", "")
+    avoid = (
+        recommendation.get("avoid_zh") if language == "zh" else recommendation.get("avoid")
+    ) or recommendation.get("avoid", "")
     st.markdown(
         '<div class="pcl-grid">'
         + stat_card_html(
@@ -2261,15 +2274,15 @@ def _render_tool_choice_advisor(st: Any, text: dict[str, str], language: str) ->
         )
         + stat_card_html(
             "PCL",
-            str(recommendation.get("pcl_adds") or ""),
+            str(pcl_adds),
             str(recommendation.get("confidence") or ""),
         )
         + "</div>",
         unsafe_allow_html=True,
     )
     rows = [
-        {"field": "why", "value": recommendation.get("why", "")},
-        {"field": text["tool_choice_avoid"], "value": recommendation.get("avoid", "")},
+        {"field": text["tool_choice_why"], "value": why},
+        {"field": text["tool_choice_avoid"], "value": avoid},
     ]
     st.dataframe(rows, use_container_width=True)
     commands = recommendation.get("commands")
