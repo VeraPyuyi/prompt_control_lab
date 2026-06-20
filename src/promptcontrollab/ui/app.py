@@ -58,6 +58,7 @@ from promptcontrollab.ui.data import (
     prompt_asset_rows,
     prompt_asset_summary,
     prompt_optimizer_gap_rows,
+    research_at_a_glance_rows,
     research_diagnostic_rows,
     research_evidence_map,
     research_gap_plan_rows,
@@ -99,6 +100,7 @@ TEXT = {
         "research_empty": "No research diagnostics found for this run.",
         "research_demo_command": "pcl research-demo --out runs/research-demo",
         "research_pipeline": "Research workflow",
+        "research_at_a_glance": "At a glance",
         "research_overview_graphic": "Research overview graphic",
         "research_insights": "Plain-language interpretation",
         "research_evidence_map": "Research evidence map",
@@ -343,6 +345,7 @@ TEXT = {
         "research_empty": "当前 run 还没有研究诊断 artifact。",
         "research_demo_command": "pcl research-demo --out runs/research-demo",
         "research_pipeline": "研究流程",
+        "research_at_a_glance": "一眼看懂",
         "research_overview_graphic": "研究总览图",
         "research_insights": "直白解释",
         "research_evidence_map": "研究证据地图",
@@ -1672,6 +1675,13 @@ def _render_research_overview_tab(
         + "</div>",
         unsafe_allow_html=True,
     )
+    glance_rows = research_at_a_glance_rows(detail, language)
+    if glance_rows:
+        st.markdown(
+            f'<div class="pcl-section-title">{html.escape(text["research_at_a_glance"])}</div>',
+            unsafe_allow_html=True,
+        )
+        st.dataframe(glance_rows, use_container_width=True)
     overview_path = research_overview_path(detail)
     if overview_path is not None:
         st.markdown(

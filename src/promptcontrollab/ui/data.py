@@ -306,6 +306,60 @@ def research_insight_rows(detail: JsonDict, language: str = "en") -> list[JsonDi
     return rows
 
 
+def research_at_a_glance_rows(detail: JsonDict, language: str = "en") -> list[JsonDict]:
+    """Return localized rows from ``research_diagnostics.at_a_glance``."""
+
+    research = detail.get("research_diagnostics")
+    research_dict = research if isinstance(research, dict) else {}
+    summary = research_dict.get("at_a_glance")
+    if not isinstance(summary, dict) or not summary:
+        return []
+
+    labels = {
+        "en": {
+            "mode": "Mode",
+            "diagnostics_ready": "Diagnostics ready",
+            "hidden_state_input": "Hidden-state input",
+            "evidence_recommendation": "Evidence recommendation",
+            "evidence_tier": "Evidence tier",
+            "claim_status": "Claim status",
+            "safe_claim": "Safe claim",
+            "open_first": "Open first",
+            "next_action": "Next action",
+        },
+        "zh": {
+            "mode": "模式",
+            "diagnostics_ready": "诊断覆盖",
+            "hidden_state_input": "Hidden-state 输入",
+            "evidence_recommendation": "证据建议",
+            "evidence_tier": "证据层级",
+            "claim_status": "主张状态",
+            "safe_claim": "安全主张",
+            "open_first": "先打开",
+            "next_action": "下一步",
+        },
+    }
+    lang = "zh" if language == "zh" else "en"
+    ordered_keys = [
+        "mode",
+        "diagnostics_ready",
+        "hidden_state_input",
+        "evidence_recommendation",
+        "evidence_tier",
+        "claim_status",
+        "safe_claim",
+        "open_first",
+        "next_action",
+    ]
+    rows: list[JsonDict] = []
+    for key in ordered_keys:
+        value = summary.get(key)
+        if value is None or value == "":
+            continue
+        rows.append({"field": labels[lang][key], "value": str(value)})
+    return rows
+
+
 def _diagnostic_payload(diagnostics: JsonDict, key: str) -> JsonDict:
     payload = diagnostics.get(key)
     return payload if isinstance(payload, dict) else {}

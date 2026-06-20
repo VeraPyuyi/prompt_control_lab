@@ -40,6 +40,7 @@ from promptcontrollab.ui.data import (
     prompt_asset_rows,
     prompt_asset_summary,
     prompt_optimizer_gap_rows,
+    research_at_a_glance_rows,
     research_diagnostic_rows,
     research_evidence_map,
     research_gap_plan_rows,
@@ -914,6 +915,37 @@ def test_research_insight_rows_explain_diagnostics_in_both_languages(tmp_path: P
     assert all(row["next_action"] for row in english)
 
 
+def test_research_at_a_glance_rows_are_localized(tmp_path: Path) -> None:
+    run = tmp_path / "runs" / "research-demo"
+    _write_json(
+        run / "research_diagnostics.json",
+        {
+            "at_a_glance": {
+                "mode": "demo",
+                "diagnostics_ready": "4/4",
+                "hidden_state_input": "present",
+                "evidence_recommendation": "share_bundle",
+                "evidence_tier": "tier_4_full_research_diagnostics",
+                "claim_status": "pass",
+                "safe_claim": "full-research",
+                "open_first": "research_bundle.html",
+                "next_action": "Share the research bundle.",
+            }
+        },
+    )
+    detail = load_run_detail(run)
+
+    english = research_at_a_glance_rows(detail, "en")
+    chinese = research_at_a_glance_rows(detail, "zh")
+
+    assert english[0] == {"field": "Mode", "value": "demo"}
+    assert {"field": "Open first", "value": "research_bundle.html"} in english
+    assert {"field": "Next action", "value": "Share the research bundle."} in english
+    assert chinese[0] == {"field": "模式", "value": "demo"}
+    assert {"field": "先打开", "value": "research_bundle.html"} in chinese
+    assert {"field": "下一步", "value": "Share the research bundle."} in chinese
+
+
 def test_research_insight_display_rows_localize_column_names() -> None:
     from promptcontrollab.ui import app
 
@@ -1497,7 +1529,19 @@ def test_research_overview_tab_renders_generated_svg(
     from promptcontrollab.ui import app
 
     run = tmp_path / "runs" / "research-demo"
-    _write_json(run / "research_diagnostics.json", {"kind": "research_diagnostics"})
+    _write_json(
+        run / "research_diagnostics.json",
+        {
+            "kind": "research_diagnostics",
+            "at_a_glance": {
+                "mode": "demo",
+                "diagnostics_ready": "1/4",
+                "claim_status": "needs_review",
+                "open_first": "research_bundle.html",
+                "next_action": "Read the bundle first.",
+            },
+        },
+    )
     _write_json(run / "diagnostics" / "soft_hard.json", {"risk": "low"})
     (run / "research_overview.svg").write_text(
         '<svg viewBox="0 0 100 40"><text>Research overview graphic</text></svg>',
@@ -1540,7 +1584,12 @@ def test_research_overview_tab_renders_generated_svg(
     assert image_bodies
     encoded = image_bodies[0].split("base64,", 1)[1].split('"', 1)[0]
     assert "Research overview graphic" in base64.b64decode(encoded).decode("utf-8")
+    assert any("At a glance" in str(call["body"]) for call in calls)
     assert any("Plain-language interpretation" in str(call["body"]) for call in calls)
+    assert any(
+        isinstance(frame, list) and frame and frame[0].get("field") == "Mode"
+        for frame in dataframes
+    )
     assert any(
         isinstance(frame, list) and frame and "Next action" in frame[0]
         for frame in dataframes
