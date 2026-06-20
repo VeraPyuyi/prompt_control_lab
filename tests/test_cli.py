@@ -578,6 +578,31 @@ def test_cli_ecosystem_demo_runs_all_external_bridge_examples(
     assert (scorecard_dir / "ecosystem_scorecard.json").exists()
     assert (scorecard_dir / "ecosystem_scorecard.md").exists()
     assert (scorecard_dir / "ecosystem_scorecard.html").exists()
+    summary_demo_out = tmp_path / "ecosystem-summary-demo"
+    capsys.readouterr()
+    assert (
+        main(
+            [
+                "ecosystem-demo",
+                "--examples",
+                str(demo / "examples" / "external"),
+                "--out",
+                str(summary_demo_out),
+                "--bootstrap-samples",
+                "10",
+                "--permutation-samples",
+                "20",
+                "--summary",
+            ]
+        )
+        == 0
+    )
+    ecosystem_summary_output = capsys.readouterr().out
+    assert "Ecosystem demo summary" in ecosystem_summary_output
+    assert "Tool bundles: 5" in ecosystem_summary_output
+    assert "Market readiness" in ecosystem_summary_output
+    assert "P1 Braintrust" in ecosystem_summary_output
+    assert ecosystem_summary_output.lstrip()[0] != "{"
     capsys.readouterr()
     assert main(["ecosystem-scorecard", "--run", str(out), "--summary"]) == 0
     summary_output = capsys.readouterr().out

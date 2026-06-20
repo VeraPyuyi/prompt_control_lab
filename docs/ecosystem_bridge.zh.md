@@ -21,6 +21,7 @@
 
 ```bash
 pcl ecosystem-demo --examples examples/external --out runs/ecosystem-demo
+pcl ecosystem-demo --examples examples/external --out runs/ecosystem-demo --summary
 ```
 
 得到什么：

@@ -80,6 +80,7 @@ Run all bundled bridge examples at once:
 
 ```bash
 pcl ecosystem-demo --examples examples/external --out runs/ecosystem-demo
+pcl ecosystem-demo --examples examples/external --out runs/ecosystem-demo --summary
 ```
 
 This writes `runs/ecosystem-demo/README.md`, `ecosystem_demo.json`,

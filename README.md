@@ -11,6 +11,7 @@ pip install -e ".[research,ui]"
 pcl start --guide
 pcl start --choice demo --out demo
 pcl research-demo --out runs/research-demo && pcl diagnose --run runs/research-demo
+pcl ui --runs runs/ --policy examples/guard.policy.yaml --port 8501
 ```
 
 ## What It Adds
@@ -19,13 +20,8 @@ pcl research-demo --out runs/research-demo && pcl diagnose --run runs/research-d
 - **Evidence bridge:** `pcl import promptfoo --input results.json --out runs/from-promptfoo --prompt-id candidate`; `pcl ingest` remains the backward-compatible alias for `pcl import`.
 - **Applied Agent Layer:** `pcl guard`, `audit-diff`, model provenance, UI, plugins, GitHub templates.
 
-UI: `pcl ui --runs runs/ --policy examples/guard.policy.yaml --port 8501`. Video: [EN](docs/assets/demo/prompt_control_lab_demo.en.mp4) / [ZH](docs/assets/demo/prompt_control_lab_demo.zh.mp4). Boundaries: public model IDs, not hidden weights; pilots are small samples, not as universal benchmarks; guard/audit are heuristics, not safety proofs.
+Docs/evidence/assets: [tutorial](docs/tutorial.en.md), [choice guide](docs/choice_guide.en.md), [install](docs/release_install.en.md), [paper mapping](docs/research_from_paper.en.md), [comparison](docs/comparison.en.md), [production pilot](docs/production_pilot.en.md), [preflight pilot](docs/case_studies/agent_guard_pilot.en.md), [paired pilot](docs/case_studies/agent_guard_paired_pilot.en.md), [scorecard](docs/assets/ecosystem_scorecard.svg), [matrix](docs/assets/ecosystem_evidence_matrix.svg). Video: [EN](docs/assets/demo/prompt_control_lab_demo.en.mp4) / [ZH](docs/assets/demo/prompt_control_lab_demo.zh.mp4).
 
-<details>
-<summary>Docs and evidence</summary>
-
-Docs: [choice guide](docs/choice_guide.en.md), [tutorial](docs/tutorial.en.md), [install](docs/release_install.en.md), [paper mapping](docs/research_from_paper.en.md), [comparison](docs/comparison.en.md). Evidence: [production pilot](docs/production_pilot.en.md), [preflight pilot](docs/case_studies/agent_guard_pilot.en.md), [paired pilot](docs/case_studies/agent_guard_paired_pilot.en.md). Assets: [plugins](plugins/), [scorecard](docs/assets/ecosystem_scorecard.svg), [matrix](docs/assets/ecosystem_evidence_matrix.svg).
-
-</details>
+Boundaries: public model IDs, not hidden weights; pilots are small samples, not as universal benchmarks; guard/audit are heuristics, not safety proofs.
 
 Apache-2.0. See [LICENSE](LICENSE).

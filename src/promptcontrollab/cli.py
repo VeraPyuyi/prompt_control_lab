@@ -823,6 +823,11 @@ def build_parser() -> argparse.ArgumentParser:
     ecosystem_demo_parser.add_argument("--model", default="gpt-4o-mini-20260601")
     ecosystem_demo_parser.add_argument("--bootstrap-samples", type=int, default=1000)
     ecosystem_demo_parser.add_argument("--permutation-samples", type=int, default=1000)
+    ecosystem_demo_parser.add_argument(
+        "--summary",
+        action="store_true",
+        help="Print a concise market-readiness summary instead of the full JSON payload.",
+    )
     ecosystem_demo_parser.set_defaults(func=_cmd_ecosystem_demo)
 
     ecosystem_scorecard_parser = subcommands.add_parser(
@@ -1674,6 +1679,9 @@ def _cmd_ecosystem_demo(args: argparse.Namespace) -> None:
         bootstrap_samples=args.bootstrap_samples,
         permutation_samples=args.permutation_samples,
     )
+    if args.summary:
+        print(_format_ecosystem_demo_summary(payload))
+        return
     print(json.dumps(payload, indent=2, ensure_ascii=False, sort_keys=True))
 
 
@@ -1686,14 +1694,47 @@ def _cmd_ecosystem_scorecard(args: argparse.Namespace) -> None:
 
 
 def _format_ecosystem_scorecard_summary(payload: JsonDict) -> str:
-    readiness = payload.get("market_readiness")
-    readiness_dict = readiness if isinstance(readiness, dict) else {}
-    next_moves = readiness_dict.get("next_moves")
     lines = [
         "Ecosystem scorecard summary",
         f"HTML: {payload.get('html_path', '')}",
         f"Markdown: {payload.get('markdown_path', '')}",
         "",
+    ]
+    lines.extend(_market_readiness_summary_lines(payload))
+    return "\n".join(lines)
+
+
+def _format_ecosystem_demo_summary(payload: JsonDict) -> str:
+    runs = payload.get("runs")
+    run_count = len(runs) if isinstance(runs, list) else 0
+    scorecard_path = Path(str(payload.get("ecosystem_scorecard_path") or ""))
+    scorecard_payload = read_json(scorecard_path) if scorecard_path.exists() else {}
+    lines = [
+        "Ecosystem demo summary",
+        f"Run: {payload.get('out_dir', '')}",
+        f"Tool bundles: {run_count}",
+        f"Scorecard: {payload.get('ecosystem_scorecard_html_path', '')}",
+        f"Research bundle: {payload.get('research_bundle_html_path', '')}",
+        "",
+    ]
+    if scorecard_payload:
+        lines.extend(_market_readiness_summary_lines(scorecard_payload))
+    else:
+        lines.append("Market readiness: not available")
+    lines.extend(
+        [
+            "",
+            "Next: open ecosystem_scorecard.html first, or run the local UI Research Overview.",
+        ]
+    )
+    return "\n".join(lines)
+
+
+def _market_readiness_summary_lines(payload: JsonDict) -> list[str]:
+    readiness = payload.get("market_readiness")
+    readiness_dict = readiness if isinstance(readiness, dict) else {}
+    next_moves = readiness_dict.get("next_moves")
+    lines = [
         "Market readiness",
         f"Status: {readiness_dict.get('status', 'unknown')}",
     ]
@@ -1724,7 +1765,7 @@ def _format_ecosystem_scorecard_summary(payload: JsonDict) -> str:
             "Boundary: positioning guidance only; imported rows remain the evidence.",
         ]
     )
-    return "\n".join(lines)
+    return lines
 
 
 def _summary_string_items(value: object) -> list[str]:
