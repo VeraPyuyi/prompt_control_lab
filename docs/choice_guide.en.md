@@ -20,6 +20,12 @@ actually supports.**
 
 ## Copy-Paste Paths
 
+Generate the ecosystem scorecard and market-readiness summary:
+
+```bash
+pcl start --choice ecosystem --out runs/ecosystem-demo
+```
+
 Import one external run:
 
 ```bash

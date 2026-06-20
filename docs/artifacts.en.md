@@ -371,6 +371,9 @@ observability, and security-testing tools. Each row also links to the tool-speci
 summary, evidence card, claim check, HTML report, and gap artifacts when those files exist.
 The JSON includes `pcl_evidence_matrix`, a compact per-tool table of prompt-only validity,
 paired stats, evidence card, claim check, research bundle, bundle verification, and gap status.
+It also includes `market_readiness`, a short action layer derived from the extended market map:
+recommended positioning, best first users, directions not to build, and the P1/P2 next moves that
+make PCL easier to position without reading every comparison row.
 The HTML version is the reviewer-facing dashboard artifact; the Markdown version is easier to
 review in plain text, and the JSON version is for automation.
 

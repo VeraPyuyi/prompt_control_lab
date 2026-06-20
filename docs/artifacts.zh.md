@@ -243,6 +243,9 @@ PCL 补了哪些证据、主要成对统计、prompt-only 比较有效性、论�
 什么研究证据层，当前比较的 validity / evidence tier 是什么，还缺哪些论文诊断。
 JSON 中的 `pcl_evidence_matrix` 会按工具列出 prompt-only validity、paired stats、证据卡、
 主张检查、research bundle、bundle verification 和 gap status，方便 UI、CI 或 reviewer 直接读取。
+JSON 中还包含 `market_readiness`：它会把扩展市场地图压缩成行动摘要，包括推荐定位、
+优先用户、暂时不要做的方向，以及 P1/P2 下一步产品动作。这样 reviewer 不用读完整矩阵，
+也能快速判断 PCL 应该从哪里切入。
 
 ## `prompt_assets.json` / `prompt_optimizer_gap_plan.json` / `eval_scaffold/`
 

@@ -18,6 +18,12 @@ prompt-optimizer。它更适合接在这些工具之后，把已有结果整理�
 
 ## 复制即用路径
 
+生成生态对比 scorecard 和 market readiness 摘要：
+
+```bash
+pcl start --choice ecosystem --out runs/ecosystem-demo
+```
+
 导入一个外部 run：
 
 ```bash

@@ -57,6 +57,10 @@ def test_competitive_positioning_stays_evidence_layer_first() -> None:
     comparison_zh = Path("docs/comparison.zh.md").read_text(encoding="utf-8")
     choice = Path("docs/choice_guide.en.md").read_text(encoding="utf-8")
     choice_zh = Path("docs/choice_guide.zh.md").read_text(encoding="utf-8")
+    artifacts = Path("docs/artifacts.en.md").read_text(encoding="utf-8")
+    artifacts_zh = Path("docs/artifacts.zh.md").read_text(encoding="utf-8")
+    ecosystem = Path("docs/ecosystem_bridge.en.md").read_text(encoding="utf-8")
+    ecosystem_zh = Path("docs/ecosystem_bridge.zh.md").read_text(encoding="utf-8")
 
     assert "pcl import promptfoo" in readme
     assert "pcl import promptfoo" in readme_zh
@@ -73,9 +77,16 @@ def test_competitive_positioning_stays_evidence_layer_first() -> None:
         assert "prompt-optimizer" in text
 
     for text in [choice, choice_zh]:
+        assert "pcl start --choice ecosystem" in text
         assert "pcl start --choice import" in text
         assert "pcl evidence-audit" in text
         assert "pcl scaffold-check" in text
+
+    for text in [artifacts, artifacts_zh]:
+        assert "market_readiness" in text
+
+    for text in [ecosystem, ecosystem_zh]:
+        assert "Market readiness" in text
 
     for text in [comparison, comparison_zh]:
         assert "evidence-audit" in text

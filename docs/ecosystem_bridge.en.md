@@ -100,9 +100,11 @@ directory is intentionally an asset bridge: it contains `prompt_assets.html`,
 evidence is still required before claiming that an optimized prompt improved.
 
 Open `ecosystem_scorecard.html` first when you need a reviewer-facing cross-tool
-positioning table: what each external tool is good at, what PCL adds, and which paper
-diagnostics are still missing. It also links to each bridge summary, evidence card, claim
-check, HTML report, and gap artifact when available. Use `ecosystem_scorecard.md` for
+positioning table. Start with the **Market readiness** block: it states where PCL should lead,
+what it should learn from adjacent tools, what not to rebuild, and the next P1/P2 product moves.
+Then read the full matrix: what each external tool is good at, what PCL adds, and which paper
+diagnostics are still missing. The scorecard also links to each bridge summary, evidence card,
+claim check, HTML report, and gap artifact when available. Use `ecosystem_scorecard.md` for
 plain-text review. Then open each `bridge_summary.html` for tool-specific provenance.
 You can also open the root directory in the local UI with
 `pcl ui --runs runs/ecosystem-demo`; the Research Overview will show one row per
