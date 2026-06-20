@@ -111,7 +111,7 @@ def build_parser() -> argparse.ArgumentParser:
     )
     start_parser.add_argument(
         "--choice",
-        choices=["research", "improve", "guard", "analyze"],
+        choices=["demo", "research", "improve", "guard", "analyze"],
         default=None,
         help="Skip the menu and choose a beginner scenario.",
     )
@@ -1538,6 +1538,16 @@ def _cmd_start(args: argparse.Namespace) -> None:
         return
 
     choice = _start_choice(args.choice, language=args.language)
+    if choice == "demo":
+        out_dir = args.out or Path("demo")
+        write_example_project(out_dir)
+        if args.language == "zh":
+            print("新手模式: 创建可运行 demo 项目")
+        else:
+            print("Beginner mode: create a runnable demo project")
+        print(_format_init_output(out_dir))
+        return
+
     if choice == "research":
         out_dir = args.out or Path("runs") / "research-demo"
         payload = write_research_demo(out_dir=out_dir, seed=args.seed)
@@ -2346,43 +2356,51 @@ def _start_choice(value: str | None, *, language: str = "en") -> str:
             "\n".join(
                 [
                     "你想先做什么?",
-                    "1) 运行论文风格的 prompt optimization 研究 demo",
-                    "2) 让我的 prompt 更清楚",
-                    "3) 在发送给 AI 工具前检查 prompt",
-                    "4) 比较 prompts 并生成报告",
+                    "1) 创建一个可直接运行的 demo 项目",
+                    "2) 运行论文风格的 prompt optimization 研究 demo",
+                    "3) 让我的 prompt 更清楚",
+                    "4) 在发送给 AI 工具前检查 prompt",
+                    "5) 比较 prompts 并生成报告",
                     "",
                     "提示: 如果不确定路径, 运行 `pcl start --guide --language zh`。",
                 ]
             )
         )
-        raw = input("请选择 1、2、3 或 4: ").strip().lower()
+        raw = input("请选择 1、2、3、4 或 5: ").strip().lower()
     else:
         print(
             "\n".join(
                 [
                     "What do you want to do?",
-                    "1) Run a paper-style prompt optimization research demo",
-                    "2) Make my prompt clearer",
-                    "3) Check a prompt before sending it to an AI tool",
-                    "4) Compare prompts and create a report",
+                    "1) Create a runnable demo project",
+                    "2) Run a paper-style prompt optimization research demo",
+                    "3) Make my prompt clearer",
+                    "4) Check a prompt before sending it to an AI tool",
+                    "5) Compare prompts and create a report",
                     "",
                     "Tip: run `pcl start --guide` if you are unsure which path fits your goal.",
                 ]
             )
         )
-        raw = input("Choose 1, 2, 3, or 4: ").strip().lower()
+        raw = input("Choose 1, 2, 3, 4, or 5: ").strip().lower()
     choices = {
-        "1": "research",
+        "1": "demo",
+        "demo": "demo",
+        "2": "research",
         "research": "research",
-        "2": "improve",
+        "3": "improve",
         "improve": "improve",
-        "3": "guard",
+        "4": "guard",
         "guard": "guard",
-        "4": "analyze",
+        "5": "analyze",
         "analyze": "analyze",
     }
     if raw not in choices:
-        msg = "请选择 1、2、3 或 4" if language == "zh" else "Choose 1, 2, 3, or 4"
+        msg = (
+            "请选择 1、2、3、4 或 5"
+            if language == "zh"
+            else "Choose 1, 2, 3, 4, or 5"
+        )
         raise ValueError(msg)
     return choices[raw]
 

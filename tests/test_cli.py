@@ -1585,6 +1585,22 @@ def test_cli_start_choice_improve_outputs_beginner_prompt(
     assert "Optimized prompt:" in output
 
 
+def test_cli_start_choice_demo_creates_runnable_project(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    demo = tmp_path / "demo"
+
+    assert main(["start", "--choice", "demo", "--out", str(demo)]) == 0
+
+    output = capsys.readouterr().out
+    assert "Beginner mode: create a runnable demo project" in output
+    assert "pcl start --guide" in output
+    assert (demo / "README.md").exists()
+    assert (demo / "promptcontrol.example.yaml").exists()
+    assert (demo / "examples" / "guard.policy.yaml").exists()
+
+
 def test_cli_start_guide_prints_goal_based_paths(capsys: pytest.CaptureFixture[str]) -> None:
     assert main(["start", "--guide"]) == 0
     output = capsys.readouterr().out
@@ -1619,11 +1635,12 @@ def test_cli_start_interactive_guard_menu(
     capsys: pytest.CaptureFixture[str],
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.setattr("sys.stdin", io.StringIO("3\nFix this bug\n"))
+    monkeypatch.setattr("sys.stdin", io.StringIO("4\nFix this bug\n"))
     assert main(["start"]) == 0
     output = capsys.readouterr().out
     assert "What do you want to do?" in output
-    assert "1) Run a paper-style prompt optimization research demo" in output
+    assert "1) Create a runnable demo project" in output
+    assert "2) Run a paper-style prompt optimization research demo" in output
     assert "pcl start --guide" in output
     assert "Beginner mode: guard a prompt" in output
     assert "Plain summary:" in output
@@ -1638,6 +1655,9 @@ def test_cli_start_interactive_menu_supports_chinese(
     assert main(["start", "--language", "zh", "--out", str(tmp_path / "research-demo")]) == 0
     output = capsys.readouterr().out
     assert "你想先做什么?" in output
+    assert "创建一个可直接运行的 demo 项目" in output
+    assert "新手模式: 创建可运行 demo 项目" in output
+    assert (tmp_path / "research-demo" / "README.md").exists()
     assert "pcl start --guide --language zh" in output
 
 
