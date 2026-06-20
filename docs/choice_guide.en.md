@@ -39,6 +39,16 @@ Use the `pcl start --choice choose` form when you want the same advisor inside b
 
 The same advisor is available in the local UI under **Research Overview**.
 
+## From Market Gap to PCL Command
+
+| What another tool leaves you with | Gap before you can make a strong claim | Run next | Open first |
+|---|---|---|---|
+| Promptfoo eval or red-team export | Scores exist, but paired uncertainty and prompt-only validity may still be unclear. | `pcl evidence-audit --tool promptfoo ... --out runs/from-promptfoo-audit` | `evidence_audit_result.html` |
+| DeepEval TestRun output | Metrics exist, but prompt/model/split provenance and claim boundary need review. | `pcl import deepeval --input test-run.json --out runs/from-deepeval` | `manifest.json`, then `pcl evidence-card` |
+| LangSmith/Langfuse trace or eval export | Traces exist, but prompt effects may be confounded with model, metric, or split changes. | `pcl start --choice import --tool auto --input results.json --out runs/from-external` | `bridge_summary.html` |
+| prompt-optimizer favorites/templates | Better prompt candidates exist, but they are not yet paired scored evidence. | `pcl import prompt-optimizer --input favorites.json --out runs/from-prompt-optimizer` | `prompt_optimizer_gap_plan.html` |
+| Any baseline/candidate run | It is not yet clear what claim the evidence supports. | `pcl claim-check --run runs/<run>` | `claim_check.html` |
+
 Generate the ecosystem scorecard and market-readiness summary:
 
 ```bash
