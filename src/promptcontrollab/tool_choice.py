@@ -58,8 +58,8 @@ def tool_choice_lanes() -> list[JsonDict]:
         {
             "id": "unit-tests",
             "use_first": "DeepEval",
-            "when": "Pytest-style LLM tests, assertions, and ready-made metrics.",
-            "when_zh": "Pytest 风格 LLM 测试, 断言和现成指标.",
+            "when": "Pytest-style LLM unit tests, assertions, and ready-made metrics.",
+            "when_zh": "Pytest 风格 LLM 单元测试, 断言和现成指标.",
             "pcl_short": "Prompt/model/split provenance and claim checks around test results.",
             "pcl_short_zh": "围绕测试结果补 prompt/model/split 溯源和 claim 检查.",
             "keywords": [

@@ -1452,7 +1452,7 @@ def test_ui_ecosystem_choice_rows_explain_adjacent_tool_paths() -> None:
     for name in ["Promptfoo", "DeepEval", "LangSmith", "Langfuse", "prompt-optimizer"]:
         assert name in combined_en
         assert name in combined_zh
-    assert "paired uncertainty" in combined_en
+    assert "paired uncertainty" in combined_en.lower()
     assert "Pytest-style LLM unit tests" in combined_en
     assert "成对不确定性" in combined_zh
     assert "LLM 单元测试" in combined_zh

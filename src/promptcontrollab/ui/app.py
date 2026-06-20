@@ -14,7 +14,7 @@ from typing import Any, cast
 from promptcontrollab.files import JsonDict
 from promptcontrollab.prompt_context import load_prompt_context
 from promptcontrollab.prompt_guard import guard_prompt
-from promptcontrollab.tool_choice import choose_tool_for_need
+from promptcontrollab.tool_choice import choose_tool_for_need, tool_choice_lanes
 from promptcontrollab.ui.charts import (
     file_breakdown_bar,
     history_category_timeline,
@@ -852,73 +852,6 @@ ONBOARDING_PATHS = {
     ],
 }
 
-ECOSYSTEM_CHOICE_ROWS = {
-    "en": [
-        {
-            "start": "Eval matrices, CI checks, or red-team/security tests",
-            "tool": "Promptfoo",
-            "pcl": "paired uncertainty, prompt-only validity, claim boundaries, and paper diagnostics",
-        },
-        {
-            "start": "Pytest-style LLM unit tests and ready-made metrics",
-            "tool": "DeepEval",
-            "pcl": "prompt/model/split provenance, paired uncertainty, and claim checks around test results",
-        },
-        {
-            "start": "Traces, agent debugging, datasets, or LangChain/LangGraph observability",
-            "tool": "LangSmith",
-            "pcl": "a reproducible evidence bundle that separates prompt effects from model, metric, and split changes",
-        },
-        {
-            "start": "Open-source tracing, prompt management, evals, cost tracking, or self-hosting",
-            "tool": "Langfuse",
-            "pcl": "soft-hard gap, trajectory/Riccati/tv-soft diagnostics, and bounded research claims",
-        },
-        {
-            "start": "A polished prompt writing and rewriting app",
-            "tool": "prompt-optimizer",
-            "pcl": "proof that the optimized prompt is reproducibly better before deployment or publication",
-        },
-        {
-            "start": "Baseline/candidate outputs already exist",
-            "tool": "PCL",
-            "pcl": "evidence card, claim check, gap status, provenance, and research bundle verification",
-        },
-    ],
-    "zh": [
-        {
-            "start": "评测矩阵、CI 检查、红队或安全测试",
-            "tool": "Promptfoo",
-            "pcl": "需要成对不确定性、prompt-only 有效性、claim 边界和论文诊断",
-        },
-        {
-            "start": "Pytest 风格 LLM 单元测试和现成指标",
-            "tool": "DeepEval",
-            "pcl": "需要补 prompt / model / split provenance、成对不确定性和 claim check",
-        },
-        {
-            "start": "Trace、agent debug、dataset 或 LangChain/LangGraph 观测",
-            "tool": "LangSmith",
-            "pcl": "需要把导出结果变成可复现证据包，并区分 prompt、模型、指标和切分变化",
-        },
-        {
-            "start": "开源 tracing、prompt 管理、eval、成本追踪或自托管",
-            "tool": "Langfuse",
-            "pcl": "需要 soft-hard gap、trajectory、Riccati、tv-soft 诊断和有边界的研究结论",
-        },
-        {
-            "start": "好用的 prompt 写作和改写界面",
-            "tool": "prompt-optimizer",
-            "pcl": "需要证明优化后的 prompt 在干净协议下真的更好",
-        },
-        {
-            "start": "已经有 baseline / candidate 输出",
-            "tool": "PCL",
-            "pcl": "需要 evidence card、claim check、gap status、模型溯源和 research bundle 验证",
-        },
-    ],
-}
-
 TUTORIAL_SECTIONS = {
     "en": [
         {
@@ -1570,8 +1503,29 @@ def onboarding_paths(language: str) -> list[JsonDict]:
 def ecosystem_choice_rows(language: str) -> list[JsonDict]:
     """Return a compact map from adjacent tools to PCL's evidence layer."""
 
-    rows = ECOSYSTEM_CHOICE_ROWS.get(language) or ECOSYSTEM_CHOICE_ROWS["en"]
-    return [dict(row) for row in rows]
+    rows: list[JsonDict] = []
+    for lane in tool_choice_lanes():
+        use_first = str(lane.get("use_first") or "")
+        tools = ["LangSmith", "Langfuse"] if use_first == "LangSmith or Langfuse" else [use_first]
+        for tool in tools:
+            rows.append(
+                {
+                    "start": str(
+                        (lane.get("when_zh") if language == "zh" else lane.get("when"))
+                        or lane.get("when", "")
+                    ),
+                    "tool": "PCL" if tool == "prompt_control_lab" else tool,
+                    "pcl": str(
+                        (
+                            lane.get("pcl_short_zh")
+                            if language == "zh"
+                            else lane.get("pcl_short")
+                        )
+                        or lane.get("pcl_short", "")
+                    ),
+                }
+            )
+    return rows
 
 
 def tutorial_gallery_items(language: str) -> list[JsonDict]:
