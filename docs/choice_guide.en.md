@@ -7,6 +7,16 @@ result needs to become reviewer-facing evidence for prompt optimization.
 One-sentence rule: **create and test elsewhere; use PCL when you need to prove what the result
 actually supports.**
 
+## Shortest Path
+
+| If this is your problem | Copy this first |
+|---|---|
+| "I do not know which adjacent tool fits." | `pcl choose --need "<your goal>"` |
+| "I need security or red-team evals." | `pcl choose --need "security evals and red-team checks"` |
+| "I already have Promptfoo/Langfuse/LangSmith/DeepEval output." | `pcl start --choice import --tool auto --input results.json --out runs/from-external` |
+| "I need the paper-derived diagnostics." | `pcl research-demo --out runs/research-demo && pcl diagnose --run runs/research-demo` |
+| "I need a reviewer-facing market/evidence scorecard." | `pcl start --choice ecosystem --out runs/ecosystem-demo` |
+
 ## 30-Second Map
 
 | Your starting point | Use first | Add PCL when you need |

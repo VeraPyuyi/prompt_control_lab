@@ -5,6 +5,16 @@ prompt-optimizer。它更适合接在这些工具之后，把已有结果整理�
 
 一句话判断：**创建、trace、测试和安全扫描交给相邻工具；需要证明“这个结果到底支持什么”时，用 PCL。**
 
+## 最短路径
+
+| 如果你现在的问题是 | 先复制这条命令 |
+|---|---|
+| “我不知道该先用哪个相邻工具。” | `pcl choose --need "<你的目标>" --language zh` |
+| “我要做安全评测或红队检查。” | `pcl choose --need "安全评测和红队检查" --language zh` |
+| “我已经有 Promptfoo / Langfuse / LangSmith / DeepEval 输出。” | `pcl start --choice import --tool auto --input results.json --out runs/from-external` |
+| “我要跑论文里的诊断流程。” | `pcl research-demo --out runs/research-demo && pcl diagnose --run runs/research-demo` |
+| “我要给 reviewer 看市场/证据 scorecard。” | `pcl start --choice ecosystem --out runs/ecosystem-demo` |
+
 ## 30 秒选择地图
 
 | 你的起点 | 先用 | 什么时候加入 PCL |

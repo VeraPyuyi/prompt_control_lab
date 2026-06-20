@@ -78,6 +78,10 @@ def test_competitive_positioning_stays_evidence_layer_first() -> None:
 
     assert "pcl choose --need prompt-writing" in choice
     assert "pcl choose --need prompt-writing --language zh" in choice_zh
+    assert "Shortest Path" in choice
+    assert "最短路径" in choice_zh
+    assert 'pcl choose --need "<your goal>"' in choice
+    assert 'pcl choose --need "<你的目标>" --language zh' in choice_zh
 
     for text in [choice, choice_zh]:
         assert "pcl start --choice ecosystem" in text
