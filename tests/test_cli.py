@@ -1563,6 +1563,19 @@ def test_cli_start_choice_improve_outputs_beginner_prompt(
     assert "Optimized prompt:" in output
 
 
+def test_cli_start_guide_prints_goal_based_paths(capsys: pytest.CaptureFixture[str]) -> None:
+    assert main(["start", "--guide"]) == 0
+    output = capsys.readouterr().out
+
+    assert "PromptControlLab beginner guide" in output
+    assert "See the product first" in output
+    assert "paper-derived prompt optimization diagnostics" in output
+    assert "Import external eval results as evidence" in output
+    assert "Guard a coding-agent prompt" in output
+    assert "Audit what an agent changed" in output
+    assert "pcl start" in output
+
+
 def test_cli_start_interactive_guard_menu(
     capsys: pytest.CaptureFixture[str],
     monkeypatch: pytest.MonkeyPatch,
@@ -1572,6 +1585,7 @@ def test_cli_start_interactive_guard_menu(
     output = capsys.readouterr().out
     assert "What do you want to do?" in output
     assert "1) Run a paper-style prompt optimization research demo" in output
+    assert "pcl start --guide" in output
     assert "Beginner mode: guard a prompt" in output
     assert "Plain summary:" in output
 

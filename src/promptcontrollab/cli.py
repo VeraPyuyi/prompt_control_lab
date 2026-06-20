@@ -115,6 +115,11 @@ def build_parser() -> argparse.ArgumentParser:
         default=None,
         help="Skip the menu and choose a beginner scenario.",
     )
+    start_parser.add_argument(
+        "--guide",
+        action="store_true",
+        help="Print a goal-based beginner guide and exit.",
+    )
     start_parser.add_argument("--prompt", default=None, help="Prompt string for improve/guard.")
     start_parser.add_argument("--prompt-file", type=Path, default=None, help="Prompt text file.")
     start_parser.add_argument("--run", type=Path, default=None, help="Optional run directory.")
@@ -1504,6 +1509,10 @@ def _cmd_ecosystem_scorecard(args: argparse.Namespace) -> None:
 
 
 def _cmd_start(args: argparse.Namespace) -> None:
+    if args.guide:
+        print(_format_start_guide())
+        return
+
     choice = _start_choice(args.choice)
     if choice == "research":
         out_dir = args.out or Path("runs") / "research-demo"
@@ -2316,6 +2325,8 @@ def _start_choice(value: str | None) -> str:
                 "2) Make my prompt clearer",
                 "3) Check a prompt before sending it to an AI tool",
                 "4) Compare prompts and create a report",
+                "",
+                "Tip: run `pcl start --guide` if you are unsure which path fits your goal.",
             ]
         )
     )
@@ -2334,6 +2345,62 @@ def _start_choice(value: str | None) -> str:
         msg = "Choose 1, 2, 3, or 4"
         raise ValueError(msg)
     return choices[raw]
+
+
+def _format_start_guide() -> str:
+    """Return a compact beginner guide for choosing the right first command."""
+
+    rows = [
+        (
+            "See the product first",
+            "pcl ui --runs runs/ --policy examples/guard.policy.yaml --port 8501",
+            "In the UI, open Workflows and click Create demo artifacts.",
+        ),
+        (
+            "Run the paper-derived prompt optimization diagnostics",
+            "pcl research-demo --out runs/research-demo",
+            "Then run `pcl diagnose --run runs/research-demo` and open research_bundle.html.",
+        ),
+        (
+            "Import external eval results as evidence",
+            "pcl import promptfoo --input results.json "
+            "--out runs/from-promptfoo --prompt-id candidate",
+            "Then run `pcl scaffold-check`, `pcl evidence-card`, or `pcl evidence-audit`.",
+        ),
+        (
+            "Guard a coding-agent prompt before it runs",
+            "pcl guard --prompt \"Fix this bug\" "
+            "--profile coding --policy examples/guard.policy.yaml",
+            "Copy the improved prompt or install a Claude Code, Cursor, or Codex adapter.",
+        ),
+        (
+            "Audit what an agent changed",
+            "pcl audit-diff --before HEAD~1 --after HEAD --out runs/audit",
+            "Then generate a PR summary or build an agent_run.json artifact.",
+        ),
+    ]
+    lines = [
+        "PromptControlLab beginner guide",
+        "",
+        "Choose the path that matches your goal:",
+        "",
+    ]
+    for index, (goal, command, next_step) in enumerate(rows, start=1):
+        lines.extend(
+            [
+                f"{index}. {goal}",
+                f"   Start: {command}",
+                f"   Next: {next_step}",
+                "",
+            ]
+        )
+    lines.extend(
+        [
+            "If you prefer an interactive menu, run:",
+            "  pcl start",
+        ]
+    )
+    return "\n".join(lines)
 
 
 def _read_start_prompt(prompt: str | None, prompt_file: Path | None) -> str:
