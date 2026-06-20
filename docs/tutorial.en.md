@@ -45,13 +45,16 @@ Result:
 - `demo/runs/quick/gate_result.json`
 - `demo/runs/quick/report.md`
 - `demo/runs/quick/report.html`
+- `demo/runs/history_index.json`
 
 What it explains:
 
 This is the shortest path for non-specialists. The report says whether the candidate prompt
 looks better, how reliable the evidence is, which examples changed, and what to inspect next.
-If you want to run the steps manually, use `pcl init --path demo`, enter `demo`, then run
-`pcl analyze --config promptcontrol.example.yaml --out runs/quick`.
+The history index lets the local UI show a run timeline immediately. If you want to run the
+steps manually, use `pcl init --path demo`, enter `demo`, run
+`pcl analyze --config promptcontrol.example.yaml --out runs/quick`, then run
+`pcl history index --runs runs --out runs/history_index.json`.
 
 ## Simplest Prompt Improvement
 

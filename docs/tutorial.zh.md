@@ -43,10 +43,12 @@ pcl start --choice demo --language zh --out demo
 - `demo/runs/quick/gate_result.json`
 - `demo/runs/quick/report.md`
 - `demo/runs/quick/report.html`
+- `demo/runs/history_index.json`
 
 说明：这是给非专业人员的最短路径。报告会直接说明 candidate prompt 是否更好、证据是否可靠、哪些样本发生变化、下一步应该检查哪里。
-如果想手动分步运行，就先 `pcl init --path demo`，进入 `demo`，再运行
-`pcl analyze --config promptcontrol.example.yaml --out runs/quick`。
+history index 会让本地 UI 立刻显示 run timeline。如果想手动分步运行，就先 `pcl init --path demo`，
+进入 `demo`，运行 `pcl analyze --config promptcontrol.example.yaml --out runs/quick`，再运行
+`pcl history index --runs runs --out runs/history_index.json`。
 
 ## 最简单的 prompt 优化
 

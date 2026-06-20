@@ -1624,8 +1624,8 @@ def test_cli_start_guide_prints_goal_based_paths(capsys: pytest.CaptureFixture[s
 
     assert "PromptControlLab beginner guide" in output
     assert "See the product first" in output
-    assert "pcl init --path demo" in output
-    assert "pcl analyze --config promptcontrol.example.yaml --out runs/quick" in output
+    assert "pcl start --choice demo --out demo" in output
+    assert "open `runs/quick/report.html`" in output
     assert "paper-derived prompt optimization diagnostics" in output
     assert "Import external eval results as evidence" in output
     assert "Guard a coding-agent prompt" in output
@@ -1639,8 +1639,8 @@ def test_cli_start_guide_supports_chinese(capsys: pytest.CaptureFixture[str]) ->
 
     assert "PromptControlLab 新手路径指南" in output
     assert "先看产品长什么样" in output
-    assert "pcl init --path demo" in output
-    assert "pcl analyze --config promptcontrol.example.yaml --out runs/quick" in output
+    assert "pcl start --choice demo --language zh --out demo" in output
+    assert "打开 `runs/quick/report.html`" in output
     assert "运行论文里的 prompt optimization 诊断" in output
     assert "把外部评测结果导入成证据" in output
     assert "在 coding agent 执行前守护 prompt" in output

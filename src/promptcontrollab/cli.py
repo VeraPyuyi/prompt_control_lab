@@ -2561,10 +2561,9 @@ def _format_start_guide(language: str = "en") -> str:
         rows = [
             (
                 "先看产品长什么样",
-                "pcl init --path demo",
-                "进入 `demo`, 运行 "
-                "`pcl analyze --config promptcontrol.example.yaml --out runs/quick`, "
-                "再打开 `pcl ui --runs runs --policy examples/guard.policy.yaml`。",
+                "pcl start --choice demo --language zh --out demo",
+                "进入 `demo`, 打开 `runs/quick/report.html`, "
+                "或运行 `pcl ui --runs runs --policy examples/guard.policy.yaml`。",
             ),
             (
                 "运行论文里的 prompt optimization 诊断",
@@ -2597,10 +2596,9 @@ def _format_start_guide(language: str = "en") -> str:
         rows = [
             (
                 "See the product first",
-                "pcl init --path demo",
-                "Enter `demo`, run "
-                "`pcl analyze --config promptcontrol.example.yaml --out runs/quick`, "
-                "then open `pcl ui --runs runs --policy examples/guard.policy.yaml`.",
+                "pcl start --choice demo --out demo",
+                "Enter `demo`, open `runs/quick/report.html`, "
+                "or run `pcl ui --runs runs --policy examples/guard.policy.yaml`.",
             ),
             (
                 "Run the paper-derived prompt optimization diagnostics",
