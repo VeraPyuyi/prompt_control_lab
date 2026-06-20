@@ -8,13 +8,43 @@ from pathlib import Path
 
 import pytest
 
-from promptcontrollab.cli import main
+from promptcontrollab.cli import _reconfigure_windows_pipe, main
 from promptcontrollab.files import write_jsonl
 
 
 def _write_json(path: Path, payload: object) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(payload), encoding="utf-8")
+
+
+class _FakeStdout:
+    encoding = "gbk"
+
+    def __init__(self, *, is_tty: bool = False) -> None:
+        self.is_tty = is_tty
+        self.reconfigured: dict[str, str] | None = None
+
+    def isatty(self) -> bool:
+        return self.is_tty
+
+    def reconfigure(self, **kwargs: str) -> None:
+        self.reconfigured = kwargs
+
+
+def test_windows_pipe_output_is_reconfigured_to_utf8() -> None:
+    stream = _FakeStdout()
+
+    assert _reconfigure_windows_pipe(stream, os_name="nt") is True
+
+    assert stream.reconfigured == {"encoding": "utf-8", "errors": "replace"}
+
+
+def test_windows_tty_output_keeps_terminal_encoding() -> None:
+    stream = _FakeStdout(is_tty=True)
+
+    assert _reconfigure_windows_pipe(stream, os_name="nt") is False
+
+    assert stream.reconfigured is None
 
 
 def _write_scored_run(

@@ -93,14 +93,44 @@ from promptcontrollab.workflow import (
 def main(argv: Sequence[str] | None = None) -> int:
     """Run the CLI."""
 
+    _ensure_utf8_for_windows_pipes()
     parser = build_parser()
     args = parser.parse_args(argv)
     try:
         args.func(args)
-    except (PromptControlLabError, ValueError, OSError) as exc:
+    except (PromptControlLabError, ValueError, OSError, subprocess.SubprocessError) as exc:
         print(f"pcl: error: {exc}", file=sys.stderr)
         return 2
     return 0
+
+
+def _ensure_utf8_for_windows_pipes() -> None:
+    """Make redirected Windows CLI output readable in UTF-8 based tools."""
+
+    _reconfigure_windows_pipe(sys.stdout)
+    _reconfigure_windows_pipe(sys.stderr)
+
+
+def _reconfigure_windows_pipe(stream: object, *, os_name: str | None = None) -> bool:
+    if (os_name or os.name) != "nt":
+        return False
+    encoding = str(getattr(stream, "encoding", "") or "").lower().replace("_", "-")
+    if "utf-8" in encoding or "utf8" in encoding:
+        return False
+    isatty = getattr(stream, "isatty", None)
+    try:
+        if callable(isatty) and isatty():
+            return False
+    except OSError:
+        return False
+    reconfigure = getattr(stream, "reconfigure", None)
+    if not callable(reconfigure):
+        return False
+    try:
+        reconfigure(encoding="utf-8", errors="replace")
+    except (TypeError, ValueError, OSError):
+        return False
+    return True
 
 
 def build_parser() -> argparse.ArgumentParser:
