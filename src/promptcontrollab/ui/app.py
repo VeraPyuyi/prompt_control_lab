@@ -79,6 +79,7 @@ from promptcontrollab.ui.workflows import (
     run_external_evidence_workflow,
     run_gate_workflow,
     run_guard_workflow,
+    run_import_external_workflow,
     run_pr_summary_workflow,
     save_guard_outputs,
 )
@@ -194,17 +195,24 @@ TEXT = {
         "analyze_workflow": "Run analyze",
         "gate_workflow": "Run gate",
         "evidence_card_workflow": "Build evidence card",
+        "import_workflow": "Import external run",
         "external_evidence_workflow": "External evidence bundle",
         "audit_workflow": "Run audit-diff",
         "agent_run_workflow": "Build agent-run",
         "pr_summary_workflow": "Generate PR summary",
         "export_workflow": "Export report zip",
         "external_tool": "External tool",
+        "external_input": "External export",
         "baseline_input": "Baseline export",
         "candidate_input": "Candidate export",
         "score_name": "Score name",
         "provider": "Provider",
         "model": "Model",
+        "prompt_id": "Prompt ID",
+        "name_filter": "Name filter",
+        "experiment_filter": "Experiment filter",
+        "asset_id": "Asset ID",
+        "method": "Method",
         "baseline_prompt_id": "Baseline prompt ID",
         "candidate_prompt_id": "Candidate prompt ID",
         "baseline_name": "Baseline name",
@@ -425,17 +433,24 @@ TEXT = {
         "analyze_workflow": "运行 analyze",
         "gate_workflow": "运行 gate",
         "evidence_card_workflow": "生成证据卡",
+        "import_workflow": "导入外部 run",
         "external_evidence_workflow": "生成外部证据包",
         "audit_workflow": "运行 audit-diff",
         "agent_run_workflow": "生成 agent-run",
         "pr_summary_workflow": "生成 PR summary",
         "export_workflow": "导出报告 zip",
         "external_tool": "外部工具",
+        "external_input": "外部导出文件",
         "baseline_input": "Baseline 导出文件",
         "candidate_input": "Candidate 导出文件",
         "score_name": "分数字段名",
         "provider": "Provider",
         "model": "模型",
+        "prompt_id": "Prompt ID",
+        "name_filter": "Name 过滤",
+        "experiment_filter": "Experiment 过滤",
+        "asset_id": "Asset ID",
+        "method": "Method",
         "baseline_prompt_id": "Baseline prompt ID",
         "candidate_prompt_id": "Candidate prompt ID",
         "baseline_name": "Baseline 名称",
@@ -579,6 +594,14 @@ CHOICE_OPTIONS = {
         ("langfuse", "langfuse", "Langfuse"),
         ("langsmith", "langsmith", "LangSmith"),
         ("deepeval", "deepeval", "DeepEval"),
+    ],
+    "import_tool": [
+        ("auto", "auto", "自动识别"),
+        ("promptfoo", "promptfoo", "Promptfoo"),
+        ("langfuse", "langfuse", "Langfuse"),
+        ("langsmith", "langsmith", "LangSmith"),
+        ("deepeval", "deepeval", "DeepEval"),
+        ("prompt-optimizer", "prompt-optimizer", "prompt-optimizer"),
     ],
 }
 
@@ -1107,6 +1130,14 @@ CHOICE_OPTIONS.update(
             ("langfuse", "langfuse", "Langfuse"),
             ("langsmith", "langsmith", "LangSmith"),
             ("deepeval", "deepeval", "DeepEval"),
+        ],
+        "import_tool": [
+            ("auto", "auto", "自动识别"),
+            ("promptfoo", "promptfoo", "Promptfoo"),
+            ("langfuse", "langfuse", "Langfuse"),
+            ("langsmith", "langsmith", "LangSmith"),
+            ("deepeval", "deepeval", "DeepEval"),
+            ("prompt-optimizer", "prompt-optimizer", "prompt-optimizer"),
         ],
     }
 )
@@ -2007,6 +2038,68 @@ def _render_workflows_tab(
                     execution_mode=execution_mode,
                     confirmed=confirmed,
                     overwrite=overwrite,
+                    safe_root=runs_dir,
+                    allow_external_outputs=allow_external_outputs,
+                ),
+            )
+
+    with st.expander(text["import_workflow"]):
+        tool_label = str(
+            st.selectbox(
+                text["external_tool"],
+                _choice_labels("import_tool", language),
+                key="wf_import_tool",
+            )
+        )
+        import_tool = str(_choice_value("import_tool", tool_label, language))
+        input_path = Path(
+            st.text_input(
+                text["external_input"],
+                "results.json",
+                key="wf_import_input",
+            )
+        )
+        out_dir = Path(
+            st.text_input(
+                text["out_dir"],
+                str(runs_dir / "from-external"),
+                key="wf_import_out",
+            )
+        )
+        columns = st.columns(4)
+        prompt_id = columns[0].text_input(text["prompt_id"], "", key="wf_import_prompt_id")
+        name_filter = columns[1].text_input(text["name_filter"], "", key="wf_import_name")
+        experiment_filter = columns[2].text_input(
+            text["experiment_filter"],
+            "",
+            key="wf_import_experiment",
+        )
+        score_name = columns[3].text_input(text["score_name"], "", key="wf_import_score")
+        columns = st.columns(4)
+        provider = columns[0].text_input(text["provider"], "", key="wf_import_provider")
+        model = columns[1].text_input(text["model"], "", key="wf_import_model")
+        method = columns[2].text_input(text["method"], "", key="wf_import_method")
+        asset_id = columns[3].text_input(text["asset_id"], "", key="wf_import_asset_id")
+        confirmed = _confirm_checkbox(st, text, execution_mode, "wf_import_confirm")
+        if st.button(text["run_action"], key="wf_import_run_button"):
+            _render_workflow_result(
+                st,
+                text,
+                lambda: run_import_external_workflow(
+                    tool=import_tool,
+                    input_path=input_path,
+                    out_dir=out_dir,
+                    execution_mode=execution_mode,
+                    confirmed=confirmed,
+                    overwrite=overwrite,
+                    prompt_id=prompt_id.strip() or None,
+                    name=name_filter.strip() or None,
+                    experiment=experiment_filter.strip() or None,
+                    score_name=score_name.strip() or None,
+                    provider=provider.strip() or None,
+                    model=model.strip() or None,
+                    method=method.strip() or None,
+                    asset_id=asset_id.strip() or None,
                     safe_root=runs_dir,
                     allow_external_outputs=allow_external_outputs,
                 ),

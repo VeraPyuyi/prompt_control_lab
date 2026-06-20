@@ -18,6 +18,7 @@ from promptcontrollab.ui.workflows import (
     run_external_evidence_workflow,
     run_gate_workflow,
     run_guard_workflow,
+    run_import_external_workflow,
     run_pr_summary_workflow,
 )
 
@@ -373,6 +374,45 @@ def test_external_evidence_workflow_preview_and_auto_modes(tmp_path: Path) -> No
     assert (out_dir / "report.html").exists()
     validity = read_json(out_dir / "comparison" / "comparison_validity.json")
     assert validity["validity"] == "clean"
+
+
+def test_import_external_workflow_preview_and_auto_modes(tmp_path: Path) -> None:
+    source = tmp_path / "promptfoo-results.json"
+    source.write_text(json.dumps(_paired_promptfoo_payload(count=2)), encoding="utf-8")
+    out_dir = tmp_path / "runs" / "from-promptfoo"
+
+    preview = run_import_external_workflow(
+        tool="promptfoo",
+        input_path=source,
+        out_dir=out_dir,
+        execution_mode="confirm",
+        confirmed=False,
+        overwrite=False,
+        prompt_id="candidate",
+        safe_root=tmp_path / "runs",
+    )
+
+    assert preview["status"] == "preview"
+    assert "pcl import promptfoo" in preview["command"]
+    assert str(out_dir / "manifest.json") in preview["outputs"]
+    assert not (out_dir / "manifest.json").exists()
+
+    result = run_import_external_workflow(
+        tool="promptfoo",
+        input_path=source,
+        out_dir=out_dir,
+        execution_mode="auto",
+        confirmed=False,
+        overwrite=False,
+        prompt_id="candidate",
+        safe_root=tmp_path / "runs",
+    )
+
+    assert result["status"] == "completed"
+    assert result["import_result"]["count"] == 2
+    assert (out_dir / "manifest.json").exists()
+    assert (out_dir / "predictions.jsonl").exists()
+    assert read_json(out_dir / "manifest.json")["source_tool"] == "promptfoo"
 
 
 def test_create_demo_artifacts_workflow_generates_demo_run(tmp_path: Path) -> None:

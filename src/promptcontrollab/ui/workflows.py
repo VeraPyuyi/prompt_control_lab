@@ -15,6 +15,14 @@ from promptcontrollab.external_evidence import ExternalTool, build_external_evid
 from promptcontrollab.files import JsonDict, ensure_dir, write_json
 from promptcontrollab.gate import run_gate
 from promptcontrollab.history import index_history
+from promptcontrollab.ingest import (
+    ingest_auto_results,
+    ingest_deepeval_results,
+    ingest_langfuse_results,
+    ingest_langsmith_results,
+    ingest_prompt_optimizer_assets,
+    ingest_promptfoo_results,
+)
 from promptcontrollab.pr_summary import write_pr_summary
 from promptcontrollab.prompt_context import load_prompt_context
 from promptcontrollab.prompt_guard import guard_prompt
@@ -420,6 +428,160 @@ def run_external_evidence_workflow(
         safe_root=safe_root,
         allow_external_outputs=allow_external_outputs,
         runner=runner,
+    )
+
+
+def run_import_external_workflow(
+    *,
+    tool: str,
+    input_path: Path,
+    out_dir: Path,
+    execution_mode: str,
+    confirmed: bool,
+    overwrite: bool,
+    prompt_id: str | None = None,
+    name: str | None = None,
+    experiment: str | None = None,
+    score_name: str | None = None,
+    provider: str | None = None,
+    model: str | None = None,
+    method: str | None = None,
+    asset_id: str | None = None,
+    safe_root: Path | None = None,
+    allow_external_outputs: bool = False,
+) -> JsonDict:
+    """Run or preview a single external export import from the local UI."""
+
+    if tool not in {"auto", "promptfoo", "langfuse", "langsmith", "deepeval", "prompt-optimizer"}:
+        msg = f"Unknown external import tool `{tool}`."
+        raise ValueError(msg)
+    outputs = [
+        out_dir / "manifest.json",
+        out_dir / "predictions.jsonl",
+        out_dir / "metrics.json",
+        out_dir / "prompt_assets.json",
+        out_dir / "prompt_assets.html",
+        out_dir / "prompt_optimizer_gap_plan.json",
+        out_dir / "prompt_optimizer_gap_plan.html",
+    ]
+    command = _command(
+        [
+            "pcl",
+            "import",
+            tool,
+            "--input",
+            str(input_path),
+            "--out",
+            str(out_dir),
+            *(_option("--prompt-id", prompt_id) if prompt_id else []),
+            *(_option("--name", name) if name else []),
+            *(_option("--experiment", experiment) if experiment else []),
+            *(_option("--score-name", score_name) if score_name else []),
+            *(_option("--provider", provider) if provider else []),
+            *(_option("--model", model) if model else []),
+            *(_option("--method", method) if method else []),
+            *(_option("--asset-id", asset_id) if asset_id else []),
+        ]
+    )
+
+    def runner() -> JsonDict:
+        return {
+            "import_result": _run_external_import(
+                tool=tool,
+                input_path=input_path,
+                out_dir=out_dir,
+                prompt_id=prompt_id,
+                name=name,
+                experiment=experiment,
+                score_name=score_name,
+                provider=provider,
+                model=model,
+                method=method,
+                asset_id=asset_id,
+            )
+        }
+
+    return _handle_execution(
+        name="import-external",
+        command=command,
+        outputs=outputs,
+        execution_mode=execution_mode,
+        confirmed=confirmed,
+        overwrite=overwrite,
+        safe_root=safe_root,
+        allow_external_outputs=allow_external_outputs,
+        runner=runner,
+    )
+
+
+def _run_external_import(
+    *,
+    tool: str,
+    input_path: Path,
+    out_dir: Path,
+    prompt_id: str | None,
+    name: str | None,
+    experiment: str | None,
+    score_name: str | None,
+    provider: str | None,
+    model: str | None,
+    method: str | None,
+    asset_id: str | None,
+) -> JsonDict:
+    if tool == "auto":
+        return ingest_auto_results(
+            source_path=input_path,
+            out_dir=out_dir,
+            prompt_id=prompt_id,
+            name=name,
+            experiment=experiment,
+            score_name=score_name,
+            model=model,
+            provider=provider,
+            method=method,
+            asset_id=asset_id,
+        )
+    if tool == "promptfoo":
+        return ingest_promptfoo_results(
+            source_path=input_path,
+            out_dir=out_dir,
+            prompt_id=prompt_id,
+            provider=provider,
+            method=method,
+        )
+    if tool == "langfuse":
+        return ingest_langfuse_results(
+            source_path=input_path,
+            out_dir=out_dir,
+            name=name,
+            score_name=score_name,
+            model=model,
+            provider=provider,
+            method=method,
+        )
+    if tool == "langsmith":
+        return ingest_langsmith_results(
+            source_path=input_path,
+            out_dir=out_dir,
+            experiment=experiment,
+            score_name=score_name,
+            model=model,
+            provider=provider,
+            method=method,
+        )
+    if tool == "deepeval":
+        return ingest_deepeval_results(
+            source_path=input_path,
+            out_dir=out_dir,
+            score_name=score_name,
+            model=model,
+            provider=provider,
+            method=method,
+        )
+    return ingest_prompt_optimizer_assets(
+        source_path=input_path,
+        out_dir=out_dir,
+        asset_id=asset_id,
     )
 
 
