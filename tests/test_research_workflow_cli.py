@@ -70,12 +70,19 @@ def test_research_demo_generates_paper_diagnostics(
     assert "prompt optimization evidence card" in concept_names
     report = (run_dir / "research_diagnostics.md").read_text(encoding="utf-8")
     assert "Research Diagnostics Report" in report
+    assert "![Research overview](research_overview.svg)" in report
     assert "Hidden-state input" in report
     assert "soft-to-hard projection gap" in report
     assert "Riccati surrogate" in report
     report_html = (run_dir / "research_diagnostics.html").read_text(encoding="utf-8")
     assert "Research Diagnostics Report" in report_html
+    assert 'src="research_overview.svg"' in report_html
     assert "Hidden-state Trajectory" in report_html
+    overview_svg = (run_dir / "research_overview.svg").read_text(encoding="utf-8")
+    assert "Paper-derived prompt-control evidence" in overview_svg
+    assert "Soft-to-hard gap" in overview_svg
+    assert "Riccati surrogate" in overview_svg
+    assert "ready" in overview_svg
     bundle = read_json(run_dir / "research_bundle.json")
     assert bundle["kind"] == "research_bundle_index"
     assert bundle["status"] == "supported"
@@ -84,6 +91,9 @@ def test_research_demo_generates_paper_diagnostics(
     diagnostics_artifact = _artifact(bundle, "research_diagnostics.html")
     assert diagnostics_artifact["bytes"] > 0
     assert diagnostics_artifact["sha256"].startswith("sha256:")
+    overview_artifact = _artifact(bundle, "research_overview.svg")
+    assert overview_artifact["bytes"] > 0
+    assert overview_artifact["sha256"].startswith("sha256:")
     assert (run_dir / "research_bundle.html").exists()
     assert "Research Evidence Bundle" in (run_dir / "research_bundle.html").read_text(
         encoding="utf-8"
@@ -270,6 +280,7 @@ def test_diagnose_reuses_research_demo_inputs(tmp_path: Path) -> None:
     assert (run_dir / "claim_check.json").exists()
     assert (run_dir / "claim_check.html").exists()
     assert (run_dir / "research_diagnostics.html").exists()
+    assert (run_dir / "research_overview.svg").exists()
     assert (run_dir / "research_bundle.html").exists()
 
 

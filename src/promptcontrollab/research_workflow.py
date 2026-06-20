@@ -480,6 +480,7 @@ def run_research_diagnostics(
         claim="full-research",
         out_path=paths.summary_dir / "claim_check.json",
     )
+    _write_research_outputs(summary_dir=paths.summary_dir, payload=payload)
     write_research_bundle_index(paths.summary_dir)
     return payload
 
@@ -583,7 +584,10 @@ def _write_research_outputs(*, summary_dir: Path, payload: JsonDict) -> None:
     artifacts_dict = artifacts if isinstance(artifacts, dict) else {}
     artifacts_dict["research_diagnostics_html"] = str(diagnostics_html)
     artifacts_dict["research_bundle_html"] = str(bundle_html)
+    overview_svg = summary_dir / "research_overview.svg"
+    artifacts_dict["research_overview_svg"] = str(overview_svg)
     payload["artifacts"] = artifacts_dict
+    overview_svg.write_text(render_research_overview_svg(payload), encoding="utf-8")
     write_json(summary_dir / "research_diagnostics.json", payload)
     (summary_dir / "research_diagnostics.md").write_text(
         render_research_diagnostics_markdown(payload),
@@ -861,6 +865,7 @@ def _bundle_artifacts(run_dir: Path) -> list[JsonDict]:
     names = [
         "research_bundle.html",
         "research_bundle.json",
+        "research_overview.svg",
         "evidence_audit_result.html",
         "evidence_audit_result.md",
         "evidence_audit_result.json",
@@ -1600,6 +1605,10 @@ def render_research_diagnostics_markdown(payload: JsonDict) -> str:
         "",
         "This report summarizes paper-derived PromptControlLab diagnostics.",
         "",
+        "## Visual Overview",
+        "",
+        "![Research overview](research_overview.svg)",
+        "",
         "## Paper Concept Map",
         "",
         "| Concept | Commands | Artifact | Meaning |",
@@ -1749,6 +1758,11 @@ def render_research_diagnostics_html(payload: JsonDict) -> str:
         diagnostics = {}
     body: list[str] = [
         _paragraph("This report summarizes paper-derived PromptControlLab diagnostics."),
+        _section(
+            "Visual Overview",
+            '<img class="overview" src="research_overview.svg" '
+            'alt="Research diagnostic overview">',
+        ),
         _section(
             "Paper Concept Map",
             _table(
@@ -1909,6 +1923,137 @@ def render_research_diagnostics_html(payload: JsonDict) -> str:
     )
 
 
+def render_research_overview_svg(payload: JsonDict) -> str:
+    """Render a dependency-free SVG overview of paper-derived evidence coverage."""
+
+    rows = _research_overview_rows(payload)
+    cards = []
+    for index, row in enumerate(rows):
+        col = index % 3
+        card_row = index // 3
+        x = 44 + col * 372
+        y = 132 + card_row * 116
+        status = str(row["status"])
+        color = _overview_status_color(status)
+        cards.append(
+            f"""
+  <g>
+    <rect x="{x}" y="{y}" width="328" height="88" rx="14" fill="#ffffff" stroke="#d8e0ec"/>
+    <circle cx="{x + 30}" cy="{y + 30}" r="13" fill="{color["fill"]}" stroke="{color["stroke"]}"/>
+    <text x="{x + 52}" y="{y + 34}" class="h">{_svg_text(row["label"])}</text>
+    <text x="{x + 20}" y="{y + 64}" class="t">{_svg_text(row["meaning"])}</text>
+    <text x="{x + 272}" y="{y + 34}" class="badge" fill="{color["text"]}">{_svg_text(status)}</text>
+  </g>""".rstrip()
+        )
+    return f"""<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="520"
+  viewBox="0 0 1200 520" role="img" aria-labelledby="title desc">
+  <title id="title">prompt_control_lab research overview</title>
+  <desc id="desc">Paper-derived prompt optimization evidence coverage: protocol,
+  statistics, deployment, hidden-state trajectory, Riccati, and time-varying
+  diagnostics.</desc>
+  <style>
+    .title {{ font: 700 30px Segoe UI, Arial, sans-serif; fill: #172033; }}
+    .sub {{ font: 16px Segoe UI, Arial, sans-serif; fill: #61708a; }}
+    .h {{ font: 700 17px Segoe UI, Arial, sans-serif; fill: #172033; }}
+    .t {{ font: 14px Segoe UI, Arial, sans-serif; fill: #53657d; }}
+    .badge {{ font: 700 12px Segoe UI, Arial, sans-serif; text-anchor: middle; }}
+  </style>
+  <rect width="1200" height="520" rx="24" fill="#f6f8fb"/>
+  <rect x="26" y="26" width="1148" height="468" rx="22" fill="#ffffff" stroke="#d8e0ec"/>
+  <text x="54" y="74" class="title">Paper-derived prompt-control evidence</text>
+  <text x="54" y="103" class="sub">From clean protocol to deployability,
+  hidden-state dynamics, surrogate stability, and reviewer artifacts.</text>
+{''.join(cards)}
+</svg>
+"""
+
+
+def _research_overview_rows(payload: JsonDict) -> list[JsonDict]:
+    run_dir_value = payload.get("run_dir")
+    run_dir = Path(str(run_dir_value)) if run_dir_value else None
+    diagnostics = payload.get("diagnostics")
+    diagnostics_dict = diagnostics if isinstance(diagnostics, dict) else {}
+    return [
+        {
+            "label": "Tri-split protocol",
+            "meaning": "train / val / withheld separation",
+            "status": _overview_artifact_status(payload, run_dir, "splits.json"),
+        },
+        {
+            "label": "Paired statistics",
+            "meaning": "mean delta, CI, p-value",
+            "status": _overview_artifact_status(payload, run_dir, "stats.json"),
+        },
+        {
+            "label": "Soft-to-hard gap",
+            "meaning": "deployment projection risk",
+            "status": _overview_diagnostic_status(diagnostics_dict, "soft_hard"),
+        },
+        {
+            "label": "Hidden-state input",
+            "meaning": "trajectory-ready state source",
+            "status": _overview_artifact_status(payload, run_dir, "inputs/hidden_states.npz"),
+        },
+        {
+            "label": "Trajectory signal",
+            "meaning": "drift and turnpike-like decay",
+            "status": _overview_diagnostic_status(diagnostics_dict, "trajectory"),
+        },
+        {
+            "label": "Riccati surrogate",
+            "meaning": "finite-dimensional stability probe",
+            "status": _overview_diagnostic_status(diagnostics_dict, "riccati"),
+        },
+        {
+            "label": "TV soft-control",
+            "meaning": "static / tv / shuffled / random",
+            "status": _overview_diagnostic_status(diagnostics_dict, "tv_soft"),
+        },
+        {
+            "label": "Evidence card",
+            "meaning": "reviewer-facing claim summary",
+            "status": _overview_artifact_status(payload, run_dir, "evidence_card.json"),
+        },
+        {
+            "label": "Claim check",
+            "meaning": "bounded full-research claim gate",
+            "status": _overview_artifact_status(payload, run_dir, "claim_check.json"),
+        },
+    ]
+
+
+def _overview_diagnostic_status(diagnostics: JsonDict, key: str) -> str:
+    value = diagnostics.get(key)
+    if isinstance(value, dict) and value:
+        return "ready"
+    return "missing"
+
+
+def _overview_artifact_status(payload: JsonDict, run_dir: Path | None, artifact: str) -> str:
+    if run_dir is not None and (run_dir / artifact).exists():
+        return "ready"
+    artifacts = payload.get("artifacts")
+    if isinstance(artifacts, dict):
+        normalized = artifact.replace("\\", "/")
+        for value in artifacts.values():
+            value_text = str(value).replace("\\", "/")
+            if value_text.endswith(normalized):
+                return "ready"
+    return "missing"
+
+
+def _overview_status_color(status: str) -> dict[str, str]:
+    if status == "ready":
+        return {"fill": "#dcfce7", "stroke": "#86efac", "text": "#166534"}
+    if status == "review":
+        return {"fill": "#fef3c7", "stroke": "#fcd34d", "text": "#92400e"}
+    return {"fill": "#fee2e2", "stroke": "#fca5a5", "text": "#991b1b"}
+
+
+def _svg_text(value: object) -> str:
+    return html.escape(str(value or ""))
+
+
 def _render_remediation_table(value: object) -> list[str]:
     rows = _remediation_list(value)
     if not rows:
@@ -2065,6 +2210,7 @@ def _html_page(*, title: str, subtitle: str, body: list[str]) -> str:
       border-radius: 12px;
       padding: 16px;
     }}
+    .overview {{ width: 100%; height: auto; display: block; }}
     p {{ margin: 0 0 10px; }}
   </style>
 </head>
