@@ -5,6 +5,16 @@ prompt-optimizer。它更适合接在这些工具之后，把已有结果整理�
 
 一句话判断：**创建、trace、测试和安全扫描交给相邻工具；需要证明“这个结果到底支持什么”时，用 PCL。**
 
+## 5 分钟采用路径
+
+| 分钟 | 操作 | 应该得到什么 |
+|---:|---|---|
+| 1 | 用 `pcl choose --need "<你的目标>" --language zh` 选择相邻工具路径。 | 一条直白建议，以及下一条 PCL 命令。 |
+| 2 | 用 `pcl start --choice import --tool auto --input results.json --out runs/from-external` 导入 Promptfoo / Langfuse / LangSmith / DeepEval 输出。 | `manifest.json` 和 `bridge_summary.html`。 |
+| 3 | 用 `pcl evidence-audit ...`，或 `pcl research-demo --out runs/research-demo --language zh && pcl diagnose --run runs/research-demo --language zh` 补论文诊断。 | `evidence_card.html`、`claim_check.html`、`research_bundle.zh.html`。 |
+| 4 | 打开命令输出里提示的第一个 HTML artifact。 | reviewer 能读懂的“发生了什么、还缺什么”。 |
+| 5 | 如果 `claim_check` 或 `gap_status` 要求复查，先不要声称“prompt 更好”。 | 得到有边界的下一步，而不是过度主张。 |
+
 ## 最短路径
 
 | 如果你现在的问题是 | 先复制这条命令 |

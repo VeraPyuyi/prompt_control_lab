@@ -78,6 +78,10 @@ def test_competitive_positioning_stays_evidence_layer_first() -> None:
 
     assert "pcl choose --need prompt-writing" in choice
     assert "pcl choose --need prompt-writing --language zh" in choice_zh
+    assert "Five-Minute Adoption Path" in choice
+    assert "5 分钟采用路径" in choice_zh
+    assert "bridge_summary.html" in choice
+    assert "research_bundle.zh.html" in choice_zh
     assert "Shortest Path" in choice
     assert "最短路径" in choice_zh
     assert 'pcl choose --need "<your goal>"' in choice

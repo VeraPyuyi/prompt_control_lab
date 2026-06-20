@@ -7,6 +7,16 @@ result needs to become reviewer-facing evidence for prompt optimization.
 One-sentence rule: **create and test elsewhere; use PCL when you need to prove what the result
 actually supports.**
 
+## Five-Minute Adoption Path
+
+| Minute | Do this | You should get |
+|---:|---|---|
+| 1 | Pick the adjacent tool path with `pcl choose --need "<your goal>"`. | A plain recommendation and the next PCL command. |
+| 2 | Import existing Promptfoo/Langfuse/LangSmith/DeepEval output with `pcl start --choice import --tool auto --input results.json --out runs/from-external`. | `manifest.json` and `bridge_summary.html`. |
+| 3 | Add paper-derived checks with `pcl evidence-audit ...` or `pcl research-demo --out runs/research-demo && pcl diagnose --run runs/research-demo`. | `evidence_card.html`, `claim_check.html`, and `research_bundle.html`. |
+| 4 | Open the first HTML artifact named by the command output. | A reviewer-readable answer to what changed and what is still missing. |
+| 5 | If `claim_check` or `gap_status` says review, do not claim "better prompt" yet. | A bounded next action instead of an overclaim. |
+
 ## Shortest Path
 
 | If this is your problem | Copy this first |
