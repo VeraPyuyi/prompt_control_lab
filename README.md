@@ -52,6 +52,13 @@ Model provenance records public model IDs and evidence levels, not hidden provid
 
 ## Docs
 
-[Paper mapping](docs/research_from_paper.en.md) | [Tutorial](docs/tutorial.en.md) | [Artifacts](docs/artifacts.en.md) | [Ecosystem bridge](docs/ecosystem_bridge.en.md) | [Decision guide](docs/decision_guide.en.md) | [Comparison](docs/comparison.en.md) | [Production pilot](docs/production_pilot.en.md) | [Preflight pilot](docs/case_studies/agent_guard_pilot.en.md) | [Paired pilot](docs/case_studies/agent_guard_paired_pilot.en.md) | [Scorecard](docs/assets/ecosystem_scorecard.svg) | [Evidence matrix](docs/assets/ecosystem_evidence_matrix.svg) | [Install/release](docs/release_install.en.md) | [Plugins](plugins/)
+[Paper mapping](docs/research_from_paper.en.md) | [Tutorial](docs/tutorial.en.md) | [Decision guide](docs/decision_guide.en.md) | [Install/release](docs/release_install.en.md) | [Plugins](plugins/)
+
+<details>
+<summary>More evidence, ecosystem, and pilot docs</summary>
+
+[Artifacts](docs/artifacts.en.md) | [Ecosystem bridge](docs/ecosystem_bridge.en.md) | [Comparison](docs/comparison.en.md) | [Production pilot](docs/production_pilot.en.md) | [Preflight pilot](docs/case_studies/agent_guard_pilot.en.md) | [Paired pilot](docs/case_studies/agent_guard_paired_pilot.en.md) | [Scorecard](docs/assets/ecosystem_scorecard.svg) | [Evidence matrix](docs/assets/ecosystem_evidence_matrix.svg)
+
+</details>
 
 Apache-2.0. See [LICENSE](LICENSE).
