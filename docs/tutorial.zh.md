@@ -8,6 +8,7 @@
 
 ```bash
 pcl choose --need "安全评测和红队检查" --language zh
+pcl choose --need "安全评测和红队检查" --language zh --out runs/tool-choice.json
 pcl start --guide --language zh
 pcl start --language zh
 pcl start --choice demo --language zh --out demo
@@ -16,13 +17,15 @@ pcl start --choice demo --language zh --out demo
 得到：
 
 - 使用 `pcl choose` 时得到一个相邻工具选择建议
+- 使用 `pcl choose --out` 时得到 `runs/tool-choice.json` 和 `runs/tool-choice.md`
 - 一个按目标选择 PCL 路径的 guide
 - 一个六选一菜单：demo 项目、研究 demo、外部证据导入、prompt 优化、guard、报告
 - 使用 `--choice demo` 时，会直接生成 `demo/runs/quick/report.html`
 - 当前场景的直白输出
 
 说明：如果你还不确定第一步应该用 PCL、Promptfoo、DeepEval、LangSmith / Langfuse 还是
-prompt-optimizer，先运行 `pcl choose --need ... --language zh`。如果你已经确定要用 PCL，
+prompt-optimizer，先运行 `pcl choose --need ... --language zh`。如果需要把选择理由留给团队审查，
+就加上 `--out`。如果你已经确定要用 PCL，
 但不确定自己应该走研究 demo、证据桥接、guard、audit 还是报告路径，再运行
 `pcl start --guide --language zh`。如果你还不熟悉 `profile`、`gate` 或 `stats` 这些词，就运行
 `pcl start --language zh` 进入交互菜单。

@@ -25,6 +25,14 @@ pcl choose --need prompt-writing --language zh
 pcl choose --need "安全评测和红队检查" --language zh --json
 ```
 
+把选择理由保存成审查材料：
+
+```bash
+pcl choose --need "安全评测和红队检查" --language zh --out runs/tool-choice.json
+```
+
+这会写出 `runs/tool-choice.json` 和 `runs/tool-choice.md`。
+
 本地 UI 的 **Research Overview / 研究总览** 里也有同一个选择器。
 
 生成生态对比 scorecard 和 market readiness 摘要：

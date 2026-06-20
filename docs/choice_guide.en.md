@@ -27,6 +27,14 @@ pcl choose --need prompt-writing
 pcl choose --need "security evals and red-team checks" --json
 ```
 
+Save the recommendation for review:
+
+```bash
+pcl choose --need "security evals and red-team checks" --out runs/tool-choice.json
+```
+
+This writes `runs/tool-choice.json` and `runs/tool-choice.md`.
+
 The same advisor is available in the local UI under **Research Overview**.
 
 Generate the ecosystem scorecard and market-readiness summary:
