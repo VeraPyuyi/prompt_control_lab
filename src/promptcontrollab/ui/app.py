@@ -6,6 +6,7 @@ from __future__ import annotations
 import base64
 import html
 import importlib
+import json
 import os
 from collections.abc import Callable
 from pathlib import Path
@@ -14,7 +15,11 @@ from typing import Any, cast
 from promptcontrollab.files import JsonDict
 from promptcontrollab.prompt_context import load_prompt_context
 from promptcontrollab.prompt_guard import guard_prompt
-from promptcontrollab.tool_choice import choose_tool_for_need, tool_choice_lanes
+from promptcontrollab.tool_choice import (
+    choose_tool_for_need,
+    render_tool_choice_markdown,
+    tool_choice_lanes,
+)
 from promptcontrollab.ui.charts import (
     file_breakdown_bar,
     history_category_timeline,
@@ -207,6 +212,8 @@ TEXT = {
         "tool_choice_why": "Why",
         "tool_choice_commands": "Suggested PCL commands",
         "tool_choice_avoid": "Avoid",
+        "tool_choice_download_json": "Download tool_choice.json",
+        "tool_choice_download_md": "Download tool_choice.md",
         "execution_mode": "Execution mode",
         "overwrite": "Overwrite existing artifacts",
         "allow_external_outputs": "Allow writing outside runs directory",
@@ -464,6 +471,8 @@ TEXT = {
         "tool_choice_why": "为什么",
         "tool_choice_commands": "建议使用的 PCL 命令",
         "tool_choice_avoid": "不要做",
+        "tool_choice_download_json": "下载 tool_choice.json",
+        "tool_choice_download_md": "下载 tool_choice.md",
         "execution_mode": "执行模式",
         "overwrite": "覆盖已有 artifact",
         "allow_external_outputs": "允许写入 runs 目录之外",
@@ -2244,6 +2253,19 @@ def _render_tool_choice_advisor(st: Any, text: dict[str, str], language: str) ->
     if command_list:
         st.caption(text["tool_choice_commands"])
         st.code("\n".join(command_list), language="bash")
+    if hasattr(st, "download_button"):
+        st.download_button(
+            text["tool_choice_download_json"],
+            data=json.dumps(recommendation, ensure_ascii=False, indent=2, sort_keys=True),
+            file_name="tool_choice.json",
+            mime="application/json",
+        )
+        st.download_button(
+            text["tool_choice_download_md"],
+            data=render_tool_choice_markdown(recommendation, language=language),
+            file_name="tool_choice.md",
+            mime="text/markdown",
+        )
 
 
 def _render_tutorial_tab(st: Any, text: dict[str, str], language: str) -> None:

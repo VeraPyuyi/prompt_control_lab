@@ -1468,6 +1468,7 @@ def test_ui_tool_choice_advisor_recommends_promptfoo_for_security() -> None:
     calls: list[dict[str, object]] = []
     frames: list[object] = []
     code_blocks: list[str] = []
+    downloads: list[dict[str, object]] = []
 
     class FakeStreamlit:
         def markdown(self, body: str, *, unsafe_allow_html: bool = False) -> None:
@@ -1485,6 +1486,9 @@ def test_ui_tool_choice_advisor_recommends_promptfoo_for_security() -> None:
         def code(self, body: str, *_args: object, **_kwargs: object) -> None:
             code_blocks.append(body)
 
+        def download_button(self, label: str, **kwargs: object) -> None:
+            downloads.append({"label": label, **kwargs})
+
     app._render_tool_choice_advisor(FakeStreamlit(), app.TEXT["en"], "en")
 
     combined_markup = " ".join(str(call["body"]) for call in calls)
@@ -1495,6 +1499,15 @@ def test_ui_tool_choice_advisor_recommends_promptfoo_for_security() -> None:
     assert "red-team/security testing" in combined_frames
     assert "pcl import promptfoo" in combined_code
     assert "pcl evidence-audit" in combined_code
+    assert {download["file_name"] for download in downloads} == {
+        "tool_choice.json",
+        "tool_choice.md",
+    }
+    markdown_download = next(
+        download for download in downloads if download["file_name"] == "tool_choice.md"
+    )
+    assert "# Tool Choice Recommendation" in str(markdown_download["data"])
+    assert "Promptfoo is strongest" in str(markdown_download["data"])
 
 
 def test_ui_tool_choice_advisor_supports_chinese_prompt_writing() -> None:
@@ -1503,6 +1516,7 @@ def test_ui_tool_choice_advisor_supports_chinese_prompt_writing() -> None:
     calls: list[dict[str, object]] = []
     code_blocks: list[str] = []
     dataframes: list[object] = []
+    downloads: list[dict[str, object]] = []
 
     class FakeStreamlit:
         def markdown(self, body: str, *, unsafe_allow_html: bool = False) -> None:
@@ -1520,6 +1534,9 @@ def test_ui_tool_choice_advisor_supports_chinese_prompt_writing() -> None:
         def code(self, body: str, *_args: object, **_kwargs: object) -> None:
             code_blocks.append(body)
 
+        def download_button(self, label: str, **kwargs: object) -> None:
+            downloads.append({"label": label, **kwargs})
+
     app._render_tool_choice_advisor(FakeStreamlit(), app.TEXT["zh"], "zh")
 
     combined_markup = " ".join(str(call["body"]) for call in calls)
@@ -1530,6 +1547,12 @@ def test_ui_tool_choice_advisor_supports_chinese_prompt_writing() -> None:
     assert "PCL 应该证明它产出的 prompt 是否可靠提升" in combined_rows
     assert "pcl import prompt-optimizer" in combined_code
     assert "scaffold-check" in combined_code
+    assert "下载 tool_choice.json" in {str(download["label"]) for download in downloads}
+    markdown_download = next(
+        download for download in downloads if download["file_name"] == "tool_choice.md"
+    )
+    assert "# 工具选择建议" in str(markdown_download["data"])
+    assert "prompt-optimizer 更适合做成熟的 prompt 写作" in str(markdown_download["data"])
 
 
 def test_ui_market_map_display_rows_use_human_headers() -> None:
