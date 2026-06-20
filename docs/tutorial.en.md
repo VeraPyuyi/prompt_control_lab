@@ -7,6 +7,7 @@ This tutorial uses the format "operation -> result -> what it explains".
 Operation:
 
 ```bash
+pcl choose --need "security evals and red-team checks"
 pcl start --guide
 pcl start
 pcl start --choice demo --out demo
@@ -14,7 +15,8 @@ pcl start --choice demo --out demo
 
 Result:
 
-- a goal-based guide that shows which path to start with
+- a direct adjacent-tool recommendation when using `pcl choose`
+- a goal-based guide that shows which PCL path to start with
 - a six-option menu: demo project, research demo, external evidence import, prompt improvement,
   guard, or report
 - a runnable demo project with `demo/runs/quick/report.html` when using `--choice demo`
@@ -22,9 +24,11 @@ Result:
 
 What it explains:
 
-This is the lowest-friction entry point. Run `pcl start --guide` first when you are not sure
-whether you need the research demo, evidence bridge, guard, audit, or report path. Use `pcl start`
-when terms like `profile`, `gate`, or `stats` are not familiar yet.
+This is the lowest-friction entry point. Run `pcl choose --need ...` first when you are not sure
+whether PCL, Promptfoo, DeepEval, LangSmith/Langfuse, or prompt-optimizer should be the first tool.
+Run `pcl start --guide` when you know you want PCL but are not sure whether you need the research
+demo, evidence bridge, guard, audit, or report path. Use `pcl start` when terms like `profile`,
+`gate`, or `stats` are not familiar yet.
 
 ## Quick Mode: One Command
 

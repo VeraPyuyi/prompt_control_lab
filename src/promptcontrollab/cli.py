@@ -2998,6 +2998,12 @@ def _format_start_guide(language: str = "en") -> str:
     if language == "zh":
         rows = [
             (
+                "不知道应该先用哪个工具",
+                'pcl choose --need "安全评测和红队检查" --language zh',
+                "先得到 Promptfoo / DeepEval / LangSmith / Langfuse / "
+                "prompt-optimizer / PCL 的选择建议。",
+            ),
+            (
                 "对比相邻工具和 PCL 补充证据",
                 "pcl start --choice ecosystem --out runs/ecosystem-demo",
                 (
@@ -3048,6 +3054,12 @@ def _format_start_guide(language: str = "en") -> str:
         final_lines = ["如果想用交互菜单, 运行:", "  pcl start --language zh"]
     else:
         rows = [
+            (
+                "Choose the right adjacent tool",
+                'pcl choose --need "security evals and red-team checks"',
+                "Get a direct recommendation for Promptfoo, DeepEval, "
+                "LangSmith/Langfuse, prompt-optimizer, or PCL.",
+            ),
             (
                 "See the product first",
                 "pcl start --choice demo --out demo",

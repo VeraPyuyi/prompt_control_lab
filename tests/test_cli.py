@@ -1734,6 +1734,8 @@ def test_cli_start_guide_prints_goal_based_paths(capsys: pytest.CaptureFixture[s
     output = capsys.readouterr().out
 
     assert "PromptControlLab beginner guide" in output
+    assert "Choose the right adjacent tool" in output
+    assert 'pcl choose --need "security evals and red-team checks"' in output
     assert "See the product first" in output
     assert "pcl start --choice demo --out demo" in output
     assert "open `runs/quick/report.html`" in output
@@ -1758,6 +1760,7 @@ def test_cli_start_guide_supports_chinese(capsys: pytest.CaptureFixture[str]) ->
     output = capsys.readouterr().out
 
     assert "PromptControlLab 新手路径指南" in output
+    assert 'pcl choose --need "安全评测和红队检查" --language zh' in output
     assert "先看产品长什么样" in output
     assert "pcl start --choice demo --language zh --out demo" in output
     assert "打开 `runs/quick/report.html`" in output
