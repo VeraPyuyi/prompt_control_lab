@@ -416,6 +416,7 @@ def test_cli_ecosystem_demo_runs_all_external_bridge_examples(tmp_path: Path) ->
     assert summary["ecosystem_scorecard_path"] == str(out / "ecosystem_scorecard.json")
     assert summary["ecosystem_scorecard_md_path"] == str(out / "ecosystem_scorecard.md")
     assert summary["ecosystem_scorecard_html_path"] == str(out / "ecosystem_scorecard.html")
+    assert "Market readiness" in " ".join(summary["next_steps"])
     assert (out / "research_diagnostics.json").exists()
     assert (out / "research_diagnostics.md").exists()
     assert (out / "research_bundle.html").exists()

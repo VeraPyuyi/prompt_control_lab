@@ -151,6 +151,7 @@ def run_ecosystem_demo(
         ),
         "runs": runs,
         "next_steps": [
+            "Open ecosystem_scorecard.html and read Market readiness first.",
             "Open each bridge_summary.html to see what the external tool supplied.",
             "Open each evidence_card.html to inspect the prompt optimization evidence.",
             "Open each claim_check.html to see the strongest supported claim.",
