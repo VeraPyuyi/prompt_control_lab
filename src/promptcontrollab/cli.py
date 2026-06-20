@@ -120,6 +120,12 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Print a goal-based beginner guide and exit.",
     )
+    start_parser.add_argument(
+        "--language",
+        choices=["en", "zh"],
+        default="en",
+        help="Language for beginner guide and menu text.",
+    )
     start_parser.add_argument("--prompt", default=None, help="Prompt string for improve/guard.")
     start_parser.add_argument("--prompt-file", type=Path, default=None, help="Prompt text file.")
     start_parser.add_argument("--run", type=Path, default=None, help="Optional run directory.")
@@ -1510,10 +1516,10 @@ def _cmd_ecosystem_scorecard(args: argparse.Namespace) -> None:
 
 def _cmd_start(args: argparse.Namespace) -> None:
     if args.guide:
-        print(_format_start_guide())
+        print(_format_start_guide(args.language))
         return
 
-    choice = _start_choice(args.choice)
+    choice = _start_choice(args.choice, language=args.language)
     if choice == "research":
         out_dir = args.out or Path("runs") / "research-demo"
         payload = write_research_demo(out_dir=out_dir, seed=args.seed)
@@ -2314,23 +2320,39 @@ def _format_improvement_output(
     return "\n".join(lines)
 
 
-def _start_choice(value: str | None) -> str:
+def _start_choice(value: str | None, *, language: str = "en") -> str:
     if value is not None:
         return value
-    print(
-        "\n".join(
-            [
-                "What do you want to do?",
-                "1) Run a paper-style prompt optimization research demo",
-                "2) Make my prompt clearer",
-                "3) Check a prompt before sending it to an AI tool",
-                "4) Compare prompts and create a report",
-                "",
-                "Tip: run `pcl start --guide` if you are unsure which path fits your goal.",
-            ]
+    if language == "zh":
+        print(
+            "\n".join(
+                [
+                    "你想先做什么?",
+                    "1) 运行论文风格的 prompt optimization 研究 demo",
+                    "2) 让我的 prompt 更清楚",
+                    "3) 在发送给 AI 工具前检查 prompt",
+                    "4) 比较 prompts 并生成报告",
+                    "",
+                    "提示: 如果不确定路径, 运行 `pcl start --guide --language zh`。",
+                ]
+            )
         )
-    )
-    raw = input("Choose 1, 2, 3, or 4: ").strip().lower()
+        raw = input("请选择 1、2、3 或 4: ").strip().lower()
+    else:
+        print(
+            "\n".join(
+                [
+                    "What do you want to do?",
+                    "1) Run a paper-style prompt optimization research demo",
+                    "2) Make my prompt clearer",
+                    "3) Check a prompt before sending it to an AI tool",
+                    "4) Compare prompts and create a report",
+                    "",
+                    "Tip: run `pcl start --guide` if you are unsure which path fits your goal.",
+                ]
+            )
+        )
+        raw = input("Choose 1, 2, 3, or 4: ").strip().lower()
     choices = {
         "1": "research",
         "research": "research",
@@ -2342,64 +2364,97 @@ def _start_choice(value: str | None) -> str:
         "analyze": "analyze",
     }
     if raw not in choices:
-        msg = "Choose 1, 2, 3, or 4"
+        msg = "请选择 1、2、3 或 4" if language == "zh" else "Choose 1, 2, 3, or 4"
         raise ValueError(msg)
     return choices[raw]
 
 
-def _format_start_guide() -> str:
+def _format_start_guide(language: str = "en") -> str:
     """Return a compact beginner guide for choosing the right first command."""
 
-    rows = [
-        (
-            "See the product first",
-            "pcl ui --runs runs/ --policy examples/guard.policy.yaml --port 8501",
-            "In the UI, open Workflows and click Create demo artifacts.",
-        ),
-        (
-            "Run the paper-derived prompt optimization diagnostics",
-            "pcl research-demo --out runs/research-demo",
-            "Then run `pcl diagnose --run runs/research-demo` and open research_bundle.html.",
-        ),
-        (
-            "Import external eval results as evidence",
-            "pcl import promptfoo --input results.json "
-            "--out runs/from-promptfoo --prompt-id candidate",
-            "Then run `pcl scaffold-check`, `pcl evidence-card`, or `pcl evidence-audit`.",
-        ),
-        (
-            "Guard a coding-agent prompt before it runs",
-            "pcl guard --prompt \"Fix this bug\" "
-            "--profile coding --policy examples/guard.policy.yaml",
-            "Copy the improved prompt or install a Claude Code, Cursor, or Codex adapter.",
-        ),
-        (
-            "Audit what an agent changed",
-            "pcl audit-diff --before HEAD~1 --after HEAD --out runs/audit",
-            "Then generate a PR summary or build an agent_run.json artifact.",
-        ),
-    ]
-    lines = [
-        "PromptControlLab beginner guide",
-        "",
-        "Choose the path that matches your goal:",
-        "",
-    ]
+    if language == "zh":
+        rows = [
+            (
+                "先看产品长什么样",
+                "pcl ui --runs runs/ --policy examples/guard.policy.yaml --port 8501",
+                "在 UI 里打开“工作流”, 点击“创建演示数据”。",
+            ),
+            (
+                "运行论文里的 prompt optimization 诊断",
+                "pcl research-demo --out runs/research-demo",
+                "然后运行 `pcl diagnose --run runs/research-demo`, 打开 research_bundle.html。",
+            ),
+            (
+                "把外部评测结果导入成证据",
+                "pcl import promptfoo --input results.json "
+                "--out runs/from-promptfoo --prompt-id candidate",
+                "然后运行 `pcl scaffold-check`、`pcl evidence-card` 或 `pcl evidence-audit`。",
+            ),
+            (
+                "在 coding agent 执行前守护 prompt",
+                "pcl guard --prompt \"修复这个 bug\" "
+                "--profile coding --policy examples/guard.policy.yaml",
+                "复制改写后的 prompt, 或安装 Claude Code、Cursor、Codex adapter。",
+            ),
+            (
+                "审计 agent 到底改了什么",
+                "pcl audit-diff --before HEAD~1 --after HEAD --out runs/audit",
+                "然后生成 PR summary, 或构建 agent_run.json artifact。",
+            ),
+        ]
+        lines = ["PromptControlLab 新手路径指南", "", "选择最符合你目标的路径:", ""]
+        start_label = "起点"
+        next_label = "下一步"
+        final_lines = ["如果想用交互菜单, 运行:", "  pcl start --language zh"]
+    else:
+        rows = [
+            (
+                "See the product first",
+                "pcl ui --runs runs/ --policy examples/guard.policy.yaml --port 8501",
+                "In the UI, open Workflows and click Create demo artifacts.",
+            ),
+            (
+                "Run the paper-derived prompt optimization diagnostics",
+                "pcl research-demo --out runs/research-demo",
+                "Then run `pcl diagnose --run runs/research-demo` and open research_bundle.html.",
+            ),
+            (
+                "Import external eval results as evidence",
+                "pcl import promptfoo --input results.json "
+                "--out runs/from-promptfoo --prompt-id candidate",
+                "Then run `pcl scaffold-check`, `pcl evidence-card`, or `pcl evidence-audit`.",
+            ),
+            (
+                "Guard a coding-agent prompt before it runs",
+                "pcl guard --prompt \"Fix this bug\" "
+                "--profile coding --policy examples/guard.policy.yaml",
+                "Copy the improved prompt or install a Claude Code, Cursor, or Codex adapter.",
+            ),
+            (
+                "Audit what an agent changed",
+                "pcl audit-diff --before HEAD~1 --after HEAD --out runs/audit",
+                "Then generate a PR summary or build an agent_run.json artifact.",
+            ),
+        ]
+        lines = [
+            "PromptControlLab beginner guide",
+            "",
+            "Choose the path that matches your goal:",
+            "",
+        ]
+        start_label = "Start"
+        next_label = "Next"
+        final_lines = ["If you prefer an interactive menu, run:", "  pcl start"]
     for index, (goal, command, next_step) in enumerate(rows, start=1):
         lines.extend(
             [
                 f"{index}. {goal}",
-                f"   Start: {command}",
-                f"   Next: {next_step}",
+                f"   {start_label}: {command}",
+                f"   {next_label}: {next_step}",
                 "",
             ]
         )
-    lines.extend(
-        [
-            "If you prefer an interactive menu, run:",
-            "  pcl start",
-        ]
-    )
+    lines.extend(final_lines)
     return "\n".join(lines)
 
 

@@ -1576,6 +1576,19 @@ def test_cli_start_guide_prints_goal_based_paths(capsys: pytest.CaptureFixture[s
     assert "pcl start" in output
 
 
+def test_cli_start_guide_supports_chinese(capsys: pytest.CaptureFixture[str]) -> None:
+    assert main(["start", "--guide", "--language", "zh"]) == 0
+    output = capsys.readouterr().out
+
+    assert "PromptControlLab 新手路径指南" in output
+    assert "先看产品长什么样" in output
+    assert "运行论文里的 prompt optimization 诊断" in output
+    assert "把外部评测结果导入成证据" in output
+    assert "在 coding agent 执行前守护 prompt" in output
+    assert "审计 agent 到底改了什么" in output
+    assert "pcl start --language zh" in output
+
+
 def test_cli_start_interactive_guard_menu(
     capsys: pytest.CaptureFixture[str],
     monkeypatch: pytest.MonkeyPatch,
@@ -1588,6 +1601,18 @@ def test_cli_start_interactive_guard_menu(
     assert "pcl start --guide" in output
     assert "Beginner mode: guard a prompt" in output
     assert "Plain summary:" in output
+
+
+def test_cli_start_interactive_menu_supports_chinese(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr("sys.stdin", io.StringIO("1\n"))
+    assert main(["start", "--language", "zh", "--out", str(tmp_path / "research-demo")]) == 0
+    output = capsys.readouterr().out
+    assert "你想先做什么?" in output
+    assert "pcl start --guide --language zh" in output
 
 
 def test_cli_start_guard_passes_policy(

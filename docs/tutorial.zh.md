@@ -7,8 +7,8 @@
 操作：
 
 ```bash
-pcl start --guide
-pcl start
+pcl start --guide --language zh
+pcl start --language zh
 ```
 
 得到：
@@ -18,8 +18,8 @@ pcl start
 - 当前场景的直白输出
 
 说明：如果你不确定自己应该走研究 demo、证据桥接、guard、audit 还是报告路径，先运行
-`pcl start --guide`。如果你还不熟悉 `profile`、`gate` 或 `stats` 这些词，就运行
-`pcl start` 进入交互菜单。
+`pcl start --guide --language zh`。如果你还不熟悉 `profile`、`gate` 或 `stats` 这些词，就运行
+`pcl start --language zh` 进入交互菜单。
 
 ## 快速模式：一个命令生成报告
 
