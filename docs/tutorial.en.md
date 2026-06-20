@@ -9,12 +9,14 @@ Operation:
 ```bash
 pcl start --guide
 pcl start
+pcl start --choice demo --out demo
 ```
 
 Result:
 
 - a goal-based guide that shows which path to start with
-- a three-option menu: improve a prompt, guard a prompt, or create a report
+- a five-option menu: demo project, research demo, prompt improvement, guard, or report
+- a runnable demo project with `demo/runs/quick/report.html` when using `--choice demo`
 - plain-language output for the selected scenario
 
 What it explains:
@@ -28,25 +30,28 @@ when terms like `profile`, `gate`, or `stats` are not familiar yet.
 Operation:
 
 ```bash
-pcl init --path demo
-cd demo
-pcl analyze --config promptcontrol.example.yaml --out runs/quick
+pcl start --choice demo --out demo
 ```
 
 Result:
 
-- `runs/quick/splits.json`
-- `runs/quick/baseline/metrics.json`
-- `runs/quick/candidate/metrics.json`
-- `runs/quick/stats.json`
-- `runs/quick/explanation.json`
-- `runs/quick/report.md`
-- `runs/quick/report.html`
+- `demo/README.md`
+- `demo/README.zh.md`
+- `demo/runs/quick/splits.json`
+- `demo/runs/quick/baseline/metrics.json`
+- `demo/runs/quick/candidate/metrics.json`
+- `demo/runs/quick/stats.json`
+- `demo/runs/quick/explanation.json`
+- `demo/runs/quick/gate_result.json`
+- `demo/runs/quick/report.md`
+- `demo/runs/quick/report.html`
 
 What it explains:
 
 This is the shortest path for non-specialists. The report says whether the candidate prompt
 looks better, how reliable the evidence is, which examples changed, and what to inspect next.
+If you want to run the steps manually, use `pcl init --path demo`, enter `demo`, then run
+`pcl analyze --config promptcontrol.example.yaml --out runs/quick`.
 
 ## Simplest Prompt Improvement
 

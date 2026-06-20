@@ -16,9 +16,9 @@ Package: `promptcontrollab`. Chinese docs: [README.zh.md](README.zh.md).
 git clone https://github.com/VeraPyuyi/prompt_control_lab.git
 cd prompt_control_lab
 pip install -e ".[research,ui]"
+pcl start --choice demo --out demo
 pcl start --guide
 pcl research-demo --out runs/research-demo && pcl diagnose --run runs/research-demo
-pcl ui --runs runs/ --policy examples/guard.policy.yaml --port 8501
 ```
 
 ## What It Adds

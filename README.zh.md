@@ -16,9 +16,9 @@ Python 包名：`promptcontrollab`。英文文档：[README.md](README.md)。
 git clone https://github.com/VeraPyuyi/prompt_control_lab.git
 cd prompt_control_lab
 pip install -e ".[research,ui]"
+pcl start --choice demo --language zh --out demo
 pcl start --guide --language zh
 pcl research-demo --out runs/research-demo && pcl diagnose --run runs/research-demo
-pcl ui --runs runs/ --policy examples/guard.policy.yaml --port 8501
 ```
 
 ## 常用命令

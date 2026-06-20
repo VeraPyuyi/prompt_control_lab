@@ -9,12 +9,14 @@
 ```bash
 pcl start --guide --language zh
 pcl start --language zh
+pcl start --choice demo --language zh --out demo
 ```
 
 得到：
 
 - 一个按目标选择路径的 guide
-- 一个三选一菜单：优化 prompt、守护 prompt、生成报告
+- 一个五选一菜单：demo 项目、研究 demo、prompt 优化、guard、报告
+- 使用 `--choice demo` 时，会直接生成 `demo/runs/quick/report.html`
 - 当前场景的直白输出
 
 说明：如果你不确定自己应该走研究 demo、证据桥接、guard、audit 还是报告路径，先运行
@@ -26,22 +28,25 @@ pcl start --language zh
 操作：
 
 ```bash
-pcl init --path demo
-cd demo
-pcl analyze --config promptcontrol.example.yaml --out runs/quick
+pcl start --choice demo --language zh --out demo
 ```
 
 得到：
 
-- `runs/quick/splits.json`
-- `runs/quick/baseline/metrics.json`
-- `runs/quick/candidate/metrics.json`
-- `runs/quick/stats.json`
-- `runs/quick/explanation.json`
-- `runs/quick/report.md`
-- `runs/quick/report.html`
+- `demo/README.md`
+- `demo/README.zh.md`
+- `demo/runs/quick/splits.json`
+- `demo/runs/quick/baseline/metrics.json`
+- `demo/runs/quick/candidate/metrics.json`
+- `demo/runs/quick/stats.json`
+- `demo/runs/quick/explanation.json`
+- `demo/runs/quick/gate_result.json`
+- `demo/runs/quick/report.md`
+- `demo/runs/quick/report.html`
 
 说明：这是给非专业人员的最短路径。报告会直接说明 candidate prompt 是否更好、证据是否可靠、哪些样本发生变化、下一步应该检查哪里。
+如果想手动分步运行，就先 `pcl init --path demo`，进入 `demo`，再运行
+`pcl analyze --config promptcontrol.example.yaml --out runs/quick`。
 
 ## 最简单的 prompt 优化
 
