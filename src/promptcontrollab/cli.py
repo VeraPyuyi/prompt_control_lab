@@ -1739,7 +1739,10 @@ def _cmd_start(args: argparse.Namespace) -> None:
             bootstrap_samples=50,
             permutation_samples=50,
         )
-        print("Beginner mode: compare adjacent ecosystem tools")
+        if args.language == "zh":
+            print("新手模式: 对比相邻生态工具")
+        else:
+            print("Beginner mode: compare adjacent ecosystem tools")
         print(
             _format_start_ecosystem_result(
                 out_dir=out_dir,

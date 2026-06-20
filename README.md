@@ -11,6 +11,7 @@ git clone https://github.com/VeraPyuyi/prompt_control_lab.git && cd prompt_contr
 pip install -e ".[research,ui]"
 pcl start --choice demo --out demo && pcl start --guide
 pcl research-demo --out runs/research-demo && pcl diagnose --run runs/research-demo
+pcl start --choice ecosystem --out runs/ecosystem-demo
 ```
 
 ## What It Adds

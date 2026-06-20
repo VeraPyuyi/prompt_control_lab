@@ -11,6 +11,7 @@ git clone https://github.com/VeraPyuyi/prompt_control_lab.git && cd prompt_contr
 pip install -e ".[research,ui]"
 pcl start --choice demo --language zh --out demo && pcl start --guide --language zh
 pcl research-demo --out runs/research-demo && pcl diagnose --run runs/research-demo
+pcl start --choice ecosystem --language zh --out runs/ecosystem-demo
 ```
 
 ## 它补上了什么

@@ -1705,6 +1705,21 @@ def test_cli_start_choice_ecosystem_writes_comparison_demo(
     assert (out / "research_bundle.html").exists()
 
 
+def test_cli_start_choice_ecosystem_supports_chinese_output(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    out = tmp_path / "runs" / "ecosystem-demo-zh"
+
+    assert main(["start", "--choice", "ecosystem", "--language", "zh", "--out", str(out)]) == 0
+    output = capsys.readouterr().out
+
+    assert "新手模式: 对比相邻生态工具" in output
+    assert "已生成生态对比 demo" in output
+    assert "Beginner mode: compare adjacent ecosystem tools" not in output
+    assert (out / "ecosystem_scorecard.html").exists()
+
+
 def test_cli_start_choice_import_promptfoo_writes_run(
     tmp_path: Path,
     capsys: pytest.CaptureFixture[str],
