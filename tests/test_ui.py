@@ -45,6 +45,7 @@ from promptcontrollab.ui.data import (
     research_gap_plan_rows,
     research_gap_script_rows,
     research_gap_status_rows,
+    research_overview_path,
     research_status_counts,
     scaffold_check_action_rows,
     scaffold_check_issue_rows,
@@ -253,6 +254,10 @@ def test_report_model_lists_diagnostic_artifacts(tmp_path: Path) -> None:
     run = tmp_path / "runs" / "quick"
     _write_json(run / "manifest.json", {"mode": "quick"})
     _write_json(run / "research_diagnostics.json", {"inputs": {"hidden_states": {"source": "hf"}}})
+    (run / "research_overview.svg").write_text(
+        '<svg viewBox="0 0 100 40"><text>overview</text></svg>',
+        encoding="utf-8",
+    )
     _write_json(
         run / "research_gap_plan.json",
         {
@@ -301,6 +306,8 @@ def test_report_model_lists_diagnostic_artifacts(tmp_path: Path) -> None:
     assert detail["research_gap_plan"]["kind"] == "research_gap_plan"
     assert detail["research_gap_status"]["status"] == "needs_work"
     assert "diagnostics/trajectory.json" in detail["artifacts"]
+    assert "research_overview.svg" in detail["artifacts"]
+    assert research_overview_path(detail) == run / "research_overview.svg"
     assert "research_diagnostics.json" in detail["artifacts"]
     assert "research_gap_plan.json" in detail["artifacts"]
     assert "research_gap_status.json" in detail["artifacts"]
@@ -1430,6 +1437,53 @@ def test_tutorial_svg_renderer_reads_utf8_svg(tmp_path: Path) -> None:
 
     assert calls[0]["unsafe"] is True
     assert "中文 prompt_control_lab" in base64.b64decode(encoded).decode("utf-8")
+
+
+def test_research_overview_tab_renders_generated_svg(tmp_path: Path) -> None:
+    from promptcontrollab.ui import app
+
+    run = tmp_path / "runs" / "research-demo"
+    _write_json(run / "research_diagnostics.json", {"kind": "research_diagnostics"})
+    _write_json(run / "diagnostics" / "soft_hard.json", {"risk": "low"})
+    (run / "research_overview.svg").write_text(
+        '<svg viewBox="0 0 100 40"><text>Research overview graphic</text></svg>',
+        encoding="utf-8",
+    )
+    detail = load_run_detail(run)
+    calls: list[dict[str, object]] = []
+
+    class FakeStreamlit:
+        def markdown(self, body: str, *, unsafe_allow_html: bool = False) -> None:
+            calls.append({"body": body, "unsafe": unsafe_allow_html})
+
+        def caption(self, _body: object) -> None:
+            pass
+
+        def dataframe(self, *_args: object, **_kwargs: object) -> None:
+            pass
+
+        def plotly_chart(self, *_args: object, **_kwargs: object) -> None:
+            pass
+
+        def info(self, _body: object) -> None:
+            pass
+
+        def warning(self, _body: object) -> None:
+            pass
+
+        def code(self, *_args: object, **_kwargs: object) -> None:
+            pass
+
+    app._render_research_overview_tab(FakeStreamlit(), app.TEXT["en"], detail)
+
+    image_bodies = [
+        str(call["body"])
+        for call in calls
+        if str(call["body"]).startswith('<img src="data:image/svg+xml;base64,')
+    ]
+    assert image_bodies
+    encoded = image_bodies[0].split("base64,", 1)[1].split('"', 1)[0]
+    assert "Research overview graphic" in base64.b64decode(encoded).decode("utf-8")
 
 
 def test_tutorial_svg_renderer_uses_data_uri_not_raw_svg(tmp_path: Path) -> None:

@@ -63,6 +63,7 @@ from promptcontrollab.ui.data import (
     research_gap_plan_rows,
     research_gap_script_rows,
     research_gap_status_rows,
+    research_overview_path,
     research_status_counts,
     scaffold_check_action_rows,
     scaffold_check_issue_rows,
@@ -97,6 +98,7 @@ TEXT = {
         "research_empty": "No research diagnostics found for this run.",
         "research_demo_command": "pcl research-demo --out runs/research-demo",
         "research_pipeline": "Research workflow",
+        "research_overview_graphic": "Research overview graphic",
         "research_evidence_map": "Research evidence map",
         "research_diagnostics": "Paper-derived diagnostics",
         "research_coverage": "Diagnostic coverage",
@@ -339,6 +341,7 @@ TEXT = {
         "research_empty": "当前 run 还没有研究诊断 artifact。",
         "research_demo_command": "pcl research-demo --out runs/research-demo",
         "research_pipeline": "研究流程",
+        "research_overview_graphic": "研究总览图",
         "research_evidence_map": "研究证据地图",
         "research_diagnostics": "论文诊断模块",
         "research_coverage": "诊断覆盖情况",
@@ -1661,6 +1664,13 @@ def _render_research_overview_tab(st: Any, text: dict[str, str], detail: JsonDic
         + "</div>",
         unsafe_allow_html=True,
     )
+    overview_path = research_overview_path(detail)
+    if overview_path is not None:
+        st.markdown(
+            f'<div class="pcl-section-title">{html.escape(text["research_overview_graphic"])}</div>',
+            unsafe_allow_html=True,
+        )
+        _render_svg(st, overview_path)
     map_html = research_evidence_map_html(evidence_map)
     if map_html:
         st.markdown(

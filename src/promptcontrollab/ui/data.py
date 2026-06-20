@@ -22,6 +22,7 @@ RUN_ARTIFACTS = [
     "agent_run.json",
     "research_bundle.json",
     "research_bundle.html",
+    "research_overview.svg",
     "research_bundle_verification.json",
     "research_bundle_verification.html",
     "source_input_verification.json",
@@ -61,6 +62,7 @@ RUN_LEVEL_ARTIFACTS = [
     "agent_run.json",
     "research_bundle.json",
     "research_bundle.html",
+    "research_overview.svg",
     "research_bundle_verification.json",
     "research_bundle_verification.html",
     "source_input_verification.json",
@@ -185,6 +187,20 @@ def first_comparison(stats: JsonDict) -> JsonDict:
     ):
         return stats
     return {}
+
+
+def research_overview_path(detail: JsonDict) -> Path | None:
+    """Return the generated research overview SVG path for the selected run."""
+
+    artifacts = detail.get("artifacts")
+    artifact_list = [str(item) for item in artifacts] if isinstance(artifacts, list) else []
+    if "research_overview.svg" not in artifact_list:
+        return None
+    run_path = detail.get("path")
+    if not isinstance(run_path, str) or not run_path:
+        return None
+    candidate = Path(run_path) / "research_overview.svg"
+    return candidate if candidate.exists() else None
 
 
 def research_diagnostic_rows(detail: JsonDict) -> list[JsonDict]:
