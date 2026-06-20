@@ -1635,6 +1635,7 @@ def test_cli_start_guide_prints_goal_based_paths(capsys: pytest.CaptureFixture[s
     assert "Audit what an agent changed" in output
     assert "Ecosystem choice map" in output
     assert "Promptfoo -> eval / CI / red-team" in output
+    assert "DeepEval -> Pytest-style LLM tests" in output
     assert "prompt-optimizer -> prompt writing" in output
     assert "pcl start" in output
 
@@ -1654,6 +1655,7 @@ def test_cli_start_guide_supports_chinese(capsys: pytest.CaptureFixture[str]) ->
     assert "审计 agent 到底改了什么" in output
     assert "生态选择地图" in output
     assert "Promptfoo -> eval / CI / red-team" in output
+    assert "DeepEval -> Pytest-style LLM tests" in output
     assert "prompt-optimizer -> prompt 写作" in output
     assert "pcl start --language zh" in output
 

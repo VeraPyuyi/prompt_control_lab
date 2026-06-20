@@ -2898,6 +2898,7 @@ def _format_start_guide(language: str = "en") -> str:
         ecosystem_lines = [
             "生态选择地图:",
             "  Promptfoo -> eval / CI / red-team; PCL 补成对统计和 claim 边界。",
+            "  DeepEval -> Pytest-style LLM tests; PCL 补 provenance 和 claim check。",
             "  LangSmith / Langfuse -> trace / observability; PCL 补 prompt-only 证据和论文诊断。",
             "  prompt-optimizer -> prompt 写作; PCL 证明优化是否可靠。",
         ]
@@ -2952,6 +2953,7 @@ def _format_start_guide(language: str = "en") -> str:
         ecosystem_lines = [
             "Ecosystem choice map:",
             "  Promptfoo -> eval / CI / red-team; PCL adds paired stats and claim boundaries.",
+            "  DeepEval -> Pytest-style LLM tests; PCL adds provenance and claim checks.",
             "  LangSmith / Langfuse -> traces / observability; "
             "PCL adds prompt-only evidence and paper diagnostics.",
             "  prompt-optimizer -> prompt writing; "
