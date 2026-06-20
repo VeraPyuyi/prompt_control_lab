@@ -1604,6 +1604,7 @@ def test_cli_start_choice_demo_creates_runnable_project(
     assert "Beginner mode: create a runnable demo project and quick report" in output
     assert "Generated quick report:" in output
     assert "Generated gate result:" in output
+    assert "Generated history index:" in output
     assert "Demo result summary:" in output
     assert "- Gate:" in output
     assert "- Candidate score:" in output
@@ -1614,6 +1615,7 @@ def test_cli_start_choice_demo_creates_runnable_project(
     assert (demo / "examples" / "guard.policy.yaml").exists()
     assert (demo / "runs" / "quick" / "report.html").exists()
     assert (demo / "runs" / "quick" / "gate_result.json").exists()
+    assert (demo / "runs" / "history_index.json").exists()
 
 
 def test_cli_start_guide_prints_goal_based_paths(capsys: pytest.CaptureFixture[str]) -> None:
@@ -1675,6 +1677,7 @@ def test_cli_start_interactive_menu_supports_chinese(
     assert "已创建 PromptControlLab 示例项目" in output
     assert "已生成 quick report:" in output
     assert "已生成 gate result:" in output
+    assert "已生成 history index:" in output
     assert "Demo 结果摘要:" in output
     assert "- Gate:" in output
     assert "- Candidate score:" in output
@@ -1686,6 +1689,7 @@ def test_cli_start_interactive_menu_supports_chinese(
     assert (tmp_path / "research-demo" / "README.zh.md").exists()
     assert (tmp_path / "research-demo" / "runs" / "quick" / "report.html").exists()
     assert (tmp_path / "research-demo" / "runs" / "quick" / "gate_result.json").exists()
+    assert (tmp_path / "research-demo" / "runs" / "history_index.json").exists()
 
 
 def test_cli_start_guard_passes_policy(

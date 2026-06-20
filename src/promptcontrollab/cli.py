@@ -1329,6 +1329,7 @@ def _format_init_output(
     *,
     language: str = "en",
     quick_run: Path | None = None,
+    history_index: Path | None = None,
 ) -> str:
     """Return concise next steps after creating an example project."""
 
@@ -1344,6 +1345,8 @@ def _format_init_output(
                     *_format_quick_run_summary(quick_run, language=language),
                 ]
             )
+        if history_index is not None:
+            lines.append(f"已生成 history index: {history_index}")
         lines.extend(
             [
                 "",
@@ -1378,6 +1381,8 @@ def _format_init_output(
                 *_format_quick_run_summary(quick_run, language=language),
             ]
         )
+    if history_index is not None:
+        lines.append(f"Generated history index: {history_index}")
     lines.extend(
         [
             "",
@@ -1676,11 +1681,20 @@ def _cmd_start(args: argparse.Namespace) -> None:
             prompt_file=out_dir / "prompts" / "current.txt",
             prompt_version="v1",
         )
+        history_index = out_dir / "runs" / "history_index.json"
+        index_history(runs_dir=out_dir / "runs", out_path=history_index)
         if args.language == "zh":
             print("新手模式: 创建可运行 demo 项目并生成 quick report")
         else:
             print("Beginner mode: create a runnable demo project and quick report")
-        print(_format_init_output(out_dir, language=args.language, quick_run=quick_run))
+        print(
+            _format_init_output(
+                out_dir,
+                language=args.language,
+                quick_run=quick_run,
+                history_index=history_index,
+            )
+        )
         return
 
     if choice == "research":
