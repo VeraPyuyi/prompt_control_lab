@@ -451,6 +451,15 @@ def test_cli_ecosystem_demo_runs_all_external_bridge_examples(tmp_path: Path) ->
     assert matrix[0]["research_bundle"] == "present"
     assert matrix[0]["bundle_verification"] == "not_checked"
     assert matrix[0]["missing_paper_diagnostic_count"] > 0
+    market_map = scorecard["market_map"]
+    assert [item["tool"] for item in market_map] == [
+        "Braintrust",
+        "Arize Phoenix",
+        "OpenAI Evals",
+        "Humanloop",
+    ]
+    assert all("not_imported" in item["status"] for item in market_map)
+    assert market_map[-1]["status"] == "historical_sunset_reference_not_imported"
     promptfoo_links = scorecard["rows"][0]["artifact_links"]
     assert {"label": "Bridge summary", "path": "promptfoo/bridge_summary.html"} in promptfoo_links
     assert {"label": "Research bundle", "path": "promptfoo/research_bundle.html"} in promptfoo_links
@@ -492,6 +501,9 @@ def test_cli_ecosystem_demo_runs_all_external_bridge_examples(tmp_path: Path) ->
     assert "[Research bundle](promptfoo/research_bundle.html)" in scorecard_markdown
     assert "[Evidence card](promptfoo/evidence_card.html)" in scorecard_markdown
     assert "[Claim check](promptfoo/claim_check.html)" in scorecard_markdown
+    assert "Extended market map (not imported in this demo)" in scorecard_markdown
+    assert "Braintrust" in scorecard_markdown
+    assert "not imported evidence bundles" in scorecard_markdown
     scorecard_html = (out / "ecosystem_scorecard.html").read_text(encoding="utf-8")
     assert "Ecosystem Scorecard" in scorecard_html
     assert "PCL-added evidence matrix" in scorecard_html
@@ -508,6 +520,9 @@ def test_cli_ecosystem_demo_runs_all_external_bridge_examples(tmp_path: Path) ->
     assert "promptfoo/evidence_card.html" in scorecard_html
     assert "promptfoo/claim_check.html" in scorecard_html
     assert "promptfoo/report.html" in scorecard_html
+    assert "Extended market map (not imported in this demo)" in scorecard_html
+    assert "OpenAI Evals" in scorecard_html
+    assert "positioning_only_not_imported" in scorecard_html
     assert main(["gap-status", "--run", str(out / "promptfoo")]) == 0
     assert main(["research-bundle", "--run", str(out / "promptfoo"), "--verify"]) == 0
     (out / "ecosystem_scorecard.json").unlink()

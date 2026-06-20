@@ -367,9 +367,11 @@ def _write_scorecard(
         "tool_count": len(rows),
         "rows": rows,
         "pcl_evidence_matrix": evidence_matrix,
+        "market_map": _extended_market_map(),
         "recommended_review_order": [
             "Open ecosystem_scorecard.html for the cross-tool summary.",
             "Use ecosystem_scorecard.md for plain-text review.",
+            "Use the extended market map only for positioning; imported rows are the evidence.",
             "Open each bridge_summary.html for tool-specific provenance.",
             "Open evidence_card.html and claim_check.html before making an optimization claim.",
             "Open research_gap_plan.html, run the reviewed commands, then run pcl gap-status.",
@@ -521,6 +523,45 @@ def _pcl_evidence_matrix(rows: list[JsonDict]) -> list[JsonDict]:
             }
         )
     return matrix
+
+
+def _extended_market_map() -> list[JsonDict]:
+    """Return positioning-only rows for adjacent tools not imported by the demo."""
+
+    return [
+        {
+            "tool": "Braintrust",
+            "strong_lane": "Eval datasets, experiments, traces, and human review workflows.",
+            "pcl_should_learn": "Fast experiment UX and reviewer-friendly comparison pages.",
+            "pcl_owns": "Paper-diagnostic evidence for prompt optimization claims.",
+            "status": "positioning_only_not_imported",
+        },
+        {
+            "tool": "Arize Phoenix",
+            "strong_lane": (
+                "Open-source observability, tracing, evaluation, and retrieval analysis."
+            ),
+            "pcl_should_learn": "Trace-first debugging and rich local investigation views.",
+            "pcl_owns": "Prompt-only validity, control diagnostics, and soft-hard risk reports.",
+            "status": "positioning_only_not_imported",
+        },
+        {
+            "tool": "OpenAI Evals",
+            "strong_lane": "Canonical eval harness patterns and reusable benchmark definitions.",
+            "pcl_should_learn": "Portable eval schemas and clear task/result separation.",
+            "pcl_owns": (
+                "Tri-split hygiene, prompt identity, and evidence cards around eval outputs."
+            ),
+            "status": "positioning_only_not_imported",
+        },
+        {
+            "tool": "Humanloop",
+            "strong_lane": "Historical prompt management and evaluation workflow reference.",
+            "pcl_should_learn": "Prompt lifecycle UX, registry language, and review workflows.",
+            "pcl_owns": "Local research diagnostics and provenance-first export artifacts.",
+            "status": "historical_sunset_reference_not_imported",
+        },
+    ]
 
 
 def _artifact_status(row: JsonDict, label: str) -> JsonDict:
@@ -784,6 +825,38 @@ def _render_scorecard(payload: JsonDict) -> str:
                 )
                 + " |"
             )
+    market_map = payload.get("market_map")
+    lines.extend(
+        [
+            "",
+            "## Extended market map (not imported in this demo)",
+            "",
+            (
+                "These rows are positioning references only. They are not imported evidence "
+                "bundles and should not be used as direct benchmark results."
+            ),
+            "",
+            "| Tool | Strong lane | What PCL should learn | What PCL still owns | Status |",
+            "|---|---|---|---|---|",
+        ]
+    )
+    if isinstance(market_map, list):
+        for row in market_map:
+            if not isinstance(row, dict):
+                continue
+            lines.append(
+                "| "
+                + " | ".join(
+                    [
+                        str(row.get("tool", "")),
+                        str(row.get("strong_lane", "")),
+                        str(row.get("pcl_should_learn", "")),
+                        str(row.get("pcl_owns", "")),
+                        str(row.get("status", "")),
+                    ]
+                )
+                + " |"
+            )
     lines.extend(
         [
             "",
@@ -825,9 +898,11 @@ def _artifact_links_markdown(value: object) -> str:
 def _render_scorecard_html(payload: JsonDict) -> str:
     rows = _scorecard_html_rows(payload.get("rows"))
     matrix_rows = _scorecard_html_rows(payload.get("pcl_evidence_matrix"))
+    market_rows = _scorecard_html_rows(payload.get("market_map"))
     summary = _scorecard_summary(rows)
     matrix_table_rows = "\n".join(_render_matrix_html_row(row) for row in matrix_rows)
     table_rows = "\n".join(_render_scorecard_html_row(row) for row in rows)
+    market_table_rows = "\n".join(_render_market_map_html_row(row) for row in market_rows)
     review_items = "\n".join(
         f"<li>{_html_text(item)}</li>"
         for item in _string_list(payload.get("recommended_review_order"))
@@ -1047,6 +1122,28 @@ def _render_scorecard_html(payload: JsonDict) -> str:
         <div class="card"><p>{boundary}</p></div>
       </div>
     </section>
+
+    <h2>Extended market map (not imported in this demo)</h2>
+    <p>
+      These rows are positioning references only. They are not imported evidence bundles
+      and should not be used as direct benchmark results.
+    </p>
+    <div class="table-wrap" style="margin-top: 14px;">
+      <table>
+        <thead>
+          <tr>
+            <th>Tool</th>
+            <th>Strong lane</th>
+            <th>What PCL should learn</th>
+            <th>What PCL still owns</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          {market_table_rows}
+        </tbody>
+      </table>
+    </div>
   </main>
 </body>
 </html>
@@ -1122,6 +1219,18 @@ def _render_scorecard_html_row(row: JsonDict) -> str:
         f"<td class=\"muted\">{_html_text(missing_text)}</td>"
         f"<td>{_html_link(row.get('open_first'))}</td>"
         f"<td><code>{_html_text(row.get('gap_status_command', ''))}</code></td>"
+        "</tr>"
+    )
+
+
+def _render_market_map_html_row(row: JsonDict) -> str:
+    return (
+        "<tr>"
+        f"<td><strong>{_html_text(row.get('tool', ''))}</strong></td>"
+        f"<td>{_html_text(row.get('strong_lane', ''))}</td>"
+        f"<td>{_html_text(row.get('pcl_should_learn', ''))}</td>"
+        f"<td>{_html_text(row.get('pcl_owns', ''))}</td>"
+        f"<td>{_html_badge(row.get('status'))}</td>"
         "</tr>"
     )
 
