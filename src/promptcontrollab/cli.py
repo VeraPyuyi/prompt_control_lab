@@ -1338,7 +1338,7 @@ def _format_init_output(path: Path, *, language: str = "en") -> str:
                 "  pcl analyze --config promptcontrol.example.yaml --out runs/quick",
                 "  pcl ui --runs runs --policy examples/guard.policy.yaml",
                 "",
-                "打开该目录里的 README.md, 可以查看文件说明和可复制命令。",
+                "打开该目录里的 README.zh.md, 可以查看中文文件说明和可复制命令。",
             ]
         )
 
@@ -1352,7 +1352,8 @@ def _format_init_output(path: Path, *, language: str = "en") -> str:
             "  pcl analyze --config promptcontrol.example.yaml --out runs/quick",
             "  pcl ui --runs runs --policy examples/guard.policy.yaml",
             "",
-            "Open README.md in that folder for the file map and copy-paste paths.",
+            "Open README.md in that folder for the file map and copy-paste paths. "
+            "Chinese guide: README.zh.md.",
         ]
     )
 

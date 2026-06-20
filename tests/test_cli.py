@@ -76,9 +76,13 @@ def test_cli_example_flow(tmp_path: Path) -> None:
     demo = tmp_path / "demo"
     assert main(["init", "--path", str(demo)]) == 0
     demo_readme = (demo / "README.md").read_text(encoding="utf-8")
+    demo_readme_zh = (demo / "README.zh.md").read_text(encoding="utf-8")
     assert "pcl start --guide" in demo_readme
     assert "pcl analyze --config promptcontrol.example.yaml --out runs/quick" in demo_readme
     assert "pcl ui --runs runs --policy examples/guard.policy.yaml" in demo_readme
+    assert "PromptControlLab 示例项目" in demo_readme_zh
+    assert "pcl start --guide --language zh" in demo_readme_zh
+    assert "pcl analyze --config promptcontrol.example.yaml --out runs/quick" in demo_readme_zh
     assert (
         main(
             [
@@ -161,6 +165,7 @@ def test_cli_init_prints_beginner_next_steps(
     assert "pcl analyze --config promptcontrol.example.yaml --out runs/quick" in output
     assert "pcl ui --runs runs --policy examples/guard.policy.yaml" in output
     assert "Open README.md" in output
+    assert "README.zh.md" in output
 
 
 def test_cli_quick_analyze_explain_and_report(tmp_path: Path) -> None:
@@ -1660,7 +1665,9 @@ def test_cli_start_interactive_menu_supports_chinese(
     assert "已创建 PromptControlLab 示例项目" in output
     assert "下一步:" in output
     assert "pcl start --guide --language zh" in output
+    assert "README.zh.md" in output
     assert (tmp_path / "research-demo" / "README.md").exists()
+    assert (tmp_path / "research-demo" / "README.zh.md").exists()
 
 
 def test_cli_start_guard_passes_policy(
