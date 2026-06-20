@@ -1868,7 +1868,7 @@ def test_cli_choose_recommends_adjacent_tool_paths(capsys: pytest.CaptureFixture
 
     assert main(["choose", "--language", "zh"]) == 0
     output = capsys.readouterr().out
-    assert "security: 先用 Promptfoo" in output
+    assert "安全评测和红队检查 (security): 先用 Promptfoo" in output
     assert "适合: 安全评测, 红队检查, CI 评测矩阵." in output
     assert "PCL 补: 成对不确定性, prompt-only 有效性和 claim 边界." in output
 
@@ -2025,7 +2025,7 @@ def test_cli_start_interactive_chinese_choose_menu_prints_tool_map(
     assert "请选择 1、2、3、4、5、6、7 或 8" in output
     assert "新手模式: 选择先用哪个相邻工具" in output
     assert "工具选择地图" in output
-    assert "security: 先用 Promptfoo" in output
+    assert "安全评测和红队检查 (security): 先用 Promptfoo" in output
 
 
 def test_cli_start_choice_ecosystem_writes_comparison_demo(

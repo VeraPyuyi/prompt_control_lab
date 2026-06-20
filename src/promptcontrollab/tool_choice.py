@@ -12,6 +12,8 @@ def tool_choice_lanes() -> list[JsonDict]:
     return [
         {
             "id": "security",
+            "label": "Security and red-team evals",
+            "label_zh": "安全评测和红队检查",
             "use_first": "Promptfoo",
             "when": "Security evals, red-team checks, CI eval matrices.",
             "when_zh": "安全评测, 红队检查, CI 评测矩阵.",
@@ -58,6 +60,8 @@ def tool_choice_lanes() -> list[JsonDict]:
         },
         {
             "id": "unit-tests",
+            "label": "LLM unit tests and metrics",
+            "label_zh": "LLM 单元测试和指标",
             "use_first": "DeepEval",
             "when": "Pytest-style LLM unit tests, assertions, and ready-made metrics.",
             "when_zh": "Pytest 风格 LLM 单元测试, 断言和现成指标.",
@@ -95,7 +99,10 @@ def tool_choice_lanes() -> list[JsonDict]:
         },
         {
             "id": "observability",
+            "label": "Observability and agent debugging",
+            "label_zh": "观测和 agent 调试",
             "use_first": "LangSmith or Langfuse",
+            "use_first_zh": "LangSmith 或 Langfuse",
             "when": "Traces, monitoring, cost, prompt registry, and agent debugging.",
             "when_zh": "trace, 监控, 成本, prompt registry 和 agent 调试.",
             "pcl_short": "Turn trace/eval exports into reproducible prompt-optimization evidence.",
@@ -146,6 +153,8 @@ def tool_choice_lanes() -> list[JsonDict]:
         },
         {
             "id": "prompt-writing",
+            "label": "Prompt writing and rewriting",
+            "label_zh": "Prompt 写作和改写",
             "use_first": "linshenkx/prompt-optimizer",
             "when": "Prompt rewriting, prompt assets, favorites, and interactive testing.",
             "when_zh": "prompt 改写, prompt 资产, 收藏和交互测试.",
@@ -201,6 +210,8 @@ def tool_choice_lanes() -> list[JsonDict]:
         },
         {
             "id": "research-evidence",
+            "label": "Research evidence and diagnostics",
+            "label_zh": "研究证据和论文诊断",
             "use_first": "prompt_control_lab",
             "when": "Paper-derived diagnostics, reproducibility, and safe claim boundaries.",
             "when_zh": "论文诊断, 可复现性和安全 claim 边界.",
@@ -283,8 +294,11 @@ def choose_tool_for_need(need: str) -> JsonDict:
     return {
         "need": need,
         "matched": matched,
+        "matched_label": best_lane.get("label", matched),
+        "matched_label_zh": best_lane.get("label_zh", best_lane.get("label", matched)),
         "confidence": "high" if best_score >= 2 else "medium" if best_score == 1 else "low",
         "use_first": best_lane["use_first"],
+        "use_first_zh": best_lane.get("use_first_zh", best_lane["use_first"]),
         "why": best_lane["why"],
         "why_zh": best_lane.get("why_zh", best_lane["why"]),
         "pcl_adds": best_lane["pcl_adds"],
@@ -428,7 +442,10 @@ def format_tool_choice(payload: JsonDict, *, language: str = "en") -> str:
         if language == "zh":
             lines = ["工具选择地图", "", "按你的目标选择第一步:"]
             for lane in choices:
-                lines.append(f"- {lane.get('id')}: 先用 {lane.get('use_first')}")
+                lines.append(
+                    f"- {_lane_display(lane, language='zh')}: "
+                    f"先用 {_use_first_display(lane, language='zh')}"
+                )
                 lines.append(f"  适合: {lane.get('when_zh') or lane.get('when', '')}")
                 lines.append(f"  PCL 补: {lane.get('pcl_short_zh') or lane.get('pcl_short', '')}")
             lines.extend(["", "下一步: pcl choose --need <你的目标>"])
@@ -447,8 +464,9 @@ def format_tool_choice(payload: JsonDict, *, language: str = "en") -> str:
         lines = [
             "工具选择建议",
             f"需求: {payload.get('need', '')}",
-            f"匹配路线: {payload.get('matched', '')} ({payload.get('confidence', 'unknown')})",
-            f"先用: {payload.get('use_first', '')}",
+            f"匹配路线: {_payload_lane_display(payload, language='zh')}",
+            f"置信度: {payload.get('confidence', 'unknown')}",
+            f"先用: {payload.get('use_first_zh') or payload.get('use_first', '')}",
             "",
             f"为什么: {payload.get('why_zh') or payload.get('why', '')}",
             f"PCL 补什么: {payload.get('pcl_adds_zh') or payload.get('pcl_adds', '')}",
@@ -510,7 +528,7 @@ def render_tool_choice_markdown(payload: JsonDict, *, language: str = "en") -> s
                 lines.append(
                     "| "
                     f"{_md_cell(lane.get('when_zh') or lane.get('when'))} | "
-                    f"{_md_cell(lane.get('use_first'))} | "
+                    f"{_md_cell(_use_first_display(lane, language='zh'))} | "
                     f"{_md_cell(lane.get('pcl_short_zh') or lane.get('pcl_short'))} |"
                 )
             lines.extend(["", "## 从市场缺口到 PCL 命令", ""])
@@ -541,9 +559,9 @@ def render_tool_choice_markdown(payload: JsonDict, *, language: str = "en") -> s
             "# 工具选择建议",
             "",
             f"- 需求: `{payload.get('need', '')}`",
-            f"- 匹配路线: `{payload.get('matched', '')}`",
+            f"- 匹配路线: `{_payload_lane_display(payload, language='zh')}`",
             f"- 置信度: `{payload.get('confidence', 'unknown')}`",
-            f"- 先用: **{payload.get('use_first', '')}**",
+            f"- 先用: **{payload.get('use_first_zh') or payload.get('use_first', '')}**",
             "",
             "## 为什么",
             "",
@@ -618,6 +636,32 @@ def _selected_market_gap_action(payload: JsonDict, *, language: str) -> JsonDict
     key = "market_gap_action_zh" if language == "zh" else "market_gap_action"
     value = payload.get(key)
     return dict(value) if isinstance(value, dict) else {}
+
+
+def _lane_display(lane: JsonDict, *, language: str) -> str:
+    lane_id = str(lane.get("id", "") or "")
+    label = (
+        str(lane.get("label_zh") or lane.get("label") or lane_id)
+        if language == "zh"
+        else str(lane.get("label") or lane_id)
+    )
+    return f"{label} ({lane_id})" if lane_id and label != lane_id else label
+
+
+def _payload_lane_display(payload: JsonDict, *, language: str) -> str:
+    lane_id = str(payload.get("matched", "") or "")
+    label = (
+        str(payload.get("matched_label_zh") or payload.get("matched_label") or lane_id)
+        if language == "zh"
+        else str(payload.get("matched_label") or lane_id)
+    )
+    return f"{label} ({lane_id})" if lane_id and label != lane_id else label
+
+
+def _use_first_display(lane: JsonDict, *, language: str) -> str:
+    if language == "zh":
+        return str(lane.get("use_first_zh") or lane.get("use_first") or "")
+    return str(lane.get("use_first") or "")
 
 
 def _md_cell(value: object) -> str:
