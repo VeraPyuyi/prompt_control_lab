@@ -1404,15 +1404,17 @@ def test_ui_ecosystem_choice_rows_explain_adjacent_tool_paths() -> None:
     en_rows = app.ecosystem_choice_rows("en")
     zh_rows = app.ecosystem_choice_rows("zh")
 
-    assert len(en_rows) == 5
-    assert len(zh_rows) == 5
+    assert len(en_rows) == 6
+    assert len(zh_rows) == 6
     combined_en = " ".join(str(row) for row in en_rows)
     combined_zh = " ".join(str(row) for row in zh_rows)
-    for name in ["Promptfoo", "LangSmith", "Langfuse", "prompt-optimizer"]:
+    for name in ["Promptfoo", "DeepEval", "LangSmith", "Langfuse", "prompt-optimizer"]:
         assert name in combined_en
         assert name in combined_zh
     assert "paired uncertainty" in combined_en
+    assert "Pytest-style LLM unit tests" in combined_en
     assert "成对不确定性" in combined_zh
+    assert "LLM 单元测试" in combined_zh
     assert "证据" in combined_zh
     assert "ecosystem_choice_title" in app.TEXT["en"]
     assert "ecosystem_choice_title" in app.TEXT["zh"]

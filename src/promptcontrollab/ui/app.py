@@ -830,6 +830,11 @@ ECOSYSTEM_CHOICE_ROWS = {
             "pcl": "paired uncertainty, prompt-only validity, claim boundaries, and paper diagnostics",
         },
         {
+            "start": "Pytest-style LLM unit tests and ready-made metrics",
+            "tool": "DeepEval",
+            "pcl": "prompt/model/split provenance, paired uncertainty, and claim checks around test results",
+        },
+        {
             "start": "Traces, agent debugging, datasets, or LangChain/LangGraph observability",
             "tool": "LangSmith",
             "pcl": "a reproducible evidence bundle that separates prompt effects from model, metric, and split changes",
@@ -855,6 +860,11 @@ ECOSYSTEM_CHOICE_ROWS = {
             "start": "评测矩阵、CI 检查、红队或安全测试",
             "tool": "Promptfoo",
             "pcl": "需要成对不确定性、prompt-only 有效性、claim 边界和论文诊断",
+        },
+        {
+            "start": "Pytest 风格 LLM 单元测试和现成指标",
+            "tool": "DeepEval",
+            "pcl": "需要补 prompt / model / split provenance、成对不确定性和 claim check",
         },
         {
             "start": "Trace、agent debug、dataset 或 LangChain/LangGraph 观测",
