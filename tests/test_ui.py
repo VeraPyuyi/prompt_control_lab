@@ -45,6 +45,7 @@ from promptcontrollab.ui.data import (
     research_gap_plan_rows,
     research_gap_script_rows,
     research_gap_status_rows,
+    research_insight_rows,
     research_overview_path,
     research_status_counts,
     scaffold_check_action_rows,
@@ -884,6 +885,35 @@ def test_research_diagnostic_rows_summarize_paper_artifacts(tmp_path: Path) -> N
     assert research_status_counts(detail) == {"available": 5}
 
 
+def test_research_insight_rows_explain_diagnostics_in_both_languages(tmp_path: Path) -> None:
+    run = tmp_path / "runs" / "research-demo"
+    _write_json(run / "diagnostics" / "soft_hard.json", {"risk": "low"})
+    _write_json(
+        run / "diagnostics" / "trajectory.json",
+        {"turnpike_like_signal": True, "log_decay_slope": -0.42},
+    )
+    _write_json(
+        run / "diagnostics" / "riccati.json",
+        {"stable_surrogate": True, "closed_loop_spectral_radius": 0.73},
+    )
+    _write_json(
+        run / "diagnostics" / "tv_soft.json",
+        {"delta_vs_baseline": {"time_varying": 0.2, "static": 0.01}},
+    )
+    detail = load_run_detail(run)
+
+    english = research_insight_rows(detail, "en")
+    chinese = research_insight_rows(detail, "zh")
+
+    assert english[0]["diagnostic"] == "Soft-to-hard gap"
+    assert "hard-token deployment" in english[0]["checks"]
+    assert "same hidden-state source" in english[1]["next_action"]
+    assert chinese[0]["diagnostic"] == "软转硬 gap"
+    assert "hard prompt" in chinese[0]["interpretation"]
+    assert "时变结构" in chinese[-1]["interpretation"]
+    assert all(row["next_action"] for row in english)
+
+
 def test_research_evidence_map_links_protocol_diagnostics_and_claim(tmp_path: Path) -> None:
     run = tmp_path / "runs" / "research-demo"
     _write_json(run / "splits.json", {"split_hash": "abc"})
@@ -1478,7 +1508,7 @@ def test_research_overview_tab_renders_generated_svg(
         def code(self, *_args: object, **_kwargs: object) -> None:
             pass
 
-    app._render_research_overview_tab(FakeStreamlit(), app.TEXT["en"], detail)
+    app._render_research_overview_tab(FakeStreamlit(), app.TEXT["en"], detail, "en")
 
     image_bodies = [
         str(call["body"])
@@ -1488,6 +1518,7 @@ def test_research_overview_tab_renders_generated_svg(
     assert image_bodies
     encoded = image_bodies[0].split("base64,", 1)[1].split('"', 1)[0]
     assert "Research overview graphic" in base64.b64decode(encoded).decode("utf-8")
+    assert any("Plain-language interpretation" in str(call["body"]) for call in calls)
 
 
 def test_tutorial_svg_renderer_uses_data_uri_not_raw_svg(tmp_path: Path) -> None:

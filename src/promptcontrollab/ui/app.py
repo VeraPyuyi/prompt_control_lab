@@ -63,6 +63,7 @@ from promptcontrollab.ui.data import (
     research_gap_plan_rows,
     research_gap_script_rows,
     research_gap_status_rows,
+    research_insight_rows,
     research_overview_path,
     research_status_counts,
     scaffold_check_action_rows,
@@ -99,6 +100,7 @@ TEXT = {
         "research_demo_command": "pcl research-demo --out runs/research-demo",
         "research_pipeline": "Research workflow",
         "research_overview_graphic": "Research overview graphic",
+        "research_insights": "Plain-language interpretation",
         "research_evidence_map": "Research evidence map",
         "research_diagnostics": "Paper-derived diagnostics",
         "research_coverage": "Diagnostic coverage",
@@ -342,6 +344,7 @@ TEXT = {
         "research_demo_command": "pcl research-demo --out runs/research-demo",
         "research_pipeline": "研究流程",
         "research_overview_graphic": "研究总览图",
+        "research_insights": "直白解释",
         "research_evidence_map": "研究证据地图",
         "research_diagnostics": "论文诊断模块",
         "research_coverage": "诊断覆盖情况",
@@ -1400,7 +1403,7 @@ def _render_view(
     allow_external_outputs: bool,
 ) -> None:
     if name == "research":
-        _render_research_overview_tab(st, text, detail)
+        _render_research_overview_tab(st, text, detail, language)
     elif name == "workflows":
         _render_workflows_tab(
             st,
@@ -1584,7 +1587,12 @@ def _select_run(st: Any, runs: list[JsonDict], text: dict[str, str]) -> JsonDict
     return load_run_detail(Path(str(match["path"])))
 
 
-def _render_research_overview_tab(st: Any, text: dict[str, str], detail: JsonDict) -> None:
+def _render_research_overview_tab(
+    st: Any,
+    text: dict[str, str],
+    detail: JsonDict,
+    language: str,
+) -> None:
     st.markdown(f'<div class="pcl-section-title">{html.escape(text["research_title"])}</div>', unsafe_allow_html=True)
     st.caption(text["research_subtitle"])
 
@@ -1671,6 +1679,13 @@ def _render_research_overview_tab(st: Any, text: dict[str, str], detail: JsonDic
             unsafe_allow_html=True,
         )
         _render_svg(st, overview_path)
+    insight_rows = research_insight_rows(detail, language)
+    if insight_rows:
+        st.markdown(
+            f'<div class="pcl-section-title">{html.escape(text["research_insights"])}</div>',
+            unsafe_allow_html=True,
+        )
+        st.dataframe(insight_rows, use_container_width=True)
     map_html = research_evidence_map_html(evidence_map)
     if map_html:
         st.markdown(

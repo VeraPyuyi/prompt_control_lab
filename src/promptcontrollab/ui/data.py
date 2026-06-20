@@ -262,6 +262,55 @@ def research_diagnostic_rows(detail: JsonDict) -> list[JsonDict]:
     return rows
 
 
+def research_insight_rows(detail: JsonDict, language: str = "en") -> list[JsonDict]:
+    """Return plain-language explanations for paper-derived diagnostics."""
+
+    lang = "zh" if language == "zh" else "en"
+    diagnostics = detail.get("diagnostics")
+    diagnostics_dict = diagnostics if isinstance(diagnostics, dict) else {}
+    specs: list[tuple[str, str, JsonDict]] = [
+        (
+            "soft_hard",
+            "diagnostics/soft_hard.json",
+            _diagnostic_payload(diagnostics_dict, "soft_hard"),
+        ),
+        ("hidden_states", "inputs/hidden_states.npz", _hidden_state_payload(detail)),
+        (
+            "trajectory",
+            "diagnostics/trajectory.json",
+            _diagnostic_payload(diagnostics_dict, "trajectory"),
+        ),
+        (
+            "riccati",
+            "diagnostics/riccati.json",
+            _diagnostic_payload(diagnostics_dict, "riccati"),
+        ),
+        (
+            "tv_soft",
+            "diagnostics/tv_soft.json",
+            _diagnostic_payload(diagnostics_dict, "tv_soft"),
+        ),
+    ]
+    rows: list[JsonDict] = []
+    for key, artifact, payload in specs:
+        payload_dict = payload if isinstance(payload, dict) else {}
+        rows.append(
+            {
+                "diagnostic": _research_label(key, lang),
+                "checks": _research_check(key, lang),
+                "result": _research_result(key, payload_dict, lang),
+                "interpretation": _research_interpretation(key, payload_dict, lang),
+                "next_action": _research_next_action(key, payload_dict, artifact, lang),
+            }
+        )
+    return rows
+
+
+def _diagnostic_payload(diagnostics: JsonDict, key: str) -> JsonDict:
+    payload = diagnostics.get(key)
+    return payload if isinstance(payload, dict) else {}
+
+
 def research_status_counts(detail: JsonDict) -> dict[str, int]:
     """Return available/missing diagnostic counts for the research overview."""
 
@@ -902,6 +951,205 @@ def _tv_soft_signal(payload: JsonDict) -> str:
         return f"best delta={best_key}:{deltas.get(best_key)}"
     means = payload.get("method_means")
     return f"method means={len(means) if isinstance(means, dict) else 0}"
+
+
+def _research_label(key: str, language: str) -> str:
+    labels = {
+        "en": {
+            "soft_hard": "Soft-to-hard gap",
+            "hidden_states": "Hidden-state input",
+            "trajectory": "Trajectory stability",
+            "riccati": "Riccati surrogate",
+            "tv_soft": "Time-varying soft-control",
+        },
+        "zh": {
+            "soft_hard": "软转硬 gap",
+            "hidden_states": "Hidden-state 输入",
+            "trajectory": "轨迹稳定性",
+            "riccati": "Riccati 代理模型",
+            "tv_soft": "时变 soft-control",
+        },
+    }
+    return labels[language][key]
+
+
+def _research_check(key: str, language: str) -> str:
+    checks = {
+        "en": {
+            "soft_hard": "Can a learned soft prompt survive hard-token deployment?",
+            "hidden_states": "Do we have the activation source needed for trajectory diagnostics?",
+            "trajectory": "Does the hidden-state path show drift or turnpike-like decay?",
+            "riccati": "Is the fitted finite-dimensional control surrogate self-consistent?",
+            "tv_soft": "Does time-varying structure beat static, shuffled, or random controls?",
+        },
+        "zh": {
+            "soft_hard": "训练得到的 soft prompt 转成 hard token 后还可靠吗?",
+            "hidden_states": "是否已有 trajectory 诊断需要的 hidden-state 输入?",
+            "trajectory": "hidden-state 路径是否漂移, 或出现 turnpike-like 衰减?",
+            "riccati": "拟合出的有限维控制代理模型是否自洽?",
+            "tv_soft": "时变结构是否真的优于 static, shuffled 或 random control?",
+        },
+    }
+    return checks[language][key]
+
+
+def _research_result(key: str, payload: JsonDict, language: str) -> str:
+    if not payload:
+        return "Not measured yet." if language == "en" else "还没有测。"
+    if key == "soft_hard":
+        return _soft_hard_signal(payload)
+    if key == "hidden_states":
+        return _hidden_state_signal(payload)
+    if key == "trajectory":
+        return _trajectory_signal(payload)
+    if key == "riccati":
+        return _riccati_signal(payload)
+    if key == "tv_soft":
+        return _tv_soft_signal(payload)
+    return "recorded" if language == "en" else "已记录"
+
+
+def _research_interpretation(key: str, payload: JsonDict, language: str) -> str:
+    if not payload:
+        return (
+            "This part of the paper evidence is missing."
+            if language == "en"
+            else "这部分论文证据还缺失。"
+        )
+    if key == "soft_hard":
+        risk = str(payload.get("risk") or "unknown").lower()
+        if risk in {"low", "pass", "safe"}:
+            return (
+                "Rounded hard prompts look less risky, but still need hard-prompt evaluation."
+                if language == "en"
+                else "转成 hard prompt 的风险较低, 但仍要用真实 hard prompt 复测。"
+            )
+        return (
+            "Deployment may lose quality when soft prompts are projected to tokens."
+            if language == "en"
+            else "soft prompt 投影成 token 后可能损失效果, 部署前要谨慎。"
+        )
+    if key == "hidden_states":
+        return (
+            "Trajectory and Riccati diagnostics can only be trusted when this input is explicit."
+            if language == "en"
+            else "只有明确记录 hidden-state 输入, trajectory 和 Riccati 诊断才更可复查。"
+        )
+    if key == "trajectory":
+        signal = payload.get("turnpike_like_signal")
+        if signal is True:
+            return (
+                "The trace shows a turnpike-like signal worth comparing across slices."
+                if language == "en"
+                else "轨迹出现 turnpike-like 信号, 值得按任务 slice 继续比较。"
+            )
+        return (
+            "The trace does not yet show a strong stability signature."
+            if language == "en"
+            else "目前还没有强稳定性信号, 可能需要更多 trace 或分 slice 检查。"
+        )
+    if key == "riccati":
+        stable = payload.get("stable_surrogate")
+        radius = payload.get("closed_loop_spectral_radius")
+        radius_value = _float_or_none(radius)
+        if stable is True or (radius_value is not None and radius_value < 1.0):
+            return (
+                "The fitted surrogate is internally stable on this reduced diagnostic model."
+                if language == "en"
+                else "降维代理模型在这次诊断中表现为内部稳定。"
+            )
+        return (
+            "The surrogate should be reviewed before using it as supporting evidence."
+            if language == "en"
+            else "这个代理模型还需要复查, 暂时不宜作为强证据。"
+        )
+    if key == "tv_soft":
+        best = _best_delta_key(payload)
+        if best and "time" in best:
+            return (
+                "Time-varying structure may explain part of the gain."
+                if language == "en"
+                else "收益可能部分来自时变结构, 而不只是参数更多。"
+            )
+        return (
+            "The current result does not isolate a clear time-varying advantage."
+            if language == "en"
+            else "当前结果还不能清楚证明时变结构带来优势。"
+        )
+    return "Recorded diagnostic evidence." if language == "en" else "已记录诊断证据。"
+
+
+def _research_next_action(
+    key: str,
+    payload: JsonDict,
+    artifact: str,
+    language: str,
+) -> str:
+    if not payload:
+        command = _research_missing_command(key)
+        if language == "zh":
+            return f"运行 `{command}`, 生成 `{artifact}`。"
+        return f"Run `{command}` to create `{artifact}`."
+    if key == "soft_hard":
+        return (
+            "Keep the gap in the evidence bundle and retest the hard prompt."
+            if language == "en"
+            else "把 gap 写入证据包, 并用 hard prompt 再评测一次。"
+        )
+    if key == "hidden_states":
+        return (
+            "Use the same hidden-state source for trajectory and Riccati follow-ups."
+            if language == "en"
+            else "后续 trajectory 和 Riccati 诊断要继续使用同一 hidden-state 来源。"
+        )
+    if key == "trajectory":
+        return (
+            "Compare slopes by task slice before making a broad stability claim."
+            if language == "en"
+            else "先按任务 slice 比较 slope, 再决定是否提出稳定性主张。"
+        )
+    if key == "riccati":
+        return (
+            "Report it as a fitted surrogate probe, not as a proof about the full LM."
+            if language == "en"
+            else "把它表述为拟合代理探针, 不要说成完整 LM 的证明。"
+        )
+    if key == "tv_soft":
+        return (
+            "Compare static, shuffled, random, and time-varying lanes side by side."
+            if language == "en"
+            else "把 static、shuffled、random 和 time-varying 放在一起对比。"
+        )
+    return (
+        "Keep this artifact with the run."
+        if language == "en"
+        else "把该 artifact 保留在 run 中。"
+    )
+
+
+def _research_missing_command(key: str) -> str:
+    commands = {
+        "soft_hard": "pcl soft-hard --run <selected-run>",
+        "hidden_states": "pcl diagnose --run <selected-run>",
+        "trajectory": "pcl trajectory --states inputs/hidden_states.npz --out diagnostics",
+        "riccati": "pcl riccati --trajectory diagnostics/trajectory.json --out diagnostics",
+        "tv_soft": "pcl tv-soft --config promptcontrol.example.yaml --out diagnostics",
+    }
+    return commands.get(key, "pcl diagnose --run <selected-run>")
+
+
+def _best_delta_key(payload: JsonDict) -> str:
+    deltas = payload.get("delta_vs_baseline")
+    if not isinstance(deltas, dict) or not deltas:
+        return ""
+    return str(max(deltas, key=lambda key: float(deltas.get(key) or 0.0)))
+
+
+def _float_or_none(value: object) -> float | None:
+    try:
+        return float(value)  # type: ignore[arg-type]
+    except (TypeError, ValueError):
+        return None
 
 
 def _map_node(*, key: str, label: str, status: str, summary: str) -> JsonDict:
