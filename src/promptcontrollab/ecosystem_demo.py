@@ -353,6 +353,7 @@ def _write_scorecard(
 ) -> JsonDict:
     rows = _scorecard_rows(out_dir=out_dir, payload=payload, diagnostics=diagnostics)
     evidence_matrix = _pcl_evidence_matrix(rows)
+    market_map = _extended_market_map()
     json_path = _scorecard_json_path(out_dir=out_dir, out_path=out_path)
     ensure_dir(json_path.parent)
     md_path = json_path.with_suffix(".md")
@@ -367,7 +368,8 @@ def _write_scorecard(
         "tool_count": len(rows),
         "rows": rows,
         "pcl_evidence_matrix": evidence_matrix,
-        "market_map": _extended_market_map(),
+        "market_map": market_map,
+        "market_readiness": _market_readiness_summary(market_map),
         "recommended_review_order": [
             "Open ecosystem_scorecard.html for the cross-tool summary.",
             "Use ecosystem_scorecard.md for plain-text review.",
@@ -572,6 +574,42 @@ def _extended_market_map() -> list[JsonDict]:
             "status": "historical_sunset_reference_not_imported",
         },
     ]
+
+
+def _market_readiness_summary(market_map: list[JsonDict]) -> JsonDict:
+    """Return a compact action summary derived from adjacent-market positioning."""
+
+    prioritized_moves = [
+        {
+            "priority": row.get("priority", ""),
+            "tool": row.get("tool", ""),
+            "move": row.get("pcl_product_move", ""),
+        }
+        for row in market_map
+        if str(row.get("priority", "")) in {"P1", "P2"}
+    ]
+    return {
+        "status": "early_adopter_ready",
+        "recommended_positioning": (
+            "Lead with paper diagnostics and evidence for prompt-optimization claims; "
+            "import outputs from eval, observability, and prompt-writing tools instead "
+            "of rebuilding their full workflows."
+        ),
+        "best_first_users": [
+            "Prompt optimization researchers who need reproducible paper diagnostics.",
+            (
+                "LLM evaluation teams that already use Promptfoo, DeepEval, LangSmith, "
+                "Langfuse, or similar tools."
+            ),
+            "AI coding-agent teams that need local evidence before rollout.",
+        ],
+        "do_not_build": [
+            "A full tracing or observability platform.",
+            "A hosted prompt-management SaaS.",
+            "A generic prompt-writing editor.",
+        ],
+        "next_moves": prioritized_moves,
+    }
 
 
 def _artifact_status(row: JsonDict, label: str) -> JsonDict:
@@ -835,6 +873,9 @@ def _render_scorecard(payload: JsonDict) -> str:
                 )
                 + " |"
             )
+    readiness = payload.get("market_readiness")
+    if isinstance(readiness, dict):
+        lines.extend(_market_readiness_markdown_lines(readiness))
     market_map = payload.get("market_map")
     lines.extend(
         [
@@ -888,6 +929,32 @@ def _render_scorecard(payload: JsonDict) -> str:
     return "\n".join(lines)
 
 
+def _market_readiness_markdown_lines(readiness: JsonDict) -> list[str]:
+    lines = [
+        "",
+        "## Market readiness",
+        "",
+        f"- Status: `{readiness.get('status', '')}`",
+        f"- Recommended positioning: {readiness.get('recommended_positioning', '')}",
+        "- Best first users:",
+        *[f"  - {item}" for item in _string_list(readiness.get("best_first_users"))],
+        "- Do not build:",
+        *[f"  - {item}" for item in _string_list(readiness.get("do_not_build"))],
+        "- Next moves:",
+    ]
+    next_moves = readiness.get("next_moves")
+    if isinstance(next_moves, list):
+        for item in next_moves:
+            if not isinstance(item, dict):
+                continue
+            lines.append(
+                "  - "
+                f"{item.get('priority', '')} {item.get('tool', '')}: "
+                f"{item.get('move', '')}"
+            )
+    return lines
+
+
 def _artifact_status_markdown(status: object, path: object) -> str:
     status_text = str(status or "")
     path_text = str(path or "")
@@ -914,6 +981,10 @@ def _render_scorecard_html(payload: JsonDict) -> str:
     rows = _scorecard_html_rows(payload.get("rows"))
     matrix_rows = _scorecard_html_rows(payload.get("pcl_evidence_matrix"))
     market_rows = _scorecard_html_rows(payload.get("market_map"))
+    readiness = payload.get("market_readiness")
+    readiness_html = (
+        _render_market_readiness_html(readiness) if isinstance(readiness, dict) else ""
+    )
     summary = _scorecard_summary(rows)
     matrix_table_rows = "\n".join(_render_matrix_html_row(row) for row in matrix_rows)
     table_rows = "\n".join(_render_scorecard_html_row(row) for row in rows)
@@ -1138,6 +1209,8 @@ def _render_scorecard_html(payload: JsonDict) -> str:
       </div>
     </section>
 
+    {readiness_html}
+
     <h2>Extended market map (not imported in this demo)</h2>
     <p>
       These rows are positioning references only. They are not imported evidence bundles
@@ -1165,6 +1238,57 @@ def _render_scorecard_html(payload: JsonDict) -> str:
 </body>
 </html>
 """
+
+
+def _render_market_readiness_html(readiness: JsonDict) -> str:
+    next_moves = readiness.get("next_moves")
+    move_rows = ""
+    if isinstance(next_moves, list):
+        move_rows = "\n".join(
+            _render_market_readiness_move_html(item)
+            for item in next_moves
+            if isinstance(item, dict)
+        )
+    return f"""
+    <h2>Market readiness</h2>
+    <section class="two-col">
+      <div class="card">
+        <p><strong>Status:</strong> <code>{_html_text(readiness.get("status", ""))}</code></p>
+        <p style="margin-top: 12px;">{_html_text(readiness.get("recommended_positioning", ""))}</p>
+      </div>
+      <div class="card">
+        <p><strong>Best first users</strong></p>
+        {_html_unordered_list(readiness.get("best_first_users"))}
+        <p style="margin-top: 12px;"><strong>Do not build</strong></p>
+        {_html_unordered_list(readiness.get("do_not_build"))}
+      </div>
+    </section>
+    <div class="table-wrap" style="margin-top: 14px;">
+      <table>
+        <thead>
+          <tr><th>Priority</th><th>Tool</th><th>Next move</th></tr>
+        </thead>
+        <tbody>{move_rows}</tbody>
+      </table>
+    </div>
+"""
+
+
+def _render_market_readiness_move_html(row: JsonDict) -> str:
+    return (
+        "<tr>"
+        f"<td>{_html_text(row.get('priority', ''))}</td>"
+        f"<td><strong>{_html_text(row.get('tool', ''))}</strong></td>"
+        f"<td>{_html_text(row.get('move', ''))}</td>"
+        "</tr>"
+    )
+
+
+def _html_unordered_list(value: object) -> str:
+    items = _string_list(value)
+    if not items:
+        return "<p class=\"muted\">None recorded.</p>"
+    return "<ul>" + "".join(f"<li>{_html_text(item)}</li>" for item in items) + "</ul>"
 
 
 def _scorecard_html_rows(value: object) -> list[JsonDict]:

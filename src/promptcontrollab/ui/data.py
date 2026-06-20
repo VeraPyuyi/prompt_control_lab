@@ -712,6 +712,16 @@ def ecosystem_market_map_rows(detail: JsonDict) -> list[JsonDict]:
     return rows
 
 
+def ecosystem_market_readiness(detail: JsonDict) -> JsonDict:
+    """Return compact market-readiness guidance from ecosystem scorecards."""
+
+    payload = detail.get("ecosystem_scorecard")
+    if not isinstance(payload, dict):
+        return {}
+    readiness = payload.get("market_readiness")
+    return readiness if isinstance(readiness, dict) else {}
+
+
 def prompt_asset_summary(detail: JsonDict) -> JsonDict:
     """Return a compact summary for prompt-optimizer asset import runs."""
 

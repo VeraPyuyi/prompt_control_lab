@@ -464,6 +464,15 @@ def test_cli_ecosystem_demo_runs_all_external_bridge_examples(tmp_path: Path) ->
         "Improve reviewer workflow and experiment comparison UX."
     )
     assert market_map[0]["priority"] == "P1"
+    readiness = scorecard["market_readiness"]
+    assert readiness["status"] == "early_adopter_ready"
+    assert "paper diagnostics" in readiness["recommended_positioning"]
+    assert "A hosted prompt-management SaaS." in readiness["do_not_build"]
+    assert [item["tool"] for item in readiness["next_moves"]] == [
+        "Braintrust",
+        "Arize Phoenix",
+        "OpenAI Evals",
+    ]
     promptfoo_links = scorecard["rows"][0]["artifact_links"]
     assert {"label": "Bridge summary", "path": "promptfoo/bridge_summary.html"} in promptfoo_links
     assert {"label": "Research bundle", "path": "promptfoo/research_bundle.html"} in promptfoo_links
@@ -510,6 +519,9 @@ def test_cli_ecosystem_demo_runs_all_external_bridge_examples(tmp_path: Path) ->
     assert "not imported evidence bundles" in scorecard_markdown
     assert "PCL product move" in scorecard_markdown
     assert "Improve reviewer workflow" in scorecard_markdown
+    assert "Market readiness" in scorecard_markdown
+    assert "Do not build" in scorecard_markdown
+    assert "early_adopter_ready" in scorecard_markdown
     scorecard_html = (out / "ecosystem_scorecard.html").read_text(encoding="utf-8")
     assert "Ecosystem Scorecard" in scorecard_html
     assert "PCL-added evidence matrix" in scorecard_html
@@ -531,6 +543,8 @@ def test_cli_ecosystem_demo_runs_all_external_bridge_examples(tmp_path: Path) ->
     assert "positioning_only_not_imported" in scorecard_html
     assert "PCL product move" in scorecard_html
     assert "P1" in scorecard_html
+    assert "Market readiness" in scorecard_html
+    assert "A generic prompt-writing editor." in scorecard_html
     assert main(["gap-status", "--run", str(out / "promptfoo")]) == 0
     assert main(["research-bundle", "--run", str(out / "promptfoo"), "--verify"]) == 0
     (out / "ecosystem_scorecard.json").unlink()

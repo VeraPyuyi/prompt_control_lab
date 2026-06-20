@@ -42,6 +42,7 @@ from promptcontrollab.ui.data import (
     ecosystem_demo_rows,
     ecosystem_evidence_matrix_rows,
     ecosystem_market_map_rows,
+    ecosystem_market_readiness,
     ecosystem_scorecard_rows,
     evidence_card_rows,
     evidence_gap_action_rows,
@@ -131,6 +132,11 @@ TEXT = {
         "ecosystem_bridge": "Ecosystem bridge",
         "ecosystem_scorecard": "Ecosystem scorecard",
         "ecosystem_evidence_matrix": "PCL-added evidence matrix",
+        "ecosystem_market_readiness": "Market readiness",
+        "ecosystem_market_readiness_note": (
+            "Action summary from the positioning matrix: where PCL should lead, learn, "
+            "and avoid overbuilding."
+        ),
         "ecosystem_market_map": "Extended market map",
         "ecosystem_market_map_note": (
             "Positioning references only; these rows are not imported evidence bundles."
@@ -380,6 +386,10 @@ TEXT = {
         "ecosystem_bridge": "生态桥接",
         "ecosystem_scorecard": "生态证据总览",
         "ecosystem_evidence_matrix": "PCL 补充证据矩阵",
+        "ecosystem_market_readiness": "市场就绪度",
+        "ecosystem_market_readiness_note": (
+            "从定位矩阵提炼出的行动摘要：PCL 应该领先什么、学习什么、避免重复建设什么。"
+        ),
         "ecosystem_market_map": "扩展市场地图",
         "ecosystem_market_map_note": "仅作定位参考；这些行不是已导入的证据包。",
         "ecosystem_demo": "生态 demo 证据包",
@@ -1641,6 +1651,7 @@ def _render_research_overview_tab(
     scorecard_rows = ecosystem_scorecard_rows(detail)
     scorecard_matrix_rows = ecosystem_evidence_matrix_rows(detail)
     scorecard_market_rows = ecosystem_market_map_rows(detail)
+    scorecard_market_readiness = ecosystem_market_readiness(detail)
     ecosystem_rows = ecosystem_demo_rows(detail)
     asset_summary = prompt_asset_summary(detail)
     asset_rows = prompt_asset_rows(detail)
@@ -1740,6 +1751,13 @@ def _render_research_overview_tab(
                 unsafe_allow_html=True,
             )
             st.dataframe(scorecard_matrix_rows, use_container_width=True)
+        if scorecard_market_readiness:
+            st.markdown(
+                f'<div class="pcl-section-title">{html.escape(text["ecosystem_market_readiness"])}</div>',
+                unsafe_allow_html=True,
+            )
+            st.caption(text["ecosystem_market_readiness_note"])
+            _render_market_readiness_summary(st, scorecard_market_readiness, language)
         if scorecard_market_rows:
             st.markdown(
                 f'<div class="pcl-section-title">{html.escape(text["ecosystem_market_map"])}</div>',
@@ -2022,6 +2040,81 @@ def _market_map_display_rows(rows: list[JsonDict], language: str) -> list[JsonDi
         }
         for row in rows
     ]
+
+
+def _render_market_readiness_summary(
+    st: Any,
+    readiness: JsonDict,
+    language: str,
+) -> None:
+    status = str(readiness.get("status") or "")
+    positioning = str(readiness.get("recommended_positioning") or "")
+    st.markdown(
+        '<div class="pcl-grid">'
+        + stat_card_html(
+            "Status" if language != "zh" else "状态",
+            status,
+            "early signal" if language != "zh" else "早期信号",
+        )
+        + stat_card_html(
+            "Next moves" if language != "zh" else "下一步动作",
+            str(len(_market_readiness_next_move_rows(readiness, language))),
+            "P1 / P2",
+        )
+        + "</div>",
+        unsafe_allow_html=True,
+    )
+    if positioning:
+        st.caption(positioning)
+    columns = st.columns(2)
+    with columns[0]:
+        st.markdown("**Best first users**" if language != "zh" else "**优先用户**")
+        for item in _string_items(readiness.get("best_first_users")):
+            st.markdown(f"- {item}")
+    with columns[1]:
+        st.markdown("**Do not build**" if language != "zh" else "**暂时不要做**")
+        for item in _string_items(readiness.get("do_not_build")):
+            st.markdown(f"- {item}")
+    next_moves = _market_readiness_next_move_rows(readiness, language)
+    if next_moves:
+        st.dataframe(next_moves, use_container_width=True)
+
+
+def _market_readiness_next_move_rows(
+    readiness: JsonDict,
+    language: str,
+) -> list[JsonDict]:
+    labels = {
+        "en": {"priority": "Priority", "tool": "Tool", "move": "Next move"},
+        "zh": {"priority": "优先级", "tool": "工具", "move": "下一步动作"},
+    }
+    selected = labels["zh"] if language == "zh" else labels["en"]
+    raw_moves = readiness.get("next_moves")
+    if not isinstance(raw_moves, list):
+        return []
+    rows: list[JsonDict] = []
+    for item in raw_moves:
+        if not isinstance(item, dict):
+            continue
+        rows.append(
+            {
+                selected["priority"]: _market_map_display_value(
+                    tool=str(item.get("tool", "")),
+                    key="priority",
+                    value=item.get("priority", ""),
+                    language=language,
+                ),
+                selected["tool"]: str(item.get("tool", "")),
+                selected["move"]: str(item.get("move", "")),
+            }
+        )
+    return rows
+
+
+def _string_items(value: object) -> list[str]:
+    if not isinstance(value, list):
+        return []
+    return [str(item) for item in value if str(item)]
 
 
 def _market_map_display_value(

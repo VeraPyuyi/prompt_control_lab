@@ -25,6 +25,7 @@ from promptcontrollab.ui.data import (
     ecosystem_demo_rows,
     ecosystem_evidence_matrix_rows,
     ecosystem_market_map_rows,
+    ecosystem_market_readiness,
     ecosystem_scorecard_rows,
     evidence_card_rows,
     evidence_gap_action_rows,
@@ -544,6 +545,19 @@ def test_ui_recognizes_ecosystem_demo_root_and_summarizes_tools(tmp_path: Path) 
                     "status": "positioning_only_not_imported",
                 }
             ],
+            "market_readiness": {
+                "status": "early_adopter_ready",
+                "recommended_positioning": "Lead with paper diagnostics.",
+                "best_first_users": ["Prompt optimization researchers"],
+                "do_not_build": ["Hosted prompt-management SaaS"],
+                "next_moves": [
+                    {
+                        "priority": "P1",
+                        "tool": "Braintrust",
+                        "move": "Improve reviewer workflow",
+                    }
+                ],
+            },
         },
     )
     (demo / "ecosystem_scorecard.md").write_text("# scorecard\n", encoding="utf-8")
@@ -554,6 +568,7 @@ def test_ui_recognizes_ecosystem_demo_root_and_summarizes_tools(tmp_path: Path) 
     scorecard_rows = ecosystem_scorecard_rows(detail)
     matrix_rows = ecosystem_evidence_matrix_rows(detail)
     market_rows = ecosystem_market_map_rows(detail)
+    market_readiness = ecosystem_market_readiness(detail)
 
     assert "ecosystem_demo.json" in detail["artifacts"]
     assert "ecosystem_scorecard.json" in detail["artifacts"]
@@ -577,6 +592,8 @@ def test_ui_recognizes_ecosystem_demo_root_and_summarizes_tools(tmp_path: Path) 
     ]
     assert [row["tool"] for row in rows] == ["promptfoo", "langfuse", "langsmith"]
     assert rows[0]["open_first"] == "promptfoo/bridge_summary.md"
+    assert market_readiness["status"] == "early_adopter_ready"
+    assert market_readiness["next_moves"][0]["tool"] == "Braintrust"
     assert matrix_rows == [
         {
             "tool": "Promptfoo",
@@ -1487,6 +1504,34 @@ def test_ui_market_map_display_rows_use_human_headers() -> None:
     ]
     assert "pcl_should_learn" not in en_rows[0]
     assert "positioning_only_not_imported" not in str(en_rows)
+
+
+def test_ui_market_readiness_next_moves_use_human_headers() -> None:
+    from promptcontrollab.ui import app
+
+    readiness = {
+        "next_moves": [
+            {
+                "priority": "P1",
+                "tool": "Braintrust",
+                "move": "Improve reviewer workflow",
+            }
+        ]
+    }
+
+    en_rows = app._market_readiness_next_move_rows(readiness, "en")
+    zh_rows = app._market_readiness_next_move_rows(readiness, "zh")
+
+    assert en_rows == [
+        {
+            "Priority": "P1 - near-term",
+            "Tool": "Braintrust",
+            "Next move": "Improve reviewer workflow",
+        }
+    ]
+    assert "priority" not in en_rows[0]
+    assert "P1 - " in str(zh_rows)
+    assert "Braintrust" in str(zh_rows)
 
 
 def test_ui_tutorial_gallery_exposes_visible_images() -> None:
