@@ -1792,12 +1792,14 @@ def test_cli_choose_recommends_adjacent_tool_paths(capsys: pytest.CaptureFixture
     assert "Use first: linshenkx/prompt-optimizer" in output
     assert "pcl import prompt-optimizer" in output
     assert "scaffold-check" in output
+    assert "Open first: prompt_optimizer_gap_plan.html" in output
 
     assert main(["choose", "--need", "安全评测和红队检查", "--language", "zh", "--json"]) == 0
     payload = json.loads(capsys.readouterr().out)
     assert payload["matched"] == "security"
     assert payload["use_first"] == "Promptfoo"
     assert payload["commands"][0].startswith("pcl import promptfoo")
+    assert payload["market_gap_action"]["open"] == "evidence_audit_result.html"
 
     cases = [
         ("prompt 写作和提示词模板", "prompt-writing", "linshenkx/prompt-optimizer"),
@@ -1848,6 +1850,8 @@ def test_cli_choose_writes_json_and_markdown_artifacts(
     assert "# Tool Choice Recommendation" in markdown
     assert "Promptfoo is strongest" in markdown
     assert "pcl evidence-audit" in markdown
+    assert "## Next Evidence Gap" in markdown
+    assert "Open first: `evidence_audit_result.html`" in markdown
 
     out_dir = tmp_path / "zh-choice"
     assert main(["choose", "--language", "zh", "--out", str(out_dir), "--json"]) == 0

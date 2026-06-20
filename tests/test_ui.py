@@ -1510,6 +1510,7 @@ def test_ui_tool_choice_advisor_recommends_promptfoo_for_security() -> None:
     )
     assert "# Tool Choice Recommendation" in str(markdown_download["data"])
     assert "Promptfoo is strongest" in str(markdown_download["data"])
+    assert "Open first: `evidence_audit_result.html`" in str(markdown_download["data"])
 
 
 def test_ui_tool_choice_advisor_supports_chinese_prompt_writing() -> None:

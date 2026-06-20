@@ -277,9 +277,12 @@ def choose_tool_for_need(need: str) -> JsonDict:
     if best_lane is None:
         best_lane = next(lane for lane in lanes if lane["id"] == "research-evidence")
         best_score = 0
+    matched = str(best_lane["id"])
+    gap_action = market_gap_action_for_lane(matched, language="en")
+    gap_action_zh = market_gap_action_for_lane(matched, language="zh")
     return {
         "need": need,
-        "matched": best_lane["id"],
+        "matched": matched,
         "confidence": "high" if best_score >= 2 else "medium" if best_score == 1 else "low",
         "use_first": best_lane["use_first"],
         "why": best_lane["why"],
@@ -289,7 +292,26 @@ def choose_tool_for_need(need: str) -> JsonDict:
         "commands": best_lane["commands"],
         "avoid": best_lane["avoid"],
         "avoid_zh": best_lane.get("avoid_zh", best_lane["avoid"]),
+        "market_gap_action": gap_action,
+        "market_gap_action_zh": gap_action_zh,
     }
+
+
+def market_gap_action_for_lane(lane_id: str, *, language: str = "en") -> JsonDict:
+    """Return the closest market-gap action row for a chosen lane."""
+
+    for row in market_gap_action_rows(language=language):
+        if row.get("lane") == lane_id:
+            return dict(row)
+    fallback = "research-evidence" if lane_id == "research-evidence" else "security"
+    return next(
+        (
+            dict(row)
+            for row in market_gap_action_rows(language=language)
+            if row.get("lane") == fallback
+        ),
+        {},
+    )
 
 
 def market_gap_action_rows(*, language: str = "en") -> list[JsonDict]:
@@ -298,6 +320,7 @@ def market_gap_action_rows(*, language: str = "en") -> list[JsonDict]:
     if language == "zh":
         return [
             {
+                "lane": "security",
                 "input": "Promptfoo eval 或红队导出",
                 "gap": "有分数，但成对不确定性和 prompt-only 有效性还不清楚。",
                 "command": (
@@ -307,12 +330,14 @@ def market_gap_action_rows(*, language: str = "en") -> list[JsonDict]:
                 "open": "evidence_audit_result.html",
             },
             {
+                "lane": "unit-tests",
                 "input": "DeepEval TestRun 输出",
                 "gap": "有指标，但 prompt/model/split provenance 和 claim 边界还需要审查。",
                 "command": "pcl import deepeval --input test-run.json --out runs/from-deepeval",
                 "open": "manifest.json, 然后运行 pcl evidence-card",
             },
             {
+                "lane": "observability",
                 "input": "LangSmith / Langfuse trace 或 eval 导出",
                 "gap": "有 trace，但 prompt 效果可能和模型、指标、切分变化混在一起。",
                 "command": (
@@ -322,6 +347,7 @@ def market_gap_action_rows(*, language: str = "en") -> list[JsonDict]:
                 "open": "bridge_summary.html",
             },
             {
+                "lane": "prompt-writing",
                 "input": "prompt-optimizer 收藏或模板",
                 "gap": "有更好的 prompt 候选，但还不是成对打分证据。",
                 "command": (
@@ -331,6 +357,7 @@ def market_gap_action_rows(*, language: str = "en") -> list[JsonDict]:
                 "open": "prompt_optimizer_gap_plan.html",
             },
             {
+                "lane": "research-evidence",
                 "input": "任意 baseline / candidate run",
                 "gap": "还不清楚当前证据最多能支持什么主张。",
                 "command": "pcl claim-check --run runs/<run>",
@@ -339,6 +366,7 @@ def market_gap_action_rows(*, language: str = "en") -> list[JsonDict]:
         ]
     return [
         {
+            "lane": "security",
             "input": "Promptfoo eval or red-team export",
             "gap": (
                 "Scores exist, but paired uncertainty and prompt-only validity may still be "
@@ -350,6 +378,7 @@ def market_gap_action_rows(*, language: str = "en") -> list[JsonDict]:
             "open": "evidence_audit_result.html",
         },
         {
+            "lane": "unit-tests",
             "input": "DeepEval TestRun output",
             "gap": (
                 "Metrics exist, but prompt/model/split provenance and claim boundary need "
@@ -359,6 +388,7 @@ def market_gap_action_rows(*, language: str = "en") -> list[JsonDict]:
             "open": "manifest.json, then pcl evidence-card",
         },
         {
+            "lane": "observability",
             "input": "LangSmith/Langfuse trace or eval export",
             "gap": (
                 "Traces exist, but prompt effects may be confounded with model, metric, "
@@ -371,6 +401,7 @@ def market_gap_action_rows(*, language: str = "en") -> list[JsonDict]:
             "open": "bridge_summary.html",
         },
         {
+            "lane": "prompt-writing",
             "input": "prompt-optimizer favorites/templates",
             "gap": "Better prompt candidates exist, but they are not yet paired scored evidence.",
             "command": (
@@ -380,6 +411,7 @@ def market_gap_action_rows(*, language: str = "en") -> list[JsonDict]:
             "open": "prompt_optimizer_gap_plan.html",
         },
         {
+            "lane": "research-evidence",
             "input": "Any baseline/candidate run",
             "gap": "It is not yet clear what claim the evidence supports.",
             "command": "pcl claim-check --run runs/<run>",
@@ -424,6 +456,16 @@ def format_tool_choice(payload: JsonDict, *, language: str = "en") -> str:
             "可复制命令:",
         ]
         lines.extend(f"- {command}" for command in command_list)
+        action = _selected_market_gap_action(payload, language="zh")
+        if action:
+            lines.extend(
+                [
+                    "",
+                    f"Evidence gap: {action.get('gap', '')}",
+                    f"Run next: {action.get('command', '')}",
+                    f"Open first: {action.get('open', '')}",
+                ]
+            )
         lines.extend(["", f"不要做: {payload.get('avoid_zh') or payload.get('avoid', '')}"])
         return "\n".join(lines)
     lines = [
@@ -438,6 +480,16 @@ def format_tool_choice(payload: JsonDict, *, language: str = "en") -> str:
         "Copy-paste commands:",
     ]
     lines.extend(f"- {command}" for command in command_list)
+    action = _selected_market_gap_action(payload, language="en")
+    if action:
+        lines.extend(
+            [
+                "",
+                f"Evidence gap: {action.get('gap', '')}",
+                f"Run next: {action.get('command', '')}",
+                f"Open first: {action.get('open', '')}",
+            ]
+        )
     lines.extend(["", f"Avoid: {payload.get('avoid', '')}"])
     return "\n".join(lines)
 
@@ -505,6 +557,18 @@ def render_tool_choice_markdown(payload: JsonDict, *, language: str = "en") -> s
             "",
         ]
         lines.extend(f"```bash\n{command}\n```" for command in command_list)
+        action = _selected_market_gap_action(payload, language="zh")
+        if action:
+            lines.extend(
+                [
+                    "",
+                    "## Next Evidence Gap",
+                    "",
+                    f"- Gap: {action.get('gap', '')}",
+                    f"- Run: `{action.get('command', '')}`",
+                    f"- Open first: `{action.get('open', '')}`",
+                ]
+            )
         lines.extend(
             ["", "## 不要做", "", str(payload.get("avoid_zh") or payload.get("avoid", ""))]
         )
@@ -530,12 +594,30 @@ def render_tool_choice_markdown(payload: JsonDict, *, language: str = "en") -> s
         "",
     ]
     lines.extend(f"```bash\n{command}\n```" for command in command_list)
+    action = _selected_market_gap_action(payload, language="en")
+    if action:
+        lines.extend(
+            [
+                "",
+                "## Next Evidence Gap",
+                "",
+                f"- Gap: {action.get('gap', '')}",
+                f"- Run: `{action.get('command', '')}`",
+                f"- Open first: `{action.get('open', '')}`",
+            ]
+        )
     lines.extend(["", "## Avoid", "", str(payload.get("avoid", ""))])
     return "\n".join(lines) + "\n"
 
 
 def _command_list(value: object) -> list[str]:
     return [str(command) for command in value] if isinstance(value, list) else []
+
+
+def _selected_market_gap_action(payload: JsonDict, *, language: str) -> JsonDict:
+    key = "market_gap_action_zh" if language == "zh" else "market_gap_action"
+    value = payload.get(key)
+    return dict(value) if isinstance(value, dict) else {}
 
 
 def _md_cell(value: object) -> str:
