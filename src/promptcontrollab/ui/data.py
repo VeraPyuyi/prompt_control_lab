@@ -685,6 +685,31 @@ def ecosystem_evidence_matrix_rows(detail: JsonDict) -> list[JsonDict]:
     return rows
 
 
+def ecosystem_market_map_rows(detail: JsonDict) -> list[JsonDict]:
+    """Return positioning-only adjacent-market rows from ecosystem scorecards."""
+
+    payload = detail.get("ecosystem_scorecard")
+    if not isinstance(payload, dict):
+        return []
+    raw_rows = payload.get("market_map")
+    if not isinstance(raw_rows, list):
+        return []
+    rows: list[JsonDict] = []
+    for item in raw_rows:
+        if not isinstance(item, dict):
+            continue
+        rows.append(
+            {
+                "tool": item.get("tool", ""),
+                "strong_lane": item.get("strong_lane", ""),
+                "pcl_should_learn": item.get("pcl_should_learn", ""),
+                "pcl_still_owns": item.get("pcl_owns", ""),
+                "status": item.get("status", ""),
+            }
+        )
+    return rows
+
+
 def prompt_asset_summary(detail: JsonDict) -> JsonDict:
     """Return a compact summary for prompt-optimizer asset import runs."""
 

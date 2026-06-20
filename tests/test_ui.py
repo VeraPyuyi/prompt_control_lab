@@ -24,6 +24,7 @@ from promptcontrollab.ui.data import (
     claim_evidence_ladder,
     ecosystem_demo_rows,
     ecosystem_evidence_matrix_rows,
+    ecosystem_market_map_rows,
     ecosystem_scorecard_rows,
     evidence_card_rows,
     evidence_gap_action_rows,
@@ -532,6 +533,15 @@ def test_ui_recognizes_ecosystem_demo_root_and_summarizes_tools(tmp_path: Path) 
                     "gap_status_command": "pcl gap-status --run promptfoo",
                 }
             ],
+            "market_map": [
+                {
+                    "tool": "Braintrust",
+                    "strong_lane": "Eval datasets and experiments",
+                    "pcl_should_learn": "Fast experiment UX",
+                    "pcl_owns": "Research evidence layer",
+                    "status": "positioning_only_not_imported",
+                }
+            ],
         },
     )
     (demo / "ecosystem_scorecard.md").write_text("# scorecard\n", encoding="utf-8")
@@ -541,6 +551,7 @@ def test_ui_recognizes_ecosystem_demo_root_and_summarizes_tools(tmp_path: Path) 
     rows = ecosystem_demo_rows(detail)
     scorecard_rows = ecosystem_scorecard_rows(detail)
     matrix_rows = ecosystem_evidence_matrix_rows(detail)
+    market_rows = ecosystem_market_map_rows(detail)
 
     assert "ecosystem_demo.json" in detail["artifacts"]
     assert "ecosystem_scorecard.json" in detail["artifacts"]
@@ -577,6 +588,15 @@ def test_ui_recognizes_ecosystem_demo_root_and_summarizes_tools(tmp_path: Path) 
             "missing_count": 1,
             "missing_paper_diagnostics": "hidden-state trajectory",
             "next_command": "pcl gap-status --run promptfoo",
+        }
+    ]
+    assert market_rows == [
+        {
+            "tool": "Braintrust",
+            "strong_lane": "Eval datasets and experiments",
+            "pcl_should_learn": "Fast experiment UX",
+            "pcl_still_owns": "Research evidence layer",
+            "status": "positioning_only_not_imported",
         }
     ]
 

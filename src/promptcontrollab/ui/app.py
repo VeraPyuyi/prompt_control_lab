@@ -41,6 +41,7 @@ from promptcontrollab.ui.data import (
     claim_evidence_ladder,
     ecosystem_demo_rows,
     ecosystem_evidence_matrix_rows,
+    ecosystem_market_map_rows,
     ecosystem_scorecard_rows,
     evidence_card_rows,
     evidence_gap_action_rows,
@@ -130,6 +131,10 @@ TEXT = {
         "ecosystem_bridge": "Ecosystem bridge",
         "ecosystem_scorecard": "Ecosystem scorecard",
         "ecosystem_evidence_matrix": "PCL-added evidence matrix",
+        "ecosystem_market_map": "Extended market map",
+        "ecosystem_market_map_note": (
+            "Positioning references only; these rows are not imported evidence bundles."
+        ),
         "ecosystem_demo": "Ecosystem demo bundles",
         "prompt_assets": "Prompt optimizer assets",
         "prompt_assets_summary": "Imported prompt candidates",
@@ -375,6 +380,8 @@ TEXT = {
         "ecosystem_bridge": "生态桥接",
         "ecosystem_scorecard": "生态证据总览",
         "ecosystem_evidence_matrix": "PCL 补充证据矩阵",
+        "ecosystem_market_map": "扩展市场地图",
+        "ecosystem_market_map_note": "仅作定位参考；这些行不是已导入的证据包。",
         "ecosystem_demo": "生态 demo 证据包",
         "prompt_assets": "Prompt optimizer 资产",
         "prompt_assets_summary": "已导入的 prompt 候选",
@@ -1633,6 +1640,7 @@ def _render_research_overview_tab(
     bridge = external_bridge_summary(detail)
     scorecard_rows = ecosystem_scorecard_rows(detail)
     scorecard_matrix_rows = ecosystem_evidence_matrix_rows(detail)
+    scorecard_market_rows = ecosystem_market_map_rows(detail)
     ecosystem_rows = ecosystem_demo_rows(detail)
     asset_summary = prompt_asset_summary(detail)
     asset_rows = prompt_asset_rows(detail)
@@ -1732,6 +1740,13 @@ def _render_research_overview_tab(
                 unsafe_allow_html=True,
             )
             st.dataframe(scorecard_matrix_rows, use_container_width=True)
+        if scorecard_market_rows:
+            st.markdown(
+                f'<div class="pcl-section-title">{html.escape(text["ecosystem_market_map"])}</div>',
+                unsafe_allow_html=True,
+            )
+            st.caption(text["ecosystem_market_map_note"])
+            st.dataframe(scorecard_market_rows, use_container_width=True)
         st.dataframe(scorecard_rows, use_container_width=True)
 
     if ecosystem_rows:
