@@ -1973,6 +1973,22 @@ def test_cli_start_interactive_choose_menu_prints_tool_map(
     assert "security: start with Promptfoo" in output
 
 
+def test_cli_start_interactive_chinese_choose_menu_prints_tool_map(
+    capsys: pytest.CaptureFixture[str],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr("sys.stdin", io.StringIO("8\n"))
+
+    assert main(["start", "--language", "zh"]) == 0
+    output = capsys.readouterr().out
+
+    assert "8) 选择应该先用哪个相邻工具" in output
+    assert "请选择 1、2、3、4、5、6、7 或 8" in output
+    assert "新手模式: 选择先用哪个相邻工具" in output
+    assert "工具选择地图" in output
+    assert "security: 先用 Promptfoo" in output
+
+
 def test_cli_start_choice_ecosystem_writes_comparison_demo(
     tmp_path: Path,
     capsys: pytest.CaptureFixture[str],

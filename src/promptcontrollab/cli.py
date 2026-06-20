@@ -3025,12 +3025,13 @@ def _start_choice(value: str | None, *, language: str = "en") -> str:
                     "5) 在发送给 AI 工具前检查 prompt",
                     "6) 比较 prompts 并生成报告",
                     "7) 生成生态对比 demo",
+                    "8) 选择应该先用哪个相邻工具",
                     "",
                     "提示: 如果不确定路径, 运行 `pcl start --guide --language zh`。",
                 ]
             )
         )
-        raw = input("请选择 1、2、3、4、5、6 或 7: ").strip().lower()
+        raw = input("请选择 1、2、3、4、5、6、7 或 8: ").strip().lower()
     else:
         print(
             "\n".join(
