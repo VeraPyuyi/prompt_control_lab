@@ -10,7 +10,6 @@ import subprocess
 import sys
 from collections.abc import Sequence
 from pathlib import Path
-from tempfile import TemporaryDirectory
 
 from promptcontrollab.agent_run import build_agent_run_manifest
 from promptcontrollab.artifact_export import export_report_zip
@@ -1924,14 +1923,13 @@ def _run_start_ecosystem(args: argparse.Namespace, *, out_dir: Path) -> JsonDict
     examples_dir = Path("examples") / "external"
     if examples_dir.exists():
         return _run_ecosystem_demo_with_examples(args, examples_dir=examples_dir, out_dir=out_dir)
-    with TemporaryDirectory(prefix="pcl-external-examples-") as tmp:
-        bundled_examples = Path(tmp) / "external"
-        write_external_examples(bundled_examples)
-        return _run_ecosystem_demo_with_examples(
-            args,
-            examples_dir=bundled_examples,
-            out_dir=out_dir,
-        )
+    bundled_examples = out_dir.parent / f"{out_dir.name}_source_examples"
+    write_external_examples(bundled_examples)
+    return _run_ecosystem_demo_with_examples(
+        args,
+        examples_dir=bundled_examples,
+        out_dir=out_dir,
+    )
 
 
 def _run_ecosystem_demo_with_examples(

@@ -1735,6 +1735,11 @@ def test_cli_start_choice_ecosystem_works_without_repo_examples(
 
     assert "Generated ecosystem comparison demo" in output
     assert not (cwd / "examples" / "external").exists()
+    source_examples = tmp_path / "runs" / "ecosystem-demo_source_examples"
+    demo = json.loads((out / "ecosystem_demo.json").read_text(encoding="utf-8"))
+    assert Path(str(demo["examples_dir"])) == source_examples
+    assert source_examples.exists()
+    assert all(Path(str(row["source"])).exists() for row in demo["runs"])
     assert (out / "ecosystem_demo.json").exists()
     assert (out / "ecosystem_scorecard.html").exists()
     assert (out / "research_bundle.html").exists()
