@@ -1628,6 +1628,7 @@ def test_cli_start_guide_prints_goal_based_paths(capsys: pytest.CaptureFixture[s
     assert "open `runs/quick/report.html`" in output
     assert "paper-derived prompt optimization diagnostics" in output
     assert "Import external eval results as evidence" in output
+    assert "pcl start --choice import --tool auto --input results.json" in output
     assert "Guard a coding-agent prompt" in output
     assert "Audit what an agent changed" in output
     assert "Ecosystem choice map" in output
@@ -1646,6 +1647,7 @@ def test_cli_start_guide_supports_chinese(capsys: pytest.CaptureFixture[str]) ->
     assert "打开 `runs/quick/report.html`" in output
     assert "运行论文里的 prompt optimization 诊断" in output
     assert "把外部评测结果导入成证据" in output
+    assert "pcl start --choice import --tool auto --input results.json" in output
     assert "在 coding agent 执行前守护 prompt" in output
     assert "审计 agent 到底改了什么" in output
     assert "生态选择地图" in output

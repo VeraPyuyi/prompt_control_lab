@@ -2754,8 +2754,8 @@ def _format_start_guide(language: str = "en") -> str:
             ),
             (
                 "把外部评测结果导入成证据",
-                "pcl import promptfoo --input results.json "
-                "--out runs/from-promptfoo --prompt-id candidate",
+                "pcl start --choice import --tool auto --input results.json "
+                "--out runs/from-external",
                 "然后运行 `pcl scaffold-check`、`pcl evidence-card` 或 `pcl evidence-audit`。",
             ),
             (
@@ -2795,8 +2795,8 @@ def _format_start_guide(language: str = "en") -> str:
             ),
             (
                 "Import external eval results as evidence",
-                "pcl import promptfoo --input results.json "
-                "--out runs/from-promptfoo --prompt-id candidate",
+                "pcl start --choice import --tool auto --input results.json "
+                "--out runs/from-external",
                 "Then run `pcl scaffold-check`, `pcl evidence-card`, or `pcl evidence-audit`.",
             ),
             (
