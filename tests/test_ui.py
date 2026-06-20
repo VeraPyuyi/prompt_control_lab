@@ -1497,6 +1497,37 @@ def test_ui_tool_choice_advisor_recommends_promptfoo_for_security() -> None:
     assert "pcl evidence-audit" in combined_code
 
 
+def test_ui_tool_choice_advisor_supports_chinese_prompt_writing() -> None:
+    from promptcontrollab.ui import app
+
+    calls: list[dict[str, object]] = []
+    code_blocks: list[str] = []
+
+    class FakeStreamlit:
+        def markdown(self, body: str, *, unsafe_allow_html: bool = False) -> None:
+            calls.append({"body": body, "unsafe": unsafe_allow_html})
+
+        def text_input(self, *_args: object, **_kwargs: object) -> str:
+            return "prompt 写作"
+
+        def dataframe(self, *_args: object, **_kwargs: object) -> None:
+            pass
+
+        def caption(self, _body: object) -> None:
+            pass
+
+        def code(self, body: str, *_args: object, **_kwargs: object) -> None:
+            code_blocks.append(body)
+
+    app._render_tool_choice_advisor(FakeStreamlit(), app.TEXT["zh"], "zh")
+
+    combined_markup = " ".join(str(call["body"]) for call in calls)
+    combined_code = "\n".join(code_blocks)
+    assert "linshenkx/prompt-optimizer" in combined_markup
+    assert "pcl import prompt-optimizer" in combined_code
+    assert "scaffold-check" in combined_code
+
+
 def test_ui_market_map_display_rows_use_human_headers() -> None:
     from promptcontrollab.ui import app
 

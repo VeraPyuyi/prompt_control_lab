@@ -1797,6 +1797,18 @@ def test_cli_choose_recommends_adjacent_tool_paths(capsys: pytest.CaptureFixture
     assert payload["use_first"] == "Promptfoo"
     assert payload["commands"][0].startswith("pcl import promptfoo")
 
+    cases = [
+        ("prompt 写作和提示词模板", "prompt-writing", "linshenkx/prompt-optimizer"),
+        ("单元测试和指标", "unit-tests", "DeepEval"),
+        ("观测 trace 和成本", "observability", "LangSmith or Langfuse"),
+        ("论文诊断和证据", "research-evidence", "prompt_control_lab"),
+    ]
+    for need, matched, use_first in cases:
+        assert main(["choose", "--need", need, "--language", "zh", "--json"]) == 0
+        payload = json.loads(capsys.readouterr().out)
+        assert payload["matched"] == matched
+        assert payload["use_first"] == use_first
+
 
 def test_cli_start_interactive_guard_menu(
     capsys: pytest.CaptureFixture[str],

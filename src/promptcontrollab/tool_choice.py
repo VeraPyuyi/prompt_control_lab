@@ -48,7 +48,19 @@ def tool_choice_lanes() -> list[JsonDict]:
         {
             "id": "unit-tests",
             "use_first": "DeepEval",
-            "keywords": ["unit test", "pytest", "deepeval", "metric", "assert", "component test"],
+            "keywords": [
+                "unit test",
+                "pytest",
+                "deepeval",
+                "metric",
+                "assert",
+                "component test",
+                "单元测试",
+                "测试",
+                "指标",
+                "断言",
+                "组件测试",
+            ],
             "why": "DeepEval is strongest for Pytest-style LLM tests and ready-made metrics.",
             "pcl_adds": (
                 "Use PCL around DeepEval results when you need prompt/model/split provenance, "
@@ -73,6 +85,13 @@ def tool_choice_lanes() -> list[JsonDict]:
                 "cost",
                 "prompt registry",
                 "agent debug",
+                "观测",
+                "可观测",
+                "监控",
+                "成本",
+                "追踪",
+                "日志",
+                "调试",
             ],
             "why": (
                 "LangSmith and Langfuse are stronger for traces, monitoring, "
@@ -107,6 +126,14 @@ def tool_choice_lanes() -> list[JsonDict]:
                 "favorite",
                 "template",
                 "chrome extension",
+                "写作",
+                "改写",
+                "提示词",
+                "提示词优化",
+                "prompt 优化",
+                "收藏",
+                "模板",
+                "浏览器插件",
             ],
             "why": (
                 "prompt-optimizer is stronger as a polished prompt writing, "
@@ -143,6 +170,14 @@ def tool_choice_lanes() -> list[JsonDict]:
                 "riccati",
                 "tv-soft",
                 "diagnose",
+                "论文",
+                "研究",
+                "证据",
+                "声明",
+                "可复现",
+                "诊断",
+                "轨迹",
+                "控制论",
             ],
             "why": (
                 "PCL is strongest when the question is what a prompt optimization "
