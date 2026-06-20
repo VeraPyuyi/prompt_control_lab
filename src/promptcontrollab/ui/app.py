@@ -1746,7 +1746,10 @@ def _render_research_overview_tab(
                 unsafe_allow_html=True,
             )
             st.caption(text["ecosystem_market_map_note"])
-            st.dataframe(scorecard_market_rows, use_container_width=True)
+            st.dataframe(
+                _market_map_display_rows(scorecard_market_rows, language),
+                use_container_width=True,
+            )
         st.dataframe(scorecard_rows, use_container_width=True)
 
     if ecosystem_rows:
@@ -1970,6 +1973,37 @@ def _research_insight_display_rows(rows: list[JsonDict], language: str) -> list[
     }
     selected = labels["zh"] if language == "zh" else labels["en"]
     ordered_keys = ["diagnostic", "checks", "result", "interpretation", "next_action"]
+    return [
+        {selected[key]: str(row.get(key, "")) for key in ordered_keys}
+        for row in rows
+    ]
+
+
+def _market_map_display_rows(rows: list[JsonDict], language: str) -> list[JsonDict]:
+    labels = {
+        "en": {
+            "tool": "Tool",
+            "strong_lane": "Strong lane",
+            "pcl_should_learn": "What PCL should learn",
+            "pcl_still_owns": "What PCL still owns",
+            "status": "Status",
+        },
+        "zh": {
+            "tool": "工具",
+            "strong_lane": "强项",
+            "pcl_should_learn": "PCL 应该学习什么",
+            "pcl_still_owns": "PCL 仍然负责什么",
+            "status": "状态",
+        },
+    }
+    selected = labels["zh"] if language == "zh" else labels["en"]
+    ordered_keys = [
+        "tool",
+        "strong_lane",
+        "pcl_should_learn",
+        "pcl_still_owns",
+        "status",
+    ]
     return [
         {selected[key]: str(row.get(key, "")) for key in ordered_keys}
         for row in rows

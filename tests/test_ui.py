@@ -1441,6 +1441,43 @@ def test_ui_ecosystem_choice_rows_explain_adjacent_tool_paths() -> None:
     assert not _contains_replacement_character(zh_rows)
 
 
+def test_ui_market_map_display_rows_use_human_headers() -> None:
+    from promptcontrollab.ui import app
+
+    rows = [
+        {
+            "tool": "Braintrust",
+            "strong_lane": "Eval datasets and experiments",
+            "pcl_should_learn": "Fast experiment UX",
+            "pcl_still_owns": "Research evidence layer",
+            "status": "positioning_only_not_imported",
+        }
+    ]
+
+    en_rows = app._market_map_display_rows(rows, "en")
+    zh_rows = app._market_map_display_rows(rows, "zh")
+
+    assert en_rows == [
+        {
+            "Tool": "Braintrust",
+            "Strong lane": "Eval datasets and experiments",
+            "What PCL should learn": "Fast experiment UX",
+            "What PCL still owns": "Research evidence layer",
+            "Status": "positioning_only_not_imported",
+        }
+    ]
+    assert zh_rows == [
+        {
+            "工具": "Braintrust",
+            "强项": "Eval datasets and experiments",
+            "PCL 应该学习什么": "Fast experiment UX",
+            "PCL 仍然负责什么": "Research evidence layer",
+            "状态": "positioning_only_not_imported",
+        }
+    ]
+    assert "pcl_should_learn" not in en_rows[0]
+
+
 def test_ui_tutorial_gallery_exposes_visible_images() -> None:
     from promptcontrollab.ui import app
 
