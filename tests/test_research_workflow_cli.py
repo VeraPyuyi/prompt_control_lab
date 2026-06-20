@@ -21,6 +21,8 @@ def test_start_research_runs_paper_diagnostics_demo(
     out = capsys.readouterr().out
     assert "Beginner mode: run the paper-style research diagnostics demo" in out
     assert f"Open first: {run_dir / 'research_bundle.html'}" in out
+    assert "At a glance: diagnostics=4/4; claim=pass" in out
+    assert "Next action: Share the research bundle" in out
     assert "Evidence card:" in out
     assert "Claim check:" in out
     assert f"UI: pcl ui --runs {tmp_path}" in out
@@ -43,6 +45,9 @@ def test_research_demo_generates_paper_diagnostics(
     assert main(["research-demo", "--out", str(run_dir)]) == 0
     out = capsys.readouterr().out
     assert f"Open first: {run_dir / 'research_bundle.html'}" in out
+    assert "At a glance: diagnostics=4/4; claim=pass" in out
+    assert f"Open first from summary: {run_dir / 'research_bundle.html'}" in out
+    assert "Next action: Share the research bundle" in out
     assert f"UI: pcl ui --runs {tmp_path}" in out
 
     assert (run_dir / "inputs" / "soft_prompt.npz").exists()
@@ -272,7 +277,10 @@ def test_research_bundle_indexes_prompt_optimizer_eval_scaffold(tmp_path: Path) 
     assert verification["checked_count"] >= len(files)
 
 
-def test_diagnose_reuses_research_demo_inputs(tmp_path: Path) -> None:
+def test_diagnose_reuses_research_demo_inputs(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
     pytest.importorskip("numpy")
     run_dir = tmp_path / "research-demo"
     assert main(["research-demo", "--out", str(run_dir)]) == 0
@@ -282,9 +290,13 @@ def test_diagnose_reuses_research_demo_inputs(tmp_path: Path) -> None:
     (run_dir / "research_diagnostics.md").unlink()
 
     assert main(["diagnose", "--run", str(run_dir)]) == 0
+    out = capsys.readouterr().out
 
     summary = read_json(run_dir / "research_diagnostics.json")
     assert summary["mode"] == "diagnose"
+    assert "At a glance: diagnostics=4/4; claim=pass" in out
+    assert f"Open first from summary: {run_dir / 'research_bundle.html'}" in out
+    assert "Next action: Share the research bundle" in out
     assert summary["diagnostics"]["trajectory"]["turnpike_like_signal"] is True
     assert (run_dir / "diagnostics" / "soft_hard.json").exists()
     assert (run_dir / "diagnostics" / "tv_soft.json").exists()

@@ -2233,6 +2233,7 @@ def _format_research_demo_output(*, out_dir: Path, payload: JsonDict) -> str:
         f"Wrote research demo to {out_dir}",
         f"Diagnostics: {', '.join(diagnostic_names)}",
         f"Open first: {out_dir / 'research_bundle.html'}",
+        *_research_cli_summary_lines(summary_dir=out_dir, payload=payload),
         f"Research diagnostics: {out_dir / 'research_diagnostics.html'}",
         f"Evidence card: {out_dir / 'evidence_card.html'}",
         f"Claim check: {out_dir / 'claim_check.html'}",
@@ -2240,6 +2241,24 @@ def _format_research_demo_output(*, out_dir: Path, payload: JsonDict) -> str:
         f"UI: pcl ui --runs {ui_runs_dir}",
     ]
     return "\n".join(lines)
+
+
+def _research_cli_summary_lines(*, summary_dir: Path, payload: JsonDict) -> list[str]:
+    at_a_glance = payload.get("at_a_glance")
+    summary = at_a_glance if isinstance(at_a_glance, dict) else {}
+    diagnostics_ready = summary.get("diagnostics_ready", "unknown")
+    claim_status = summary.get("claim_status", "unknown")
+    evidence_tier = summary.get("evidence_tier", "unknown")
+    next_action = summary.get("next_action")
+    open_first = summary.get("open_first")
+    lines = [
+        f"At a glance: diagnostics={diagnostics_ready}; claim={claim_status}; tier={evidence_tier}",
+    ]
+    if isinstance(open_first, str) and open_first:
+        lines.append(f"Open first from summary: {summary_dir / open_first}")
+    if isinstance(next_action, str) and next_action:
+        lines.append(f"Next action: {next_action}")
+    return lines
 
 
 def _cmd_research_bundle(args: argparse.Namespace) -> None:
@@ -2279,7 +2298,9 @@ def _cmd_diagnose(args: argparse.Namespace) -> None:
         iterations=args.iterations,
     )
     print(f"Wrote research diagnostics to {payload['diagnostics_dir']}")
-    print(f"Report: {Path(str(payload['summary_dir'])) / 'research_diagnostics.html'}")
+    summary_dir_path = Path(str(payload["summary_dir"]))
+    print(f"Report: {summary_dir_path / 'research_diagnostics.html'}")
+    print("\n".join(_research_cli_summary_lines(summary_dir=summary_dir_path, payload=payload)))
 
 
 def _cmd_gap_status(args: argparse.Namespace) -> None:
