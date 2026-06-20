@@ -231,6 +231,9 @@ def tool_choice_lanes() -> list[JsonDict]:
                 "riccati",
                 "tv-soft",
                 "diagnose",
+                "diagnostic",
+                "diagnostics",
+                "control-theoretic",
                 "论文",
                 "研究",
                 "证据",
@@ -373,9 +376,12 @@ def market_gap_action_rows(*, language: str = "en") -> list[JsonDict]:
             {
                 "lane": "research-evidence",
                 "input": "任意 baseline / candidate run",
-                "gap": "还不清楚当前证据最多能支持什么主张。",
-                "command": "pcl claim-check --run runs/<run>",
-                "open": "claim_check.html",
+                "gap": "还没有先打开论文诊断证据包，用户不容易理解各项诊断之间的关系。",
+                "command": (
+                    "pcl research-demo --out runs/research-demo && "
+                    "pcl diagnose --run runs/research-demo"
+                ),
+                "open": "research_bundle.html",
             },
         ]
     return [
@@ -427,9 +433,12 @@ def market_gap_action_rows(*, language: str = "en") -> list[JsonDict]:
         {
             "lane": "research-evidence",
             "input": "Any baseline/candidate run",
-            "gap": "It is not yet clear what claim the evidence supports.",
-            "command": "pcl claim-check --run runs/<run>",
-            "open": "claim_check.html",
+            "gap": "The paper-diagnostic evidence bundle has not been opened first.",
+            "command": (
+                "pcl research-demo --out runs/research-demo && "
+                "pcl diagnose --run runs/research-demo"
+            ),
+            "open": "research_bundle.html",
         },
     ]
 

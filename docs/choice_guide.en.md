@@ -57,7 +57,7 @@ The same advisor is available in the local UI under **Research Overview**.
 | DeepEval TestRun output | Metrics exist, but prompt/model/split provenance and claim boundary need review. | `pcl import deepeval --input test-run.json --out runs/from-deepeval` | `manifest.json`, then `pcl evidence-card` |
 | LangSmith/Langfuse trace or eval export | Traces exist, but prompt effects may be confounded with model, metric, or split changes. | `pcl start --choice import --tool auto --input results.json --out runs/from-external` | `bridge_summary.html` |
 | prompt-optimizer favorites/templates | Better prompt candidates exist, but they are not yet paired scored evidence. | `pcl import prompt-optimizer --input favorites.json --out runs/from-prompt-optimizer` | `prompt_optimizer_gap_plan.html` |
-| Any baseline/candidate run | It is not yet clear what claim the evidence supports. | `pcl claim-check --run runs/<run>` | `claim_check.html` |
+| Any paper-diagnostic run | The research evidence bundle has not been opened first. | `pcl research-demo --out runs/research-demo && pcl diagnose --run runs/research-demo` | `research_bundle.html` |
 
 Generate the ecosystem scorecard and market-readiness summary:
 

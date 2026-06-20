@@ -3094,12 +3094,9 @@ def _format_start_guide(language: str = "en") -> str:
                 "prompt-optimizer / PCL 的选择建议。",
             ),
             (
-                "对比相邻工具和 PCL 补充证据",
-                "pcl start --choice ecosystem --out runs/ecosystem-demo",
-                (
-                    "打开 `ecosystem_scorecard.html`, 先看 Market readiness, "
-                    "再看外部工具强项和 PCL 证据缺口。"
-                ),
+                "运行论文里的 prompt optimization 诊断",
+                "pcl research-demo --out runs/research-demo",
+                "然后运行 `pcl diagnose --run runs/research-demo`, 打开 research_bundle.html。",
             ),
             (
                 "先看产品长什么样",
@@ -3108,9 +3105,12 @@ def _format_start_guide(language: str = "en") -> str:
                 "或运行 `pcl ui --runs runs --policy examples/guard.policy.yaml`。",
             ),
             (
-                "运行论文里的 prompt optimization 诊断",
-                "pcl research-demo --out runs/research-demo",
-                "然后运行 `pcl diagnose --run runs/research-demo`, 打开 research_bundle.html。",
+                "对比相邻工具和 PCL 补充证据",
+                "pcl start --choice ecosystem --out runs/ecosystem-demo",
+                (
+                    "打开 `ecosystem_scorecard.html`, 先看 Market readiness, "
+                    "再看外部工具强项和 PCL 证据缺口。"
+                ),
             ),
             (
                 "把外部评测结果导入成证据",
@@ -3151,15 +3151,15 @@ def _format_start_guide(language: str = "en") -> str:
                 "LangSmith/Langfuse, prompt-optimizer, or PCL.",
             ),
             (
+                "Run the paper-derived prompt optimization diagnostics",
+                "pcl research-demo --out runs/research-demo",
+                "Then run `pcl diagnose --run runs/research-demo` and open research_bundle.html.",
+            ),
+            (
                 "See the product first",
                 "pcl start --choice demo --out demo",
                 "Enter `demo`, open `runs/quick/report.html`, "
                 "or run `pcl ui --runs runs --policy examples/guard.policy.yaml`.",
-            ),
-            (
-                "Run the paper-derived prompt optimization diagnostics",
-                "pcl research-demo --out runs/research-demo",
-                "Then run `pcl diagnose --run runs/research-demo` and open research_bundle.html.",
             ),
             (
                 "Compare adjacent tools and PCL-added evidence",
