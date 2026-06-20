@@ -1790,6 +1790,7 @@ def test_cli_start_interactive_menu_supports_chinese(
     output = capsys.readouterr().out
     assert "你想先做什么?" in output
     assert "创建一个可直接运行的 demo 项目" in output
+    assert "7) 生成生态对比 demo" in output
     assert "新手模式: 创建可运行 demo 项目并生成 quick report" in output
     assert "已创建 PromptControlLab 示例项目" in output
     assert "已生成 quick report:" in output

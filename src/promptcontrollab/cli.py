@@ -2775,12 +2775,13 @@ def _start_choice(value: str | None, *, language: str = "en") -> str:
                     "4) 让我的 prompt 更清楚",
                     "5) 在发送给 AI 工具前检查 prompt",
                     "6) 比较 prompts 并生成报告",
+                    "7) 生成生态对比 demo",
                     "",
                     "提示: 如果不确定路径, 运行 `pcl start --guide --language zh`。",
                 ]
             )
         )
-        raw = input("请选择 1、2、3、4、5 或 6: ").strip().lower()
+        raw = input("请选择 1、2、3、4、5、6 或 7: ").strip().lower()
     else:
         print(
             "\n".join(
@@ -2819,7 +2820,7 @@ def _start_choice(value: str | None, *, language: str = "en") -> str:
     }
     if raw not in choices:
         msg = (
-            "请选择 1、2、3、4、5 或 6"
+            "请选择 1、2、3、4、5、6 或 7"
             if language == "zh"
             else "Choose 1, 2, 3, 4, 5, 6, or 7"
         )
