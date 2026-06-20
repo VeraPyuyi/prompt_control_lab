@@ -1909,6 +1909,7 @@ def test_cli_start_interactive_guard_menu(
     assert "2) Run a paper-style prompt optimization research demo" in output
     assert "3) Import external eval results as evidence" in output
     assert "7) Generate an ecosystem comparison demo" in output
+    assert "8) Choose which adjacent tool to use first" in output
     assert "pcl start --guide" in output
     assert "Beginner mode: guard a prompt" in output
     assert "Plain summary:" in output
@@ -1925,6 +1926,21 @@ def test_cli_start_interactive_import_menu_prints_bridge_commands(
     assert "pcl start --choice import --tool auto --input results.json" in output
     assert "prompt-optimizer favorites" in output
     assert "pcl evidence-audit" in output
+
+
+def test_cli_start_interactive_choose_menu_prints_tool_map(
+    capsys: pytest.CaptureFixture[str],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr("sys.stdin", io.StringIO("8\n"))
+
+    assert main(["start"]) == 0
+    output = capsys.readouterr().out
+
+    assert "8) Choose which adjacent tool to use first" in output
+    assert "Beginner mode: choose the right adjacent tool" in output
+    assert "Tool choice map" in output
+    assert "security: start with Promptfoo" in output
 
 
 def test_cli_start_choice_ecosystem_writes_comparison_demo(

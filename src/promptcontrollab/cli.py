@@ -3013,12 +3013,13 @@ def _start_choice(value: str | None, *, language: str = "en") -> str:
                     "5) Check a prompt before sending it to an AI tool",
                     "6) Compare prompts and create a report",
                     "7) Generate an ecosystem comparison demo",
+                    "8) Choose which adjacent tool to use first",
                     "",
                     "Tip: run `pcl start --guide` if you are unsure which path fits your goal.",
                 ]
             )
         )
-        raw = input("Choose 1, 2, 3, 4, 5, 6, or 7: ").strip().lower()
+        raw = input("Choose 1, 2, 3, 4, 5, 6, 7, or 8: ").strip().lower()
     choices = {
         "1": "demo",
         "demo": "demo",
@@ -3036,12 +3037,15 @@ def _start_choice(value: str | None, *, language: str = "en") -> str:
         "7": "ecosystem",
         "ecosystem": "ecosystem",
         "ecosystem-demo": "ecosystem",
+        "8": "choose",
+        "choose": "choose",
+        "tool-choice": "choose",
     }
     if raw not in choices:
         msg = (
-            "请选择 1、2、3、4、5、6 或 7"
+            "请选择 1、2、3、4、5、6、7 或 8"
             if language == "zh"
-            else "Choose 1, 2, 3, 4, 5, 6, or 7"
+            else "Choose 1, 2, 3, 4, 5, 6, 7, or 8"
         )
         raise ValueError(msg)
     return choices[raw]
