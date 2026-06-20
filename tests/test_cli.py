@@ -429,6 +429,7 @@ def test_cli_ecosystem_demo_runs_all_external_bridge_examples(tmp_path: Path) ->
         "langfuse",
         "langsmith",
         "deepeval",
+        "prompt-optimizer",
     ]
     assert scorecard["rows"][0]["gap_status"] == "not_checked"
     assert scorecard["rows"][0]["research_bundle_integrity"]["status"] == "hashed"
@@ -443,6 +444,7 @@ def test_cli_ecosystem_demo_runs_all_external_bridge_examples(tmp_path: Path) ->
         "langfuse",
         "langsmith",
         "deepeval",
+        "prompt-optimizer",
     ]
     assert matrix[0]["evidence_card"] == "present"
     assert matrix[0]["claim_check"] == "needs_review"
@@ -455,6 +457,29 @@ def test_cli_ecosystem_demo_runs_all_external_bridge_examples(tmp_path: Path) ->
     assert {"label": "Evidence card", "path": "promptfoo/evidence_card.html"} in promptfoo_links
     assert {"label": "Claim check", "path": "promptfoo/claim_check.html"} in promptfoo_links
     assert {"label": "HTML report", "path": "promptfoo/report.html"} in promptfoo_links
+    prompt_optimizer_row = next(
+        item for item in scorecard["rows"] if item["tool"] == "prompt-optimizer"
+    )
+    assert prompt_optimizer_row["validity"] == "not_scored"
+    assert prompt_optimizer_row["evidence_tier"] == "asset_bridge"
+    assert prompt_optimizer_row["claim_check_status"] == "not_applicable"
+    assert prompt_optimizer_row["recommendation"] == (
+        "score_imported_assets_before_claiming_improvement"
+    )
+    assert {
+        "label": "Prompt assets",
+        "path": "prompt-optimizer/prompt_assets.html",
+    } in prompt_optimizer_row["artifact_links"]
+    assert {
+        "label": "Prompt-optimizer gap plan",
+        "path": "prompt-optimizer/prompt_optimizer_gap_plan.html",
+    } in prompt_optimizer_row["artifact_links"]
+    prompt_optimizer_matrix = next(
+        item for item in matrix if item["tool"] == "prompt-optimizer"
+    )
+    assert prompt_optimizer_matrix["prompt_only_validity"] == "not_scored"
+    assert prompt_optimizer_matrix["paired_stats"] == "unknown"
+    assert prompt_optimizer_matrix["evidence_card"] == "missing"
     scorecard_markdown = (out / "ecosystem_scorecard.md").read_text(encoding="utf-8")
     assert "research evidence layer" in scorecard_markdown
     assert "PCL-added evidence matrix" in scorecard_markdown
@@ -472,6 +497,9 @@ def test_cli_ecosystem_demo_runs_all_external_bridge_examples(tmp_path: Path) ->
     assert "PCL-added evidence matrix" in scorecard_html
     assert "Prompt-only validity" in scorecard_html
     assert "DeepEval" in scorecard_html
+    assert "prompt-optimizer" in scorecard_html
+    assert "prompt-optimizer/prompt_assets.html" in scorecard_html
+    assert "prompt-optimizer/prompt_optimizer_gap_plan.html" in scorecard_html
     assert "promptfoo/bridge_summary.html" in scorecard_html
     assert "Bundle integrity" in scorecard_html
     assert "hashed; present" in scorecard_html
@@ -514,6 +542,7 @@ def test_cli_ecosystem_demo_runs_all_external_bridge_examples(tmp_path: Path) ->
         "langfuse",
         "langsmith",
         "deepeval",
+        "prompt-optimizer",
     ]
     for tool in ["promptfoo", "langfuse", "langsmith", "deepeval"]:
         tool_dir = out / tool
@@ -525,6 +554,13 @@ def test_cli_ecosystem_demo_runs_all_external_bridge_examples(tmp_path: Path) ->
         assert (tool_dir / "evidence_card.html").exists()
         assert (tool_dir / "research_bundle.html").exists()
         assert (tool_dir / "report.html").exists()
+    prompt_optimizer_dir = out / "prompt-optimizer"
+    assert (prompt_optimizer_dir / "prompt_assets.json").exists()
+    assert (prompt_optimizer_dir / "prompt_assets.html").exists()
+    assert (prompt_optimizer_dir / "prompt_optimizer_gap_plan.json").exists()
+    assert (prompt_optimizer_dir / "prompt_optimizer_gap_plan.html").exists()
+    assert (prompt_optimizer_dir / "bridge_summary.md").exists()
+    assert (prompt_optimizer_dir / "bridge_summary.html").exists()
     assert "prompt optimization evidence auditor" in (out / "README.md").read_text(
         encoding="utf-8"
     )

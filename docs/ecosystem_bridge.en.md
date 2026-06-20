@@ -92,6 +92,12 @@ external tool:
 - `runs/ecosystem-demo/langfuse/`
 - `runs/ecosystem-demo/langsmith/`
 - `runs/ecosystem-demo/deepeval/`
+- `runs/ecosystem-demo/prompt-optimizer/`
+
+The first four directories are scored evidence bundles. The `prompt-optimizer/`
+directory is intentionally an asset bridge: it contains `prompt_assets.html`,
+`prompt_optimizer_gap_plan.html`, and a bridge summary explaining which paired eval
+evidence is still required before claiming that an optimized prompt improved.
 
 Open `ecosystem_scorecard.html` first when you need a reviewer-facing cross-tool
 positioning table: what each external tool is good at, what PCL adds, and which paper

@@ -33,8 +33,13 @@ pcl ecosystem-demo --examples examples/external --out runs/ecosystem-demo
 - `research_gap_status.html`
 - `research_bundle_verification.html`
 
+一键 demo 还会生成 `runs/ecosystem-demo/prompt-optimizer/`。这个目录不是已评分证据，
+而是 prompt asset bridge：它包含 `prompt_assets.html`、`prompt_optimizer_gap_plan.html`
+和 bridge summary，告诉你在声称“优化有效”之前还需要补哪些成对评测证据。
+
 说明什么问题：你可以看到 Promptfoo、DeepEval、Langfuse、LangSmith 风格导出分别提供了
-什么证据，PCL 又补了哪些成对统计、prompt-only validity、claim check 和论文诊断缺口。
+什么证据，prompt-optimizer 提供了哪些 prompt 资产，PCL 又补了哪些成对统计、prompt-only validity、
+claim check 和论文诊断缺口。
 
 ## 一条命令做完整外部证据审计
 

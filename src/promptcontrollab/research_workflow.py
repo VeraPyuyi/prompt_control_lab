@@ -1550,6 +1550,7 @@ def _display_tool_name(tool: object) -> str:
         "langfuse": "Langfuse",
         "langsmith": "LangSmith",
         "deepeval": "DeepEval",
+        "prompt-optimizer": "prompt-optimizer",
     }
     return names.get(str(tool), str(tool))
 

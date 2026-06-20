@@ -8,6 +8,7 @@ from pathlib import Path
 
 from promptcontrollab.external_evidence import ExternalTool, build_external_evidence
 from promptcontrollab.files import JsonDict, ensure_dir, read_json, write_json
+from promptcontrollab.ingest import ingest_prompt_optimizer_assets
 from promptcontrollab.research_workflow import run_research_diagnostics
 
 
@@ -23,6 +24,12 @@ class EcosystemDemoSpec:
     candidate_name: str | None = None
     baseline_experiment: str | None = None
     candidate_experiment: str | None = None
+
+
+@dataclass(frozen=True)
+class PromptOptimizerAssetSpec:
+    tool: str
+    filename: str
 
 
 DEMO_SPECS: tuple[EcosystemDemoSpec, ...] = (
@@ -51,6 +58,13 @@ DEMO_SPECS: tuple[EcosystemDemoSpec, ...] = (
         filename="deepeval_baseline.json",
         candidate_filename="deepeval_candidate.json",
         score_name="exact_match",
+    ),
+)
+
+ASSET_SPECS: tuple[PromptOptimizerAssetSpec, ...] = (
+    PromptOptimizerAssetSpec(
+        tool="prompt-optimizer",
+        filename="prompt_optimizer_favorites.json",
     ),
 )
 
@@ -124,6 +138,8 @@ def run_ecosystem_demo(
                 "report_html_path": str(tool_dir / "report.html"),
             }
         )
+    for asset_spec in ASSET_SPECS:
+        runs.append(_run_prompt_optimizer_asset_bridge(examples_dir, out_dir, asset_spec))
 
     payload: JsonDict = {
         "kind": "ecosystem_demo",
@@ -188,6 +204,146 @@ def write_ecosystem_scorecard(*, run_dir: Path, out_path: Path | None = None) ->
     )
 
 
+def _run_prompt_optimizer_asset_bridge(
+    examples_dir: Path,
+    out_dir: Path,
+    spec: PromptOptimizerAssetSpec,
+) -> JsonDict:
+    source = examples_dir / spec.filename
+    if not source.exists():
+        msg = f"Missing {spec.tool} example export: {source}"
+        raise ValueError(msg)
+    tool_dir = out_dir / spec.tool
+    payload = ingest_prompt_optimizer_assets(source_path=source, out_dir=tool_dir)
+    bridge = _write_prompt_optimizer_bridge_summary(
+        tool_dir=tool_dir,
+        source=source,
+        ingest_payload=payload,
+    )
+    return {
+        "tool": spec.tool,
+        "source": str(source),
+        "out_dir": str(tool_dir),
+        "recommendation": bridge.get("recommendation"),
+        "evidence_tier": bridge.get("evidence_tier"),
+        "validity": bridge.get("validity"),
+        "claim_check_status": bridge.get("claim_check_status"),
+        "missing_evidence": bridge.get("missing_evidence", []),
+        "next_actions": bridge.get("next_actions", []),
+        "result_path": str(tool_dir / "prompt_assets.json"),
+        "bridge_summary_path": str(tool_dir / "bridge_summary.md"),
+        "bridge_summary_html_path": str(tool_dir / "bridge_summary.html"),
+        "prompt_assets_html_path": str(tool_dir / "prompt_assets.html"),
+        "gap_plan_html_path": str(tool_dir / "prompt_optimizer_gap_plan.html"),
+    }
+
+
+def _write_prompt_optimizer_bridge_summary(
+    *,
+    tool_dir: Path,
+    source: Path,
+    ingest_payload: JsonDict,
+) -> JsonDict:
+    bridge: JsonDict = {
+        "requested_tool": "prompt-optimizer",
+        "validity": "not_scored",
+        "evidence_tier": "asset_bridge",
+        "claim_check_status": "not_applicable",
+        "recommendation": "score_imported_assets_before_claiming_improvement",
+        "paired_n": None,
+        "mean_delta": None,
+        "asset_count": ingest_payload.get("asset_count"),
+        "source": str(source),
+        "missing_evidence": [
+            "paired_predictions",
+            "metrics",
+            "comparison_validity",
+            "paired_statistics",
+            "claim_check",
+        ],
+        "next_actions": ingest_payload.get("next_actions", []),
+        "boundary": ingest_payload.get(
+            "boundary",
+            "prompt-optimizer exports are prompt assets, not scored eval evidence.",
+        ),
+    }
+    write_json(tool_dir / "bridge_summary.json", bridge)
+    (tool_dir / "bridge_summary.md").write_text(
+        _render_prompt_optimizer_bridge_markdown(bridge),
+        encoding="utf-8",
+    )
+    (tool_dir / "bridge_summary.html").write_text(
+        _render_prompt_optimizer_bridge_html(bridge),
+        encoding="utf-8",
+    )
+    return bridge
+
+
+def _render_prompt_optimizer_bridge_markdown(payload: JsonDict) -> str:
+    missing = _string_list(payload.get("missing_evidence"))
+    actions = _string_list(payload.get("next_actions"))
+    lines = [
+        "# prompt-optimizer Asset Bridge",
+        "",
+        "This bundle imports prompt-optimizer favorites/templates as prompt assets.",
+        (
+            "It does **not** claim that any prompt improved, because no paired "
+            "predictions or metrics were supplied."
+        ),
+        "",
+        "## Status",
+        "",
+        f"- Validity: `{payload.get('validity')}`",
+        f"- Evidence tier: `{payload.get('evidence_tier')}`",
+        f"- Claim check: `{payload.get('claim_check_status')}`",
+        f"- Asset count: `{payload.get('asset_count')}`",
+        "",
+        "## Missing evidence before an improvement claim",
+        "",
+        *[f"- {item}" for item in missing],
+        "",
+        "## Next actions",
+        "",
+        *[f"- {item}" for item in actions],
+        "",
+        "## Boundary",
+        "",
+        str(payload.get("boundary") or ""),
+        "",
+    ]
+    return "\n".join(lines)
+
+
+def _render_prompt_optimizer_bridge_html(payload: JsonDict) -> str:
+    body = _render_prompt_optimizer_bridge_markdown(payload)
+    return f"""<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>prompt-optimizer Asset Bridge</title>
+  <style>
+    body {{
+      margin: 0;
+      background: #f7f9fc;
+      color: #18212f;
+      font: 15px/1.6 system-ui, sans-serif;
+    }}
+    main {{ max-width: 920px; margin: 0 auto; padding: 40px 24px; }}
+    pre {{
+      white-space: pre-wrap;
+      background: #fff;
+      border: 1px solid #d9e1ec;
+      border-radius: 12px;
+      padding: 22px;
+    }}
+  </style>
+</head>
+<body><main><pre>{html.escape(body)}</pre></main></body>
+</html>
+"""
+
+
 def _write_scorecard(
     *,
     out_dir: Path,
@@ -204,9 +360,9 @@ def _write_scorecard(
     scorecard: JsonDict = {
         "kind": "ecosystem_scorecard",
         "positioning": (
-            "Promptfoo, DeepEval, LangSmith, and Langfuse remain the systems of record for evals, "
-            "traces, security tests, and prompt management. PCL adds the research evidence "
-            "layer for prompt optimization claims."
+            "Promptfoo, DeepEval, LangSmith, Langfuse, and prompt-optimizer remain the systems "
+            "of record for evals, tests, traces, observability, security checks, and prompt "
+            "assets. PCL adds the research evidence layer for prompt optimization claims."
         ),
         "tool_count": len(rows),
         "rows": rows,
@@ -307,6 +463,11 @@ def _scorecard_artifact_links(*, out_dir: Path, tool_dir: Path) -> list[JsonDict
         ("Evidence card", _preferred_artifact(tool_dir, "evidence_card", "html", "md")),
         ("Claim check", _preferred_artifact(tool_dir, "claim_check", "html", "md")),
         ("HTML report", tool_dir / "report.html"),
+        ("Prompt assets", _preferred_artifact(tool_dir, "prompt_assets", "html", "md")),
+        (
+            "Prompt-optimizer gap plan",
+            _preferred_artifact(tool_dir, "prompt_optimizer_gap_plan", "html", "md"),
+        ),
         ("Gap plan", _preferred_artifact(tool_dir, "research_gap_plan", "html", "md")),
         ("Gap status", _preferred_artifact(tool_dir, "research_gap_status", "html", "md")),
     ]
@@ -459,6 +620,9 @@ def _external_strength(tool: str) -> str:
         "langfuse": "Open-source tracing, prompt management, scores, costs, and self-hosting.",
         "langsmith": "Agent tracing, datasets, online/offline evals, debugging, and deployment.",
         "deepeval": "Local LLM evaluation test runs, metric scores, reasons, and CI artifacts.",
+        "prompt-optimizer": (
+            "Prompt rewriting UX, prompt favorites/templates, and prompt asset management."
+        ),
     }
     return values.get(tool, "External eval or observability export.")
 
@@ -481,6 +645,10 @@ def _pcl_adds(tool: str) -> str:
             "Paired prompt evidence, protocol hygiene, claim checks, and paper-diagnostic "
             "follow-up planning on top of DeepEval local TestRun JSON."
         ),
+        "prompt-optimizer": (
+            "Prompt asset provenance, content hashes, and an explicit gap plan for collecting "
+            "paired eval evidence before claiming improvement."
+        ),
     }
     return values.get(tool, "Paired prompt optimization evidence and diagnostics.")
 
@@ -491,6 +659,7 @@ def _display_tool_name(tool: str) -> str:
         "langfuse": "Langfuse",
         "langsmith": "LangSmith",
         "deepeval": "DeepEval",
+        "prompt-optimizer": "prompt-optimizer",
     }
     return values.get(tool, tool)
 
@@ -1045,7 +1214,8 @@ def _render_readme(payload: JsonDict) -> str:
         "",
         (
             "This directory shows how `prompt_control_lab` works as a prompt optimization "
-            "evidence auditor for exports from Promptfoo, DeepEval, Langfuse, and LangSmith."
+            "evidence auditor for exports from Promptfoo, DeepEval, Langfuse, LangSmith, "
+            "and prompt-optimizer."
         ),
         "",
         "It does not replace those tools. It adds paired statistics, prompt-only validity, "
