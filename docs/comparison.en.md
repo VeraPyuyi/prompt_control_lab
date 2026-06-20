@@ -4,6 +4,16 @@ This page explains where `prompt_control_lab` should compete and where it should
 The short version: PCL should not try to become another broad LLMOps platform. Its strongest lane is
 the research evidence layer for prompt optimization.
 
+## 30-Second Choice Guide
+
+| If the user wants... | Start with... | Add PCL when... |
+|---|---|---|
+| Security testing, red-team suites, or provider-wide eval matrices | Promptfoo | The result needs paired uncertainty, prompt-only validity, claim boundaries, or paper-diagnostic evidence. |
+| Production traces, agent debugging, annotation queues, or LangChain/LangGraph observability | LangSmith | The trace/eval export must become a reproducible prompt-optimization evidence bundle. |
+| Open-source observability, prompt registry, cost tracking, or self-hosted LLM monitoring | Langfuse | Observability should be extended with soft-hard gap, hidden trajectory, Riccati, or time-varying control diagnostics. |
+| A polished app that rewrites prompts and manages prompt assets | prompt-optimizer | An optimized prompt needs proof that it improved under a clean protocol before deployment or publication. |
+| A reviewer-facing answer to "what can I safely claim?" | PCL | This is PCL's center: evidence cards, claim checks, gap status, provenance, and research bundles. |
+
 ## Positioning
 
 | Tool | Strong lane | PCL should not copy | PCL can add |

@@ -5,6 +5,16 @@
 一句话版本：PCL 不应该做另一个大而全的 LLMOps 平台。它最强的位置是
 **prompt optimization 的研究证据层**。
 
+## 30 秒选择指南
+
+| 用户想要什么 | 先用什么 | 什么时候加 PCL |
+|---|---|---|
+| 安全测试、红队用例、provider 评测矩阵 | Promptfoo | 结果还需要成对不确定性、prompt-only 有效性、claim 边界或论文诊断证据。 |
+| 生产 trace、agent debug、标注队列、LangChain/LangGraph 观测 | LangSmith | trace / eval 导出需要变成可复现的 prompt optimization 证据包。 |
+| 开源观测、prompt registry、成本跟踪、自托管 LLM monitoring | Langfuse | observability 还需要 soft-hard gap、hidden trajectory、Riccati 或 time-varying control 诊断。 |
+| 更顺手地改写 prompt、管理 prompt 资产 | prompt-optimizer | 优化后的 prompt 需要在部署或论文声称前证明“真的变好”。 |
+| 回答“我最多能安全声称什么？” | PCL | 这是 PCL 的中心：evidence card、claim check、gap status、provenance 和 research bundle。 |
+
 ## 定位对比
 
 | 工具 | 强项 | PCL 不应该硬拼 | PCL 可以补上的东西 |
