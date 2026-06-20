@@ -1439,7 +1439,10 @@ def test_tutorial_svg_renderer_reads_utf8_svg(tmp_path: Path) -> None:
     assert "中文 prompt_control_lab" in base64.b64decode(encoded).decode("utf-8")
 
 
-def test_research_overview_tab_renders_generated_svg(tmp_path: Path) -> None:
+def test_research_overview_tab_renders_generated_svg(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     from promptcontrollab.ui import app
 
     run = tmp_path / "runs" / "research-demo"
@@ -1451,6 +1454,7 @@ def test_research_overview_tab_renders_generated_svg(tmp_path: Path) -> None:
     )
     detail = load_run_detail(run)
     calls: list[dict[str, object]] = []
+    monkeypatch.setattr(app, "research_diagnostic_bar", lambda *_args, **_kwargs: object())
 
     class FakeStreamlit:
         def markdown(self, body: str, *, unsafe_allow_html: bool = False) -> None:
