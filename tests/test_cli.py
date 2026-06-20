@@ -1702,6 +1702,8 @@ def test_cli_start_guide_prints_goal_based_paths(capsys: pytest.CaptureFixture[s
     assert "paper-derived prompt optimization diagnostics" in output
     assert "Compare adjacent tools and PCL-added evidence" in output
     assert "pcl start --choice ecosystem --out runs/ecosystem-demo" in output
+    assert "Market readiness" in output
+    assert "avoid overbuilding" in output
     assert "Import external eval results as evidence" in output
     assert "pcl start --choice import --tool auto --input results.json" in output
     assert "Guard a coding-agent prompt" in output
@@ -1727,6 +1729,7 @@ def test_cli_start_guide_supports_chinese(capsys: pytest.CaptureFixture[str]) ->
     assert "在 coding agent 执行前守护 prompt" in output
     assert "审计 agent 到底改了什么" in output
     assert "生态选择地图" in output
+    assert "Market readiness" in output
     assert "Promptfoo -> eval / CI / red-team" in output
     assert "DeepEval -> Pytest-style LLM tests" in output
     assert "prompt-optimizer -> prompt 写作" in output
@@ -1775,6 +1778,7 @@ def test_cli_start_choice_ecosystem_writes_comparison_demo(
     assert "Beginner mode: compare adjacent ecosystem tools" in output
     assert "Generated ecosystem comparison demo" in output
     assert "Open first:" in output
+    assert "Start with Market readiness" in output
     assert (out / "ecosystem_demo.json").exists()
     assert (out / "ecosystem_scorecard.html").exists()
     assert (out / "research_bundle.html").exists()
@@ -1791,6 +1795,7 @@ def test_cli_start_choice_ecosystem_supports_chinese_output(
 
     assert "新手模式: 对比相邻生态工具" in output
     assert "已生成生态对比 demo" in output
+    assert "Market readiness" in output
     assert "Beginner mode: compare adjacent ecosystem tools" not in output
     assert (out / "ecosystem_scorecard.html").exists()
 

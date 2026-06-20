@@ -1967,8 +1967,12 @@ def _format_start_ecosystem_result(
                 f"已生成生态对比 demo: {out_dir}",
                 f"- 工具证据包数量: {run_count}",
                 f"- 先打开: {scorecard}",
+                (
+                    "- 先看 Market readiness: 它会告诉你 PCL 应该优先切入哪里, "
+                    "学习什么, 暂时不要做什么。"
+                ),
                 f"- 研究证据包: {bundle}",
-                "- 下一步: 打开 scorecard, 看每个外部工具强项和 PCL 补充的证据层。",
+                "- 下一步: 再看扩展市场地图和每个外部工具强项, 确认 PCL 补充的证据层。",
             ]
         )
     return "\n".join(
@@ -1976,10 +1980,14 @@ def _format_start_ecosystem_result(
             f"Generated ecosystem comparison demo: {out_dir}",
             f"- Tool bundles: {run_count}",
             f"- Open first: {scorecard}",
+            (
+                "- Start with Market readiness: it shows where PCL should lead, "
+                "learn, and avoid overbuilding."
+            ),
             f"- Research bundle: {bundle}",
             (
-                "- Next: open the scorecard to see each external tool's strength "
-                "and PCL-added evidence."
+                "- Next: review the extended market map and each external tool's strength "
+                "against PCL-added evidence."
             ),
         ]
     )
@@ -2861,7 +2869,10 @@ def _format_start_guide(language: str = "en") -> str:
             (
                 "对比相邻工具和 PCL 补充证据",
                 "pcl start --choice ecosystem --out runs/ecosystem-demo",
-                "打开 `ecosystem_scorecard.html`, 看外部工具强项和 PCL 证据缺口。",
+                (
+                    "打开 `ecosystem_scorecard.html`, 先看 Market readiness, "
+                    "再看外部工具强项和 PCL 证据缺口。"
+                ),
             ),
             (
                 "先看产品长什么样",
@@ -2897,6 +2908,7 @@ def _format_start_guide(language: str = "en") -> str:
         next_label = "下一步"
         ecosystem_lines = [
             "生态选择地图:",
+            "  先看 Market readiness -> 判断 PCL 应该领先什么、学习什么、暂时不要做什么。",
             "  Promptfoo -> eval / CI / red-team; PCL 补成对统计和 claim 边界。",
             "  DeepEval -> Pytest-style LLM tests; PCL 补 provenance 和 claim check。",
             "  LangSmith / Langfuse -> trace / observability; PCL 补 prompt-only 证据和论文诊断。",
@@ -2920,8 +2932,8 @@ def _format_start_guide(language: str = "en") -> str:
                 "Compare adjacent tools and PCL-added evidence",
                 "pcl start --choice ecosystem --out runs/ecosystem-demo",
                 (
-                    "Open `ecosystem_scorecard.html` to see external-tool strengths "
-                    "and PCL evidence gaps."
+                    "Open `ecosystem_scorecard.html`; read Market readiness first, "
+                    "then inspect external-tool strengths and PCL evidence gaps."
                 ),
             ),
             (
@@ -2952,6 +2964,7 @@ def _format_start_guide(language: str = "en") -> str:
         next_label = "Next"
         ecosystem_lines = [
             "Ecosystem choice map:",
+            "  Market readiness -> where PCL should lead, learn, and avoid overbuilding.",
             "  Promptfoo -> eval / CI / red-team; PCL adds paired stats and claim boundaries.",
             "  DeepEval -> Pytest-style LLM tests; PCL adds provenance and claim checks.",
             "  LangSmith / Langfuse -> traces / observability; "
