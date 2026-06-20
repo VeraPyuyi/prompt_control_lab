@@ -10,6 +10,7 @@ import subprocess
 import sys
 from collections.abc import Sequence
 from pathlib import Path
+from tempfile import TemporaryDirectory
 
 from promptcontrollab.agent_run import build_agent_run_manifest
 from promptcontrollab.artifact_export import export_report_zip
@@ -71,7 +72,7 @@ from promptcontrollab.scaffold_check import write_scaffold_check
 from promptcontrollab.soft_hard import analyze_soft_hard
 from promptcontrollab.splitting import load_tasks, make_split, write_split
 from promptcontrollab.statistics import compare_prediction_files
-from promptcontrollab.templates import write_example_project
+from promptcontrollab.templates import write_example_project, write_external_examples
 from promptcontrollab.trajectory import analyze_trajectory
 from promptcontrollab.tv_soft import summarize_tv_soft
 from promptcontrollab.validity import run_comparison_validity
@@ -1730,15 +1731,7 @@ def _cmd_start(args: argparse.Namespace) -> None:
 
     if choice == "ecosystem":
         out_dir = args.out or Path("runs") / "ecosystem-demo"
-        payload = run_ecosystem_demo(
-            examples_dir=Path("examples") / "external",
-            out_dir=out_dir,
-            split_hash="external-demo-split",
-            provider=args.provider or "openai",
-            model=args.model or "gpt-4o-mini-20260601",
-            bootstrap_samples=50,
-            permutation_samples=50,
-        )
+        payload = _run_start_ecosystem(args, out_dir=out_dir)
         if args.language == "zh":
             print("新手模式: 对比相邻生态工具")
         else:
@@ -1924,6 +1917,37 @@ def _run_start_import(args: argparse.Namespace, *, out_dir: Path) -> JsonDict:
         source_path=source_path,
         out_dir=out_dir,
         asset_id=args.asset_id,
+    )
+
+
+def _run_start_ecosystem(args: argparse.Namespace, *, out_dir: Path) -> JsonDict:
+    examples_dir = Path("examples") / "external"
+    if examples_dir.exists():
+        return _run_ecosystem_demo_with_examples(args, examples_dir=examples_dir, out_dir=out_dir)
+    with TemporaryDirectory(prefix="pcl-external-examples-") as tmp:
+        bundled_examples = Path(tmp) / "external"
+        write_external_examples(bundled_examples)
+        return _run_ecosystem_demo_with_examples(
+            args,
+            examples_dir=bundled_examples,
+            out_dir=out_dir,
+        )
+
+
+def _run_ecosystem_demo_with_examples(
+    args: argparse.Namespace,
+    *,
+    examples_dir: Path,
+    out_dir: Path,
+) -> JsonDict:
+    return run_ecosystem_demo(
+        examples_dir=examples_dir,
+        out_dir=out_dir,
+        split_hash="external-demo-split",
+        provider=args.provider or "openai",
+        model=args.model or "gpt-4o-mini-20260601",
+        bootstrap_samples=50,
+        permutation_samples=50,
     )
 
 

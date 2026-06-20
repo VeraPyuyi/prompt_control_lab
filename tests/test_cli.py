@@ -1720,6 +1720,26 @@ def test_cli_start_choice_ecosystem_supports_chinese_output(
     assert (out / "ecosystem_scorecard.html").exists()
 
 
+def test_cli_start_choice_ecosystem_works_without_repo_examples(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    cwd = tmp_path / "empty-project"
+    cwd.mkdir()
+    out = tmp_path / "runs" / "ecosystem-demo"
+    monkeypatch.chdir(cwd)
+
+    assert main(["start", "--choice", "ecosystem", "--out", str(out)]) == 0
+    output = capsys.readouterr().out
+
+    assert "Generated ecosystem comparison demo" in output
+    assert not (cwd / "examples" / "external").exists()
+    assert (out / "ecosystem_demo.json").exists()
+    assert (out / "ecosystem_scorecard.html").exists()
+    assert (out / "research_bundle.html").exists()
+
+
 def test_cli_start_choice_import_promptfoo_writes_run(
     tmp_path: Path,
     capsys: pytest.CaptureFixture[str],

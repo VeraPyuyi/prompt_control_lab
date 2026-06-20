@@ -538,7 +538,6 @@ def write_example_project(path: Path) -> None:
     """Write a small example project."""
 
     ensure_dir(path / "examples")
-    ensure_dir(path / "examples" / "external")
     ensure_dir(path / "prompts")
     ensure_dir(path / "runs")
     (path / "examples" / "tasks.jsonl").write_text(TASKS_JSONL, encoding="utf-8")
@@ -549,34 +548,7 @@ def write_example_project(path: Path) -> None:
     )
     (path / "examples" / "guard.policy.yaml").write_text(GUARD_POLICY_YAML, encoding="utf-8")
     (path / "examples" / "gate.policy.yaml").write_text(GATE_POLICY_YAML, encoding="utf-8")
-    (path / "examples" / "external" / "README.md").write_text(
-        EXTERNAL_README_MD,
-        encoding="utf-8",
-    )
-    (path / "examples" / "external" / "promptfoo_results.json").write_text(
-        PROMPTFOO_RESULTS_JSON,
-        encoding="utf-8",
-    )
-    (path / "examples" / "external" / "langfuse_export.json").write_text(
-        LANGFUSE_EXPORT_JSON,
-        encoding="utf-8",
-    )
-    (path / "examples" / "external" / "langsmith_runs.csv").write_text(
-        LANGSMITH_RUNS_CSV,
-        encoding="utf-8",
-    )
-    (path / "examples" / "external" / "deepeval_baseline.json").write_text(
-        DEEPEVAL_BASELINE_JSON,
-        encoding="utf-8",
-    )
-    (path / "examples" / "external" / "deepeval_candidate.json").write_text(
-        DEEPEVAL_CANDIDATE_JSON,
-        encoding="utf-8",
-    )
-    (path / "examples" / "external" / "prompt_optimizer_favorites.json").write_text(
-        PROMPT_OPTIMIZER_FAVORITES_JSON,
-        encoding="utf-8",
-    )
+    write_external_examples(path / "examples" / "external")
     (path / "prompts" / "current.txt").write_text(
         "Answer the user question exactly and keep the requested output format.\n",
         encoding="utf-8",
@@ -585,3 +557,37 @@ def write_example_project(path: Path) -> None:
     (path / "README.zh.md").write_text(PROJECT_README_ZH_MD, encoding="utf-8")
     (path / "promptcontrol.example.yaml").write_text(CONFIG_YAML, encoding="utf-8")
     (path / ".promptcontrol.yaml").write_text(PROJECT_CONFIG_YAML, encoding="utf-8")
+
+
+def write_external_examples(path: Path) -> None:
+    """Write bundled external-tool export examples."""
+
+    ensure_dir(path)
+    (path / "README.md").write_text(
+        EXTERNAL_README_MD,
+        encoding="utf-8",
+    )
+    (path / "promptfoo_results.json").write_text(
+        PROMPTFOO_RESULTS_JSON,
+        encoding="utf-8",
+    )
+    (path / "langfuse_export.json").write_text(
+        LANGFUSE_EXPORT_JSON,
+        encoding="utf-8",
+    )
+    (path / "langsmith_runs.csv").write_text(
+        LANGSMITH_RUNS_CSV,
+        encoding="utf-8",
+    )
+    (path / "deepeval_baseline.json").write_text(
+        DEEPEVAL_BASELINE_JSON,
+        encoding="utf-8",
+    )
+    (path / "deepeval_candidate.json").write_text(
+        DEEPEVAL_CANDIDATE_JSON,
+        encoding="utf-8",
+    )
+    (path / "prompt_optimizer_favorites.json").write_text(
+        PROMPT_OPTIMIZER_FAVORITES_JSON,
+        encoding="utf-8",
+    )
