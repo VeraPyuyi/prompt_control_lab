@@ -120,6 +120,7 @@ def build_parser() -> argparse.ArgumentParser:
         choices=[
             "demo",
             "research",
+            "choose",
             "ecosystem",
             "import",
             "evidence",
@@ -143,6 +144,11 @@ def build_parser() -> argparse.ArgumentParser:
     )
     start_parser.add_argument("--prompt", default=None, help="Prompt string for improve/guard.")
     start_parser.add_argument("--prompt-file", type=Path, default=None, help="Prompt text file.")
+    start_parser.add_argument(
+        "--need",
+        default=None,
+        help="Free-text need used when choice is choose.",
+    )
     start_parser.add_argument("--run", type=Path, default=None, help="Optional run directory.")
     start_parser.add_argument("--out", type=Path, default=None, help="Optional output directory.")
     start_parser.add_argument("--policy", type=Path, default=None, help="Optional guard policy.")
@@ -1886,6 +1892,21 @@ def _cmd_start(args: argparse.Namespace) -> None:
         payload = write_research_demo(out_dir=out_dir, seed=args.seed)
         print("Beginner mode: run the paper-style research diagnostics demo")
         print(_format_research_demo_output(out_dir=out_dir, payload=payload))
+        return
+
+    if choice == "choose":
+        if args.language == "zh":
+            print("新手模式: 选择先用哪个相邻工具")
+        else:
+            print("Beginner mode: choose the right adjacent tool")
+        _cmd_choose(
+            argparse.Namespace(
+                need=args.need,
+                language=args.language,
+                json=False,
+                out=args.out,
+            )
+        )
         return
 
     if choice == "ecosystem":

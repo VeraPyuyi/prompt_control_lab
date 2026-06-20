@@ -1858,6 +1858,38 @@ def test_cli_choose_writes_json_and_markdown_artifacts(
     assert "成对不确定性" in markdown
 
 
+def test_cli_start_choice_choose_writes_tool_choice_artifacts(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    out_path = tmp_path / "tool-choice.json"
+
+    assert (
+        main(
+            [
+                "start",
+                "--choice",
+                "choose",
+                "--need",
+                "security evals and red-team checks",
+                "--out",
+                str(out_path),
+            ]
+        )
+        == 0
+    )
+    output = capsys.readouterr().out
+
+    assert "Beginner mode: choose the right adjacent tool" in output
+    assert "Tool choice recommendation" in output
+    assert "Wrote tool-choice artifacts" in output
+    payload = json.loads(out_path.read_text(encoding="utf-8"))
+    markdown = out_path.with_suffix(".md").read_text(encoding="utf-8")
+    assert payload["matched"] == "security"
+    assert "# Tool Choice Recommendation" in markdown
+    assert "Promptfoo is strongest" in markdown
+
+
 def test_cli_start_interactive_guard_menu(
     capsys: pytest.CaptureFixture[str],
     monkeypatch: pytest.MonkeyPatch,
