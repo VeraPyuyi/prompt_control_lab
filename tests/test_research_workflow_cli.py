@@ -64,6 +64,9 @@ def test_research_demo_generates_paper_diagnostics(
     assert set(summary["diagnostics"]) == {"soft_hard", "trajectory", "riccati", "tv_soft"}
     assert summary["plain_language_insights"][0]["diagnostic"] == "Soft-to-hard gap"
     assert summary["plain_language_insights"][0]["next_action"]
+    assert summary["at_a_glance"]["diagnostics_ready"] == "4/4"
+    assert summary["at_a_glance"]["open_first"] == "research_bundle.html"
+    assert summary["at_a_glance"]["claim_status"] == "pass"
     concept_names = {item["concept"] for item in _mapping(summary)}
     assert "tri-split withheld protocol" in concept_names
     assert "HuggingFace hidden-state extraction" in concept_names
@@ -72,6 +75,8 @@ def test_research_demo_generates_paper_diagnostics(
     assert "prompt optimization evidence card" in concept_names
     report = (run_dir / "research_diagnostics.md").read_text(encoding="utf-8")
     assert "Research Diagnostics Report" in report
+    assert "## At a glance" in report
+    assert "| diagnostics ready | 4/4 |" in report
     assert "![Research overview](research_overview.svg)" in report
     assert "## Plain-language interpretation" in report
     assert "| Diagnostic | Checks | Result | Interpretation | Next action |" in report
@@ -80,6 +85,8 @@ def test_research_demo_generates_paper_diagnostics(
     assert "Riccati surrogate" in report
     report_html = (run_dir / "research_diagnostics.html").read_text(encoding="utf-8")
     assert "Research Diagnostics Report" in report_html
+    assert "At a Glance" in report_html
+    assert "research_bundle.html" in report_html
     assert 'src="research_overview.svg"' in report_html
     assert "Plain-language Interpretation" in report_html
     assert "Next action" in report_html

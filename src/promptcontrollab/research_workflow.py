@@ -555,6 +555,7 @@ def _run_external_bridge_diagnostics(
 def _write_research_outputs(*, summary_dir: Path, payload: JsonDict) -> None:
     ensure_dir(summary_dir)
     payload["plain_language_insights"] = _plain_language_research_insights(payload)
+    payload["at_a_glance"] = _research_at_a_glance(payload, summary_dir=summary_dir)
     gap_plan = _build_research_gap_plan(payload)
     if gap_plan["actions"]:
         plan_json = summary_dir / "research_gap_plan.json"
@@ -1606,15 +1607,30 @@ def render_research_diagnostics_markdown(payload: JsonDict) -> str:
         "",
         "This report summarizes paper-derived PromptControlLab diagnostics.",
         "",
-        "## Visual Overview",
+        "## At a glance",
         "",
-        "![Research overview](research_overview.svg)",
-        "",
-        "## Plain-language interpretation",
-        "",
-        "| Diagnostic | Checks | Result | Interpretation | Next action |",
-        "|---|---|---|---|---|",
+        "| Field | Value |",
+        "|---|---|",
     ]
+    for key, value in _research_at_a_glance(payload).items():
+        lines.append(f"| {key.replace('_', ' ')} | {value} |")
+    lines.extend(
+        [
+            "",
+            "## Visual Overview",
+            "",
+            "![Research overview](research_overview.svg)",
+            "",
+        ]
+    )
+    lines.extend(
+        [
+            "## Plain-language interpretation",
+            "",
+            "| Diagnostic | Checks | Result | Interpretation | Next action |",
+            "|---|---|---|---|---|",
+        ]
+    )
     for row in _plain_language_research_insights(payload):
         lines.append(
             "| "
@@ -1782,6 +1798,15 @@ def render_research_diagnostics_html(payload: JsonDict) -> str:
         diagnostics = {}
     body: list[str] = [
         _paragraph("This report summarizes paper-derived PromptControlLab diagnostics."),
+        _section(
+            "At a Glance",
+            _metric_grid(
+                [
+                    (key.replace("_", " "), value)
+                    for key, value in _research_at_a_glance(payload).items()
+                ]
+            ),
+        ),
         _section(
             "Visual Overview",
             '<img class="overview" src="research_overview.svg" '
@@ -2526,6 +2551,89 @@ def _plain_language_research_insights(payload: JsonDict) -> list[JsonDict]:
         }
         for key, artifact, row_payload in specs
     ]
+
+
+def _research_at_a_glance(payload: JsonDict, *, summary_dir: Path | None = None) -> JsonDict:
+    existing = payload.get("at_a_glance")
+    if summary_dir is None and isinstance(existing, dict) and existing:
+        return existing
+
+    diagnostics = payload.get("diagnostics")
+    diagnostics_dict = diagnostics if isinstance(diagnostics, dict) else {}
+    ready_keys = [
+        key
+        for key in ["soft_hard", "trajectory", "riccati", "tv_soft"]
+        if isinstance(diagnostics_dict.get(key), dict)
+    ]
+    inputs = payload.get("inputs")
+    inputs_dict = inputs if isinstance(inputs, dict) else {}
+    hidden_state_input = (
+        "present" if isinstance(inputs_dict.get("hidden_states"), dict) else "missing"
+    )
+    evidence = _read_optional_json(summary_dir / "evidence_card.json") if summary_dir else {}
+    claim = _read_optional_json(summary_dir / "claim_check.json") if summary_dir else {}
+    gap_plan = _read_optional_json(summary_dir / "research_gap_plan.json") if summary_dir else {}
+    gap_status = (
+        _read_optional_json(summary_dir / "research_gap_status.json") if summary_dir else {}
+    )
+    claim_status = str(claim.get("status") or "not run")
+    evidence_recommendation = str(evidence.get("recommendation") or "not run")
+    open_first = _research_open_first(
+        evidence=evidence,
+        claim=claim,
+        gap_plan=gap_plan,
+        gap_status=gap_status,
+    )
+    return {
+        "mode": str(payload.get("mode") or "unknown"),
+        "diagnostics_ready": f"{len(ready_keys)}/4",
+        "hidden_state_input": hidden_state_input,
+        "evidence_recommendation": evidence_recommendation,
+        "evidence_tier": str(
+            claim.get("evidence_tier") or evidence.get("evidence_tier") or "not run"
+        ),
+        "claim_status": claim_status,
+        "safe_claim": str(claim.get("safe_claim") or "not checked"),
+        "open_first": open_first,
+        "next_action": _research_next_report_action(
+            evidence_recommendation=evidence_recommendation,
+            claim_status=claim_status,
+            open_first=open_first,
+        ),
+    }
+
+
+def _research_open_first(
+    *,
+    evidence: JsonDict,
+    claim: JsonDict,
+    gap_plan: JsonDict,
+    gap_status: JsonDict,
+) -> str:
+    if gap_plan and gap_status.get("status") != "complete":
+        return "research_gap_plan.html"
+    if evidence.get("recommendation") == "supported" and claim.get("status") == "pass":
+        return "research_bundle.html"
+    if claim:
+        return "claim_check.html"
+    if evidence:
+        return "evidence_card.html"
+    return "research_diagnostics.html"
+
+
+def _research_next_report_action(
+    *,
+    evidence_recommendation: str,
+    claim_status: str,
+    open_first: str,
+) -> str:
+    if evidence_recommendation == "supported" and claim_status == "pass":
+        return "Share the research bundle, evidence card, and claim check together."
+    if open_first == "research_gap_plan.html":
+        return "Close the listed evidence gaps, then rerun `pcl diagnose`."
+    if claim_status in {"fail", "needs_review"}:
+        return "Read claim_check.html before making a broad prompt-optimization claim."
+    return "Read research_diagnostics.html and add missing diagnostics before claiming improvement."
 
 
 def _payload_dict(payload: JsonDict, key: str) -> JsonDict:
