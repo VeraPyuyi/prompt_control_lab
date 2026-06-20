@@ -17,6 +17,7 @@ from promptcontrollab.prompt_context import load_prompt_context
 from promptcontrollab.prompt_guard import guard_prompt
 from promptcontrollab.tool_choice import (
     choose_tool_for_need,
+    market_gap_action_rows,
     render_tool_choice_markdown,
     tool_choice_lanes,
 )
@@ -212,6 +213,11 @@ TEXT = {
         "tool_choice_why": "Why",
         "tool_choice_commands": "Suggested PCL commands",
         "tool_choice_avoid": "Avoid",
+        "tool_choice_gap_actions": "From market gap to PCL command",
+        "tool_choice_gap_input": "External result",
+        "tool_choice_gap_gap": "Evidence gap",
+        "tool_choice_gap_command": "Run next",
+        "tool_choice_gap_open": "Open first",
         "tool_choice_download_json": "Download tool_choice.json",
         "tool_choice_download_md": "Download tool_choice.md",
         "execution_mode": "Execution mode",
@@ -471,6 +477,11 @@ TEXT = {
         "tool_choice_why": "为什么",
         "tool_choice_commands": "建议使用的 PCL 命令",
         "tool_choice_avoid": "不要做",
+        "tool_choice_gap_actions": "从市场缺口到 PCL 命令",
+        "tool_choice_gap_input": "外部结果",
+        "tool_choice_gap_gap": "证据缺口",
+        "tool_choice_gap_command": "下一步运行",
+        "tool_choice_gap_open": "先打开",
         "tool_choice_download_json": "下载 tool_choice.json",
         "tool_choice_download_md": "下载 tool_choice.md",
         "execution_mode": "执行模式",
@@ -2253,6 +2264,18 @@ def _render_tool_choice_advisor(st: Any, text: dict[str, str], language: str) ->
     if command_list:
         st.caption(text["tool_choice_commands"])
         st.code("\n".join(command_list), language="bash")
+    gap_rows = [
+        {
+            text["tool_choice_gap_input"]: row.get("input", ""),
+            text["tool_choice_gap_gap"]: row.get("gap", ""),
+            text["tool_choice_gap_command"]: row.get("command", ""),
+            text["tool_choice_gap_open"]: row.get("open", ""),
+        }
+        for row in market_gap_action_rows(language=language)
+    ]
+    if gap_rows:
+        st.caption(text["tool_choice_gap_actions"])
+        st.dataframe(gap_rows, use_container_width=True)
     if hasattr(st, "download_button"):
         st.download_button(
             text["tool_choice_download_json"],

@@ -1854,6 +1854,9 @@ def test_cli_choose_writes_json_and_markdown_artifacts(
     payload = json.loads((out_dir / "tool_choice.json").read_text(encoding="utf-8"))
     markdown = (out_dir / "tool_choice.md").read_text(encoding="utf-8")
     assert "choices" in payload
+    assert "market_gap_actions" in payload
+    assert "pcl evidence-audit --tool promptfoo" in markdown
+    assert "prompt_optimizer_gap_plan.html" in markdown
     assert "# 工具选择地图" in markdown
     assert "成对不确定性" in markdown
 

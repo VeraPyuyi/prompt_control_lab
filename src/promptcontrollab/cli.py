@@ -75,6 +75,7 @@ from promptcontrollab.templates import write_example_project, write_external_exa
 from promptcontrollab.tool_choice import (
     choose_tool_for_need,
     format_tool_choice,
+    market_gap_action_rows,
     render_tool_choice_markdown,
     tool_choice_lanes,
 )
@@ -1812,7 +1813,11 @@ def _cmd_choose(args: argparse.Namespace) -> None:
     """Print adjacent-tool guidance for a user need."""
 
     if args.need is None:
-        payload = {"choices": tool_choice_lanes(), "next": "Run pcl choose --need <your-goal>."}
+        payload = {
+            "choices": tool_choice_lanes(),
+            "market_gap_actions": market_gap_action_rows(language=args.language),
+            "next": "Run pcl choose --need <your-goal>.",
+        }
     else:
         payload = choose_tool_for_need(args.need)
     written: tuple[Path, Path] | None = None

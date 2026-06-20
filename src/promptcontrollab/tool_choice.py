@@ -1,4 +1,5 @@
 """Adjacent-tool choice guidance for prompt_control_lab."""
+# ruff: noqa: RUF001
 
 from __future__ import annotations
 
@@ -291,6 +292,102 @@ def choose_tool_for_need(need: str) -> JsonDict:
     }
 
 
+def market_gap_action_rows(*, language: str = "en") -> list[JsonDict]:
+    """Return action rows that turn adjacent-tool outputs into PCL next steps."""
+
+    if language == "zh":
+        return [
+            {
+                "input": "Promptfoo eval 或红队导出",
+                "gap": "有分数，但成对不确定性和 prompt-only 有效性还不清楚。",
+                "command": (
+                    "pcl evidence-audit --tool promptfoo ... "
+                    "--out runs/from-promptfoo-audit"
+                ),
+                "open": "evidence_audit_result.html",
+            },
+            {
+                "input": "DeepEval TestRun 输出",
+                "gap": "有指标，但 prompt/model/split provenance 和 claim 边界还需要审查。",
+                "command": "pcl import deepeval --input test-run.json --out runs/from-deepeval",
+                "open": "manifest.json, 然后运行 pcl evidence-card",
+            },
+            {
+                "input": "LangSmith / Langfuse trace 或 eval 导出",
+                "gap": "有 trace，但 prompt 效果可能和模型、指标、切分变化混在一起。",
+                "command": (
+                    "pcl start --choice import --tool auto --input results.json "
+                    "--out runs/from-external"
+                ),
+                "open": "bridge_summary.html",
+            },
+            {
+                "input": "prompt-optimizer 收藏或模板",
+                "gap": "有更好的 prompt 候选，但还不是成对打分证据。",
+                "command": (
+                    "pcl import prompt-optimizer --input favorites.json "
+                    "--out runs/from-prompt-optimizer"
+                ),
+                "open": "prompt_optimizer_gap_plan.html",
+            },
+            {
+                "input": "任意 baseline / candidate run",
+                "gap": "还不清楚当前证据最多能支持什么主张。",
+                "command": "pcl claim-check --run runs/<run>",
+                "open": "claim_check.html",
+            },
+        ]
+    return [
+        {
+            "input": "Promptfoo eval or red-team export",
+            "gap": (
+                "Scores exist, but paired uncertainty and prompt-only validity may still be "
+                "unclear."
+            ),
+            "command": (
+                "pcl evidence-audit --tool promptfoo ... --out runs/from-promptfoo-audit"
+            ),
+            "open": "evidence_audit_result.html",
+        },
+        {
+            "input": "DeepEval TestRun output",
+            "gap": (
+                "Metrics exist, but prompt/model/split provenance and claim boundary need "
+                "review."
+            ),
+            "command": "pcl import deepeval --input test-run.json --out runs/from-deepeval",
+            "open": "manifest.json, then pcl evidence-card",
+        },
+        {
+            "input": "LangSmith/Langfuse trace or eval export",
+            "gap": (
+                "Traces exist, but prompt effects may be confounded with model, metric, "
+                "or split changes."
+            ),
+            "command": (
+                "pcl start --choice import --tool auto --input results.json "
+                "--out runs/from-external"
+            ),
+            "open": "bridge_summary.html",
+        },
+        {
+            "input": "prompt-optimizer favorites/templates",
+            "gap": "Better prompt candidates exist, but they are not yet paired scored evidence.",
+            "command": (
+                "pcl import prompt-optimizer --input favorites.json "
+                "--out runs/from-prompt-optimizer"
+            ),
+            "open": "prompt_optimizer_gap_plan.html",
+        },
+        {
+            "input": "Any baseline/candidate run",
+            "gap": "It is not yet clear what claim the evidence supports.",
+            "command": "pcl claim-check --run runs/<run>",
+            "open": "claim_check.html",
+        },
+    ]
+
+
 def format_tool_choice(payload: JsonDict, *, language: str = "en") -> str:
     """Format a tool-choice payload for humans."""
 
@@ -364,6 +461,8 @@ def render_tool_choice_markdown(payload: JsonDict, *, language: str = "en") -> s
                     f"{_md_cell(lane.get('use_first'))} | "
                     f"{_md_cell(lane.get('pcl_short_zh') or lane.get('pcl_short'))} |"
                 )
+            lines.extend(["", "## 从市场缺口到 PCL 命令", ""])
+            lines.extend(_market_gap_markdown_table(language="zh"))
             lines.extend(["", "下一步: `pcl choose --need <你的目标>`"])
             return "\n".join(lines) + "\n"
         lines = [
@@ -379,6 +478,8 @@ def render_tool_choice_markdown(payload: JsonDict, *, language: str = "en") -> s
                 f"{_md_cell(lane.get('use_first'))} | "
                 f"{_md_cell(lane.get('pcl_short'))} |"
             )
+        lines.extend(["", "## From Market Gap to PCL Command", ""])
+        lines.extend(_market_gap_markdown_table(language="en"))
         lines.extend(["", "Next: `pcl choose --need <your-goal>`"])
         return "\n".join(lines) + "\n"
 
@@ -439,3 +540,28 @@ def _command_list(value: object) -> list[str]:
 
 def _md_cell(value: object) -> str:
     return str(value or "").replace("|", "\\|").replace("\n", " ")
+
+
+def _market_gap_markdown_table(*, language: str) -> list[str]:
+    if language == "zh":
+        lines = [
+            "| 你已经从其他工具得到什么 | 还缺什么证据 | 下一步运行 | 先打开 |",
+            "|---|---|---|---|",
+        ]
+    else:
+        lines = [
+            (
+                "| What another tool leaves you with | Gap before a strong claim | "
+                "Run next | Open first |"
+            ),
+            "|---|---|---|---|",
+        ]
+    for row in market_gap_action_rows(language=language):
+        lines.append(
+            "| "
+            f"{_md_cell(row.get('input'))} | "
+            f"{_md_cell(row.get('gap'))} | "
+            f"`{_md_cell(row.get('command'))}` | "
+            f"`{_md_cell(row.get('open'))}` |"
+        )
+    return lines
