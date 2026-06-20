@@ -914,6 +914,27 @@ def test_research_insight_rows_explain_diagnostics_in_both_languages(tmp_path: P
     assert all(row["next_action"] for row in english)
 
 
+def test_research_insight_display_rows_localize_column_names() -> None:
+    from promptcontrollab.ui import app
+
+    rows = [
+        {
+            "diagnostic": "软转硬 gap",
+            "checks": "检查部署风险",
+            "result": "risk=low",
+            "interpretation": "风险较低",
+            "next_action": "复测 hard prompt",
+        }
+    ]
+
+    chinese = app._research_insight_display_rows(rows, "zh")
+    english = app._research_insight_display_rows(rows, "en")
+
+    assert list(chinese[0]) == ["诊断", "检查什么", "当前结果", "说明什么", "下一步"]
+    assert "next_action" not in chinese[0]
+    assert list(english[0]) == ["Diagnostic", "Checks", "Result", "Interpretation", "Next action"]
+
+
 def test_research_evidence_map_links_protocol_diagnostics_and_claim(tmp_path: Path) -> None:
     run = tmp_path / "runs" / "research-demo"
     _write_json(run / "splits.json", {"split_hash": "abc"})
@@ -1484,6 +1505,7 @@ def test_research_overview_tab_renders_generated_svg(
     )
     detail = load_run_detail(run)
     calls: list[dict[str, object]] = []
+    dataframes: list[object] = []
     monkeypatch.setattr(app, "research_diagnostic_bar", lambda *_args, **_kwargs: object())
 
     class FakeStreamlit:
@@ -1493,8 +1515,8 @@ def test_research_overview_tab_renders_generated_svg(
         def caption(self, _body: object) -> None:
             pass
 
-        def dataframe(self, *_args: object, **_kwargs: object) -> None:
-            pass
+        def dataframe(self, data: object, *_args: object, **_kwargs: object) -> None:
+            dataframes.append(data)
 
         def plotly_chart(self, *_args: object, **_kwargs: object) -> None:
             pass
@@ -1519,6 +1541,10 @@ def test_research_overview_tab_renders_generated_svg(
     encoded = image_bodies[0].split("base64,", 1)[1].split('"', 1)[0]
     assert "Research overview graphic" in base64.b64decode(encoded).decode("utf-8")
     assert any("Plain-language interpretation" in str(call["body"]) for call in calls)
+    assert any(
+        isinstance(frame, list) and frame and "Next action" in frame[0]
+        for frame in dataframes
+    )
 
 
 def test_tutorial_svg_renderer_uses_data_uri_not_raw_svg(tmp_path: Path) -> None:

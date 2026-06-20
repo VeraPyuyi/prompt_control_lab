@@ -1685,7 +1685,10 @@ def _render_research_overview_tab(
             f'<div class="pcl-section-title">{html.escape(text["research_insights"])}</div>',
             unsafe_allow_html=True,
         )
-        st.dataframe(insight_rows, use_container_width=True)
+        st.dataframe(
+            _research_insight_display_rows(insight_rows, language),
+            use_container_width=True,
+        )
     map_html = research_evidence_map_html(evidence_map)
     if map_html:
         st.markdown(
@@ -1911,6 +1914,31 @@ def _render_research_pipeline(st: Any, text: dict[str, str]) -> None:
         f'<div class="pcl-pipeline">{html_steps}</div>',
         unsafe_allow_html=True,
     )
+
+
+def _research_insight_display_rows(rows: list[JsonDict], language: str) -> list[JsonDict]:
+    labels = {
+        "en": {
+            "diagnostic": "Diagnostic",
+            "checks": "Checks",
+            "result": "Result",
+            "interpretation": "Interpretation",
+            "next_action": "Next action",
+        },
+        "zh": {
+            "diagnostic": "诊断",
+            "checks": "检查什么",
+            "result": "当前结果",
+            "interpretation": "说明什么",
+            "next_action": "下一步",
+        },
+    }
+    selected = labels["zh"] if language == "zh" else labels["en"]
+    ordered_keys = ["diagnostic", "checks", "result", "interpretation", "next_action"]
+    return [
+        {selected[key]: str(row.get(key, "")) for key in ordered_keys}
+        for row in rows
+    ]
 
 
 def _render_external_bridge_section(
