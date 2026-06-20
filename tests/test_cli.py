@@ -1774,6 +1774,27 @@ def test_cli_start_guide_supports_chinese(capsys: pytest.CaptureFixture[str]) ->
     assert "pcl start --language zh" in output
 
 
+def test_cli_choose_recommends_adjacent_tool_paths(capsys: pytest.CaptureFixture[str]) -> None:
+    assert main(["choose"]) == 0
+    output = capsys.readouterr().out
+    assert "Tool choice map" in output
+    assert "security: start with Promptfoo" in output
+    assert "prompt-writing: start with linshenkx/prompt-optimizer" in output
+
+    assert main(["choose", "--need", "rewrite prompt and keep favorite templates"]) == 0
+    output = capsys.readouterr().out
+    assert "Tool choice recommendation" in output
+    assert "Use first: linshenkx/prompt-optimizer" in output
+    assert "pcl import prompt-optimizer" in output
+    assert "scaffold-check" in output
+
+    assert main(["choose", "--need", "安全评测和红队检查", "--language", "zh", "--json"]) == 0
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["matched"] == "security"
+    assert payload["use_first"] == "Promptfoo"
+    assert payload["commands"][0].startswith("pcl import promptfoo")
+
+
 def test_cli_start_interactive_guard_menu(
     capsys: pytest.CaptureFixture[str],
     monkeypatch: pytest.MonkeyPatch,

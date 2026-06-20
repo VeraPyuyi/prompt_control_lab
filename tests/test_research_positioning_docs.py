@@ -76,6 +76,9 @@ def test_competitive_positioning_stays_evidence_layer_first() -> None:
         assert "Langfuse" in text
         assert "prompt-optimizer" in text
 
+    assert "pcl choose --need prompt-writing" in choice
+    assert "pcl choose --need prompt-writing --language zh" in choice_zh
+
     for text in [choice, choice_zh]:
         assert "pcl start --choice ecosystem" in text
         assert "pcl start --choice import" in text

@@ -20,6 +20,13 @@ actually supports.**
 
 ## Copy-Paste Paths
 
+Ask for a direct recommendation:
+
+```bash
+pcl choose --need prompt-writing
+pcl choose --need "security evals and red-team checks" --json
+```
+
 Generate the ecosystem scorecard and market-readiness summary:
 
 ```bash
