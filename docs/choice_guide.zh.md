@@ -1,0 +1,58 @@
+# 我应该先用哪个工具？
+
+`prompt_control_lab` 不应该替代 Promptfoo、LangSmith、Langfuse、DeepEval 或
+prompt-optimizer。它更适合接在这些工具之后，把已有结果整理成 prompt 优化的可审查证据。
+
+## 30 秒选择地图
+
+| 你的起点 | 先用 | 什么时候加入 PCL |
+|---|---|---|
+| 你需要评测矩阵、CI 检查、红队或安全测试。 | Promptfoo | 需要成对不确定性、prompt-only 有效性、claim 边界和论文诊断时。 |
+| 你需要 trace、agent debug、dataset 或 LangChain/LangGraph 观测。 | LangSmith | 需要把导出结果变成可复现证据包，并区分 prompt、模型、指标和切分变化时。 |
+| 你需要开源 tracing、prompt 管理、eval、成本追踪或自托管。 | Langfuse | 需要补 soft-hard gap、trajectory、Riccati、tv-soft 诊断和有边界的研究结论时。 |
+| 你想要好用的 prompt 写作和改写界面。 | prompt-optimizer | 需要证明优化后的 prompt 在干净协议下真的更好时。 |
+| 你已经有 baseline / candidate 输出。 | PCL | 需要 evidence card、claim check、gap status、模型溯源和 research bundle 验证时。 |
+
+## 复制即用路径
+
+导入一个外部 run：
+
+```bash
+pcl start --choice import --tool auto --input results.json --out runs/from-external
+```
+
+审计成对外部证据：
+
+```bash
+pcl evidence-audit \
+  --tool promptfoo \
+  --baseline-input baseline.json \
+  --candidate-input candidate.json \
+  --baseline-prompt-id baseline \
+  --candidate-prompt-id candidate \
+  --out runs/from-promptfoo-audit
+```
+
+把 prompt-optimizer 资产推进到可评分协议：
+
+```bash
+pcl import prompt-optimizer --input favorites.json --out runs/from-prompt-optimizer
+pcl scaffold-check --run runs/from-prompt-optimizer
+```
+
+## 最实用的判断规则
+
+用相邻工具做创建、trace 或大规模评测。有人问下面这些问题时，用 PCL：
+
+- 这是干净的 prompt-only 对比吗？
+- 模型、切分、指标或 prompt identity 变了吗？
+- candidate 的提升在成对不确定性下可靠吗？
+- 当前证据最多能安全支持什么 claim？
+- 还缺哪些论文里的诊断证据？
+
+定位来源：[Promptfoo intro](https://www.promptfoo.dev/docs/intro/)、
+[Promptfoo CI/CD](https://www.promptfoo.dev/docs/integrations/ci-cd/)、
+[LangSmith observability](https://www.langchain.com/langsmith/observability)、
+[Langfuse docs](https://langfuse.com/docs)、
+[Langfuse prompt management](https://langfuse.com/docs/prompt-management/overview)、
+[linshenkx/prompt-optimizer README](https://github.com/linshenkx/prompt-optimizer)。

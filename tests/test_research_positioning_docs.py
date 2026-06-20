@@ -55,17 +55,28 @@ def test_competitive_positioning_stays_evidence_layer_first() -> None:
     readme_zh = Path("README.zh.md").read_text(encoding="utf-8")
     comparison = Path("docs/comparison.en.md").read_text(encoding="utf-8")
     comparison_zh = Path("docs/comparison.zh.md").read_text(encoding="utf-8")
+    choice = Path("docs/choice_guide.en.md").read_text(encoding="utf-8")
+    choice_zh = Path("docs/choice_guide.zh.md").read_text(encoding="utf-8")
 
     assert "pcl import promptfoo" in readme
     assert "pcl import promptfoo" in readme_zh
+    assert "docs/choice_guide.en.md" in readme
+    assert "docs/choice_guide.zh.md" in readme_zh
     assert "pcl ingest` remains the backward-compatible alias" in readme
     assert "向后兼容别名" in readme_zh
 
-    for text in [comparison, comparison_zh]:
+    for text in [comparison, comparison_zh, choice, choice_zh]:
         assert "Promptfoo" in text
         assert "LangSmith" in text
         assert "Langfuse" in text
         assert "prompt-optimizer" in text
+
+    for text in [choice, choice_zh]:
+        assert "pcl start --choice import" in text
+        assert "pcl evidence-audit" in text
+        assert "pcl scaffold-check" in text
+
+    for text in [comparison, comparison_zh]:
         assert "evidence-audit" in text
         assert "claim-check" in text
         assert "gap-status" in text

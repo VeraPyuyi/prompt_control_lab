@@ -21,7 +21,7 @@ pcl research-demo --out runs/research-demo && pcl diagnose --run runs/research-d
 
 Use the local UI with `pcl ui --runs runs/ --policy examples/guard.policy.yaml --port 8501`. Watch the 4K walkthrough: [English MP4](docs/assets/demo/prompt_control_lab_demo.en.mp4) | [Chinese MP4](docs/assets/demo/prompt_control_lab_demo.zh.mp4).
 
-Docs: [paper mapping](docs/research_from_paper.en.md), [tutorial](docs/tutorial.en.md), [install](docs/release_install.en.md), [comparison](docs/comparison.en.md), [production pilot](docs/production_pilot.en.md), [preflight pilot](docs/case_studies/agent_guard_pilot.en.md), [paired pilot](docs/case_studies/agent_guard_paired_pilot.en.md), [plugins](plugins/), [scorecard](docs/assets/ecosystem_scorecard.svg), [matrix](docs/assets/ecosystem_evidence_matrix.svg).
+Docs: [choice guide](docs/choice_guide.en.md), [paper mapping](docs/research_from_paper.en.md), [tutorial](docs/tutorial.en.md), [install](docs/release_install.en.md), [comparison](docs/comparison.en.md), [production pilot](docs/production_pilot.en.md), [preflight pilot](docs/case_studies/agent_guard_pilot.en.md), [paired pilot](docs/case_studies/agent_guard_paired_pilot.en.md), [plugins](plugins/), [scorecard](docs/assets/ecosystem_scorecard.svg), [matrix](docs/assets/ecosystem_evidence_matrix.svg).
 
 Boundaries: model provenance records public model IDs and evidence levels, not hidden provider weight versions. Local pilots are transparent small samples, not as universal benchmarks. `pcl guard` and `pcl audit-diff` are heuristic governance tools, not safety proofs.
 

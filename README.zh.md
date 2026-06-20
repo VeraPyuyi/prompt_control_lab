@@ -21,7 +21,7 @@ pcl research-demo --out runs/research-demo && pcl diagnose --run runs/research-d
 
 本地仪表盘：`pcl ui --runs runs/ --policy examples/guard.policy.yaml --port 8501`。4K 实操演示：[中文 MP4](docs/assets/demo/prompt_control_lab_demo.zh.mp4) | [English MP4](docs/assets/demo/prompt_control_lab_demo.en.mp4)。
 
-文档：[论文功能映射](docs/research_from_paper.zh.md)、[教程](docs/tutorial.zh.md)、[安装](docs/release_install.zh.md)、[对比](docs/comparison.zh.md)、[production pilot](docs/production_pilot.zh.md)、[preflight pilot](docs/case_studies/agent_guard_pilot.zh.md)、[paired pilot](docs/case_studies/agent_guard_paired_pilot.zh.md)、[插件](plugins/)、[scorecard](docs/assets/ecosystem_scorecard.zh.svg)、[证据矩阵](docs/assets/ecosystem_evidence_matrix.zh.svg)。
+文档：[选择指南](docs/choice_guide.zh.md)、[论文功能映射](docs/research_from_paper.zh.md)、[教程](docs/tutorial.zh.md)、[安装](docs/release_install.zh.md)、[对比](docs/comparison.zh.md)、[production pilot](docs/production_pilot.zh.md)、[preflight pilot](docs/case_studies/agent_guard_pilot.zh.md)、[paired pilot](docs/case_studies/agent_guard_paired_pilot.zh.md)、[插件](plugins/)、[scorecard](docs/assets/ecosystem_scorecard.zh.svg)、[证据矩阵](docs/assets/ecosystem_evidence_matrix.zh.svg)。
 
 证据边界：模型溯源记录公开 model id 和证据等级，不证明服务商隐藏权重版本。本地 pilots 是透明小样本，不是通用 benchmark。`pcl guard` 和 `pcl audit-diff` 是启发式治理工具，不是安全证明。
 
