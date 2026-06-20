@@ -1496,6 +1496,7 @@ def test_ui_tool_choice_advisor_recommends_promptfoo_for_security() -> None:
     combined_code = "\n".join(code_blocks)
     assert "Which tool should I use first?" in combined_markup
     assert "Promptfoo" in combined_markup
+    assert "Security and red-team evals (security)" in combined_markup
     assert "red-team/security testing" in combined_frames
     assert "Scores exist, but paired uncertainty" in combined_frames
     assert "prompt_optimizer_gap_plan.html" in combined_frames
@@ -1547,6 +1548,7 @@ def test_ui_tool_choice_advisor_supports_chinese_prompt_writing() -> None:
     combined_code = "\n".join(code_blocks)
     combined_rows = " ".join(str(dataframe) for dataframe in dataframes)
     assert "linshenkx/prompt-optimizer" in combined_markup
+    assert "\u0050rompt \u5199\u4f5c\u548c\u6539\u5199 (prompt-writing)" in combined_markup
     assert "prompt-optimizer 更适合做成熟的 prompt 写作" in combined_rows
     assert "PCL 应该证明它产出的 prompt 是否可靠提升" in combined_rows
     assert "pcl import prompt-optimizer" in combined_code

@@ -2242,12 +2242,14 @@ def _render_tool_choice_advisor(st: Any, text: dict[str, str], language: str) ->
     action_key = "market_gap_action_zh" if language == "zh" else "market_gap_action"
     selected_action = recommendation.get(action_key)
     selected_action = selected_action if isinstance(selected_action, dict) else {}
+    use_first = _tool_choice_use_first(recommendation, language)
+    matched_lane = _tool_choice_matched_lane(recommendation, language)
     st.markdown(
         '<div class="pcl-grid">'
         + stat_card_html(
             text["tool_choice_recommendation"],
-            str(recommendation.get("use_first") or ""),
-            str(recommendation.get("matched") or ""),
+            use_first,
+            matched_lane,
         )
         + stat_card_html(
             "PCL",
@@ -2300,6 +2302,26 @@ def _render_tool_choice_advisor(st: Any, text: dict[str, str], language: str) ->
             file_name="tool_choice.md",
             mime="text/markdown",
         )
+
+
+def _tool_choice_use_first(recommendation: JsonDict, language: str) -> str:
+    if language == "zh":
+        return str(recommendation.get("use_first_zh") or recommendation.get("use_first") or "")
+    return str(recommendation.get("use_first") or "")
+
+
+def _tool_choice_matched_lane(recommendation: JsonDict, language: str) -> str:
+    lane_id = str(recommendation.get("matched", "") or "")
+    label = (
+        str(
+            recommendation.get("matched_label_zh")
+            or recommendation.get("matched_label")
+            or lane_id
+        )
+        if language == "zh"
+        else str(recommendation.get("matched_label") or lane_id)
+    )
+    return f"{label} ({lane_id})" if lane_id and label != lane_id else label
 
 
 def _render_tutorial_tab(st: Any, text: dict[str, str], language: str) -> None:
