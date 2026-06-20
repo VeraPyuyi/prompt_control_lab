@@ -1599,11 +1599,15 @@ def test_cli_start_choice_demo_creates_runnable_project(
     assert main(["start", "--choice", "demo", "--out", str(demo)]) == 0
 
     output = capsys.readouterr().out
-    assert "Beginner mode: create a runnable demo project" in output
-    assert "pcl start --guide" in output
+    assert "Beginner mode: create a runnable demo project and quick report" in output
+    assert "Generated quick report:" in output
+    assert "Generated gate result:" in output
+    assert "Open runs/quick/report.html in your browser" in output
     assert (demo / "README.md").exists()
     assert (demo / "promptcontrol.example.yaml").exists()
     assert (demo / "examples" / "guard.policy.yaml").exists()
+    assert (demo / "runs" / "quick" / "report.html").exists()
+    assert (demo / "runs" / "quick" / "gate_result.json").exists()
 
 
 def test_cli_start_guide_prints_goal_based_paths(capsys: pytest.CaptureFixture[str]) -> None:
@@ -1661,13 +1665,17 @@ def test_cli_start_interactive_menu_supports_chinese(
     output = capsys.readouterr().out
     assert "你想先做什么?" in output
     assert "创建一个可直接运行的 demo 项目" in output
-    assert "新手模式: 创建可运行 demo 项目" in output
+    assert "新手模式: 创建可运行 demo 项目并生成 quick report" in output
     assert "已创建 PromptControlLab 示例项目" in output
+    assert "已生成 quick report:" in output
+    assert "已生成 gate result:" in output
     assert "下一步:" in output
-    assert "pcl start --guide --language zh" in output
+    assert "打开 runs/quick/report.html 查看报告" in output
     assert "README.zh.md" in output
     assert (tmp_path / "research-demo" / "README.md").exists()
     assert (tmp_path / "research-demo" / "README.zh.md").exists()
+    assert (tmp_path / "research-demo" / "runs" / "quick" / "report.html").exists()
+    assert (tmp_path / "research-demo" / "runs" / "quick" / "gate_result.json").exists()
 
 
 def test_cli_start_guard_passes_policy(

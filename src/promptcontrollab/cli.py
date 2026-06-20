@@ -1324,38 +1324,81 @@ def _cmd_init(args: argparse.Namespace) -> None:
     print(_format_init_output(args.path))
 
 
-def _format_init_output(path: Path, *, language: str = "en") -> str:
+def _format_init_output(
+    path: Path,
+    *,
+    language: str = "en",
+    quick_run: Path | None = None,
+) -> str:
     """Return concise next steps after creating an example project."""
 
     if language == "zh":
-        return "\n".join(
+        lines = [
+            f"已创建 PromptControlLab 示例项目: {path}",
+        ]
+        if quick_run is not None:
+            lines.extend(
+                [
+                    f"已生成 quick report: {quick_run / 'report.html'}",
+                    f"已生成 gate result: {quick_run / 'gate_result.json'}",
+                ]
+            )
+        lines.extend(
             [
-                f"已创建 PromptControlLab 示例项目: {path}",
                 "",
                 "下一步:",
                 f"  cd {path}",
-                "  pcl start --guide --language zh",
-                "  pcl analyze --config promptcontrol.example.yaml --out runs/quick",
-                "  pcl ui --runs runs --policy examples/guard.policy.yaml",
+                *(
+                    [
+                        "  打开 runs/quick/report.html 查看报告",
+                        "  pcl ui --runs runs --policy examples/guard.policy.yaml",
+                    ]
+                    if quick_run is not None
+                    else [
+                        "  pcl start --guide --language zh",
+                        "  pcl analyze --config promptcontrol.example.yaml --out runs/quick",
+                        "  pcl ui --runs runs --policy examples/guard.policy.yaml",
+                    ]
+                ),
                 "",
                 "打开该目录里的 README.zh.md, 可以查看中文文件说明和可复制命令。",
             ]
         )
+        return "\n".join(lines)
 
-    return "\n".join(
+    lines = [
+        f"Created PromptControlLab example at {path}",
+    ]
+    if quick_run is not None:
+        lines.extend(
+            [
+                f"Generated quick report: {quick_run / 'report.html'}",
+                f"Generated gate result: {quick_run / 'gate_result.json'}",
+            ]
+        )
+    lines.extend(
         [
-            f"Created PromptControlLab example at {path}",
             "",
             "Next steps:",
             f"  cd {path}",
-            "  pcl start --guide",
-            "  pcl analyze --config promptcontrol.example.yaml --out runs/quick",
-            "  pcl ui --runs runs --policy examples/guard.policy.yaml",
+            *(
+                [
+                    "  Open runs/quick/report.html in your browser",
+                    "  pcl ui --runs runs --policy examples/guard.policy.yaml",
+                ]
+                if quick_run is not None
+                else [
+                    "  pcl start --guide",
+                    "  pcl analyze --config promptcontrol.example.yaml --out runs/quick",
+                    "  pcl ui --runs runs --policy examples/guard.policy.yaml",
+                ]
+            ),
             "",
             "Open README.md in that folder for the file map and copy-paste paths. "
             "Chinese guide: README.zh.md.",
         ]
     )
+    return "\n".join(lines)
 
 
 def _cmd_ingest_auto(args: argparse.Namespace) -> None:
@@ -1557,11 +1600,30 @@ def _cmd_start(args: argparse.Namespace) -> None:
     if choice == "demo":
         out_dir = args.out or Path("demo")
         write_example_project(out_dir)
+        quick_run = out_dir / "runs" / "quick"
+        run_quick_analysis(
+            data_path=out_dir / "examples" / "tasks.jsonl",
+            baseline_predictions_path=out_dir / "examples" / "predictions_baseline.jsonl",
+            candidate_predictions_path=out_dir / "examples" / "predictions_candidate.jsonl",
+            out_dir=quick_run,
+            metric="exact_match",
+            train_ratio=0.5,
+            val_ratio=0.25,
+            seed=args.seed,
+            bootstrap_samples=50,
+            permutation_samples=50,
+            explain_level="plain",
+            title="PromptControlLab Demo Analysis",
+            policy_path=out_dir / "examples" / "gate.policy.yaml",
+            prompt_id="demo-prompt",
+            prompt_file=out_dir / "prompts" / "current.txt",
+            prompt_version="v1",
+        )
         if args.language == "zh":
-            print("新手模式: 创建可运行 demo 项目")
+            print("新手模式: 创建可运行 demo 项目并生成 quick report")
         else:
-            print("Beginner mode: create a runnable demo project")
-        print(_format_init_output(out_dir, language=args.language))
+            print("Beginner mode: create a runnable demo project and quick report")
+        print(_format_init_output(out_dir, language=args.language, quick_run=quick_run))
         return
 
     if choice == "research":
