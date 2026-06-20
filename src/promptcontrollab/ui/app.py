@@ -220,6 +220,10 @@ TEXT = {
         "tool_choice_gap_open": "Open first",
         "tool_choice_download_json": "Download tool_choice.json",
         "tool_choice_download_md": "Download tool_choice.md",
+        "adoption_path_title": "Five-minute adoption path",
+        "adoption_path_minute": "Minute",
+        "adoption_path_action": "Do this",
+        "adoption_path_result": "You should get",
         "execution_mode": "Execution mode",
         "overwrite": "Overwrite existing artifacts",
         "allow_external_outputs": "Allow writing outside runs directory",
@@ -484,6 +488,10 @@ TEXT = {
         "tool_choice_gap_open": "先打开",
         "tool_choice_download_json": "下载 tool_choice.json",
         "tool_choice_download_md": "下载 tool_choice.md",
+        "adoption_path_title": "5 分钟采用路径",
+        "adoption_path_minute": "分钟",
+        "adoption_path_action": "操作",
+        "adoption_path_result": "应该得到什么",
         "execution_mode": "执行模式",
         "overwrite": "覆盖已有 artifact",
         "allow_external_outputs": "允许写入 runs 目录之外",
@@ -1548,6 +1556,66 @@ def ecosystem_choice_rows(language: str) -> list[JsonDict]:
     return rows
 
 
+def adoption_path_rows(language: str) -> list[JsonDict]:
+    """Return the short path from adjacent-tool output to reviewer evidence."""
+
+    if language == "zh":
+        return [
+            {
+                "minute": "1",
+                "action": '运行 `pcl choose --need "<你的目标>" --language zh`。',
+                "result": "得到直白建议和下一条 PCL 命令。",
+            },
+            {
+                "minute": "2",
+                "action": "导入 Promptfoo / Langfuse / LangSmith / DeepEval 输出。",
+                "result": "`manifest.json` 和 `bridge_summary.html`。",
+            },
+            {
+                "minute": "3",
+                "action": "运行 `pcl evidence-audit ...` 或中文 research-demo / diagnose。",
+                "result": "`evidence_card.html`、`claim_check.html`、`research_bundle.zh.html`。",
+            },
+            {
+                "minute": "4",
+                "action": "打开命令输出里提示的第一个 HTML artifact。",
+                "result": "看到发生了什么、还缺什么。",
+            },
+            {
+                "minute": "5",
+                "action": "如果 claim_check 或 gap_status 要求复查, 暂停强主张。",
+                "result": "得到有边界的下一步。",
+            },
+        ]
+    return [
+        {
+            "minute": "1",
+            "action": 'Run `pcl choose --need "<your goal>"`.',
+            "result": "A plain recommendation and the next PCL command.",
+        },
+        {
+            "minute": "2",
+            "action": "Import Promptfoo/Langfuse/LangSmith/DeepEval output.",
+            "result": "`manifest.json` and `bridge_summary.html`.",
+        },
+        {
+            "minute": "3",
+            "action": "Run `pcl evidence-audit ...` or research-demo / diagnose.",
+            "result": "`evidence_card.html`, `claim_check.html`, and `research_bundle.html`.",
+        },
+        {
+            "minute": "4",
+            "action": "Open the first HTML artifact named by the command output.",
+            "result": "A reviewer-readable view of what changed and what is missing.",
+        },
+        {
+            "minute": "5",
+            "action": "If claim_check or gap_status says review, pause stronger claims.",
+            "result": "A bounded next action instead of an overclaim.",
+        },
+    ]
+
+
 def tutorial_gallery_items(language: str) -> list[JsonDict]:
     """Return always-visible tutorial image cards for the selected language."""
 
@@ -2277,6 +2345,18 @@ def _render_tool_choice_advisor(st: Any, text: dict[str, str], language: str) ->
     if command_list:
         st.caption(text["tool_choice_commands"])
         st.code("\n".join(command_list), language="bash")
+    st.caption(text["adoption_path_title"])
+    st.dataframe(
+        [
+            {
+                text["adoption_path_minute"]: row.get("minute", ""),
+                text["adoption_path_action"]: row.get("action", ""),
+                text["adoption_path_result"]: row.get("result", ""),
+            }
+            for row in adoption_path_rows(language)
+        ],
+        use_container_width=True,
+    )
     gap_rows = [
         {
             text["tool_choice_gap_input"]: row.get("input", ""),
@@ -2344,6 +2424,18 @@ def _render_tutorial_tab(st: Any, text: dict[str, str], language: str) -> None:
     st.markdown(
         f'<div class="pcl-section-title">{html.escape(text["ecosystem_choice_title"])}</div>',
         unsafe_allow_html=True,
+    )
+    st.caption(text["adoption_path_title"])
+    st.dataframe(
+        [
+            {
+                text["adoption_path_minute"]: row.get("minute", ""),
+                text["adoption_path_action"]: row.get("action", ""),
+                text["adoption_path_result"]: row.get("result", ""),
+            }
+            for row in adoption_path_rows(language)
+        ],
+        use_container_width=True,
     )
     st.dataframe(
         [

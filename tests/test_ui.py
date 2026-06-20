@@ -1444,6 +1444,8 @@ def test_ui_ecosystem_choice_rows_explain_adjacent_tool_paths() -> None:
 
     en_rows = app.ecosystem_choice_rows("en")
     zh_rows = app.ecosystem_choice_rows("zh")
+    en_path = app.adoption_path_rows("en")
+    zh_path = app.adoption_path_rows("zh")
 
     assert len(en_rows) == 6
     assert len(zh_rows) == 6
@@ -1459,7 +1461,14 @@ def test_ui_ecosystem_choice_rows_explain_adjacent_tool_paths() -> None:
     assert "证据" in combined_zh
     assert "ecosystem_choice_title" in app.TEXT["en"]
     assert "ecosystem_choice_title" in app.TEXT["zh"]
+    assert len(en_path) == 5
+    assert len(zh_path) == 5
+    assert "bridge_summary.html" in " ".join(str(row) for row in en_path)
+    assert "research_bundle.zh.html" in " ".join(str(row) for row in zh_path)
+    assert "adoption_path_title" in app.TEXT["en"]
+    assert "adoption_path_title" in app.TEXT["zh"]
     assert not _contains_replacement_character(zh_rows)
+    assert not _contains_replacement_character(zh_path)
 
 
 def test_ui_tool_choice_advisor_recommends_promptfoo_for_security() -> None:
@@ -1497,6 +1506,7 @@ def test_ui_tool_choice_advisor_recommends_promptfoo_for_security() -> None:
     assert "Which tool should I use first?" in combined_markup
     assert "Promptfoo" in combined_markup
     assert "Security and red-team evals (security)" in combined_markup
+    assert "bridge_summary.html" in combined_frames
     assert "red-team/security testing" in combined_frames
     assert "Scores exist, but paired uncertainty" in combined_frames
     assert "prompt_optimizer_gap_plan.html" in combined_frames
@@ -1549,6 +1559,7 @@ def test_ui_tool_choice_advisor_supports_chinese_prompt_writing() -> None:
     combined_rows = " ".join(str(dataframe) for dataframe in dataframes)
     assert "linshenkx/prompt-optimizer" in combined_markup
     assert "\u0050rompt \u5199\u4f5c\u548c\u6539\u5199 (prompt-writing)" in combined_markup
+    assert "research_bundle.zh.html" in combined_rows
     assert "prompt-optimizer 更适合做成熟的 prompt 写作" in combined_rows
     assert "PCL 应该证明它产出的 prompt 是否可靠提升" in combined_rows
     assert "pcl import prompt-optimizer" in combined_code
