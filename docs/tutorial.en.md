@@ -9,6 +9,7 @@ Operation:
 ```bash
 pcl choose --need "security evals and red-team checks"
 pcl choose --need "security evals and red-team checks" --out runs/tool-choice.json
+pcl start --choice choose --need "security evals and red-team checks" --out runs/tool-choice.json
 pcl start --guide
 pcl start
 pcl start --choice demo --out demo
@@ -18,6 +19,7 @@ Result:
 
 - a direct adjacent-tool recommendation when using `pcl choose`
 - `runs/tool-choice.json` and `runs/tool-choice.md` when using `pcl choose --out`
+- the same recommendation through beginner mode when using `pcl start --choice choose`
 - a goal-based guide that shows which PCL path to start with
 - a six-option menu: demo project, research demo, external evidence import, prompt improvement,
   guard, or report
@@ -29,6 +31,7 @@ What it explains:
 This is the lowest-friction entry point. Run `pcl choose --need ...` first when you are not sure
 whether PCL, Promptfoo, DeepEval, LangSmith/Langfuse, or prompt-optimizer should be the first tool.
 Add `--out` when the recommendation should be kept as reviewer-facing evidence.
+Use `pcl start --choice choose ...` when you want the same advisor inside the beginner-mode flow.
 Run `pcl start --guide` when you know you want PCL but are not sure whether you need the research
 demo, evidence bridge, guard, audit, or report path. Use `pcl start` when terms like `profile`,
 `gate`, or `stats` are not familiar yet.

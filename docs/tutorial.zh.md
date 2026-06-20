@@ -9,6 +9,7 @@
 ```bash
 pcl choose --need "安全评测和红队检查" --language zh
 pcl choose --need "安全评测和红队检查" --language zh --out runs/tool-choice.json
+pcl start --choice choose --need "安全评测和红队检查" --language zh --out runs/tool-choice.json
 pcl start --guide --language zh
 pcl start --language zh
 pcl start --choice demo --language zh --out demo

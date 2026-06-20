@@ -29,6 +29,7 @@ pcl choose --need "安全评测和红队检查" --language zh --json
 
 ```bash
 pcl choose --need "安全评测和红队检查" --language zh --out runs/tool-choice.json
+pcl start --choice choose --need "安全评测和红队检查" --language zh --out runs/tool-choice.json
 ```
 
 这会写出 `runs/tool-choice.json` 和 `runs/tool-choice.md`。

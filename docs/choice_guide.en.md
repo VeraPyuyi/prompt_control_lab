@@ -31,9 +31,11 @@ Save the recommendation for review:
 
 ```bash
 pcl choose --need "security evals and red-team checks" --out runs/tool-choice.json
+pcl start --choice choose --need "security evals and red-team checks" --out runs/tool-choice.json
 ```
 
 This writes `runs/tool-choice.json` and `runs/tool-choice.md`.
+Use the `pcl start --choice choose` form when you want the same advisor inside beginner mode.
 
 The same advisor is available in the local UI under **Research Overview**.
 
