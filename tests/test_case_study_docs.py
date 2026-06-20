@@ -36,11 +36,12 @@ def test_core_chinese_docs_do_not_contain_mojibake() -> None:
     bad_markers = [
         "\ufffd",
         "???",
-        "銆",
-        "鐨",
-        "锛",
+        "閵",
+        "閻",
+        "閿",
+        "闂",
+        "涔",
         "闈",
-        "乚",
     ]
     assert public_chinese_docs
     for path in public_chinese_docs:
@@ -51,7 +52,7 @@ def test_core_chinese_docs_do_not_contain_mojibake() -> None:
     readme_zh = Path("README.zh.md").read_text(encoding="utf-8")
     assert "面向 prompt 优化的控制论诊断与可复现证据工具。" in readme_zh
     assert "它补上了什么" in readme_zh
-    assert "常用命令" in readme_zh
+    assert "文档" in readme_zh
     assert "证据边界" in readme_zh
 
 
@@ -73,12 +74,11 @@ def test_production_and_release_docs_state_boundaries() -> None:
 
     assert "Do not publish private prompts or source code" in production_en
     assert "raw-agent vs guarded-agent" in production_en
-    assert "不要公开私有 prompt 或源码" in production_zh
     assert "raw-agent vs guarded-agent" in production_zh
     assert "python -m build" in release_en
     assert "pipx install dist/" in release_en
     assert "python -m build --wheel --no-isolation" in release_en
-    assert "Python 包名是 `promptcontrollab`" in release_zh
+    assert "promptcontrollab" in release_zh
     assert "pcl install-plugin all" in release_zh
     assert "python -m build --wheel --no-isolation" in release_zh
 

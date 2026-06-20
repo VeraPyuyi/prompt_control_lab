@@ -628,6 +628,7 @@ TUTORIAL_SECTION_SCREENSHOTS = {
     "drift": "model_drift",
     "audit": "audit",
     "history": "history",
+    "import_external": "workflows",
     "project_defaults": "workflows",
     "export_pr": "workflows",
 }
@@ -645,6 +646,12 @@ TUTORIAL_STEPS = {
             "Keep Execution mode on confirm for the first run.",
             "Click Create demo artifacts and confirm the files that will be written.",
             "Use the generated run in Run Report, Audit, and History.",
+        ],
+        "import_external": [
+            "Open Workflows and expand Import external run.",
+            "Choose auto, Promptfoo, Langfuse, LangSmith, DeepEval, or prompt-optimizer.",
+            "Select the export file and output directory, then run in confirm mode first.",
+            "Open the generated run, evidence card, scaffold check, or prompt asset gap plan.",
         ],
         "report": [
             "Select a run in the sidebar.",
@@ -695,6 +702,12 @@ TUTORIAL_STEPS = {
             "第一次使用时保持“确认后执行”模式。",
             "点击“创建演示数据”，先检查将写入的文件，再确认执行。",
             "用生成的 run 去查看“运行报告”“审计”和“历史”。",
+        ],
+        "import_external": [
+            "打开“工作流”，展开“导入外部 run”。",
+            "选择自动识别、Promptfoo、Langfuse、LangSmith、DeepEval 或 prompt-optimizer。",
+            "选择导出文件和输出目录，第一次先用“确认后执行”。",
+            "打开生成的 run、证据卡、scaffold check 或 prompt asset gap plan。",
         ],
         "report": [
             "在侧边栏选择一个 run。",
@@ -749,8 +762,8 @@ ONBOARDING_PATHS = {
         },
         {
             "goal": "I already have eval outputs from Promptfoo, Langfuse, or LangSmith.",
-            "start": "Evidence bridge -> `pcl import` or `pcl evidence-audit`",
-            "next": "Use claim-check and gap-status to see what the evidence can safely support.",
+            "start": "Workflows -> Import external run, or CLI `pcl start --choice import`",
+            "next": "Then build an evidence card, run scaffold-check, or upgrade to evidence-audit.",
         },
         {
             "goal": "I want to stop vague or risky coding-agent prompts before they run.",
@@ -776,8 +789,8 @@ ONBOARDING_PATHS = {
         },
         {
             "goal": "我已经有 Promptfoo、Langfuse 或 LangSmith 的评测导出。",
-            "start": "证据桥接 -> `pcl import` 或 `pcl evidence-audit`",
-            "next": "用 claim-check 和 gap-status 判断这些证据最多能支持什么结论。",
+            "start": "工作流 -> 导入外部 run，或 CLI `pcl start --choice import`",
+            "next": "然后生成 evidence card、运行 scaffold-check，或升级到 evidence-audit。",
         },
         {
             "goal": "我想在 coding agent 执行前拦住模糊或高风险 prompt。",
@@ -815,9 +828,19 @@ TUTORIAL_SECTIONS = {
             "command": "pcl init --path demo && cd demo && pcl analyze --config promptcontrol.example.yaml --out runs/quick",
         },
         {
+            "id": "import_external",
+            "image": "overview",
+            "title": "3. Import external eval or prompt assets",
+            "operation": "Open Workflows, expand Import external run, choose the source tool, and select the export file.",
+            "result": "`manifest.json`, `predictions.jsonl`/`metrics.json`, or prompt-optimizer asset and gap-plan artifacts.",
+            "meaning": "Promptfoo, Langfuse, LangSmith, DeepEval, and prompt-optimizer outputs can enter the PCL evidence workflow without rebuilding their platforms.",
+            "next_step": "Run scaffold-check, build an evidence card, or run evidence-audit when you have baseline/candidate exports.",
+            "command": "pcl start --choice import --tool auto --input results.json --out runs/from-external",
+        },
+        {
             "id": "report",
             "image": "report",
-            "title": "3. Analyze, gate, and read the report",
+            "title": "4. Analyze, gate, and read the report",
             "operation": "Run analyze from Workflows or CLI, then run gate with a policy.",
             "result": "`metrics.json`, `stats.json`, `explanation.json`, `gate_result.json`, and report files.",
             "meaning": "You can judge whether the candidate prompt improved reliably and passed policy.",
@@ -827,7 +850,7 @@ TUTORIAL_SECTIONS = {
         {
             "id": "drift",
             "image": "report",
-            "title": "4. Check model provenance and drift",
+            "title": "5. Check model provenance and drift",
             "operation": "Open Model Drift or run model-drift between two run directories.",
             "result": "`model_drift.json` with provider/model comparison and drift risk.",
             "meaning": "If models changed, the comparison is not a clean prompt-only comparison.",
@@ -837,7 +860,7 @@ TUTORIAL_SECTIONS = {
         {
             "id": "audit",
             "image": "audit_history",
-            "title": "5. Audit what the coding agent changed",
+            "title": "6. Audit what the coding agent changed",
             "operation": "Run audit-diff against two git refs after an agent finishes.",
             "result": "`audit_result.json` and `audit_summary.md` with files, line counts, risks, and tests.",
             "meaning": "You can see whether the agent touched dangerous paths, dependencies, workflows, or tests.",
@@ -847,7 +870,7 @@ TUTORIAL_SECTIONS = {
         {
             "id": "history",
             "image": "audit_history",
-            "title": "6. Build local run history",
+            "title": "7. Build local run history",
             "operation": "Index a runs directory after several analyses or audits.",
             "result": "`history_index.json` with model, score, gate, prompt, and risk timeline data.",
             "meaning": "You can spot score regressions, model changes, and risky agent runs over time.",
@@ -857,7 +880,7 @@ TUTORIAL_SECTIONS = {
         {
             "id": "project_defaults",
             "image": "overview",
-            "title": "7. Use project defaults",
+            "title": "8. Use project defaults",
             "operation": "Keep `.promptcontrol.yaml` in the repo root for policies, runs, paths, and tests.",
             "result": "Shorter commands because guard, gate, audit-diff, and UI can read local defaults.",
             "meaning": "Teams can share the same policy and expected paths without copy-pasting flags.",
@@ -867,7 +890,7 @@ TUTORIAL_SECTIONS = {
         {
             "id": "export_pr",
             "image": "audit_history",
-            "title": "8. Export and summarize for review",
+            "title": "9. Export and summarize for review",
             "operation": "Generate a PR summary or export a report zip from Workflows.",
             "result": "`pr_summary.md/json` or a zip containing recognized run artifacts.",
             "meaning": "Reviewers get a compact, shareable summary without reading every JSON file.",
@@ -1164,9 +1187,19 @@ TUTORIAL_SECTIONS["zh"] = [
         "command": "pcl init --path demo && cd demo && pcl analyze --config promptcontrol.example.yaml --out runs/quick",
     },
     {
+        "id": "import_external",
+        "image": "overview",
+        "title": "3. 导入外部评测或 prompt 资产",
+        "operation": "打开“工作流”，展开“导入外部 run”，选择来源工具和导出文件。",
+        "result": "`manifest.json`、`predictions.jsonl` / `metrics.json`，或 prompt-optimizer 资产和 gap plan。",
+        "meaning": "Promptfoo、Langfuse、LangSmith、DeepEval 和 prompt-optimizer 的结果可以进入 PCL 证据流程，不需要重造它们的平台。",
+        "next_step": "运行 scaffold-check，生成 evidence card；如果有 baseline/candidate 导出，再运行 evidence-audit。",
+        "command": "pcl start --choice import --tool auto --input results.json --out runs/from-external",
+    },
+    {
         "id": "report",
         "image": "report",
-        "title": "3. 评测、门禁和报告",
+        "title": "4. 评测、门禁和报告",
         "operation": "在工作流或 CLI 里运行 analyze，然后用策略运行 gate。",
         "result": "`metrics.json`、`stats.json`、`explanation.json`、`gate_result.json` 和报告文件。",
         "meaning": "你可以判断候选 prompt 是否可靠提升，并且是否通过团队门禁。",
@@ -1176,7 +1209,7 @@ TUTORIAL_SECTIONS["zh"] = [
     {
         "id": "drift",
         "image": "report",
-        "title": "4. 检查模型来源和漂移",
+        "title": "5. 检查模型来源和漂移",
         "operation": "打开“模型漂移”，或在两个 run 目录之间运行 model-drift。",
         "result": "`model_drift.json`，包含 provider/model 对比和漂移风险。",
         "meaning": "如果模型变了，这次比较就不是干净的 prompt-only 比较。",
@@ -1186,7 +1219,7 @@ TUTORIAL_SECTIONS["zh"] = [
     {
         "id": "audit",
         "image": "audit_history",
-        "title": "5. 审计编程 Agent 改了什么",
+        "title": "6. 审计编程 Agent 改了什么",
         "operation": "Agent 完成后，对两个 git ref 运行 audit-diff。",
         "result": "`audit_result.json` 和 `audit_summary.md`，包含文件、行数、风险和测试记录。",
         "meaning": "你可以看到 agent 是否改了危险路径、依赖、workflow 或测试。",
@@ -1196,7 +1229,7 @@ TUTORIAL_SECTIONS["zh"] = [
     {
         "id": "history",
         "image": "audit_history",
-        "title": "6. 建立本地运行历史",
+        "title": "7. 建立本地运行历史",
         "operation": "多次 analyze 或 audit 后，对 runs 目录建立索引。",
         "result": "`history_index.json`，包含模型、分数、gate、prompt 和风险时间线。",
         "meaning": "你可以发现分数回退、模型变化和高风险 agent run。",
@@ -1206,7 +1239,7 @@ TUTORIAL_SECTIONS["zh"] = [
     {
         "id": "project_defaults",
         "image": "overview",
-        "title": "7. 使用项目默认配置",
+        "title": "8. 使用项目默认配置",
         "operation": "在仓库根目录保留 `.promptcontrol.yaml`，记录策略、runs、路径和测试命令。",
         "result": "guard、gate、audit-diff 和 UI 可以读取本地默认值，命令更短。",
         "meaning": "团队可以共享同一套策略和预期路径，不用反复复制参数。",
@@ -1216,7 +1249,7 @@ TUTORIAL_SECTIONS["zh"] = [
     {
         "id": "export_pr",
         "image": "audit_history",
-        "title": "8. 导出并生成审查摘要",
+        "title": "9. 导出并生成审查摘要",
         "operation": "从工作流生成 PR summary，或导出报告 zip。",
         "result": "`pr_summary.md/json`，或一个包含 run artifacts 的 zip。",
         "meaning": "Reviewer 不用逐个打开 JSON，也能快速看到结论和风险。",

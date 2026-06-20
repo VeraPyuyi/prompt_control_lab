@@ -1245,7 +1245,9 @@ def test_ui_choice_labels_are_localized_but_keep_internal_values() -> None:
     assert app._choice_value("guard_mode", "给出建议", "zh") == "suggest"
     assert app._choice_value("token_mode", "平衡省 token", "zh") == "balanced"
     assert app._choice_value("tests_passed", "未知", "zh") == "unknown"
+    assert app._choice_value("import_tool", "prompt-optimizer", "zh") == "prompt-optimizer"
     assert app._choice_labels("profile", "en") == ["coding", "general", "research"]
+    assert "prompt-optimizer" in app._choice_labels("import_tool", "en")
 
 
 def test_ui_tutorial_sections_are_complete_and_localized() -> None:
@@ -1254,6 +1256,7 @@ def test_ui_tutorial_sections_are_complete_and_localized() -> None:
     expected_ids = {
         "guard",
         "workflows",
+        "import_external",
         "report",
         "drift",
         "audit",
@@ -1295,11 +1298,12 @@ def test_ui_tutorial_onboarding_paths_cover_main_user_goals() -> None:
     combined_en = " ".join(str(row) for row in en_paths)
     combined_zh = " ".join(str(row) for row in zh_paths)
     assert "research-demo" in combined_en
+    assert "Import external run" in combined_en
     assert "evidence-audit" in combined_en
     assert "Guard Prompt" in combined_en
     assert "audit-diff" in combined_en
     assert "创建演示数据" in combined_zh
-    assert "证据桥接" in combined_zh
+    assert "导入外部 run" in combined_zh
     assert "Prompt 守护" in combined_zh
     assert not _contains_replacement_character(zh_paths)
 
