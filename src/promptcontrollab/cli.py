@@ -2570,7 +2570,7 @@ def _format_research_demo_output(
             "做了什么: 生成一个用于论文诊断的小型 synthetic 证据包"
             f"({readable_diagnostics})。",
             f"诊断项: {', '.join(diagnostic_names)}",
-            f"先打开: {out_dir / 'research_bundle.html'}",
+            f"先打开: {out_dir / 'research_bundle.zh.html'}",
             *_research_cli_summary_lines(
                 summary_dir=out_dir,
                 payload=payload,
@@ -2666,7 +2666,12 @@ def _research_cli_summary_lines(
             ),
         ]
         if isinstance(open_first, str) and open_first:
-            lines.append(f"摘要建议先打开: {summary_dir / open_first}")
+            open_path = (
+                "research_bundle.zh.html"
+                if open_first == "research_bundle.html"
+                else open_first
+            )
+            lines.append(f"摘要建议先打开: {summary_dir / open_path}")
         if isinstance(next_action, str) and next_action:
             lines.append(f"下一步: {_translate_research_next_action(next_action)}")
         return lines
@@ -3241,7 +3246,7 @@ def _format_start_guide(language: str = "en") -> str:
             (
                 "运行论文里的 prompt optimization 诊断",
                 "pcl research-demo --out runs/research-demo",
-                "然后运行 `pcl diagnose --run runs/research-demo`, 打开 research_bundle.html。",
+                "然后运行 `pcl diagnose --run runs/research-demo`, 打开 research_bundle.zh.html。",
             ),
             (
                 "先看产品长什么样",

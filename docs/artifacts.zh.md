@@ -9,7 +9,7 @@
 
 1. `evidence_audit_result.html`：外部工具导入后的总审计入口。
 2. `bridge_summary.html`：外部工具提供了什么，PCL 又补了什么。
-3. `research_bundle.html`：完整研究证据索引。
+3. `research_bundle.zh.html` / `research_bundle.html`：中文 / 英文完整研究证据索引。
 4. `evidence_card.html`：prompt optimization 证据卡片。
 5. `claim_check.html`：当前证据最多能支持什么主张。
 6. `research_gap_status.html`：还缺哪些论文诊断。
@@ -127,7 +127,7 @@ model、provider、metric、split hash、prompt identity 等混杂因素。如�
 说明什么问题：检查 gap plan 中要求的 soft-hard、trajectory、Riccati、tv-soft 等
 artifact 是否已经存在。它适合用来确认“证据缺口是否真的补上了”。
 
-## `research_bundle.json` / `research_bundle.html`
+## `research_bundle.json` / `research_bundle.zh.html` / `research_bundle.html`
 
 由 `pcl research-bundle`、`pcl research-demo`、`pcl diagnose` 或 `pcl evidence-audit` 写出。
 

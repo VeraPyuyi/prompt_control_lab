@@ -653,7 +653,13 @@ def write_research_bundle_index(run_dir: Path) -> JsonDict:
     payload = build_research_bundle_index(run_dir)
     out_path = run_dir / "research_bundle.html"
     out_path.write_text(render_research_bundle_index_html(payload), encoding="utf-8")
+    zh_path = run_dir / "research_bundle.zh.html"
+    zh_path.write_text(
+        render_research_bundle_index_html(payload, language="zh"),
+        encoding="utf-8",
+    )
     payload["html_path"] = str(out_path)
+    payload["html_zh_path"] = str(zh_path)
     write_json(run_dir / "research_bundle.json", payload)
     return payload
 
@@ -776,6 +782,10 @@ def build_research_bundle_index(run_dir: Path) -> JsonDict:
         "recommendation": evidence.get("recommendation") or claim.get("status") or "review",
         "evidence_tier": evidence_tier,
         "evidence_tier_label": _readable_bundle_evidence_tier(str(evidence_tier or "")),
+        "evidence_tier_label_zh": _readable_bundle_evidence_tier(
+            str(evidence_tier or ""),
+            language="zh",
+        ),
         "claim_check_status": claim_status,
         "claim_language": claim.get("safe_claim_language") or evidence.get("claim_language"),
         "diagnostic_type": diagnostics.get("diagnostic_type") or diagnostics.get("mode"),
@@ -789,6 +799,15 @@ def build_research_bundle_index(run_dir: Path) -> JsonDict:
             claim_status=claim_status,
             diagnostics_present=sorted(diagnostics_dict),
             gap_status=gap_status_value,
+            language="en",
+        ),
+        "plain_summary_zh": _research_bundle_plain_summary(
+            status=status,
+            evidence_tier=evidence_tier,
+            claim_status=claim_status,
+            diagnostics_present=sorted(diagnostics_dict),
+            gap_status=gap_status_value,
+            language="zh",
         ),
         "review_order": _bundle_review_order(run_dir),
         "artifacts": artifacts,
@@ -803,7 +822,16 @@ def build_research_bundle_index(run_dir: Path) -> JsonDict:
     }
 
 
-def _readable_bundle_evidence_tier(value: str) -> str:
+def _readable_bundle_evidence_tier(value: str, *, language: str = "en") -> str:
+    if language == "zh":
+        labels = {
+            "tier_0_insufficient_or_contradicted": "证据不足或互相矛盾",
+            "tier_1_incomplete_comparison": "比较证据不完整",
+            "tier_2_paired_comparison": "成对比较证据",
+            "tier_3_partial_research_diagnostics": "部分研究诊断",
+            "tier_4_full_research_diagnostics": "完整研究诊断",
+        }
+        return labels.get(value, value.replace("_", " ") if value else "未记录")
     labels = {
         "tier_0_insufficient_or_contradicted": "insufficient or contradicted evidence",
         "tier_1_incomplete_comparison": "incomplete comparison",
@@ -821,13 +849,32 @@ def _research_bundle_plain_summary(
     claim_status: object,
     diagnostics_present: list[str],
     gap_status: str,
+    language: str = "en",
 ) -> list[str]:
-    diagnostics = ", ".join(_readable_diagnostic_name(name) for name in diagnostics_present)
+    diagnostics = ", ".join(
+        _readable_diagnostic_name(name, language=language) for name in diagnostics_present
+    )
+    if language == "zh":
+        diagnostics_text = diagnostics or "还没有论文诊断"
+        tier = _readable_bundle_evidence_tier(str(evidence_tier or ""), language="zh")
+        claim = _readable_bundle_status(str(claim_status or "missing"), language="zh")
+        gap = _readable_bundle_status(gap_status, language="zh")
+        bundle = _readable_bundle_status(status, language="zh")
+        return [
+            "先打开 research_diagnostics.html, 用直白语言查看论文诊断。",
+            f"当前证据层级是 {tier}, 主张检查状态是 {claim}。",
+            f"包含的诊断: {diagnostics_text}。",
+            f"gap 状态是 {gap}, 证据包状态是 {bundle}。",
+            (
+                "在提出较强的 prompt optimization 主张前, 先看 claim_check.html; "
+                "这个页面是证据导航, 不是证明本身。"
+            ),
+        ]
     diagnostics_text = diagnostics or "no paper diagnostics yet"
-    tier = _readable_bundle_evidence_tier(str(evidence_tier or ""))
-    claim = _readable_bundle_status(str(claim_status or "missing"))
-    gap = _readable_bundle_status(gap_status)
-    bundle = _readable_bundle_status(status)
+    tier = _readable_bundle_evidence_tier(str(evidence_tier or ""), language="en")
+    claim = _readable_bundle_status(str(claim_status or "missing"), language="en")
+    gap = _readable_bundle_status(gap_status, language="en")
+    bundle = _readable_bundle_status(status, language="en")
     return [
         (
             "Start with research_diagnostics.html to see the paper-derived checks in "
@@ -843,7 +890,15 @@ def _research_bundle_plain_summary(
     ]
 
 
-def _readable_diagnostic_name(name: str) -> str:
+def _readable_diagnostic_name(name: str, *, language: str = "en") -> str:
+    if language == "zh":
+        labels = {
+            "soft_hard": "soft-hard gap",
+            "trajectory": "hidden-state trajectory",
+            "riccati": "Riccati surrogate",
+            "tv_soft": "time-varying soft-control",
+        }
+        return labels.get(name, name.replace("_", "-"))
     labels = {
         "soft_hard": "soft-hard gap",
         "trajectory": "hidden-state trajectory",
@@ -853,7 +908,20 @@ def _readable_diagnostic_name(name: str) -> str:
     return labels.get(name, name.replace("_", "-"))
 
 
-def _readable_bundle_status(value: str) -> str:
+def _readable_bundle_status(value: str, *, language: str = "en") -> str:
+    if language == "zh":
+        labels = {
+            "pass": "通过",
+            "supported": "已支持",
+            "review": "需要复查",
+            "needs_review": "需要复查",
+            "needs_work": "需要补证据",
+            "not_planned": "未规划补证据",
+            "gap_status_not_checked": "尚未检查 gap 状态",
+            "incomplete": "不完整",
+            "missing": "缺失",
+        }
+        return labels.get(value, value.replace("_", " ") if value else "缺失")
     labels = {
         "pass": "pass",
         "supported": "supported",
@@ -943,6 +1011,7 @@ def _bundle_review_order(run_dir: Path) -> list[JsonDict]:
 def _bundle_artifacts(run_dir: Path) -> list[JsonDict]:
     names = [
         "research_bundle.html",
+        "research_bundle.zh.html",
         "research_bundle.json",
         "research_overview.svg",
         "evidence_audit_result.html",
@@ -1004,7 +1073,11 @@ def _eval_scaffold_prompt_artifacts(run_dir: Path) -> list[str]:
 
 def _bundle_artifact_row(*, run_dir: Path, name: str) -> JsonDict:
     path = run_dir / name
-    self_generated = name in {"research_bundle.html", "research_bundle.json"}
+    self_generated = name in {
+        "research_bundle.html",
+        "research_bundle.zh.html",
+        "research_bundle.json",
+    }
     audit_summary = name.startswith("evidence_audit_result.") or name.startswith(
         "evidence_gate_result."
     )
@@ -1050,9 +1123,10 @@ def _artifact_role(name: str) -> str:
     return "artifact"
 
 
-def render_research_bundle_index_html(payload: JsonDict) -> str:
+def render_research_bundle_index_html(payload: JsonDict, *, language: str = "en") -> str:
     """Render the research bundle navigation page."""
 
+    zh = language == "zh"
     review_order = payload.get("review_order")
     review_rows = []
     if isinstance(review_order, list):
@@ -1089,38 +1163,77 @@ def render_research_bundle_index_html(payload: JsonDict) -> str:
                 ]
             )
     return _html_page(
-        title="Research Evidence Bundle",
-        subtitle="One browser entry point for paper-derived prompt optimization evidence.",
+        title="研究证据包" if zh else "Research Evidence Bundle",
+        subtitle=(
+            "论文 prompt optimization 证据的本地浏览入口。"
+            if zh
+            else "One browser entry point for paper-derived prompt optimization evidence."
+        ),
         body=[
             _metric_grid(
                 [
-                    ("Status", _badge(str(payload.get("status", "")))),
+                    ("状态" if zh else "Status", _badge(str(payload.get("status", "")))),
                     (
-                        "Evidence tier",
-                        payload.get("evidence_tier_label") or payload.get("evidence_tier", ""),
+                        "证据层级" if zh else "Evidence tier",
+                        (
+                            payload.get("evidence_tier_label_zh")
+                            if zh
+                            else payload.get("evidence_tier_label")
+                        )
+                        or payload.get("evidence_tier", ""),
                     ),
-                    ("Claim check", _badge(str(payload.get("claim_check_status", "")))),
-                    ("Gap status", _badge(str(payload.get("gap_status", "")))),
-                    ("Diagnostic type", payload.get("diagnostic_type", "")),
+                    (
+                        "主张检查" if zh else "Claim check",
+                        _badge(str(payload.get("claim_check_status", ""))),
+                    ),
+                    (
+                        "Gap 状态" if zh else "Gap status",
+                        _badge(str(payload.get("gap_status", ""))),
+                    ),
+                    ("诊断类型" if zh else "Diagnostic type", payload.get("diagnostic_type", "")),
                 ]
             ),
             _section(
-                "What this bundle tells you",
-                _bullet_list(payload.get("plain_summary")),
+                "这个证据包说明什么" if zh else "What this bundle tells you",
+                _bullet_list(payload.get("plain_summary_zh" if zh else "plain_summary")),
             ),
             _section(
-                "Review Order",
-                _table(["Step", "Status", "Open", "What it explains"], review_rows),
-            ),
-            _section(
-                "Artifact Inventory",
+                "建议阅读顺序" if zh else "Review Order",
                 _table(
-                    ["Role", "Status", "Artifact", "Bytes", "SHA-256 / hash status"],
+                    (
+                        ["步骤", "状态", "打开", "它说明什么"]
+                        if zh
+                        else ["Step", "Status", "Open", "What it explains"]
+                    ),
+                    review_rows,
+                ),
+            ),
+            _section(
+                "Artifact 清单" if zh else "Artifact Inventory",
+                _table(
+                    (
+                        ["角色", "状态", "Artifact", "大小", "SHA-256 / hash 状态"]
+                        if zh
+                        else ["Role", "Status", "Artifact", "Bytes", "SHA-256 / hash status"]
+                    ),
                     artifact_rows,
                 ),
             ),
-            _section("Safe Claim Language", _paragraph(payload.get("claim_language"))),
-            _section("Boundary", _paragraph(payload.get("boundary"))),
+            _section(
+                "安全主张表述" if zh else "Safe Claim Language",
+                _paragraph(payload.get("claim_language")),
+            ),
+            _section(
+                "边界" if zh else "Boundary",
+                _paragraph(
+                    (
+                        "这个索引只是导航入口。它不会增加链接 artifact 之外的新证据, "
+                        "也不证明科学充分性。"
+                    )
+                    if zh
+                    else payload.get("boundary")
+                ),
+            ),
         ],
     )
 

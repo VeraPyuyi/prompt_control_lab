@@ -65,6 +65,7 @@ def test_start_research_supports_chinese_output(
     assert "如何阅读输出:" in out
     assert "研究诊断报告:" in out
     assert "证据层级=完整研究诊断" in out
+    assert str(run_dir / "research_bundle.zh.html") in out
     assert f"UI: pcl ui --runs {tmp_path} --language zh" in out
 
 
@@ -151,11 +152,16 @@ def test_research_demo_generates_paper_diagnostics(
     assert overview_artifact["bytes"] > 0
     assert overview_artifact["sha256"].startswith("sha256:")
     assert (run_dir / "research_bundle.html").exists()
+    assert (run_dir / "research_bundle.zh.html").exists()
     bundle_html = (run_dir / "research_bundle.html").read_text(encoding="utf-8")
+    bundle_zh_html = (run_dir / "research_bundle.zh.html").read_text(encoding="utf-8")
     assert "Research Evidence Bundle" in bundle_html
     assert "What this bundle tells you" in bundle_html
     assert "full research diagnostics" in bundle_html
     assert "Start with research_diagnostics.html" in bundle_html
+    assert "研究证据包" in bundle_zh_html
+    assert "这个证据包说明什么" in bundle_zh_html
+    assert "完整研究诊断" in bundle_zh_html
     assert main(["research-bundle", "--run", str(run_dir)]) == 0
     refreshed_bundle = read_json(run_dir / "research_bundle.json")
     assert refreshed_bundle["hashed_artifact_count"] >= bundle["hashed_artifact_count"]

@@ -54,7 +54,7 @@ pcl start --choice choose --need "安全评测和红队检查" --language zh --o
 | DeepEval TestRun 输出 | 有指标，但 prompt/model/split provenance 和 claim 边界还需要审查。 | `pcl import deepeval --input test-run.json --out runs/from-deepeval` | `manifest.json`，再运行 `pcl evidence-card` |
 | LangSmith / Langfuse trace 或 eval 导出 | 有 trace，但 prompt 效果可能和模型、指标、切分变化混在一起。 | `pcl start --choice import --tool auto --input results.json --out runs/from-external` | `bridge_summary.html` |
 | prompt-optimizer 收藏或模板 | 有更好的 prompt 候选，但还不是成对打分证据。 | `pcl import prompt-optimizer --input favorites.json --out runs/from-prompt-optimizer` | `prompt_optimizer_gap_plan.html` |
-| 任意论文诊断 run | 还没有先打开研究证据包。 | `pcl research-demo --out runs/research-demo && pcl diagnose --run runs/research-demo` | `research_bundle.html` |
+| 任意论文诊断 run | 还没有先打开研究证据包。 | `pcl research-demo --out runs/research-demo --language zh && pcl diagnose --run runs/research-demo --language zh` | `research_bundle.zh.html` |
 
 生成生态对比 scorecard 和 market readiness 摘要：
 
