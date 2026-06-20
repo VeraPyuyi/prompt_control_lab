@@ -1308,6 +1308,27 @@ def test_ui_tutorial_onboarding_paths_cover_main_user_goals() -> None:
     assert not _contains_replacement_character(zh_paths)
 
 
+def test_ui_ecosystem_choice_rows_explain_adjacent_tool_paths() -> None:
+    from promptcontrollab.ui import app
+
+    en_rows = app.ecosystem_choice_rows("en")
+    zh_rows = app.ecosystem_choice_rows("zh")
+
+    assert len(en_rows) == 5
+    assert len(zh_rows) == 5
+    combined_en = " ".join(str(row) for row in en_rows)
+    combined_zh = " ".join(str(row) for row in zh_rows)
+    for name in ["Promptfoo", "LangSmith", "Langfuse", "prompt-optimizer"]:
+        assert name in combined_en
+        assert name in combined_zh
+    assert "paired uncertainty" in combined_en
+    assert "成对不确定性" in combined_zh
+    assert "证据" in combined_zh
+    assert "ecosystem_choice_title" in app.TEXT["en"]
+    assert "ecosystem_choice_title" in app.TEXT["zh"]
+    assert not _contains_replacement_character(zh_rows)
+
+
 def test_ui_tutorial_gallery_exposes_visible_images() -> None:
     from promptcontrollab.ui import app
 

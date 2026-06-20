@@ -179,6 +179,10 @@ TEXT = {
         "onboarding_goal": "Goal",
         "onboarding_start": "Start here",
         "onboarding_next": "Then",
+        "ecosystem_choice_title": "Which tool should I use first?",
+        "ecosystem_choice_start": "Starting point",
+        "ecosystem_choice_use": "Use first",
+        "ecosystem_choice_add": "Add PCL when...",
         "execution_mode": "Execution mode",
         "overwrite": "Overwrite existing artifacts",
         "allow_external_outputs": "Allow writing outside runs directory",
@@ -417,6 +421,10 @@ TEXT = {
         "onboarding_goal": "目标",
         "onboarding_start": "从这里开始",
         "onboarding_next": "然后",
+        "ecosystem_choice_title": "我应该先用哪个工具？",
+        "ecosystem_choice_start": "你的起点",
+        "ecosystem_choice_use": "先用",
+        "ecosystem_choice_add": "什么时候加入 PCL",
         "execution_mode": "执行模式",
         "overwrite": "覆盖已有 artifact",
         "allow_external_outputs": "允许写入 runs 目录之外",
@@ -801,6 +809,63 @@ ONBOARDING_PATHS = {
             "goal": "我需要复查 agent 到底改了哪些代码。",
             "start": "Agent 改动审计 -> `pcl audit-diff`",
             "next": "生成 PR summary，构建 `agent_run.json`，并在历史页持续追踪。",
+        },
+    ],
+}
+
+ECOSYSTEM_CHOICE_ROWS = {
+    "en": [
+        {
+            "start": "Eval matrices, CI checks, or red-team/security tests",
+            "tool": "Promptfoo",
+            "pcl": "paired uncertainty, prompt-only validity, claim boundaries, and paper diagnostics",
+        },
+        {
+            "start": "Traces, agent debugging, datasets, or LangChain/LangGraph observability",
+            "tool": "LangSmith",
+            "pcl": "a reproducible evidence bundle that separates prompt effects from model, metric, and split changes",
+        },
+        {
+            "start": "Open-source tracing, prompt management, evals, cost tracking, or self-hosting",
+            "tool": "Langfuse",
+            "pcl": "soft-hard gap, trajectory/Riccati/tv-soft diagnostics, and bounded research claims",
+        },
+        {
+            "start": "A polished prompt writing and rewriting app",
+            "tool": "prompt-optimizer",
+            "pcl": "proof that the optimized prompt is reproducibly better before deployment or publication",
+        },
+        {
+            "start": "Baseline/candidate outputs already exist",
+            "tool": "PCL",
+            "pcl": "evidence card, claim check, gap status, provenance, and research bundle verification",
+        },
+    ],
+    "zh": [
+        {
+            "start": "评测矩阵、CI 检查、红队或安全测试",
+            "tool": "Promptfoo",
+            "pcl": "需要成对不确定性、prompt-only 有效性、claim 边界和论文诊断",
+        },
+        {
+            "start": "Trace、agent debug、dataset 或 LangChain/LangGraph 观测",
+            "tool": "LangSmith",
+            "pcl": "需要把导出结果变成可复现证据包，并区分 prompt、模型、指标和切分变化",
+        },
+        {
+            "start": "开源 tracing、prompt 管理、eval、成本追踪或自托管",
+            "tool": "Langfuse",
+            "pcl": "需要 soft-hard gap、trajectory、Riccati、tv-soft 诊断和有边界的研究结论",
+        },
+        {
+            "start": "好用的 prompt 写作和改写界面",
+            "tool": "prompt-optimizer",
+            "pcl": "需要证明优化后的 prompt 在干净协议下真的更好",
+        },
+        {
+            "start": "已经有 baseline / candidate 输出",
+            "tool": "PCL",
+            "pcl": "需要 evidence card、claim check、gap status、模型溯源和 research bundle 验证",
         },
     ],
 }
@@ -1453,6 +1518,13 @@ def onboarding_paths(language: str) -> list[JsonDict]:
     return [dict(row) for row in rows]
 
 
+def ecosystem_choice_rows(language: str) -> list[JsonDict]:
+    """Return a compact map from adjacent tools to PCL's evidence layer."""
+
+    rows = ECOSYSTEM_CHOICE_ROWS.get(language) or ECOSYSTEM_CHOICE_ROWS["en"]
+    return [dict(row) for row in rows]
+
+
 def tutorial_gallery_items(language: str) -> list[JsonDict]:
     """Return always-visible tutorial image cards for the selected language."""
 
@@ -1867,6 +1939,21 @@ def _render_tutorial_tab(st: Any, text: dict[str, str], language: str) -> None:
                 text["onboarding_next"]: row.get("next", ""),
             }
             for row in onboarding_paths(language)
+        ],
+        use_container_width=True,
+    )
+    st.markdown(
+        f'<div class="pcl-section-title">{html.escape(text["ecosystem_choice_title"])}</div>',
+        unsafe_allow_html=True,
+    )
+    st.dataframe(
+        [
+            {
+                text["ecosystem_choice_start"]: row.get("start", ""),
+                text["ecosystem_choice_use"]: row.get("tool", ""),
+                text["ecosystem_choice_add"]: row.get("pcl", ""),
+            }
+            for row in ecosystem_choice_rows(language)
         ],
         use_container_width=True,
     )
