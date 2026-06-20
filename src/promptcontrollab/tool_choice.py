@@ -343,3 +343,99 @@ def format_tool_choice(payload: JsonDict, *, language: str = "en") -> str:
     lines.extend(f"- {command}" for command in command_list)
     lines.extend(["", f"Avoid: {payload.get('avoid', '')}"])
     return "\n".join(lines)
+
+
+def render_tool_choice_markdown(payload: JsonDict, *, language: str = "en") -> str:
+    """Render a tool-choice payload as reviewer-friendly Markdown."""
+
+    choices = payload.get("choices")
+    if isinstance(choices, list):
+        if language == "zh":
+            lines = [
+                "# 工具选择地图",
+                "",
+                "| 场景 | 先用 | PCL 补什么 |",
+                "|---|---|---|",
+            ]
+            for lane in choices:
+                lines.append(
+                    "| "
+                    f"{_md_cell(lane.get('when_zh') or lane.get('when'))} | "
+                    f"{_md_cell(lane.get('use_first'))} | "
+                    f"{_md_cell(lane.get('pcl_short_zh') or lane.get('pcl_short'))} |"
+                )
+            lines.extend(["", "下一步: `pcl choose --need <你的目标>`"])
+            return "\n".join(lines) + "\n"
+        lines = [
+            "# Tool Choice Map",
+            "",
+            "| Scenario | Use first | What PCL adds |",
+            "|---|---|---|",
+        ]
+        for lane in choices:
+            lines.append(
+                "| "
+                f"{_md_cell(lane.get('when'))} | "
+                f"{_md_cell(lane.get('use_first'))} | "
+                f"{_md_cell(lane.get('pcl_short'))} |"
+            )
+        lines.extend(["", "Next: `pcl choose --need <your-goal>`"])
+        return "\n".join(lines) + "\n"
+
+    command_list = _command_list(payload.get("commands"))
+    if language == "zh":
+        lines = [
+            "# 工具选择建议",
+            "",
+            f"- 需求: `{payload.get('need', '')}`",
+            f"- 匹配路线: `{payload.get('matched', '')}`",
+            f"- 置信度: `{payload.get('confidence', 'unknown')}`",
+            f"- 先用: **{payload.get('use_first', '')}**",
+            "",
+            "## 为什么",
+            "",
+            str(payload.get("why_zh") or payload.get("why", "")),
+            "",
+            "## PCL 补什么",
+            "",
+            str(payload.get("pcl_adds_zh") or payload.get("pcl_adds", "")),
+            "",
+            "## 可复制命令",
+            "",
+        ]
+        lines.extend(f"```bash\n{command}\n```" for command in command_list)
+        lines.extend(
+            ["", "## 不要做", "", str(payload.get("avoid_zh") or payload.get("avoid", ""))]
+        )
+        return "\n".join(lines) + "\n"
+
+    lines = [
+        "# Tool Choice Recommendation",
+        "",
+        f"- Need: `{payload.get('need', '')}`",
+        f"- Matched lane: `{payload.get('matched', '')}`",
+        f"- Confidence: `{payload.get('confidence', 'unknown')}`",
+        f"- Use first: **{payload.get('use_first', '')}**",
+        "",
+        "## Why",
+        "",
+        str(payload.get("why", "")),
+        "",
+        "## What PCL Adds",
+        "",
+        str(payload.get("pcl_adds", "")),
+        "",
+        "## Copy-Paste Commands",
+        "",
+    ]
+    lines.extend(f"```bash\n{command}\n```" for command in command_list)
+    lines.extend(["", "## Avoid", "", str(payload.get("avoid", ""))])
+    return "\n".join(lines) + "\n"
+
+
+def _command_list(value: object) -> list[str]:
+    return [str(command) for command in value] if isinstance(value, list) else []
+
+
+def _md_cell(value: object) -> str:
+    return str(value or "").replace("|", "\\|").replace("\n", " ")

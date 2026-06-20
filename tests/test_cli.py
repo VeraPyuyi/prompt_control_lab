@@ -1823,6 +1823,41 @@ def test_cli_choose_recommends_adjacent_tool_paths(capsys: pytest.CaptureFixture
     assert "PCL 补: 成对不确定性, prompt-only 有效性和 claim 边界." in output
 
 
+def test_cli_choose_writes_json_and_markdown_artifacts(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    out_path = tmp_path / "choice.json"
+    assert (
+        main(
+            [
+                "choose",
+                "--need",
+                "security evals and red-team checks",
+                "--out",
+                str(out_path),
+            ]
+        )
+        == 0
+    )
+    output = capsys.readouterr().out
+    assert "Wrote tool-choice artifacts" in output
+    payload = json.loads(out_path.read_text(encoding="utf-8"))
+    markdown = out_path.with_suffix(".md").read_text(encoding="utf-8")
+    assert payload["matched"] == "security"
+    assert "# Tool Choice Recommendation" in markdown
+    assert "Promptfoo is strongest" in markdown
+    assert "pcl evidence-audit" in markdown
+
+    out_dir = tmp_path / "zh-choice"
+    assert main(["choose", "--language", "zh", "--out", str(out_dir), "--json"]) == 0
+    payload = json.loads((out_dir / "tool_choice.json").read_text(encoding="utf-8"))
+    markdown = (out_dir / "tool_choice.md").read_text(encoding="utf-8")
+    assert "choices" in payload
+    assert "# 工具选择地图" in markdown
+    assert "成对不确定性" in markdown
+
+
 def test_cli_start_interactive_guard_menu(
     capsys: pytest.CaptureFixture[str],
     monkeypatch: pytest.MonkeyPatch,

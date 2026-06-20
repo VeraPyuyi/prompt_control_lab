@@ -75,6 +75,7 @@ from promptcontrollab.templates import write_example_project, write_external_exa
 from promptcontrollab.tool_choice import (
     choose_tool_for_need,
     format_tool_choice,
+    render_tool_choice_markdown,
     tool_choice_lanes,
 )
 from promptcontrollab.trajectory import analyze_trajectory
@@ -191,6 +192,12 @@ def build_parser() -> argparse.ArgumentParser:
     )
     choose_parser.add_argument("--language", choices=["en", "zh"], default="en")
     choose_parser.add_argument("--json", action="store_true")
+    choose_parser.add_argument(
+        "--out",
+        type=Path,
+        default=None,
+        help="Write tool-choice JSON plus a sibling Markdown summary.",
+    )
     choose_parser.set_defaults(func=_cmd_choose)
 
     init_parser = subcommands.add_parser("init", help="Create an example project.")
@@ -1802,10 +1809,32 @@ def _cmd_choose(args: argparse.Namespace) -> None:
         payload = {"choices": tool_choice_lanes(), "next": "Run pcl choose --need <your-goal>."}
     else:
         payload = choose_tool_for_need(args.need)
+    written: tuple[Path, Path] | None = None
+    if args.out is not None:
+        json_path = _choice_output_path(args.out)
+        md_path = json_path.with_suffix(".md")
+        write_json(json_path, payload)
+        md_path.write_text(
+            render_tool_choice_markdown(payload, language=args.language),
+            encoding="utf-8",
+        )
+        written = (json_path, md_path)
     if args.json:
         print(json.dumps(payload, indent=2, ensure_ascii=False, sort_keys=True))
         return
     print(format_tool_choice(payload, language=args.language))
+    if written is not None:
+        print(f"\nWrote tool-choice artifacts: {written[0]} and {written[1]}")
+
+
+def _choice_output_path(path: Path) -> Path:
+    """Resolve ``pcl choose --out`` to a JSON artifact path."""
+
+    if path.suffix.lower() == ".json":
+        return path
+    if path.suffix:
+        return path.with_suffix(".json")
+    return path / "tool_choice.json"
 
 
 def _cmd_start(args: argparse.Namespace) -> None:
