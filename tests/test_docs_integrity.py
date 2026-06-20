@@ -11,6 +11,18 @@ def test_readmes_stay_concise() -> None:
     assert _line_count(Path("README.zh.md")) <= 75
 
 
+def test_beginner_guide_is_visible_from_readmes_and_tutorials() -> None:
+    """Keep the goal-based beginner path visible at the public entry points."""
+
+    for path in [
+        Path("README.md"),
+        Path("README.zh.md"),
+        Path("docs/tutorial.en.md"),
+        Path("docs/tutorial.zh.md"),
+    ]:
+        assert "pcl start --guide" in path.read_text(encoding="utf-8")
+
+
 def test_public_markdown_local_links_resolve() -> None:
     """Ensure public README/docs links and image references point to existing files."""
 

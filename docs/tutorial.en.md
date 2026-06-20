@@ -7,18 +7,21 @@ This tutorial uses the format "operation -> result -> what it explains".
 Operation:
 
 ```bash
+pcl start --guide
 pcl start
 ```
 
 Result:
 
+- a goal-based guide that shows which path to start with
 - a three-option menu: improve a prompt, guard a prompt, or create a report
 - plain-language output for the selected scenario
 
 What it explains:
 
-This is the lowest-friction entry point. Use it when terms like `profile`, `gate`, or
-`stats` are not familiar yet.
+This is the lowest-friction entry point. Run `pcl start --guide` first when you are not sure
+whether you need the research demo, evidence bridge, guard, audit, or report path. Use `pcl start`
+when terms like `profile`, `gate`, or `stats` are not familiar yet.
 
 ## Quick Mode: One Command
 
