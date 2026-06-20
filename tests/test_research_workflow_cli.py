@@ -302,6 +302,9 @@ def test_diagnose_reuses_research_demo_inputs(
     assert "At a glance: diagnostics=4/4; claim=pass" in out
     assert f"Open first from summary: {run_dir / 'research_bundle.html'}" in out
     assert "Next action: Share the research bundle" in out
+    assert "How to read the outputs:" in out
+    assert "Research diagnostics:" in out
+    assert "Evidence gate:" in out
     assert summary["diagnostics"]["trajectory"]["turnpike_like_signal"] is True
     assert (run_dir / "diagnostics" / "soft_hard.json").exists()
     assert (run_dir / "diagnostics" / "tv_soft.json").exists()

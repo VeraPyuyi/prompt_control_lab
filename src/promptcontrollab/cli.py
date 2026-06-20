@@ -2552,16 +2552,7 @@ def _format_research_demo_output(*, out_dir: Path, payload: JsonDict) -> str:
         f"Diagnostics: {', '.join(diagnostic_names)}",
         f"Open first: {out_dir / 'research_bundle.html'}",
         *_research_cli_summary_lines(summary_dir=out_dir, payload=payload),
-        "",
-        "How to read the outputs:",
-        f"Research diagnostics: {out_dir / 'research_diagnostics.html'}",
-        "  Explains each paper-derived diagnostic in plain language.",
-        f"Evidence card: {out_dir / 'evidence_card.html'}",
-        "  Summarizes what evidence exists for a prompt-optimization claim.",
-        f"Claim check: {out_dir / 'claim_check.html'}",
-        "  Shows the strongest claim this run can safely support.",
-        f"Evidence gate: {out_dir / 'evidence_gate_result.html'}",
-        "  Checks whether required research artifacts are present and linked.",
+        *_research_output_guide_lines(out_dir),
         f"UI: pcl ui --runs {ui_runs_dir}",
     ]
     return "\n".join(lines)
@@ -2576,6 +2567,21 @@ def _readable_research_diagnostic_names(names: list[str]) -> str:
     }
     readable = [labels.get(name, name.replace("_", "-")) for name in names]
     return ", ".join(readable) if readable else "none"
+
+
+def _research_output_guide_lines(out_dir: Path) -> list[str]:
+    return [
+        "",
+        "How to read the outputs:",
+        f"Research diagnostics: {out_dir / 'research_diagnostics.html'}",
+        "  Explains each paper-derived diagnostic in plain language.",
+        f"Evidence card: {out_dir / 'evidence_card.html'}",
+        "  Summarizes what evidence exists for a prompt-optimization claim.",
+        f"Claim check: {out_dir / 'claim_check.html'}",
+        "  Shows the strongest claim this run can safely support.",
+        f"Evidence gate: {out_dir / 'evidence_gate_result.html'}",
+        "  Checks whether required research artifacts are present and linked.",
+    ]
 
 
 def _research_cli_summary_lines(*, summary_dir: Path, payload: JsonDict) -> list[str]:
@@ -2651,6 +2657,7 @@ def _cmd_diagnose(args: argparse.Namespace) -> None:
     summary_dir_path = Path(str(payload["summary_dir"]))
     print(f"Report: {summary_dir_path / 'research_diagnostics.html'}")
     print("\n".join(_research_cli_summary_lines(summary_dir=summary_dir_path, payload=payload)))
+    print("\n".join(_research_output_guide_lines(summary_dir_path)))
 
 
 def _cmd_gap_status(args: argparse.Namespace) -> None:
