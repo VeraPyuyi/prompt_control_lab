@@ -15,7 +15,7 @@ pcl start --choice demo --language zh --out demo
 得到：
 
 - 一个按目标选择路径的 guide
-- 一个五选一菜单：demo 项目、研究 demo、prompt 优化、guard、报告
+- 一个六选一菜单：demo 项目、研究 demo、外部证据导入、prompt 优化、guard、报告
 - 使用 `--choice demo` 时，会直接生成 `demo/runs/quick/report.html`
 - 当前场景的直白输出
 

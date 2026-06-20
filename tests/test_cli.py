@@ -1652,15 +1652,104 @@ def test_cli_start_interactive_guard_menu(
     capsys: pytest.CaptureFixture[str],
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.setattr("sys.stdin", io.StringIO("4\nFix this bug\n"))
+    monkeypatch.setattr("sys.stdin", io.StringIO("5\nFix this bug\n"))
     assert main(["start"]) == 0
     output = capsys.readouterr().out
     assert "What do you want to do?" in output
     assert "1) Create a runnable demo project" in output
     assert "2) Run a paper-style prompt optimization research demo" in output
+    assert "3) Import external eval results as evidence" in output
     assert "pcl start --guide" in output
     assert "Beginner mode: guard a prompt" in output
     assert "Plain summary:" in output
+
+
+def test_cli_start_interactive_import_menu_prints_bridge_commands(
+    capsys: pytest.CaptureFixture[str],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr("sys.stdin", io.StringIO("3\n"))
+    assert main(["start"]) == 0
+    output = capsys.readouterr().out
+    assert "Beginner mode: import external eval results as evidence" in output
+    assert "pcl start --choice import --tool auto --input results.json" in output
+    assert "prompt-optimizer favorites" in output
+    assert "pcl evidence-audit" in output
+
+
+def test_cli_start_choice_import_promptfoo_writes_run(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    source = tmp_path / "promptfoo-results.json"
+    out_dir = tmp_path / "runs" / "from-promptfoo"
+    _write_json(
+        source,
+        {
+            "version": 3,
+            "prompts": [
+                {
+                    "id": "candidate",
+                    "raw": "Answer with only the final result.",
+                    "label": "Candidate",
+                    "provider": "openai:gpt-4o-mini",
+                }
+            ],
+            "results": [
+                {
+                    "promptId": "candidate",
+                    "provider": {"id": "openai:gpt-4o-mini"},
+                    "testIdx": 0,
+                    "testCase": {
+                        "vars": {"slice": "arithmetic"},
+                        "assert": [{"type": "equals", "value": "4"}],
+                    },
+                    "response": {"output": "4"},
+                    "success": True,
+                    "score": 1,
+                },
+                {
+                    "promptId": "candidate",
+                    "provider": {"id": "openai:gpt-4o-mini"},
+                    "testIdx": 1,
+                    "testCase": {
+                        "vars": {"slice": "arithmetic"},
+                        "assert": [{"type": "equals", "value": "6"}],
+                    },
+                    "response": {"output": "5"},
+                    "success": False,
+                    "score": 0,
+                },
+            ],
+        },
+    )
+
+    assert (
+        main(
+            [
+                "start",
+                "--choice",
+                "import",
+                "--tool",
+                "promptfoo",
+                "--input",
+                str(source),
+                "--out",
+                str(out_dir),
+                "--prompt-id",
+                "candidate",
+            ]
+        )
+        == 0
+    )
+
+    output = capsys.readouterr().out
+    assert "Beginner mode: import external eval results as evidence" in output
+    assert "- Source tool: promptfoo" in output
+    assert f"- Output directory: {out_dir}" in output
+    assert (out_dir / "predictions.jsonl").exists()
+    manifest = json.loads((out_dir / "manifest.json").read_text(encoding="utf-8"))
+    assert manifest["source_tool"] == "promptfoo"
 
 
 def test_cli_start_interactive_menu_supports_chinese(

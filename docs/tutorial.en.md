@@ -15,7 +15,8 @@ pcl start --choice demo --out demo
 Result:
 
 - a goal-based guide that shows which path to start with
-- a five-option menu: demo project, research demo, prompt improvement, guard, or report
+- a six-option menu: demo project, research demo, external evidence import, prompt improvement,
+  guard, or report
 - a runnable demo project with `demo/runs/quick/report.html` when using `--choice demo`
 - plain-language output for the selected scenario
 

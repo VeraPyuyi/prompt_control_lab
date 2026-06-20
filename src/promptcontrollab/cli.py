@@ -111,7 +111,7 @@ def build_parser() -> argparse.ArgumentParser:
     )
     start_parser.add_argument(
         "--choice",
-        choices=["demo", "research", "improve", "guard", "analyze"],
+        choices=["demo", "research", "import", "evidence", "improve", "guard", "analyze"],
         default=None,
         help="Skip the menu and choose a beginner scenario.",
     )
@@ -145,6 +145,21 @@ def build_parser() -> argparse.ArgumentParser:
     )
     start_parser.add_argument("--max-tokens", type=int, default=None)
     start_parser.add_argument("--config", type=Path, default=None, help="Config for analyze mode.")
+    start_parser.add_argument(
+        "--tool",
+        choices=["auto", "promptfoo", "langfuse", "langsmith", "deepeval", "prompt-optimizer"],
+        default="auto",
+        help="External tool used when choice is import.",
+    )
+    start_parser.add_argument("--input", type=Path, default=None, help="External export file.")
+    start_parser.add_argument("--prompt-id", default=None, help="Promptfoo prompt filter.")
+    start_parser.add_argument("--name", default=None, help="Langfuse observation name filter.")
+    start_parser.add_argument("--experiment", default=None, help="LangSmith experiment filter.")
+    start_parser.add_argument("--score-name", default=None, help="External score/metric filter.")
+    start_parser.add_argument("--model", default=None, help="External model id filter.")
+    start_parser.add_argument("--provider", default=None, help="External provider filter.")
+    start_parser.add_argument("--method", default=None, help="Method name written to predictions.")
+    start_parser.add_argument("--asset-id", default=None, help="prompt-optimizer asset id filter.")
     start_parser.add_argument("--seed", type=int, default=0, help="Synthetic fixture seed.")
     start_parser.set_defaults(func=_cmd_start)
 
@@ -1704,6 +1719,16 @@ def _cmd_start(args: argparse.Namespace) -> None:
         print(_format_research_demo_output(out_dir=out_dir, payload=payload))
         return
 
+    if choice == "import":
+        if args.input is None:
+            print(_format_start_import_guide(args.language))
+            return
+        out_dir = args.out or _default_start_import_out_dir(args.tool)
+        payload = _run_start_import(args, out_dir=out_dir)
+        payload.setdefault("source_tool", args.tool)
+        print(_format_start_import_result(out_dir=out_dir, payload=payload, language=args.language))
+        return
+
     if choice == "improve":
         prompt = _read_start_prompt(args.prompt, args.prompt_file)
         print("Beginner mode: improve a prompt")
@@ -1800,6 +1825,158 @@ def _cmd_start(args: argparse.Namespace) -> None:
                 "is worth keeping.",
             ]
         )
+    )
+
+
+def _default_start_import_out_dir(tool: str) -> Path:
+    name = "external" if tool == "auto" else tool
+    return Path("runs") / f"from-{name}"
+
+
+def _run_start_import(args: argparse.Namespace, *, out_dir: Path) -> JsonDict:
+    if args.input is None:
+        raise ValueError("--input is required when start import executes an import.")
+    source_path: Path = args.input
+    if args.tool == "auto":
+        return ingest_auto_results(
+            source_path=source_path,
+            out_dir=out_dir,
+            prompt_id=args.prompt_id,
+            name=args.name,
+            experiment=args.experiment,
+            score_name=args.score_name,
+            model=args.model,
+            provider=args.provider,
+            method=args.method,
+            asset_id=args.asset_id,
+        )
+    if args.tool == "promptfoo":
+        return ingest_promptfoo_results(
+            source_path=source_path,
+            out_dir=out_dir,
+            prompt_id=args.prompt_id,
+            provider=args.provider,
+            method=args.method,
+        )
+    if args.tool == "langfuse":
+        return ingest_langfuse_results(
+            source_path=source_path,
+            out_dir=out_dir,
+            name=args.name,
+            score_name=args.score_name,
+            model=args.model,
+            provider=args.provider,
+            method=args.method,
+        )
+    if args.tool == "langsmith":
+        return ingest_langsmith_results(
+            source_path=source_path,
+            out_dir=out_dir,
+            experiment=args.experiment,
+            score_name=args.score_name,
+            model=args.model,
+            provider=args.provider,
+            method=args.method,
+        )
+    if args.tool == "deepeval":
+        return ingest_deepeval_results(
+            source_path=source_path,
+            out_dir=out_dir,
+            score_name=args.score_name,
+            model=args.model,
+            provider=args.provider,
+            method=args.method,
+        )
+    return ingest_prompt_optimizer_assets(
+        source_path=source_path,
+        out_dir=out_dir,
+        asset_id=args.asset_id,
+    )
+
+
+def _format_start_import_guide(language: str = "en") -> str:
+    if language == "zh":
+        return "\n".join(
+            [
+                "新手模式: 把外部评测结果导入成证据",
+                "",
+                "如果你已经有 Promptfoo / Langfuse / LangSmith / DeepEval 导出文件, 运行:",
+                (
+                    "  pcl start --choice import --tool auto --input results.json "
+                    "--out runs/from-external"
+                ),
+                "",
+                "如果是 prompt-optimizer 收藏或模板导出, 运行:",
+                (
+                    "  pcl start --choice import --tool prompt-optimizer "
+                    "--input favorites.json --out runs/from-prompt-optimizer"
+                ),
+                "",
+                "得到什么: PCL run artifact、manifest、metrics 或 prompt asset gap plan。",
+                (
+                    "下一步: 运行 `pcl scaffold-check --run <run>`、"
+                    "`pcl evidence-card --run <run>` 或 `pcl evidence-audit`。"
+                ),
+            ]
+        )
+    return "\n".join(
+        [
+            "Beginner mode: import external eval results as evidence",
+            "",
+            "If you already have Promptfoo / Langfuse / LangSmith / DeepEval exports, run:",
+            "  pcl start --choice import --tool auto --input results.json --out runs/from-external",
+            "",
+            "For prompt-optimizer favorites or template exports, run:",
+            (
+                "  pcl start --choice import --tool prompt-optimizer "
+                "--input favorites.json --out runs/from-prompt-optimizer"
+            ),
+            "",
+            "Result: PCL run artifacts, manifest, metrics, or a prompt asset gap plan.",
+            (
+                "Next: run `pcl scaffold-check --run <run>`, "
+                "`pcl evidence-card --run <run>`, or `pcl evidence-audit`."
+            ),
+        ]
+    )
+
+
+def _format_start_import_result(
+    *,
+    out_dir: Path,
+    payload: JsonDict,
+    language: str = "en",
+) -> str:
+    source_tool = payload.get("source_tool") or payload.get("tool") or "external"
+    status = payload.get("evaluation_status") or payload.get("status") or "imported"
+    count = payload.get("count")
+    count_text = "unknown" if count is None else str(count)
+    if language == "zh":
+        return "\n".join(
+            [
+                "新手模式: 把外部评测结果导入成证据",
+                f"- 来源工具: {source_tool}",
+                f"- 输出目录: {out_dir}",
+                f"- 记录数量: {count_text}",
+                f"- 状态: {status}",
+                "",
+                "下一步:",
+                f"  pcl scaffold-check --run {out_dir}",
+                f"  pcl evidence-card --run {out_dir} --out {out_dir / 'evidence_card.md'}",
+            ]
+        )
+    return "\n".join(
+        [
+            "Beginner mode: import external eval results as evidence",
+            f"- Source tool: {source_tool}",
+            f"- Output directory: {out_dir}",
+            f"- Records: {count_text}",
+            f"- Status: {status}",
+            "",
+            "Next steps:",
+            f"  pcl scaffold-check --run {out_dir}",
+            f"  pcl evidence-card --run {out_dir} --out {out_dir / 'evidence_card.md'}",
+        ]
     )
 
 
@@ -2507,15 +2684,16 @@ def _start_choice(value: str | None, *, language: str = "en") -> str:
                     "你想先做什么?",
                     "1) 创建一个可直接运行的 demo 项目",
                     "2) 运行论文风格的 prompt optimization 研究 demo",
-                    "3) 让我的 prompt 更清楚",
-                    "4) 在发送给 AI 工具前检查 prompt",
-                    "5) 比较 prompts 并生成报告",
+                    "3) 把外部评测结果导入成证据",
+                    "4) 让我的 prompt 更清楚",
+                    "5) 在发送给 AI 工具前检查 prompt",
+                    "6) 比较 prompts 并生成报告",
                     "",
                     "提示: 如果不确定路径, 运行 `pcl start --guide --language zh`。",
                 ]
             )
         )
-        raw = input("请选择 1、2、3、4 或 5: ").strip().lower()
+        raw = input("请选择 1、2、3、4、5 或 6: ").strip().lower()
     else:
         print(
             "\n".join(
@@ -2523,32 +2701,36 @@ def _start_choice(value: str | None, *, language: str = "en") -> str:
                     "What do you want to do?",
                     "1) Create a runnable demo project",
                     "2) Run a paper-style prompt optimization research demo",
-                    "3) Make my prompt clearer",
-                    "4) Check a prompt before sending it to an AI tool",
-                    "5) Compare prompts and create a report",
+                    "3) Import external eval results as evidence",
+                    "4) Make my prompt clearer",
+                    "5) Check a prompt before sending it to an AI tool",
+                    "6) Compare prompts and create a report",
                     "",
                     "Tip: run `pcl start --guide` if you are unsure which path fits your goal.",
                 ]
             )
         )
-        raw = input("Choose 1, 2, 3, 4, or 5: ").strip().lower()
+        raw = input("Choose 1, 2, 3, 4, 5, or 6: ").strip().lower()
     choices = {
         "1": "demo",
         "demo": "demo",
         "2": "research",
         "research": "research",
-        "3": "improve",
+        "3": "import",
+        "import": "import",
+        "evidence": "import",
+        "4": "improve",
         "improve": "improve",
-        "4": "guard",
+        "5": "guard",
         "guard": "guard",
-        "5": "analyze",
+        "6": "analyze",
         "analyze": "analyze",
     }
     if raw not in choices:
         msg = (
-            "请选择 1、2、3、4 或 5"
+            "请选择 1、2、3、4、5 或 6"
             if language == "zh"
-            else "Choose 1, 2, 3, 4, or 5"
+            else "Choose 1, 2, 3, 4, 5, or 6"
         )
         raise ValueError(msg)
     return choices[raw]
