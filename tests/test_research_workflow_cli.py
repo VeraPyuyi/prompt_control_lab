@@ -109,6 +109,8 @@ def test_research_demo_generates_paper_diagnostics(
     bundle = read_json(run_dir / "research_bundle.json")
     assert bundle["kind"] == "research_bundle_index"
     assert bundle["status"] == "supported"
+    assert bundle["evidence_tier_label"] == "full research diagnostics"
+    assert any("plain language" in item for item in bundle["plain_summary"])
     assert bundle["present_artifact_count"] > 0
     assert bundle["hashed_artifact_count"] > 0
     diagnostics_artifact = _artifact(bundle, "research_diagnostics.html")
@@ -118,9 +120,11 @@ def test_research_demo_generates_paper_diagnostics(
     assert overview_artifact["bytes"] > 0
     assert overview_artifact["sha256"].startswith("sha256:")
     assert (run_dir / "research_bundle.html").exists()
-    assert "Research Evidence Bundle" in (run_dir / "research_bundle.html").read_text(
-        encoding="utf-8"
-    )
+    bundle_html = (run_dir / "research_bundle.html").read_text(encoding="utf-8")
+    assert "Research Evidence Bundle" in bundle_html
+    assert "What this bundle tells you" in bundle_html
+    assert "full research diagnostics" in bundle_html
+    assert "Start with research_diagnostics.html" in bundle_html
     assert main(["research-bundle", "--run", str(run_dir)]) == 0
     refreshed_bundle = read_json(run_dir / "research_bundle.json")
     assert refreshed_bundle["hashed_artifact_count"] >= bundle["hashed_artifact_count"]

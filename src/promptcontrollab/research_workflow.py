@@ -752,6 +752,15 @@ def build_research_bundle_index(run_dir: Path) -> JsonDict:
     gap_plan = _read_optional_research_json(run_dir / "research_gap_plan.json")
     diagnostics_payload = diagnostics.get("diagnostics")
     diagnostics_dict = diagnostics_payload if isinstance(diagnostics_payload, dict) else {}
+    status = _bundle_status(
+        evidence=evidence,
+        claim=claim,
+        gap_status=gap_status,
+        gap_plan=gap_plan,
+    )
+    evidence_tier = evidence.get("evidence_tier") or claim.get("evidence_tier")
+    claim_status = claim.get("status")
+    gap_status_value = gap_status.get("status") or ("planned" if gap_plan else "not_planned")
     expected = [
         "research_diagnostics.html",
         "evidence_card.html",
@@ -763,21 +772,24 @@ def build_research_bundle_index(run_dir: Path) -> JsonDict:
     return {
         "kind": "research_bundle_index",
         "run_dir": str(run_dir),
-        "status": _bundle_status(
-            evidence=evidence,
-            claim=claim,
-            gap_status=gap_status,
-            gap_plan=gap_plan,
-        ),
+        "status": status,
         "recommendation": evidence.get("recommendation") or claim.get("status") or "review",
-        "evidence_tier": evidence.get("evidence_tier") or claim.get("evidence_tier"),
-        "claim_check_status": claim.get("status"),
+        "evidence_tier": evidence_tier,
+        "evidence_tier_label": _readable_bundle_evidence_tier(str(evidence_tier or "")),
+        "claim_check_status": claim_status,
         "claim_language": claim.get("safe_claim_language") or evidence.get("claim_language"),
         "diagnostic_type": diagnostics.get("diagnostic_type") or diagnostics.get("mode"),
         "diagnostics_present": sorted(diagnostics_dict),
-        "gap_status": gap_status.get("status") or ("planned" if gap_plan else "not_planned"),
+        "gap_status": gap_status_value,
         "gap_complete_count": gap_status.get("complete_count"),
         "gap_missing_count": gap_status.get("missing_count"),
+        "plain_summary": _research_bundle_plain_summary(
+            status=status,
+            evidence_tier=evidence_tier,
+            claim_status=claim_status,
+            diagnostics_present=sorted(diagnostics_dict),
+            gap_status=gap_status_value,
+        ),
         "review_order": _bundle_review_order(run_dir),
         "artifacts": artifacts,
         "artifact_count": len(artifacts),
@@ -789,6 +801,71 @@ def build_research_bundle_index(run_dir: Path) -> JsonDict:
             "artifacts and does not prove scientific sufficiency."
         ),
     }
+
+
+def _readable_bundle_evidence_tier(value: str) -> str:
+    labels = {
+        "tier_0_insufficient_or_contradicted": "insufficient or contradicted evidence",
+        "tier_1_incomplete_comparison": "incomplete comparison",
+        "tier_2_paired_comparison": "paired comparison",
+        "tier_3_partial_research_diagnostics": "partial research diagnostics",
+        "tier_4_full_research_diagnostics": "full research diagnostics",
+    }
+    return labels.get(value, value.replace("_", " ") if value else "not recorded")
+
+
+def _research_bundle_plain_summary(
+    *,
+    status: str,
+    evidence_tier: object,
+    claim_status: object,
+    diagnostics_present: list[str],
+    gap_status: str,
+) -> list[str]:
+    diagnostics = ", ".join(_readable_diagnostic_name(name) for name in diagnostics_present)
+    diagnostics_text = diagnostics or "no paper diagnostics yet"
+    tier = _readable_bundle_evidence_tier(str(evidence_tier or ""))
+    claim = _readable_bundle_status(str(claim_status or "missing"))
+    gap = _readable_bundle_status(gap_status)
+    bundle = _readable_bundle_status(status)
+    return [
+        (
+            "Start with research_diagnostics.html to see the paper-derived checks in "
+            "plain language."
+        ),
+        f"This bundle currently has {tier} with claim check status {claim}.",
+        f"Included diagnostics: {diagnostics_text}.",
+        f"Gap status is {gap} and bundle status is {bundle}.",
+        (
+            "Use claim_check.html before making a broad prompt-optimization claim; "
+            "the bundle is evidence navigation, not a proof by itself."
+        ),
+    ]
+
+
+def _readable_diagnostic_name(name: str) -> str:
+    labels = {
+        "soft_hard": "soft-hard gap",
+        "trajectory": "hidden-state trajectory",
+        "riccati": "Riccati surrogate",
+        "tv_soft": "time-varying soft-control",
+    }
+    return labels.get(name, name.replace("_", "-"))
+
+
+def _readable_bundle_status(value: str) -> str:
+    labels = {
+        "pass": "pass",
+        "supported": "supported",
+        "review": "needs review",
+        "needs_review": "needs review",
+        "needs_work": "needs work",
+        "not_planned": "not planned",
+        "gap_status_not_checked": "gap status not checked",
+        "incomplete": "incomplete",
+        "missing": "missing",
+    }
+    return labels.get(value, value.replace("_", " ") if value else "missing")
 
 
 def _read_optional_research_json(path: Path) -> JsonDict:
@@ -1018,11 +1095,18 @@ def render_research_bundle_index_html(payload: JsonDict) -> str:
             _metric_grid(
                 [
                     ("Status", _badge(str(payload.get("status", "")))),
-                    ("Evidence tier", payload.get("evidence_tier", "")),
+                    (
+                        "Evidence tier",
+                        payload.get("evidence_tier_label") or payload.get("evidence_tier", ""),
+                    ),
                     ("Claim check", _badge(str(payload.get("claim_check_status", "")))),
                     ("Gap status", _badge(str(payload.get("gap_status", "")))),
                     ("Diagnostic type", payload.get("diagnostic_type", "")),
                 ]
+            ),
+            _section(
+                "What this bundle tells you",
+                _bullet_list(payload.get("plain_summary")),
             ),
             _section(
                 "Review Order",
@@ -2333,6 +2417,13 @@ def _table(headers: list[str], rows: list[list[object]]) -> str:
 def _paragraph(value: object) -> str:
     text = _format_value(value)
     return f"<p>{_html_text(text)}</p>" if text else ""
+
+
+def _bullet_list(value: object) -> str:
+    if not isinstance(value, list) or not value:
+        return '<div class="empty">No summary recorded.</div>'
+    items = "".join(f"<li>{_html_text(_format_value(item))}</li>" for item in value)
+    return f"<ul>{items}</ul>"
 
 
 def _badge(value: str) -> str:
