@@ -12,6 +12,10 @@ def tool_choice_lanes() -> list[JsonDict]:
         {
             "id": "security",
             "use_first": "Promptfoo",
+            "when": "Security evals, red-team checks, CI eval matrices.",
+            "when_zh": "安全评测, 红队检查, CI 评测矩阵.",
+            "pcl_short": "Paired uncertainty, prompt-only validity, and claim boundaries.",
+            "pcl_short_zh": "成对不确定性, prompt-only 有效性和 claim 边界.",
             "keywords": [
                 "security",
                 "red-team",
@@ -54,6 +58,10 @@ def tool_choice_lanes() -> list[JsonDict]:
         {
             "id": "unit-tests",
             "use_first": "DeepEval",
+            "when": "Pytest-style LLM tests, assertions, and ready-made metrics.",
+            "when_zh": "Pytest 风格 LLM 测试, 断言和现成指标.",
+            "pcl_short": "Prompt/model/split provenance and claim checks around test results.",
+            "pcl_short_zh": "围绕测试结果补 prompt/model/split 溯源和 claim 检查.",
             "keywords": [
                 "unit test",
                 "pytest",
@@ -87,6 +95,10 @@ def tool_choice_lanes() -> list[JsonDict]:
         {
             "id": "observability",
             "use_first": "LangSmith or Langfuse",
+            "when": "Traces, monitoring, cost, prompt registry, and agent debugging.",
+            "when_zh": "trace, 监控, 成本, prompt registry 和 agent 调试.",
+            "pcl_short": "Turn trace/eval exports into reproducible prompt-optimization evidence.",
+            "pcl_short_zh": "把 trace/eval 导出变成可复现的 prompt 优化证据.",
             "keywords": [
                 "trace",
                 "tracing",
@@ -134,6 +146,10 @@ def tool_choice_lanes() -> list[JsonDict]:
         {
             "id": "prompt-writing",
             "use_first": "linshenkx/prompt-optimizer",
+            "when": "Prompt rewriting, prompt assets, favorites, and interactive testing.",
+            "when_zh": "prompt 改写, prompt 资产, 收藏和交互测试.",
+            "pcl_short": "Prove whether optimized prompts improve under a clean protocol.",
+            "pcl_short_zh": "证明优化后的 prompt 是否在干净协议下真的变好.",
             "keywords": [
                 "rewrite prompt",
                 "prompt writing",
@@ -185,6 +201,12 @@ def tool_choice_lanes() -> list[JsonDict]:
         {
             "id": "research-evidence",
             "use_first": "prompt_control_lab",
+            "when": "Paper-derived diagnostics, reproducibility, and safe claim boundaries.",
+            "when_zh": "论文诊断, 可复现性和安全 claim 边界.",
+            "pcl_short": "Research bundle, evidence card, soft-hard, trajectory, Riccati, tv-soft.",
+            "pcl_short_zh": (
+                "research bundle, evidence card, soft-hard, trajectory, Riccati, tv-soft."
+            ),
             "keywords": [
                 "paper",
                 "research",
@@ -278,11 +300,15 @@ def format_tool_choice(payload: JsonDict, *, language: str = "en") -> str:
             lines = ["工具选择地图", "", "按你的目标选择第一步:"]
             for lane in choices:
                 lines.append(f"- {lane.get('id')}: 先用 {lane.get('use_first')}")
+                lines.append(f"  适合: {lane.get('when_zh') or lane.get('when', '')}")
+                lines.append(f"  PCL 补: {lane.get('pcl_short_zh') or lane.get('pcl_short', '')}")
             lines.extend(["", "下一步: pcl choose --need <你的目标>"])
             return "\n".join(lines)
         lines = ["Tool choice map", "", "Pick the first tool by your goal:"]
         for lane in choices:
             lines.append(f"- {lane.get('id')}: start with {lane.get('use_first')}")
+            lines.append(f"  When: {lane.get('when', '')}")
+            lines.append(f"  PCL adds: {lane.get('pcl_short', '')}")
         lines.extend(["", "Next: pcl choose --need <your-goal>"])
         return "\n".join(lines)
 

@@ -1782,6 +1782,8 @@ def test_cli_choose_recommends_adjacent_tool_paths(capsys: pytest.CaptureFixture
     output = capsys.readouterr().out
     assert "Tool choice map" in output
     assert "security: start with Promptfoo" in output
+    assert "When: Security evals, red-team checks, CI eval matrices." in output
+    assert "PCL adds: Paired uncertainty, prompt-only validity, and claim boundaries." in output
     assert "prompt-writing: start with linshenkx/prompt-optimizer" in output
 
     assert main(["choose", "--need", "rewrite prompt and keep favorite templates"]) == 0
@@ -1813,6 +1815,12 @@ def test_cli_choose_recommends_adjacent_tool_paths(capsys: pytest.CaptureFixture
     output = capsys.readouterr().out
     assert "prompt-optimizer 更适合做成熟的 prompt 写作" in output
     assert "PCL 应该证明它产出的 prompt 是否可靠提升" in output
+
+    assert main(["choose", "--language", "zh"]) == 0
+    output = capsys.readouterr().out
+    assert "security: 先用 Promptfoo" in output
+    assert "适合: 安全评测, 红队检查, CI 评测矩阵." in output
+    assert "PCL 补: 成对不确定性, prompt-only 有效性和 claim 边界." in output
 
 
 def test_cli_start_interactive_guard_menu(
