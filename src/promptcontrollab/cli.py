@@ -37,7 +37,7 @@ from promptcontrollab.external_evidence import (
     build_external_evidence_audit,
     verify_source_inputs,
 )
-from promptcontrollab.files import JsonDict, ensure_dir, write_json
+from promptcontrollab.files import JsonDict, ensure_dir, read_json, write_json
 from promptcontrollab.gate import run_gate
 from promptcontrollab.hf_hidden import extract_hidden_states
 from promptcontrollab.history import compare_history, index_history
@@ -1341,6 +1341,7 @@ def _format_init_output(
                 [
                     f"已生成 quick report: {quick_run / 'report.html'}",
                     f"已生成 gate result: {quick_run / 'gate_result.json'}",
+                    *_format_quick_run_summary(quick_run, language=language),
                 ]
             )
         lines.extend(
@@ -1374,6 +1375,7 @@ def _format_init_output(
             [
                 f"Generated quick report: {quick_run / 'report.html'}",
                 f"Generated gate result: {quick_run / 'gate_result.json'}",
+                *_format_quick_run_summary(quick_run, language=language),
             ]
         )
     lines.extend(
@@ -1399,6 +1401,61 @@ def _format_init_output(
         ]
     )
     return "\n".join(lines)
+
+
+def _format_quick_run_summary(quick_run: Path, *, language: str = "en") -> list[str]:
+    """Return a compact terminal summary for a generated quick run."""
+
+    gate = _read_json_if_exists(quick_run / "gate_result.json")
+    metrics = _read_json_if_exists(quick_run / "candidate" / "metrics.json")
+    stats = _read_json_if_exists(quick_run / "stats.json")
+    comparison = _first_stats_comparison(stats)
+    gate_status = str(gate.get("status") or "unknown")
+    score = _format_optional_number(metrics.get("mean_score"))
+    delta = _format_optional_number(comparison.get("mean_delta"), signed=True)
+    if language == "zh":
+        return [
+            "Demo 结果摘要:",
+            f"- Gate: {gate_status}",
+            f"- Candidate score: {score}",
+            f"- Mean delta: {delta}",
+        ]
+    return [
+        "Demo result summary:",
+        f"- Gate: {gate_status}",
+        f"- Candidate score: {score}",
+        f"- Mean delta: {delta}",
+    ]
+
+
+def _read_json_if_exists(path: Path) -> JsonDict:
+    if not path.exists():
+        return {}
+    return read_json(path)
+
+
+def _first_stats_comparison(stats: JsonDict) -> JsonDict:
+    comparisons = stats.get("comparisons")
+    if isinstance(comparisons, list) and comparisons and isinstance(comparisons[0], dict):
+        return comparisons[0]
+    return stats if isinstance(stats, dict) else {}
+
+
+def _format_optional_number(value: object, *, signed: bool = False) -> str:
+    if value is None:
+        return "unknown"
+    if isinstance(value, int | float):
+        number = float(value)
+    elif isinstance(value, str):
+        try:
+            number = float(value)
+        except ValueError:
+            return value
+    else:
+        return str(value)
+    if signed:
+        return f"{number:+.3f}"
+    return f"{number:.3f}"
 
 
 def _cmd_ingest_auto(args: argparse.Namespace) -> None:
