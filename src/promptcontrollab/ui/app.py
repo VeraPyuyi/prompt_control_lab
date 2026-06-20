@@ -2005,9 +2005,67 @@ def _market_map_display_rows(rows: list[JsonDict], language: str) -> list[JsonDi
         "status",
     ]
     return [
-        {selected[key]: str(row.get(key, "")) for key in ordered_keys}
+        {
+            selected[key]: _market_map_display_value(
+                tool=str(row.get("tool", "")),
+                key=key,
+                value=row.get(key, ""),
+                language=language,
+            )
+            for key in ordered_keys
+        }
         for row in rows
     ]
+
+
+def _market_map_display_value(
+    *,
+    tool: str,
+    key: str,
+    value: object,
+    language: str,
+) -> str:
+    raw = str(value or "")
+    if key == "status":
+        labels = {
+            "positioning_only_not_imported": {
+                "en": "Positioning only (not imported)",
+                "zh": "定位参考 - 未导入",
+            },
+            "historical_sunset_reference_not_imported": {
+                "en": "Historical/sunset reference (not imported)",
+                "zh": "历史/已停止服务参考 - 未导入",
+            },
+        }
+        mapped = labels.get(raw)
+        if mapped:
+            return mapped["zh" if language == "zh" else "en"]
+        return raw
+    if language != "zh" or key == "tool":
+        return raw
+    zh_rows = {
+        "Braintrust": {
+            "strong_lane": "评测数据集、实验、trace 与人工 review 工作流。",
+            "pcl_should_learn": "快速实验体验和适合 reviewer 的对比页面。",
+            "pcl_still_owns": "prompt 优化主张的论文诊断证据。",
+        },
+        "Arize Phoenix": {
+            "strong_lane": "开源 observability、trace、评测和检索分析。",
+            "pcl_should_learn": "trace-first 调试和丰富的本地排查视图。",
+            "pcl_still_owns": "prompt-only 有效性、控制论诊断和 soft-hard 风险报告。",
+        },
+        "OpenAI Evals": {
+            "strong_lane": "标准化评测 harness 和可复用 benchmark 定义。",
+            "pcl_should_learn": "可移植 eval schema，以及清楚的任务/结果分离。",
+            "pcl_still_owns": "tri-split 协议、prompt 身份和围绕 eval 输出的证据卡。",
+        },
+        "Humanloop": {
+            "strong_lane": "历史 prompt 管理与评测工作流参考。",
+            "pcl_should_learn": "prompt 生命周期、registry 语言和 review 工作流。",
+            "pcl_still_owns": "本地研究诊断和 provenance-first 导出 artifact。",
+        },
+    }
+    return zh_rows.get(tool, {}).get(key, raw)
 
 
 def _render_external_bridge_section(

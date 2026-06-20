@@ -1463,19 +1463,20 @@ def test_ui_market_map_display_rows_use_human_headers() -> None:
             "Strong lane": "Eval datasets and experiments",
             "What PCL should learn": "Fast experiment UX",
             "What PCL still owns": "Research evidence layer",
-            "Status": "positioning_only_not_imported",
+            "Status": "Positioning only (not imported)",
         }
     ]
     assert zh_rows == [
         {
             "工具": "Braintrust",
-            "强项": "Eval datasets and experiments",
-            "PCL 应该学习什么": "Fast experiment UX",
-            "PCL 仍然负责什么": "Research evidence layer",
-            "状态": "positioning_only_not_imported",
+            "强项": "评测数据集、实验、trace 与人工 review 工作流。",
+            "PCL 应该学习什么": "快速实验体验和适合 reviewer 的对比页面。",
+            "PCL 仍然负责什么": "prompt 优化主张的论文诊断证据。",
+            "状态": "定位参考 - 未导入",
         }
     ]
     assert "pcl_should_learn" not in en_rows[0]
+    assert "positioning_only_not_imported" not in str(en_rows)
 
 
 def test_ui_tutorial_gallery_exposes_visible_images() -> None:
