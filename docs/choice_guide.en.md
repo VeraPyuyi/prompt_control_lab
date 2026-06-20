@@ -27,6 +27,8 @@ pcl choose --need prompt-writing
 pcl choose --need "security evals and red-team checks" --json
 ```
 
+The same advisor is available in the local UI under **Research Overview**.
+
 Generate the ecosystem scorecard and market-readiness summary:
 
 ```bash

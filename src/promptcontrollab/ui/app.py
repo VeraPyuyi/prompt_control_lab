@@ -14,6 +14,7 @@ from typing import Any, cast
 from promptcontrollab.files import JsonDict
 from promptcontrollab.prompt_context import load_prompt_context
 from promptcontrollab.prompt_guard import guard_prompt
+from promptcontrollab.tool_choice import choose_tool_for_need
 from promptcontrollab.ui.charts import (
     file_breakdown_bar,
     history_category_timeline,
@@ -200,6 +201,11 @@ TEXT = {
         "ecosystem_choice_start": "Starting point",
         "ecosystem_choice_use": "Use first",
         "ecosystem_choice_add": "Add PCL when...",
+        "tool_choice_need": "Describe your need",
+        "tool_choice_placeholder": "security evals, prompt writing, observability, research evidence...",
+        "tool_choice_recommendation": "Recommendation",
+        "tool_choice_commands": "Suggested PCL commands",
+        "tool_choice_avoid": "Avoid",
         "execution_mode": "Execution mode",
         "overwrite": "Overwrite existing artifacts",
         "allow_external_outputs": "Allow writing outside runs directory",
@@ -451,6 +457,11 @@ TEXT = {
         "ecosystem_choice_start": "你的起点",
         "ecosystem_choice_use": "先用",
         "ecosystem_choice_add": "什么时候加入 PCL",
+        "tool_choice_need": "描述你的目标",
+        "tool_choice_placeholder": "安全评测、prompt 写作、观测、研究证据……",
+        "tool_choice_recommendation": "推荐",
+        "tool_choice_commands": "建议使用的 PCL 命令",
+        "tool_choice_avoid": "不要做",
         "execution_mode": "执行模式",
         "overwrite": "覆盖已有 artifact",
         "allow_external_outputs": "允许写入 runs 目录之外",
@@ -1625,6 +1636,7 @@ def _render_research_overview_tab(
 ) -> None:
     st.markdown(f'<div class="pcl-section-title">{html.escape(text["research_title"])}</div>', unsafe_allow_html=True)
     st.caption(text["research_subtitle"])
+    _render_tool_choice_advisor(st, text, language)
 
     diagnostics = detail.get("diagnostics")
     has_diagnostics = isinstance(diagnostics, dict) and bool(diagnostics)
@@ -2216,6 +2228,55 @@ def _render_external_bridge_section(
         },
     ]
     st.dataframe(rows, use_container_width=True)
+
+
+def _render_tool_choice_advisor(st: Any, text: dict[str, str], language: str) -> None:
+    """Render a small adjacent-tool advisor in the research overview."""
+
+    st.markdown(
+        f'<div class="pcl-section-title">{html.escape(text["ecosystem_choice_title"])}</div>',
+        unsafe_allow_html=True,
+    )
+    default_need = "prompt writing" if language == "en" else "prompt 写作"
+    if hasattr(st, "text_input"):
+        need = str(
+            st.text_input(
+                text["tool_choice_need"],
+                default_need,
+                placeholder=text["tool_choice_placeholder"],
+                key="tool-choice-need",
+            )
+        ).strip()
+    else:
+        need = default_need
+    if not need:
+        return
+    recommendation = choose_tool_for_need(need)
+    st.markdown(
+        '<div class="pcl-grid">'
+        + stat_card_html(
+            text["tool_choice_recommendation"],
+            str(recommendation.get("use_first") or ""),
+            str(recommendation.get("matched") or ""),
+        )
+        + stat_card_html(
+            "PCL",
+            str(recommendation.get("pcl_adds") or ""),
+            str(recommendation.get("confidence") or ""),
+        )
+        + "</div>",
+        unsafe_allow_html=True,
+    )
+    rows = [
+        {"field": "why", "value": recommendation.get("why", "")},
+        {"field": text["tool_choice_avoid"], "value": recommendation.get("avoid", "")},
+    ]
+    st.dataframe(rows, use_container_width=True)
+    commands = recommendation.get("commands")
+    command_list = [str(command) for command in commands] if isinstance(commands, list) else []
+    if command_list:
+        st.caption(text["tool_choice_commands"])
+        st.code("\n".join(command_list), language="bash")
 
 
 def _render_tutorial_tab(st: Any, text: dict[str, str], language: str) -> None:

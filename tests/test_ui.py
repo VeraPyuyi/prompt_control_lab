@@ -1462,6 +1462,41 @@ def test_ui_ecosystem_choice_rows_explain_adjacent_tool_paths() -> None:
     assert not _contains_replacement_character(zh_rows)
 
 
+def test_ui_tool_choice_advisor_recommends_promptfoo_for_security() -> None:
+    from promptcontrollab.ui import app
+
+    calls: list[dict[str, object]] = []
+    frames: list[object] = []
+    code_blocks: list[str] = []
+
+    class FakeStreamlit:
+        def markdown(self, body: str, *, unsafe_allow_html: bool = False) -> None:
+            calls.append({"body": body, "unsafe": unsafe_allow_html})
+
+        def text_input(self, *_args: object, **_kwargs: object) -> str:
+            return "security evals and red-team checks"
+
+        def dataframe(self, data: object, *_args: object, **_kwargs: object) -> None:
+            frames.append(data)
+
+        def caption(self, _body: object) -> None:
+            pass
+
+        def code(self, body: str, *_args: object, **_kwargs: object) -> None:
+            code_blocks.append(body)
+
+    app._render_tool_choice_advisor(FakeStreamlit(), app.TEXT["en"], "en")
+
+    combined_markup = " ".join(str(call["body"]) for call in calls)
+    combined_frames = " ".join(str(frame) for frame in frames)
+    combined_code = "\n".join(code_blocks)
+    assert "Which tool should I use first?" in combined_markup
+    assert "Promptfoo" in combined_markup
+    assert "red-team/security testing" in combined_frames
+    assert "pcl import promptfoo" in combined_code
+    assert "pcl evidence-audit" in combined_code
+
+
 def test_ui_market_map_display_rows_use_human_headers() -> None:
     from promptcontrollab.ui import app
 
