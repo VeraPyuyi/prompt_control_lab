@@ -22,10 +22,10 @@ def test_readmes_lead_with_paper_research_core() -> None:
 
     assert "面向 prompt 优化的控制论诊断与可复现证据工具。" in readme_zh
     assert "它补上了什么" in readme_zh
-    assert "Agent 应用层" in readme_zh
+    assert "Applied Agent Layer" in readme_zh
     assert "pcl research-demo" in readme_zh
     assert "pcl diagnose" in readme_zh
-    assert readme_zh.find("它补上了什么") < readme_zh.find("Agent 应用层")
+    assert readme_zh.find("它补上了什么") < readme_zh.find("Applied Agent Layer")
     assert "docs/research_from_paper.zh.md" in readme_zh
 
 

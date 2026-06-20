@@ -42,6 +42,8 @@ def test_core_chinese_docs_do_not_contain_mojibake() -> None:
         "闂",
         "涔",
         "闈",
+        "闁",
+        "娑",
     ]
     assert public_chinese_docs
     for path in public_chinese_docs:
@@ -52,8 +54,8 @@ def test_core_chinese_docs_do_not_contain_mojibake() -> None:
     readme_zh = Path("README.zh.md").read_text(encoding="utf-8")
     assert "面向 prompt 优化的控制论诊断与可复现证据工具。" in readme_zh
     assert "它补上了什么" in readme_zh
-    assert "文档" in readme_zh
-    assert "证据边界" in readme_zh
+    assert "文档、证据和素材" in readme_zh
+    assert "边界" in readme_zh
 
 
 def test_readmes_link_production_and_release_readiness_docs() -> None:
