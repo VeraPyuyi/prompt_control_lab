@@ -1831,6 +1831,24 @@ def test_cli_choose_recommends_adjacent_tool_paths(capsys: pytest.CaptureFixture
     assert payload["commands"][0].startswith("pcl import promptfoo")
     assert payload["market_gap_action"]["open"] == "evidence_audit_result.html"
 
+    assert (
+        main(
+            [
+                "choose",
+                "--need",
+                "\u5b89\u5168\u8bc4\u6d4b\u548c\u7ea2\u961f\u68c0\u67e5",
+                "--language",
+                "zh",
+            ]
+        )
+        == 0
+    )
+    output = capsys.readouterr().out
+    assert "\u8bc1\u636e\u7f3a\u53e3:" in output
+    assert "\u4e0b\u4e00\u6b65\u8fd0\u884c:" in output
+    assert "\u5148\u6253\u5f00: evidence_audit_result.html" in output
+    assert "Evidence gap:" not in output
+
     cases = [
         ("prompt 写作和提示词模板", "prompt-writing", "linshenkx/prompt-optimizer"),
         ("单元测试和指标", "unit-tests", "DeepEval"),
@@ -1882,6 +1900,27 @@ def test_cli_choose_writes_json_and_markdown_artifacts(
     assert "pcl evidence-audit" in markdown
     assert "## Next Evidence Gap" in markdown
     assert "Open first: `evidence_audit_result.html`" in markdown
+
+    zh_out_path = tmp_path / "zh-recommendation.json"
+    assert (
+        main(
+            [
+                "choose",
+                "--need",
+                "\u5b89\u5168\u8bc4\u6d4b\u548c\u7ea2\u961f\u68c0\u67e5",
+                "--language",
+                "zh",
+                "--out",
+                str(zh_out_path),
+            ]
+        )
+        == 0
+    )
+    zh_markdown = zh_out_path.with_suffix(".md").read_text(encoding="utf-8")
+    assert "## \u4e0b\u4e00\u6b65\u8bc1\u636e\u7f3a\u53e3" in zh_markdown
+    assert "- \u8fd0\u884c: `pcl evidence-audit --tool promptfoo" in zh_markdown
+    assert "- \u5148\u6253\u5f00: `evidence_audit_result.html`" in zh_markdown
+    assert "## Next Evidence Gap" not in zh_markdown
 
     out_dir = tmp_path / "zh-choice"
     assert main(["choose", "--language", "zh", "--out", str(out_dir), "--json"]) == 0

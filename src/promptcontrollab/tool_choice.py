@@ -461,9 +461,9 @@ def format_tool_choice(payload: JsonDict, *, language: str = "en") -> str:
             lines.extend(
                 [
                     "",
-                    f"Evidence gap: {action.get('gap', '')}",
-                    f"Run next: {action.get('command', '')}",
-                    f"Open first: {action.get('open', '')}",
+                    f"证据缺口: {action.get('gap', '')}",
+                    f"下一步运行: {action.get('command', '')}",
+                    f"先打开: {action.get('open', '')}",
                 ]
             )
         lines.extend(["", f"不要做: {payload.get('avoid_zh') or payload.get('avoid', '')}"])
@@ -562,11 +562,11 @@ def render_tool_choice_markdown(payload: JsonDict, *, language: str = "en") -> s
             lines.extend(
                 [
                     "",
-                    "## Next Evidence Gap",
+                    "## 下一步证据缺口",
                     "",
-                    f"- Gap: {action.get('gap', '')}",
-                    f"- Run: `{action.get('command', '')}`",
-                    f"- Open first: `{action.get('open', '')}`",
+                    f"- 缺口: {action.get('gap', '')}",
+                    f"- 运行: `{action.get('command', '')}`",
+                    f"- 先打开: `{action.get('open', '')}`",
                 ]
             )
         lines.extend(
