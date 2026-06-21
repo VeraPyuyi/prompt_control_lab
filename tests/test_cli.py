@@ -1814,6 +1814,7 @@ def test_cli_start_guide_prints_goal_based_paths(capsys: pytest.CaptureFixture[s
     assert "pcl start --choice demo --out demo" in output
     assert "open `runs/quick/report.html`" in output
     assert "paper-derived prompt optimization diagnostics" in output
+    assert "pcl research-quickstart --out runs/research-demo --open-report" in output
     assert "Compare adjacent tools and PCL-added evidence" in output
     assert "pcl start --choice ecosystem --out runs/ecosystem-demo" in output
     assert "Market readiness" in output
@@ -1843,6 +1844,7 @@ def test_cli_start_guide_supports_chinese(capsys: pytest.CaptureFixture[str]) ->
     assert "pcl start --choice demo --language zh --out demo" in output
     assert "打开 `runs/quick/report.html`" in output
     assert "运行论文里的 prompt optimization 诊断" in output
+    assert "pcl research-quickstart --out runs/research-demo --language zh --open-report" in output
     assert "把外部评测结果导入成证据" in output
     assert "pcl start --choice import --tool auto --input results.json" in output
     assert "在 coding agent 执行前守护 prompt" in output

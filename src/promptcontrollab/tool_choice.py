@@ -380,8 +380,8 @@ def market_gap_action_rows(*, language: str = "en") -> list[JsonDict]:
                 "input": "任意 baseline / candidate run",
                 "gap": "还没有先打开论文诊断证据包，用户不容易理解各项诊断之间的关系。",
                 "command": (
-                    "pcl research-demo --out runs/research-demo && "
-                    "pcl diagnose --run runs/research-demo"
+                    "pcl research-quickstart --out runs/research-demo "
+                    "--language zh --open-report"
                 ),
                 "open": "research_bundle.html",
             },
@@ -436,10 +436,7 @@ def market_gap_action_rows(*, language: str = "en") -> list[JsonDict]:
             "lane": "research-evidence",
             "input": "Any baseline/candidate run",
             "gap": "The paper-diagnostic evidence bundle has not been opened first.",
-            "command": (
-                "pcl research-demo --out runs/research-demo && "
-                "pcl diagnose --run runs/research-demo"
-            ),
+            "command": "pcl research-quickstart --out runs/research-demo --open-report",
             "open": "research_bundle.html",
         },
     ]
@@ -462,7 +459,7 @@ def adoption_path_rows(language: str = "en") -> list[JsonDict]:
             },
             {
                 "minute": "3",
-                "action": "运行 `pcl evidence-audit ...` 或中文 research-demo / diagnose。",
+                "action": "运行 `pcl evidence-audit ...` 或 `pcl research-quickstart ...`。",
                 "result": "`evidence_card.html`、`claim_check.html`、`research_bundle.zh.html`。",
             },
             {
@@ -489,7 +486,7 @@ def adoption_path_rows(language: str = "en") -> list[JsonDict]:
         },
         {
             "minute": "3",
-            "action": "Run `pcl evidence-audit ...` or research-demo / diagnose.",
+            "action": "Run `pcl evidence-audit ...` or `pcl research-quickstart ...`.",
             "result": "`evidence_card.html`, `claim_check.html`, and `research_bundle.html`.",
         },
         {

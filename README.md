@@ -9,7 +9,8 @@ pip install -e ".[research,ui]"
 pcl start --guide
 pcl choose --need "security evals" && pcl quickstart --out demo --open-report
 # same as: pcl start --choice demo --out demo
-pcl research-demo --out runs/research-demo && pcl diagnose --run runs/research-demo
+pcl research-quickstart --out runs/research-demo --open-report
+# same as: pcl research-demo --out runs/research-demo && pcl diagnose --run runs/research-demo
 ```
 
 ## What It Adds

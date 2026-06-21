@@ -26,8 +26,10 @@ If you want to experience the paper-derived diagnostics before preparing your
 own artifacts, start here:
 
 ```bash
-pcl research-demo --out runs/research-demo
-pcl diagnose --run runs/research-demo
+pcl research-quickstart --out runs/research-demo --open-report
+# same as:
+# pcl research-demo --out runs/research-demo
+# pcl diagnose --run runs/research-demo
 ```
 
 This writes synthetic soft prompt vectors, vocabulary embeddings, hidden-state

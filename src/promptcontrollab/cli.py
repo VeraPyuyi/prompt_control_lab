@@ -1113,6 +1113,30 @@ def build_parser() -> argparse.ArgumentParser:
     research_demo_parser.add_argument("--language", choices=["en", "zh"], default="en")
     research_demo_parser.set_defaults(func=_cmd_research_demo)
 
+    research_quickstart_parser = subcommands.add_parser(
+        "research-quickstart",
+        help="Create a paper-style research demo, run diagnose, and optionally open the bundle.",
+    )
+    research_quickstart_parser.add_argument(
+        "--out",
+        type=Path,
+        default=Path("runs") / "research-demo",
+        help="Demo run directory.",
+    )
+    research_quickstart_parser.add_argument(
+        "--seed",
+        type=int,
+        default=0,
+        help="Synthetic fixture seed.",
+    )
+    research_quickstart_parser.add_argument("--language", choices=["en", "zh"], default="en")
+    research_quickstart_parser.add_argument(
+        "--open-report",
+        action="store_true",
+        help="Open the generated research bundle in the default browser.",
+    )
+    research_quickstart_parser.set_defaults(func=_cmd_research_quickstart)
+
     research_bundle_parser = subcommands.add_parser(
         "research-bundle",
         help="Refresh research_bundle.json/html for a run directory.",
@@ -2618,6 +2642,23 @@ def _cmd_research_demo(args: argparse.Namespace) -> None:
     print(_format_research_demo_output(out_dir=args.out, payload=payload, language=args.language))
 
 
+def _cmd_research_quickstart(args: argparse.Namespace) -> None:
+    write_research_demo(out_dir=args.out, seed=args.seed)
+    payload = run_research_diagnostics(
+        run_dir=args.out,
+        mode="diagnose",
+        summary_dir=args.out,
+    )
+    if args.language == "zh":
+        print("研究 quickstart: 已生成论文诊断 demo 并刷新 diagnose 证据包")
+    else:
+        print("Research quickstart: generated the paper demo and refreshed diagnose evidence")
+    print(_format_research_demo_output(out_dir=args.out, payload=payload, language=args.language))
+    if args.open_report:
+        report_name = "research_bundle.zh.html" if args.language == "zh" else "research_bundle.html"
+        _open_html_report(args.out / report_name, language=args.language)
+
+
 def _format_research_demo_output(
     *,
     out_dir: Path,
@@ -3312,8 +3353,9 @@ def _format_start_guide(language: str = "en") -> str:
             ),
             (
                 "运行论文里的 prompt optimization 诊断",
-                "pcl research-demo --out runs/research-demo",
-                "然后运行 `pcl diagnose --run runs/research-demo`, 打开 research_bundle.zh.html。",
+                "pcl research-quickstart --out runs/research-demo --language zh --open-report "
+                "(同: pcl research-demo ... && pcl diagnose ...)",
+                "打开 research_bundle.zh.html 查看论文证据包。",
             ),
             (
                 "先看产品长什么样",
@@ -3371,8 +3413,9 @@ def _format_start_guide(language: str = "en") -> str:
             ),
             (
                 "Run the paper-derived prompt optimization diagnostics",
-                "pcl research-demo --out runs/research-demo",
-                "Then run `pcl diagnose --run runs/research-demo` and open research_bundle.html.",
+                "pcl research-quickstart --out runs/research-demo --open-report "
+                "(same as: pcl research-demo ... && pcl diagnose ...)",
+                "Open research_bundle.html as the paper evidence bundle.",
             ),
             (
                 "See the product first",

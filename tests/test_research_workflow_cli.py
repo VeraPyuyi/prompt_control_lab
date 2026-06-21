@@ -181,6 +181,35 @@ def test_research_demo_generates_paper_diagnostics(
     assert (run_dir / "claim_check.html").exists()
 
 
+def test_research_quickstart_runs_diagnose_and_can_open_bundle(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    pytest.importorskip("numpy")
+    opened_urls: list[str] = []
+
+    def fake_open(url: str) -> bool:
+        opened_urls.append(url)
+        return True
+
+    monkeypatch.setattr("promptcontrollab.cli.webbrowser.open", fake_open)
+    run_dir = tmp_path / "research-quickstart"
+
+    assert main(["research-quickstart", "--out", str(run_dir), "--open-report"]) == 0
+
+    out = capsys.readouterr().out
+    assert "Research quickstart: generated the paper demo" in out
+    assert f"Open first: {run_dir / 'research_bundle.html'}" in out
+    assert "Opened report in your browser:" in out
+    assert len(opened_urls) == 1
+    assert opened_urls[0].startswith("file:")
+    assert "research_bundle.html" in opened_urls[0]
+    assert (run_dir / "research_bundle.html").exists()
+    assert (run_dir / "research_diagnostics.html").exists()
+    assert read_json(run_dir / "research_diagnostics.json")["mode"] == "diagnose"
+
+
 def test_research_demo_generates_complete_evidence_chain(tmp_path: Path) -> None:
     pytest.importorskip("numpy")
     run_dir = tmp_path / "research-demo"

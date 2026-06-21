@@ -13,7 +13,7 @@ actually supports.**
 |---:|---|---|
 | 1 | Pick the adjacent tool path with `pcl choose --need "<your goal>"`. | A plain recommendation and the next PCL command. |
 | 2 | Import existing Promptfoo/Langfuse/LangSmith/DeepEval output with `pcl start --choice import --tool auto --input results.json --out runs/from-external`. | `manifest.json` and `bridge_summary.html`. |
-| 3 | Add paper-derived checks with `pcl evidence-audit ...` or `pcl research-demo --out runs/research-demo && pcl diagnose --run runs/research-demo`. | `evidence_card.html`, `claim_check.html`, and `research_bundle.html`. |
+| 3 | Add paper-derived checks with `pcl evidence-audit ...` or `pcl research-quickstart --out runs/research-demo --open-report`. | `evidence_card.html`, `claim_check.html`, and `research_bundle.html`. |
 | 4 | Open the first HTML artifact named by the command output. | A reviewer-readable answer to what changed and what is still missing. |
 | 5 | If `claim_check` or `gap_status` says review, do not claim "better prompt" yet. | A bounded next action instead of an overclaim. |
 
@@ -25,7 +25,7 @@ actually supports.**
 | "I do not know which adjacent tool fits." | `pcl choose --need "<your goal>"` |
 | "I need security or red-team evals." | `pcl choose --need "security evals and red-team checks"` |
 | "I already have Promptfoo/Langfuse/LangSmith/DeepEval output." | `pcl start --choice import --tool auto --input results.json --out runs/from-external` |
-| "I need the paper-derived diagnostics." | `pcl research-demo --out runs/research-demo && pcl diagnose --run runs/research-demo` |
+| "I need the paper-derived diagnostics." | `pcl research-quickstart --out runs/research-demo --open-report` |
 | "I need a reviewer-facing market/evidence scorecard." | `pcl start --choice ecosystem --out runs/ecosystem-demo` |
 
 ## 30-Second Map
@@ -68,7 +68,7 @@ The same advisor is available in the local UI under **Research Overview**.
 | DeepEval TestRun output | Metrics exist, but prompt/model/split provenance and claim boundary need review. | `pcl import deepeval --input test-run.json --out runs/from-deepeval` | `manifest.json`, then `pcl evidence-card` |
 | LangSmith/Langfuse trace or eval export | Traces exist, but prompt effects may be confounded with model, metric, or split changes. | `pcl start --choice import --tool auto --input results.json --out runs/from-external` | `bridge_summary.html` |
 | prompt-optimizer favorites/templates | Better prompt candidates exist, but they are not yet paired scored evidence. | `pcl import prompt-optimizer --input favorites.json --out runs/from-prompt-optimizer` | `prompt_optimizer_gap_plan.html` |
-| Any paper-diagnostic run | The research evidence bundle has not been opened first. | `pcl research-demo --out runs/research-demo && pcl diagnose --run runs/research-demo` | `research_bundle.html` |
+| Any paper-diagnostic run | The research evidence bundle has not been opened first. | `pcl research-quickstart --out runs/research-demo --open-report` | `research_bundle.html` |
 
 Generate the ecosystem scorecard and market-readiness summary:
 

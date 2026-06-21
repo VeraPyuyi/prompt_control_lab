@@ -14,6 +14,7 @@ pcl start --guide --language zh
 pcl start --language zh
 pcl quickstart --language zh --out demo --open-report
 # 同: pcl start --choice demo --language zh --out demo
+pcl research-quickstart --out runs/research-demo --language zh --open-report
 ```
 
 得到：

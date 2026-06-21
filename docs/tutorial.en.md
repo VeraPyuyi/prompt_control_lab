@@ -14,6 +14,7 @@ pcl start --guide
 pcl start
 pcl quickstart --out demo --open-report
 # same as: pcl start --choice demo --out demo
+pcl research-quickstart --out runs/research-demo --open-report
 ```
 
 Result:

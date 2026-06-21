@@ -11,6 +11,7 @@ def test_readmes_lead_with_paper_research_core() -> None:
     )
     assert "What It Adds" in readme
     assert "Applied Agent Layer" in readme
+    assert "pcl research-quickstart" in readme
     assert "pcl research-demo" in readme
     assert "pcl diagnose" in readme
     assert readme.find("What It Adds") < readme.find("Applied Agent Layer")
@@ -23,6 +24,7 @@ def test_readmes_lead_with_paper_research_core() -> None:
     assert "面向 prompt 优化的控制论诊断与可复现证据工具。" in readme_zh
     assert "它补上了什么" in readme_zh
     assert "Applied Agent Layer" in readme_zh
+    assert "pcl research-quickstart" in readme_zh
     assert "pcl research-demo" in readme_zh
     assert "pcl diagnose" in readme_zh
     assert readme_zh.find("它补上了什么") < readme_zh.find("Applied Agent Layer")
@@ -35,6 +37,7 @@ def test_research_from_paper_docs_map_concepts_to_commands() -> None:
 
     for text in [doc_en, doc_zh]:
         assert "pcl split" in text
+        assert "pcl research-quickstart" in text
         assert "pcl research-demo" in text
         assert "pcl diagnose" in text
         assert "pcl stats" in text

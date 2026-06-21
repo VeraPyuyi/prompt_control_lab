@@ -11,7 +11,7 @@ prompt-optimizer。它更适合接在这些工具之后，把已有结果整理�
 |---:|---|---|
 | 1 | 用 `pcl choose --need "<你的目标>" --language zh` 选择相邻工具路径。 | 一条直白建议，以及下一条 PCL 命令。 |
 | 2 | 用 `pcl start --choice import --tool auto --input results.json --out runs/from-external` 导入 Promptfoo / Langfuse / LangSmith / DeepEval 输出。 | `manifest.json` 和 `bridge_summary.html`。 |
-| 3 | 用 `pcl evidence-audit ...`，或 `pcl research-demo --out runs/research-demo --language zh && pcl diagnose --run runs/research-demo --language zh` 补论文诊断。 | `evidence_card.html`、`claim_check.html`、`research_bundle.zh.html`。 |
+| 3 | 用 `pcl evidence-audit ...`，或 `pcl research-quickstart --out runs/research-demo --language zh --open-report` 补论文诊断。 | `evidence_card.html`、`claim_check.html`、`research_bundle.zh.html`。 |
 | 4 | 打开命令输出里提示的第一个 HTML artifact。 | reviewer 能读懂的“发生了什么、还缺什么”。 |
 | 5 | 如果 `claim_check` 或 `gap_status` 要求复查，先不要声称“prompt 更好”。 | 得到有边界的下一步，而不是过度主张。 |
 
@@ -23,7 +23,7 @@ prompt-optimizer。它更适合接在这些工具之后，把已有结果整理�
 | “我不知道该先用哪个相邻工具。” | `pcl choose --need "<你的目标>" --language zh` |
 | “我要做安全评测或红队检查。” | `pcl choose --need "安全评测和红队检查" --language zh` |
 | “我已经有 Promptfoo / Langfuse / LangSmith / DeepEval 输出。” | `pcl start --choice import --tool auto --input results.json --out runs/from-external` |
-| “我要跑论文里的诊断流程。” | `pcl research-demo --out runs/research-demo && pcl diagnose --run runs/research-demo` |
+| “我要跑论文里的诊断流程。” | `pcl research-quickstart --out runs/research-demo --language zh --open-report` |
 | “我要给 reviewer 看市场/证据 scorecard。” | `pcl start --choice ecosystem --out runs/ecosystem-demo` |
 
 ## 30 秒选择地图
@@ -65,7 +65,7 @@ pcl start --choice choose --need "安全评测和红队检查" --language zh --o
 | DeepEval TestRun 输出 | 有指标，但 prompt/model/split provenance 和 claim 边界还需要审查。 | `pcl import deepeval --input test-run.json --out runs/from-deepeval` | `manifest.json`，再运行 `pcl evidence-card` |
 | LangSmith / Langfuse trace 或 eval 导出 | 有 trace，但 prompt 效果可能和模型、指标、切分变化混在一起。 | `pcl start --choice import --tool auto --input results.json --out runs/from-external` | `bridge_summary.html` |
 | prompt-optimizer 收藏或模板 | 有更好的 prompt 候选，但还不是成对打分证据。 | `pcl import prompt-optimizer --input favorites.json --out runs/from-prompt-optimizer` | `prompt_optimizer_gap_plan.html` |
-| 任意论文诊断 run | 还没有先打开研究证据包。 | `pcl research-demo --out runs/research-demo --language zh && pcl diagnose --run runs/research-demo --language zh` | `research_bundle.zh.html` |
+| 任意论文诊断 run | 还没有先打开研究证据包。 | `pcl research-quickstart --out runs/research-demo --language zh --open-report` | `research_bundle.zh.html` |
 
 生成生态对比 scorecard 和 market readiness 摘要：
 
