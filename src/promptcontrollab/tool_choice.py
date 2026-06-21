@@ -311,6 +311,8 @@ def choose_tool_for_need(need: str) -> JsonDict:
         "avoid_zh": best_lane.get("avoid_zh", best_lane["avoid"]),
         "market_gap_action": gap_action,
         "market_gap_action_zh": gap_action_zh,
+        "adoption_path": adoption_path_rows(language="en"),
+        "adoption_path_zh": adoption_path_rows(language="zh"),
     }
 
 
@@ -443,6 +445,66 @@ def market_gap_action_rows(*, language: str = "en") -> list[JsonDict]:
     ]
 
 
+def adoption_path_rows(language: str = "en") -> list[JsonDict]:
+    """Return the short path from adjacent-tool output to reviewer evidence."""
+
+    if language == "zh":
+        return [
+            {
+                "minute": "1",
+                "action": '运行 `pcl choose --need "<你的目标>" --language zh`。',
+                "result": "得到直白建议和下一条 PCL 命令。",
+            },
+            {
+                "minute": "2",
+                "action": "导入 Promptfoo / Langfuse / LangSmith / DeepEval 输出。",
+                "result": "`manifest.json` 和 `bridge_summary.html`。",
+            },
+            {
+                "minute": "3",
+                "action": "运行 `pcl evidence-audit ...` 或中文 research-demo / diagnose。",
+                "result": "`evidence_card.html`、`claim_check.html`、`research_bundle.zh.html`。",
+            },
+            {
+                "minute": "4",
+                "action": "打开命令输出里提示的第一个 HTML artifact。",
+                "result": "看到发生了什么、还缺什么。",
+            },
+            {
+                "minute": "5",
+                "action": "如果 claim_check 或 gap_status 要求复查, 暂停强主张。",
+                "result": "得到有边界的下一步。",
+            },
+        ]
+    return [
+        {
+            "minute": "1",
+            "action": 'Run `pcl choose --need "<your goal>"`.',
+            "result": "A plain recommendation and the next PCL command.",
+        },
+        {
+            "minute": "2",
+            "action": "Import Promptfoo/Langfuse/LangSmith/DeepEval output.",
+            "result": "`manifest.json` and `bridge_summary.html`.",
+        },
+        {
+            "minute": "3",
+            "action": "Run `pcl evidence-audit ...` or research-demo / diagnose.",
+            "result": "`evidence_card.html`, `claim_check.html`, and `research_bundle.html`.",
+        },
+        {
+            "minute": "4",
+            "action": "Open the first HTML artifact named by the command output.",
+            "result": "A reviewer-readable view of what changed and what is missing.",
+        },
+        {
+            "minute": "5",
+            "action": "If claim_check or gap_status says review, pause stronger claims.",
+            "result": "A bounded next action instead of an overclaim.",
+        },
+    ]
+
+
 def format_tool_choice(payload: JsonDict, *, language: str = "en") -> str:
     """Format a tool-choice payload for humans."""
 
@@ -457,6 +519,8 @@ def format_tool_choice(payload: JsonDict, *, language: str = "en") -> str:
                 )
                 lines.append(f"  适合: {lane.get('when_zh') or lane.get('when', '')}")
                 lines.append(f"  PCL 补: {lane.get('pcl_short_zh') or lane.get('pcl_short', '')}")
+            lines.extend(["", "5 分钟采用路径:"])
+            lines.extend(_adoption_path_text_lines(language="zh"))
             lines.extend(["", "下一步: pcl choose --need <你的目标>"])
             return "\n".join(lines)
         lines = ["Tool choice map", "", "Pick the first tool by your goal:"]
@@ -464,6 +528,8 @@ def format_tool_choice(payload: JsonDict, *, language: str = "en") -> str:
             lines.append(f"- {lane.get('id')}: start with {lane.get('use_first')}")
             lines.append(f"  When: {lane.get('when', '')}")
             lines.append(f"  PCL adds: {lane.get('pcl_short', '')}")
+        lines.extend(["", "Five-minute adoption path:"])
+        lines.extend(_adoption_path_text_lines(language="en"))
         lines.extend(["", "Next: pcl choose --need <your-goal>"])
         return "\n".join(lines)
 
@@ -493,6 +559,8 @@ def format_tool_choice(payload: JsonDict, *, language: str = "en") -> str:
                     f"先打开: {action.get('open', '')}",
                 ]
             )
+        lines.extend(["", "5 分钟采用路径:"])
+        lines.extend(_adoption_path_text_lines(language="zh"))
         lines.extend(["", f"不要做: {payload.get('avoid_zh') or payload.get('avoid', '')}"])
         return "\n".join(lines)
     lines = [
@@ -517,6 +585,8 @@ def format_tool_choice(payload: JsonDict, *, language: str = "en") -> str:
                 f"Open first: {action.get('open', '')}",
             ]
         )
+    lines.extend(["", "Five-minute adoption path:"])
+    lines.extend(_adoption_path_text_lines(language="en"))
     lines.extend(["", f"Avoid: {payload.get('avoid', '')}"])
     return "\n".join(lines)
 
@@ -540,6 +610,8 @@ def render_tool_choice_markdown(payload: JsonDict, *, language: str = "en") -> s
                     f"{_md_cell(_use_first_display(lane, language='zh'))} | "
                     f"{_md_cell(lane.get('pcl_short_zh') or lane.get('pcl_short'))} |"
                 )
+            lines.extend(["", "## 5 分钟采用路径", ""])
+            lines.extend(_adoption_path_markdown_table(language="zh"))
             lines.extend(["", "## 从市场缺口到 PCL 命令", ""])
             lines.extend(_market_gap_markdown_table(language="zh"))
             lines.extend(["", "下一步: `pcl choose --need <你的目标>`"])
@@ -557,6 +629,8 @@ def render_tool_choice_markdown(payload: JsonDict, *, language: str = "en") -> s
                 f"{_md_cell(lane.get('use_first'))} | "
                 f"{_md_cell(lane.get('pcl_short'))} |"
             )
+        lines.extend(["", "## Five-Minute Adoption Path", ""])
+        lines.extend(_adoption_path_markdown_table(language="en"))
         lines.extend(["", "## From Market Gap to PCL Command", ""])
         lines.extend(_market_gap_markdown_table(language="en"))
         lines.extend(["", "Next: `pcl choose --need <your-goal>`"])
@@ -596,6 +670,8 @@ def render_tool_choice_markdown(payload: JsonDict, *, language: str = "en") -> s
                     f"- 先打开: `{action.get('open', '')}`",
                 ]
             )
+        lines.extend(["", "## 5 分钟采用路径", ""])
+        lines.extend(_adoption_path_markdown_table(language="zh"))
         lines.extend(
             ["", "## 不要做", "", str(payload.get("avoid_zh") or payload.get("avoid", ""))]
         )
@@ -633,8 +709,43 @@ def render_tool_choice_markdown(payload: JsonDict, *, language: str = "en") -> s
                 f"- Open first: `{action.get('open', '')}`",
             ]
         )
+    lines.extend(["", "## Five-Minute Adoption Path", ""])
+    lines.extend(_adoption_path_markdown_table(language="en"))
     lines.extend(["", "## Avoid", "", str(payload.get("avoid", ""))])
     return "\n".join(lines) + "\n"
+
+
+def _adoption_path_text_lines(*, language: str) -> list[str]:
+    if language == "zh":
+        return [
+            f"- {row.get('minute')}. {row.get('action')} -> {row.get('result')}"
+            for row in adoption_path_rows(language="zh")
+        ]
+    return [
+        f"- {row.get('minute')}. {row.get('action')} -> {row.get('result')}"
+        for row in adoption_path_rows(language="en")
+    ]
+
+
+def _adoption_path_markdown_table(*, language: str) -> list[str]:
+    if language == "zh":
+        lines = [
+            "| 分钟 | 操作 | 应该得到什么 |",
+            "|---:|---|---|",
+        ]
+    else:
+        lines = [
+            "| Minute | Do this | You should get |",
+            "|---:|---|---|",
+        ]
+    for row in adoption_path_rows(language=language):
+        lines.append(
+            "| "
+            f"{_md_cell(row.get('minute'))} | "
+            f"{_md_cell(row.get('action'))} | "
+            f"{_md_cell(row.get('result'))} |"
+        )
+    return lines
 
 
 def _command_list(value: object) -> list[str]:

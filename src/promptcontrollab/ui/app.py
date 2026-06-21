@@ -16,6 +16,9 @@ from promptcontrollab.files import JsonDict
 from promptcontrollab.prompt_context import load_prompt_context
 from promptcontrollab.prompt_guard import guard_prompt
 from promptcontrollab.tool_choice import (
+    adoption_path_rows as _tool_choice_adoption_path_rows,
+)
+from promptcontrollab.tool_choice import (
     choose_tool_for_need,
     market_gap_action_rows,
     render_tool_choice_markdown,
@@ -1557,63 +1560,9 @@ def ecosystem_choice_rows(language: str) -> list[JsonDict]:
 
 
 def adoption_path_rows(language: str) -> list[JsonDict]:
-    """Return the short path from adjacent-tool output to reviewer evidence."""
+    """Return the shared five-minute adoption path for UI rendering."""
 
-    if language == "zh":
-        return [
-            {
-                "minute": "1",
-                "action": '运行 `pcl choose --need "<你的目标>" --language zh`。',
-                "result": "得到直白建议和下一条 PCL 命令。",
-            },
-            {
-                "minute": "2",
-                "action": "导入 Promptfoo / Langfuse / LangSmith / DeepEval 输出。",
-                "result": "`manifest.json` 和 `bridge_summary.html`。",
-            },
-            {
-                "minute": "3",
-                "action": "运行 `pcl evidence-audit ...` 或中文 research-demo / diagnose。",
-                "result": "`evidence_card.html`、`claim_check.html`、`research_bundle.zh.html`。",
-            },
-            {
-                "minute": "4",
-                "action": "打开命令输出里提示的第一个 HTML artifact。",
-                "result": "看到发生了什么、还缺什么。",
-            },
-            {
-                "minute": "5",
-                "action": "如果 claim_check 或 gap_status 要求复查, 暂停强主张。",
-                "result": "得到有边界的下一步。",
-            },
-        ]
-    return [
-        {
-            "minute": "1",
-            "action": 'Run `pcl choose --need "<your goal>"`.',
-            "result": "A plain recommendation and the next PCL command.",
-        },
-        {
-            "minute": "2",
-            "action": "Import Promptfoo/Langfuse/LangSmith/DeepEval output.",
-            "result": "`manifest.json` and `bridge_summary.html`.",
-        },
-        {
-            "minute": "3",
-            "action": "Run `pcl evidence-audit ...` or research-demo / diagnose.",
-            "result": "`evidence_card.html`, `claim_check.html`, and `research_bundle.html`.",
-        },
-        {
-            "minute": "4",
-            "action": "Open the first HTML artifact named by the command output.",
-            "result": "A reviewer-readable view of what changed and what is missing.",
-        },
-        {
-            "minute": "5",
-            "action": "If claim_check or gap_status says review, pause stronger claims.",
-            "result": "A bounded next action instead of an overclaim.",
-        },
-    ]
+    return _tool_choice_adoption_path_rows(language)
 
 
 def tutorial_gallery_items(language: str) -> list[JsonDict]:

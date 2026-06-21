@@ -73,6 +73,7 @@ from promptcontrollab.splitting import load_tasks, make_split, write_split
 from promptcontrollab.statistics import compare_prediction_files
 from promptcontrollab.templates import write_example_project, write_external_examples
 from promptcontrollab.tool_choice import (
+    adoption_path_rows,
     choose_tool_for_need,
     format_tool_choice,
     market_gap_action_rows,
@@ -1848,6 +1849,7 @@ def _cmd_choose(args: argparse.Namespace) -> None:
         payload = {
             "choices": tool_choice_lanes(),
             "market_gap_actions": market_gap_action_rows(language=args.language),
+            "adoption_path": adoption_path_rows(language=args.language),
             "next": "Run pcl choose --need <your-goal>.",
         }
     else:

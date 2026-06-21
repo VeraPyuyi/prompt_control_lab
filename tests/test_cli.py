@@ -1815,6 +1815,8 @@ def test_cli_choose_recommends_adjacent_tool_paths(capsys: pytest.CaptureFixture
     assert "When: Security evals, red-team checks, CI eval matrices." in output
     assert "PCL adds: Paired uncertainty, prompt-only validity, and claim boundaries." in output
     assert "prompt-writing: start with linshenkx/prompt-optimizer" in output
+    assert "Five-minute adoption path" in output
+    assert "bridge_summary.html" in output
 
     assert main(["choose", "--need", "rewrite prompt and keep favorite templates"]) == 0
     output = capsys.readouterr().out
@@ -1823,6 +1825,7 @@ def test_cli_choose_recommends_adjacent_tool_paths(capsys: pytest.CaptureFixture
     assert "pcl import prompt-optimizer" in output
     assert "scaffold-check" in output
     assert "Open first: prompt_optimizer_gap_plan.html" in output
+    assert "Five-minute adoption path" in output
 
     assert main(["choose", "--need", "安全评测和红队检查", "--language", "zh", "--json"]) == 0
     payload = json.loads(capsys.readouterr().out)
@@ -1830,6 +1833,7 @@ def test_cli_choose_recommends_adjacent_tool_paths(capsys: pytest.CaptureFixture
     assert payload["use_first"] == "Promptfoo"
     assert payload["commands"][0].startswith("pcl import promptfoo")
     assert payload["market_gap_action"]["open"] == "evidence_audit_result.html"
+    assert payload["adoption_path_zh"][2]["result"].endswith("research_bundle.zh.html`。")
 
     assert (
         main(
@@ -1847,6 +1851,7 @@ def test_cli_choose_recommends_adjacent_tool_paths(capsys: pytest.CaptureFixture
     assert "\u8bc1\u636e\u7f3a\u53e3:" in output
     assert "\u4e0b\u4e00\u6b65\u8fd0\u884c:" in output
     assert "\u5148\u6253\u5f00: evidence_audit_result.html" in output
+    assert "5 \u5206\u949f\u91c7\u7528\u8def\u5f84" in output
     assert "Evidence gap:" not in output
 
     cases = [
@@ -1899,6 +1904,7 @@ def test_cli_choose_writes_json_and_markdown_artifacts(
     assert "Promptfoo is strongest" in markdown
     assert "pcl evidence-audit" in markdown
     assert "## Next Evidence Gap" in markdown
+    assert "## Five-Minute Adoption Path" in markdown
     assert "Open first: `evidence_audit_result.html`" in markdown
 
     zh_out_path = tmp_path / "zh-recommendation.json"
@@ -1918,6 +1924,7 @@ def test_cli_choose_writes_json_and_markdown_artifacts(
     )
     zh_markdown = zh_out_path.with_suffix(".md").read_text(encoding="utf-8")
     assert "## \u4e0b\u4e00\u6b65\u8bc1\u636e\u7f3a\u53e3" in zh_markdown
+    assert "## 5 \u5206\u949f\u91c7\u7528\u8def\u5f84" in zh_markdown
     assert "- \u8fd0\u884c: `pcl evidence-audit --tool promptfoo" in zh_markdown
     assert "- \u5148\u6253\u5f00: `evidence_audit_result.html`" in zh_markdown
     assert "## Next Evidence Gap" not in zh_markdown
@@ -1930,6 +1937,7 @@ def test_cli_choose_writes_json_and_markdown_artifacts(
     assert "market_gap_actions" in payload
     assert "pcl evidence-audit --tool promptfoo" in markdown
     assert "prompt_optimizer_gap_plan.html" in markdown
+    assert "research_bundle.zh.html" in markdown
     assert "# 工具选择地图" in markdown
     assert "成对不确定性" in markdown
 
