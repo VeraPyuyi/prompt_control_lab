@@ -27,7 +27,7 @@ def test_start_research_runs_paper_diagnostics_demo(
     assert "Next action: Share the research bundle" in out
     assert "Evidence card:" in out
     assert "Claim check:" in out
-    assert f"UI: pcl ui --runs {tmp_path}" in out
+    assert f"UI: pcl ui --runs {run_dir}" in out
     assert (run_dir / "research_diagnostics.html").exists()
     assert (run_dir / "evidence_card.html").exists()
     assert (run_dir / "claim_check.html").exists()
@@ -66,7 +66,7 @@ def test_start_research_supports_chinese_output(
     assert "研究诊断报告:" in out
     assert "证据层级=完整研究诊断" in out
     assert str(run_dir / "research_bundle.zh.html") in out
-    assert f"UI: pcl ui --runs {tmp_path} --language zh" in out
+    assert f"UI: pcl ui --runs {run_dir} --language zh" in out
 
 
 def test_research_demo_generates_paper_diagnostics(
@@ -82,10 +82,10 @@ def test_research_demo_generates_paper_diagnostics(
     assert "time-varying soft-control" in out
     assert f"Open first: {run_dir / 'research_bundle.html'}" in out
     assert "At a glance: diagnostics=4/4; claim=pass" in out
-    assert f"Open first from summary: {run_dir / 'research_bundle.html'}" in out
+    assert "Open first from summary:" not in out
     assert "Shows the strongest claim this run can safely support." in out
     assert "Next action: Share the research bundle" in out
-    assert f"UI: pcl ui --runs {tmp_path}" in out
+    assert f"UI: pcl ui --runs {run_dir}" in out
 
     assert (run_dir / "inputs" / "soft_prompt.npz").exists()
     assert (run_dir / "inputs" / "vocab_embeddings.npz").exists()
@@ -201,6 +201,8 @@ def test_research_quickstart_runs_diagnose_and_can_open_bundle(
     out = capsys.readouterr().out
     assert "Research quickstart: generated the paper demo" in out
     assert f"Open first: {run_dir / 'research_bundle.html'}" in out
+    assert f"UI: pcl ui --runs {run_dir}" in out
+    assert "Open first from summary:" not in out
     assert "Opened report in your browser:" in out
     assert len(opened_urls) == 1
     assert opened_urls[0].startswith("file:")
@@ -264,7 +266,7 @@ def test_research_demo_and_diagnose_can_print_chinese_guidance(
     out = capsys.readouterr().out
     assert "已写出研究诊断:" in out
     assert "报告:" in out
-    assert "摘要建议先打开:" in out
+    assert "先打开:" in out
     assert "证据门禁:" in out
 
 
@@ -391,7 +393,7 @@ def test_diagnose_reuses_research_demo_inputs(
     summary = read_json(run_dir / "research_diagnostics.json")
     assert summary["mode"] == "diagnose"
     assert "At a glance: diagnostics=4/4; claim=pass" in out
-    assert f"Open first from summary: {run_dir / 'research_bundle.html'}" in out
+    assert f"Open first: {run_dir / 'research_bundle.html'}" in out
     assert "Next action: Share the research bundle" in out
     assert "How to read the outputs:" in out
     assert "Research diagnostics:" in out

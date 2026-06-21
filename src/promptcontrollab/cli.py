@@ -2667,7 +2667,6 @@ def _format_research_demo_output(
 ) -> str:
     diagnostics = payload.get("diagnostics", {})
     diagnostic_names = sorted(diagnostics) if isinstance(diagnostics, dict) else []
-    ui_runs_dir = out_dir.parent if out_dir.parent != Path("") else Path(".")
     readable_diagnostics = _readable_research_diagnostic_names(
         diagnostic_names,
         language=language,
@@ -2678,14 +2677,13 @@ def _format_research_demo_output(
             "做了什么: 生成一个用于论文诊断的小型 synthetic 证据包"
             f"({readable_diagnostics})。",
             f"诊断项: {', '.join(diagnostic_names)}",
-            f"先打开: {out_dir / 'research_bundle.zh.html'}",
             *_research_cli_summary_lines(
                 summary_dir=out_dir,
                 payload=payload,
                 language=language,
             ),
             *_research_output_guide_lines(out_dir, language=language),
-            f"UI: pcl ui --runs {ui_runs_dir} --language zh",
+            f"UI: pcl ui --runs {out_dir} --language zh",
         ]
         return "\n".join(lines)
     lines = [
@@ -2693,10 +2691,9 @@ def _format_research_demo_output(
         "What it did: generated a small synthetic evidence bundle for the paper "
         f"diagnostics ({readable_diagnostics}).",
         f"Diagnostics: {', '.join(diagnostic_names)}",
-        f"Open first: {out_dir / 'research_bundle.html'}",
         *_research_cli_summary_lines(summary_dir=out_dir, payload=payload, language=language),
         *_research_output_guide_lines(out_dir, language=language),
-        f"UI: pcl ui --runs {ui_runs_dir}",
+        f"UI: pcl ui --runs {out_dir}",
     ]
     return "\n".join(lines)
 
@@ -2779,7 +2776,7 @@ def _research_cli_summary_lines(
                 if open_first == "research_bundle.html"
                 else open_first
             )
-            lines.append(f"摘要建议先打开: {summary_dir / open_path}")
+            lines.append(f"先打开: {summary_dir / open_path}")
         if isinstance(next_action, str) and next_action:
             lines.append(f"下一步: {_translate_research_next_action(next_action)}")
         return lines
@@ -2791,7 +2788,7 @@ def _research_cli_summary_lines(
         ),
     ]
     if isinstance(open_first, str) and open_first:
-        lines.append(f"Open first from summary: {summary_dir / open_first}")
+        lines.append(f"Open first: {summary_dir / open_first}")
     if isinstance(next_action, str) and next_action:
         lines.append(f"Next action: {next_action}")
     return lines
