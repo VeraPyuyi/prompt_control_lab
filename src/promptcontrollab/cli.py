@@ -216,6 +216,25 @@ def build_parser() -> argparse.ArgumentParser:
     start_parser.add_argument("--seed", type=int, default=0, help="Synthetic fixture seed.")
     start_parser.set_defaults(func=_cmd_start)
 
+    quickstart_parser = subcommands.add_parser(
+        "quickstart",
+        help="Create a runnable demo project and quick report.",
+    )
+    quickstart_parser.add_argument(
+        "--out",
+        type=Path,
+        default=Path("demo"),
+        help="Demo project directory.",
+    )
+    quickstart_parser.add_argument(
+        "--language",
+        choices=["en", "zh"],
+        default="en",
+        help="Output language.",
+    )
+    quickstart_parser.add_argument("--seed", type=int, default=0, help="Synthetic fixture seed.")
+    quickstart_parser.set_defaults(func=_cmd_quickstart)
+
     choose_parser = subcommands.add_parser(
         "choose",
         help="Choose which adjacent tool to use first, and where PCL adds evidence.",
@@ -2082,6 +2101,20 @@ def _cmd_start(args: argparse.Namespace) -> None:
     )
 
 
+def _cmd_quickstart(args: argparse.Namespace) -> None:
+    """Create the beginner demo through a shorter public command."""
+
+    _cmd_start(
+        argparse.Namespace(
+            guide=False,
+            choice="demo",
+            language=args.language,
+            out=args.out,
+            seed=args.seed,
+        )
+    )
+
+
 def _default_start_import_out_dir(tool: str) -> Path:
     name = "external" if tool == "auto" else tool
     return Path("runs") / f"from-{name}"
@@ -3252,7 +3285,8 @@ def _format_start_guide(language: str = "en") -> str:
             ),
             (
                 "先看产品长什么样",
-                "pcl start --choice demo --language zh --out demo",
+                "pcl quickstart --language zh --out demo "
+                "(同: pcl start --choice demo --language zh --out demo)",
                 "进入 `demo`, 打开 `runs/quick/report.html`, "
                 "或运行 `pcl ui --runs runs --policy examples/guard.policy.yaml`。",
             ),
@@ -3310,7 +3344,7 @@ def _format_start_guide(language: str = "en") -> str:
             ),
             (
                 "See the product first",
-                "pcl start --choice demo --out demo",
+                "pcl quickstart --out demo (same as: pcl start --choice demo --out demo)",
                 "Enter `demo`, open `runs/quick/report.html`, "
                 "or run `pcl ui --runs runs --policy examples/guard.policy.yaml`.",
             ),

@@ -21,6 +21,7 @@ actually supports.**
 
 | If this is your problem | Copy this first |
 |---|---|
+| "I want to see the product quickly." | `pcl quickstart --out demo` |
 | "I do not know which adjacent tool fits." | `pcl choose --need "<your goal>"` |
 | "I need security or red-team evals." | `pcl choose --need "security evals and red-team checks"` |
 | "I already have Promptfoo/Langfuse/LangSmith/DeepEval output." | `pcl start --choice import --tool auto --input results.json --out runs/from-external` |

@@ -107,11 +107,13 @@ def test_cli_example_flow(tmp_path: Path) -> None:
     assert main(["init", "--path", str(demo)]) == 0
     demo_readme = (demo / "README.md").read_text(encoding="utf-8")
     demo_readme_zh = (demo / "README.zh.md").read_text(encoding="utf-8")
+    assert "pcl quickstart --out demo" in demo_readme
     assert "pcl start --choice demo --out demo" in demo_readme
     assert "pcl start --guide" in demo_readme
     assert "pcl analyze --config promptcontrol.example.yaml --out runs/quick" in demo_readme
     assert "pcl ui --runs runs --policy examples/guard.policy.yaml" in demo_readme
     assert "PromptControlLab 示例项目" in demo_readme_zh
+    assert "pcl quickstart --language zh --out demo" in demo_readme_zh
     assert "pcl start --choice demo --language zh --out demo" in demo_readme_zh
     assert "pcl start --guide --language zh" in demo_readme_zh
     assert "pcl analyze --config promptcontrol.example.yaml --out runs/quick" in demo_readme_zh
@@ -1759,6 +1761,24 @@ def test_cli_start_choice_demo_creates_runnable_project(
     assert (demo / "runs" / "history_index.json").exists()
 
 
+def test_cli_quickstart_alias_creates_runnable_project(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    demo = tmp_path / "quickstart-demo"
+
+    assert main(["quickstart", "--out", str(demo)]) == 0
+
+    output = capsys.readouterr().out
+    assert "Beginner mode: create a runnable demo project and quick report" in output
+    assert "Generated quick report:" in output
+    assert (demo / "README.md").exists()
+    assert (demo / "promptcontrol.example.yaml").exists()
+    assert (demo / "runs" / "quick" / "report.html").exists()
+    assert (demo / "runs" / "quick" / "gate_result.json").exists()
+    assert (demo / "runs" / "history_index.json").exists()
+
+
 def test_cli_start_guide_prints_goal_based_paths(capsys: pytest.CaptureFixture[str]) -> None:
     assert main(["start", "--guide"]) == 0
     output = capsys.readouterr().out
@@ -1767,6 +1787,7 @@ def test_cli_start_guide_prints_goal_based_paths(capsys: pytest.CaptureFixture[s
     assert "Choose the right adjacent tool" in output
     assert 'pcl choose --need "security evals and red-team checks"' in output
     assert "See the product first" in output
+    assert "pcl quickstart --out demo" in output
     assert "pcl start --choice demo --out demo" in output
     assert "open `runs/quick/report.html`" in output
     assert "paper-derived prompt optimization diagnostics" in output
@@ -1795,6 +1816,7 @@ def test_cli_start_guide_supports_chinese(capsys: pytest.CaptureFixture[str]) ->
     assert "PromptControlLab 新手路径指南" in output
     assert 'pcl choose --need "安全评测和红队检查" --language zh' in output
     assert "先看产品长什么样" in output
+    assert "pcl quickstart --language zh --out demo" in output
     assert "pcl start --choice demo --language zh --out demo" in output
     assert "打开 `runs/quick/report.html`" in output
     assert "运行论文里的 prompt optimization 诊断" in output

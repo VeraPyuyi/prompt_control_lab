@@ -7,7 +7,8 @@ Package: `promptcontrollab`. Chinese: [README.zh.md](README.zh.md).
 ```bash
 pip install -e ".[research,ui]"
 pcl start --guide
-pcl choose --need "security evals" && pcl start --choice demo --out demo
+pcl choose --need "security evals" && pcl quickstart --out demo
+# same as: pcl start --choice demo --out demo
 pcl research-demo --out runs/research-demo && pcl diagnose --run runs/research-demo
 ```
 

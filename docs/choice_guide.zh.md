@@ -19,6 +19,7 @@ prompt-optimizer。它更适合接在这些工具之后，把已有结果整理�
 
 | 如果你现在的问题是 | 先复制这条命令 |
 |---|---|
+| “我想最快看到产品长什么样。” | `pcl quickstart --language zh --out demo` |
 | “我不知道该先用哪个相邻工具。” | `pcl choose --need "<你的目标>" --language zh` |
 | “我要做安全评测或红队检查。” | `pcl choose --need "安全评测和红队检查" --language zh` |
 | “我已经有 Promptfoo / Langfuse / LangSmith / DeepEval 输出。” | `pcl start --choice import --tool auto --input results.json --out runs/from-external` |

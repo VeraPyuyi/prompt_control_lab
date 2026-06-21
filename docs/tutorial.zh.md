@@ -12,7 +12,8 @@ pcl choose --need "安全评测和红队检查" --language zh --out runs/tool-ch
 pcl start --choice choose --need "安全评测和红队检查" --language zh --out runs/tool-choice.json
 pcl start --guide --language zh
 pcl start --language zh
-pcl start --choice demo --language zh --out demo
+pcl quickstart --language zh --out demo
+# 同: pcl start --choice demo --language zh --out demo
 ```
 
 得到：
@@ -36,7 +37,7 @@ prompt-optimizer，先运行 `pcl choose --need ... --language zh`。如果需�
 操作：
 
 ```bash
-pcl start --choice demo --language zh --out demo
+pcl quickstart --language zh --out demo
 ```
 
 得到：
