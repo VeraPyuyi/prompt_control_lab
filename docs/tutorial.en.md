@@ -12,7 +12,7 @@ pcl choose --need "security evals and red-team checks" --out runs/tool-choice.js
 pcl start --choice choose --need "security evals and red-team checks" --out runs/tool-choice.json
 pcl start --guide
 pcl start
-pcl quickstart --out demo
+pcl quickstart --out demo --open-report
 # same as: pcl start --choice demo --out demo
 ```
 
@@ -42,7 +42,7 @@ demo, evidence bridge, guard, audit, or report path. Use `pcl start` when terms 
 Operation:
 
 ```bash
-pcl quickstart --out demo
+pcl quickstart --out demo --open-report
 ```
 
 Result:

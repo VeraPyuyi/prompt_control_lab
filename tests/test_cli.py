@@ -107,13 +107,13 @@ def test_cli_example_flow(tmp_path: Path) -> None:
     assert main(["init", "--path", str(demo)]) == 0
     demo_readme = (demo / "README.md").read_text(encoding="utf-8")
     demo_readme_zh = (demo / "README.zh.md").read_text(encoding="utf-8")
-    assert "pcl quickstart --out demo" in demo_readme
+    assert "pcl quickstart --out demo --open-report" in demo_readme
     assert "pcl start --choice demo --out demo" in demo_readme
     assert "pcl start --guide" in demo_readme
     assert "pcl analyze --config promptcontrol.example.yaml --out runs/quick" in demo_readme
     assert "pcl ui --runs runs --policy examples/guard.policy.yaml" in demo_readme
     assert "PromptControlLab 示例项目" in demo_readme_zh
-    assert "pcl quickstart --language zh --out demo" in demo_readme_zh
+    assert "pcl quickstart --language zh --out demo --open-report" in demo_readme_zh
     assert "pcl start --choice demo --language zh --out demo" in demo_readme_zh
     assert "pcl start --guide --language zh" in demo_readme_zh
     assert "pcl analyze --config promptcontrol.example.yaml --out runs/quick" in demo_readme_zh
@@ -1779,6 +1779,29 @@ def test_cli_quickstart_alias_creates_runnable_project(
     assert (demo / "runs" / "history_index.json").exists()
 
 
+def test_cli_quickstart_can_open_report(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    opened_urls: list[str] = []
+
+    def fake_open(url: str) -> bool:
+        opened_urls.append(url)
+        return True
+
+    monkeypatch.setattr("promptcontrollab.cli.webbrowser.open", fake_open)
+    demo = tmp_path / "quickstart-open"
+
+    assert main(["quickstart", "--out", str(demo), "--open-report"]) == 0
+
+    output = capsys.readouterr().out
+    assert "Opened report in your browser:" in output
+    assert len(opened_urls) == 1
+    assert opened_urls[0].startswith("file:")
+    assert "report.html" in opened_urls[0]
+
+
 def test_cli_start_guide_prints_goal_based_paths(capsys: pytest.CaptureFixture[str]) -> None:
     assert main(["start", "--guide"]) == 0
     output = capsys.readouterr().out
@@ -1787,7 +1810,7 @@ def test_cli_start_guide_prints_goal_based_paths(capsys: pytest.CaptureFixture[s
     assert "Choose the right adjacent tool" in output
     assert 'pcl choose --need "security evals and red-team checks"' in output
     assert "See the product first" in output
-    assert "pcl quickstart --out demo" in output
+    assert "pcl quickstart --out demo --open-report" in output
     assert "pcl start --choice demo --out demo" in output
     assert "open `runs/quick/report.html`" in output
     assert "paper-derived prompt optimization diagnostics" in output
@@ -1816,7 +1839,7 @@ def test_cli_start_guide_supports_chinese(capsys: pytest.CaptureFixture[str]) ->
     assert "PromptControlLab 新手路径指南" in output
     assert 'pcl choose --need "安全评测和红队检查" --language zh' in output
     assert "先看产品长什么样" in output
-    assert "pcl quickstart --language zh --out demo" in output
+    assert "pcl quickstart --language zh --out demo --open-report" in output
     assert "pcl start --choice demo --language zh --out demo" in output
     assert "打开 `runs/quick/report.html`" in output
     assert "运行论文里的 prompt optimization 诊断" in output

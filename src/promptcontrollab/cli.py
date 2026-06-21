@@ -8,6 +8,7 @@ import json
 import os
 import subprocess
 import sys
+import webbrowser
 from collections.abc import Sequence
 from pathlib import Path
 
@@ -214,6 +215,11 @@ def build_parser() -> argparse.ArgumentParser:
     start_parser.add_argument("--method", default=None, help="Method name written to predictions.")
     start_parser.add_argument("--asset-id", default=None, help="prompt-optimizer asset id filter.")
     start_parser.add_argument("--seed", type=int, default=0, help="Synthetic fixture seed.")
+    start_parser.add_argument(
+        "--open-report",
+        action="store_true",
+        help="Open the generated demo report in the default browser.",
+    )
     start_parser.set_defaults(func=_cmd_start)
 
     quickstart_parser = subcommands.add_parser(
@@ -233,6 +239,11 @@ def build_parser() -> argparse.ArgumentParser:
         help="Output language.",
     )
     quickstart_parser.add_argument("--seed", type=int, default=0, help="Synthetic fixture seed.")
+    quickstart_parser.add_argument(
+        "--open-report",
+        action="store_true",
+        help="Open the generated report in the default browser.",
+    )
     quickstart_parser.set_defaults(func=_cmd_quickstart)
 
     choose_parser = subcommands.add_parser(
@@ -1529,6 +1540,24 @@ def _format_init_output(
     return "\n".join(lines)
 
 
+def _open_html_report(path: Path, *, language: str = "en") -> None:
+    """Open a generated HTML report in the user's default browser."""
+
+    report_path = path.resolve()
+    if not report_path.exists():
+        raise ValueError(f"Report does not exist: {report_path}")
+    opened = webbrowser.open(report_path.as_uri())
+    if language == "zh":
+        if opened:
+            print(f"已在浏览器中打开报告: {report_path}")
+        else:
+            print(f"无法自动打开浏览器, 请手动打开: {report_path}")
+    elif opened:
+        print(f"Opened report in your browser: {report_path}")
+    else:
+        print(f"Could not open a browser automatically. Open manually: {report_path}")
+
+
 def _format_quick_run_summary(quick_run: Path, *, language: str = "en") -> list[str]:
     """Return a compact terminal summary for a generated quick run."""
 
@@ -1943,6 +1972,8 @@ def _cmd_start(args: argparse.Namespace) -> None:
                 history_index=history_index,
             )
         )
+        if args.open_report:
+            _open_html_report(quick_run / "report.html", language=args.language)
         return
 
     if choice == "research":
@@ -2111,6 +2142,7 @@ def _cmd_quickstart(args: argparse.Namespace) -> None:
             language=args.language,
             out=args.out,
             seed=args.seed,
+            open_report=args.open_report,
         )
     )
 
@@ -3285,7 +3317,7 @@ def _format_start_guide(language: str = "en") -> str:
             ),
             (
                 "先看产品长什么样",
-                "pcl quickstart --language zh --out demo "
+                "pcl quickstart --language zh --out demo --open-report "
                 "(同: pcl start --choice demo --language zh --out demo)",
                 "进入 `demo`, 打开 `runs/quick/report.html`, "
                 "或运行 `pcl ui --runs runs --policy examples/guard.policy.yaml`。",
@@ -3344,7 +3376,8 @@ def _format_start_guide(language: str = "en") -> str:
             ),
             (
                 "See the product first",
-                "pcl quickstart --out demo (same as: pcl start --choice demo --out demo)",
+                "pcl quickstart --out demo --open-report "
+                "(same as: pcl start --choice demo --out demo)",
                 "Enter `demo`, open `runs/quick/report.html`, "
                 "or run `pcl ui --runs runs --policy examples/guard.policy.yaml`.",
             ),

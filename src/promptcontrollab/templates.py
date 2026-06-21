@@ -103,7 +103,7 @@ If you want a fresh project and report in one command, run this from outside
 this folder:
 
 ```bash
-pcl quickstart --out demo
+pcl quickstart --out demo --open-report
 # same as: pcl start --choice demo --out demo
 ```
 
@@ -151,7 +151,7 @@ PROJECT_README_ZH_MD = """\
 如果你想一条命令创建新项目并直接生成报告, 在当前目录外运行:
 
 ```bash
-pcl quickstart --language zh --out demo
+pcl quickstart --language zh --out demo --open-report
 # 同: pcl start --choice demo --language zh --out demo
 ```
 
