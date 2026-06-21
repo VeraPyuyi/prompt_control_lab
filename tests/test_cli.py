@@ -8,7 +8,7 @@ from pathlib import Path
 
 import pytest
 
-from promptcontrollab.cli import _reconfigure_windows_pipe, main
+from promptcontrollab.cli import _reconfigure_windows_pipe, build_parser, main
 from promptcontrollab.files import write_jsonl
 
 
@@ -45,6 +45,17 @@ def test_windows_tty_output_keeps_terminal_encoding() -> None:
     assert _reconfigure_windows_pipe(stream, os_name="nt") is False
 
     assert stream.reconfigured is None
+
+
+def test_top_level_help_stays_beginner_friendly() -> None:
+    help_text = build_parser().format_help()
+    usage_line = help_text.splitlines()[0]
+
+    assert "usage: pcl [-h] command ..." in usage_line
+    assert "{start,quickstart,choose" not in usage_line
+    assert "pcl start --guide" in help_text
+    assert "pcl quickstart --out demo --open-report" in help_text
+    assert 'pcl choose --need "<your goal>"' in help_text
 
 
 def _write_scored_run(

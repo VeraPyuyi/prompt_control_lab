@@ -141,8 +141,12 @@ def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="pcl",
         description="PromptControlLab prompt evaluation and diagnostics toolkit.",
+        epilog=(
+            "Start here: `pcl start --guide`, `pcl quickstart --out demo --open-report`, "
+            "or `pcl choose --need \"<your goal>\"`."
+        ),
     )
-    subcommands = parser.add_subparsers(dest="command", required=True)
+    subcommands = parser.add_subparsers(dest="command", metavar="command", required=True)
 
     start_parser = subcommands.add_parser(
         "start",
