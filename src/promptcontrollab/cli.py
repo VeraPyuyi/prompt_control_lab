@@ -258,7 +258,7 @@ def build_parser() -> argparse.ArgumentParser:
             "unit tests, or research evidence."
         ),
     )
-    choose_parser.add_argument("--language", choices=["en", "zh"], default="en")
+    choose_parser.add_argument("--language", choices=["auto", "en", "zh"], default="auto")
     choose_parser.add_argument("--json", action="store_true")
     choose_parser.add_argument(
         "--out",
@@ -1917,11 +1917,12 @@ def _summary_string_items(value: object) -> list[str]:
 def _cmd_choose(args: argparse.Namespace) -> None:
     """Print adjacent-tool guidance for a user need."""
 
+    language = _resolve_choose_language(args.need, args.language)
     if args.need is None:
         payload = {
             "choices": tool_choice_lanes(),
-            "market_gap_actions": market_gap_action_rows(language=args.language),
-            "adoption_path": adoption_path_rows(language=args.language),
+            "market_gap_actions": market_gap_action_rows(language=language),
+            "adoption_path": adoption_path_rows(language=language),
             "next": "Run pcl choose --need <your-goal>.",
         }
     else:
@@ -1932,16 +1933,26 @@ def _cmd_choose(args: argparse.Namespace) -> None:
         md_path = json_path.with_suffix(".md")
         write_json(json_path, payload)
         md_path.write_text(
-            render_tool_choice_markdown(payload, language=args.language),
+            render_tool_choice_markdown(payload, language=language),
             encoding="utf-8",
         )
         written = (json_path, md_path)
     if args.json:
         print(json.dumps(payload, indent=2, ensure_ascii=False, sort_keys=True))
         return
-    print(format_tool_choice(payload, language=args.language))
+    print(format_tool_choice(payload, language=language))
     if written is not None:
         print(f"\nWrote tool-choice artifacts: {written[0]} and {written[1]}")
+
+
+def _resolve_choose_language(need: str | None, language: str) -> str:
+    """Resolve ``pcl choose --language auto`` from the user's need text."""
+
+    if language != "auto":
+        return language
+    if need and any("\u4e00" <= character <= "\u9fff" for character in need):
+        return "zh"
+    return "en"
 
 
 def _choice_output_path(path: Path) -> Path:

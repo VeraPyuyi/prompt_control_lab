@@ -1908,6 +1908,21 @@ def test_cli_choose_recommends_adjacent_tool_paths(capsys: pytest.CaptureFixture
     assert "5 \u5206\u949f\u91c7\u7528\u8def\u5f84" not in output
     assert "Evidence gap:" not in output
 
+    assert (
+        main(
+            [
+                "choose",
+                "--need",
+                "\u6211\u60f3\u8bc1\u660e\u4f18\u5316\u540e\u7684\u63d0\u793a\u8bcd\u662f\u4e0d\u662f\u771f\u7684\u66f4\u597d",
+            ]
+        )
+        == 0
+    )
+    output = capsys.readouterr().out
+    assert "\u5de5\u5177\u9009\u62e9\u5efa\u8bae" in output
+    assert "\u5148\u7528: prompt_control_lab" in output
+    assert "Tool choice recommendation" not in output
+
     cases = [
         ("prompt 写作和提示词模板", "prompt-writing", "linshenkx/prompt-optimizer"),
         ("单元测试和指标", "unit-tests", "DeepEval"),
