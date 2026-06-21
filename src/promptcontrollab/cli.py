@@ -165,6 +165,7 @@ def build_parser() -> argparse.ArgumentParser:
             "ecosystem",
             "import",
             "evidence",
+            "plugins",
             "improve",
             "guard",
             "analyze",
@@ -2076,6 +2077,10 @@ def _cmd_start(args: argparse.Namespace) -> None:
         print(_format_start_import_result(out_dir=out_dir, payload=payload, language=args.language))
         return
 
+    if choice == "plugins":
+        print(_format_start_plugins_guide(args.language))
+        return
+
     if choice == "improve":
         prompt = _read_start_prompt(args.prompt, args.prompt_file)
         print("Beginner mode: improve a prompt")
@@ -3300,12 +3305,13 @@ def _start_choice(value: str | None, *, language: str = "en") -> str:
                     "6) 比较 prompts 并生成报告",
                     "7) 生成生态对比 demo",
                     "8) 选择应该先用哪个相邻工具",
+                    "9) \u5b89\u88c5 Claude Code / Cursor / Codex prompt guard adapter",
                     "",
                     "提示: 如果不确定路径, 运行 `pcl start --guide --language zh`。",
                 ]
             )
         )
-        raw = input("请选择 1、2、3、4、5、6、7 或 8: ").strip().lower()
+        raw = input("\u8bf7\u9009\u62e9 1-9: ").strip().lower()
     else:
         print(
             "\n".join(
@@ -3319,12 +3325,13 @@ def _start_choice(value: str | None, *, language: str = "en") -> str:
                     "6) Compare prompts and create a report",
                     "7) Generate an ecosystem comparison demo",
                     "8) Choose which adjacent tool to use first",
+                    "9) Install Claude Code / Cursor / Codex prompt guard adapters",
                     "",
                     "Tip: run `pcl start --guide` if you are unsure which path fits your goal.",
                 ]
             )
         )
-        raw = input("Choose 1, 2, 3, 4, 5, 6, 7, or 8: ").strip().lower()
+        raw = input("Choose 1-9: ").strip().lower()
     choices = {
         "1": "demo",
         "demo": "demo",
@@ -3345,15 +3352,68 @@ def _start_choice(value: str | None, *, language: str = "en") -> str:
         "8": "choose",
         "choose": "choose",
         "tool-choice": "choose",
+        "9": "plugins",
+        "plugins": "plugins",
+        "plugin": "plugins",
+        "install-plugin": "plugins",
+        "adapters": "plugins",
     }
     if raw not in choices:
         msg = (
-            "请选择 1、2、3、4、5、6、7 或 8"
+            "\u8bf7\u9009\u62e9 1-9"
             if language == "zh"
-            else "Choose 1, 2, 3, 4, 5, 6, 7, or 8"
+            else "Choose 1-9"
         )
         raise ValueError(msg)
     return choices[raw]
+
+
+def _format_start_plugins_guide(language: str = "en") -> str:
+    """Return copy-paste steps for local IDE and coding-agent adapters."""
+
+    if language == "zh":
+        return "\n".join(
+            [
+                "PromptControlLab adapter 接入路径",
+                "",
+                "1. 安装本地 adapter 模板:",
+                "   pcl install-plugin all",
+                "2. 检查本地安装和 hook 是否可运行:",
+                "   pcl doctor --json",
+                "3. 在 IDE / CI adapter 中调用稳定 JSON 输出:",
+                (
+                    '   pcl guard --prompt "修复这个 bug" --profile coding '
+                    "--policy examples/guard.policy.yaml --json"
+                ),
+                "",
+                (
+                    "说明: 这不是沙箱。它是在 Claude Code、Cursor、Codex 或 CI "
+                    "把 prompt 交给 agent 前做本地 policy preflight。"
+                ),
+                "更多路径: docs/choice_guide.zh.md",
+            ]
+        )
+    return "\n".join(
+        [
+            "PromptControlLab adapter setup",
+            "",
+            "1. Install the local adapter templates:",
+            "   pcl install-plugin all",
+            "2. Check that local hooks and adapters can run:",
+            "   pcl doctor --json",
+            "3. Call the stable guard JSON from your IDE or CI adapter:",
+            (
+                '   pcl guard --prompt "Fix this bug" --profile coding '
+                "--policy examples/guard.policy.yaml --json"
+            ),
+            "",
+            (
+                "Note: this is not a sandbox. It is local policy preflight before "
+                "Claude Code, Cursor, Codex, or CI forwards a prompt to an agent."
+            ),
+            "More paths: docs/choice_guide.en.md",
+        ]
+    )
 
 
 def _format_start_guide(language: str = "en") -> str:
@@ -3403,6 +3463,11 @@ def _format_start_guide(language: str = "en") -> str:
                 "审计 agent 到底改了什么",
                 "pcl audit-diff --before HEAD~1 --after HEAD --out runs/audit",
                 "生成审计 artifact, 之后可做 PR summary。",
+            ),
+            (
+                "\u5b89\u88c5 IDE / Agent prompt guard adapter",
+                "pcl start --choice plugins --language zh",
+                "Claude Code\u3001Cursor\u3001Codex \u548c CI \u63a5\u5165\u6b65\u9aa4\u3002",
             ),
         ]
         lines = ["PromptControlLab 新手路径指南", "", "复制最符合你目标的一条命令:", ""]
@@ -3463,6 +3528,11 @@ def _format_start_guide(language: str = "en") -> str:
                 "Audit what an agent changed",
                 "pcl audit-diff --before HEAD~1 --after HEAD --out runs/audit",
                 "Diff audit artifacts; optionally build a PR summary.",
+            ),
+            (
+                "Install IDE / agent prompt guard adapters",
+                "pcl start --choice plugins",
+                "Claude Code, Cursor, Codex, and CI adapter setup steps.",
             ),
         ]
         lines = [

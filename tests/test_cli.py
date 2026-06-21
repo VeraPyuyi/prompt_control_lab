@@ -67,6 +67,7 @@ def test_no_argument_cli_opens_beginner_guide(capsys: pytest.CaptureFixture[str]
     assert "pcl quickstart --out demo --open-report" in output
     assert "pcl research-quickstart --out runs/research-demo --open-report" in output
     assert 'pcl choose --need "security evals and red-team checks"' in output
+    assert "pcl start --choice plugins" in output
 
 
 def _write_scored_run(
@@ -1846,6 +1847,8 @@ def test_cli_start_guide_prints_goal_based_paths(capsys: pytest.CaptureFixture[s
     assert "pcl start --choice import --tool auto --input results.json" in output
     assert "Guard a coding-agent prompt" in output
     assert "Audit what an agent changed" in output
+    assert "Install IDE / agent prompt guard adapters" in output
+    assert "pcl start --choice plugins" in output
     assert "More choice logic: docs/choice_guide.en.md" in output
     assert "Adjacent-tool map" in output
     assert "Promptfoo -> eval / CI / red-team" in output
@@ -1876,6 +1879,7 @@ def test_cli_start_guide_supports_chinese(capsys: pytest.CaptureFixture[str]) ->
     assert "pcl start --choice import --tool auto --input results.json" in output
     assert "在 coding agent 执行前守护 prompt" in output
     assert "审计 agent 到底改了什么" in output
+    assert "pcl start --choice plugins --language zh" in output
     assert "docs/choice_guide.zh.md" in output
     assert "相邻工具地图" in output
     assert "Market readiness" in output
@@ -1885,6 +1889,26 @@ def test_cli_start_guide_supports_chinese(capsys: pytest.CaptureFixture[str]) ->
     assert "bridge_summary.html" in output
     assert "research_bundle.zh.html" in output
     assert "pcl start --language zh" in output
+
+
+def test_cli_start_choice_plugins_prints_adapter_setup(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    assert main(["start", "--choice", "plugins"]) == 0
+    output = capsys.readouterr().out
+
+    assert "PromptControlLab adapter setup" in output
+    assert "pcl install-plugin all" in output
+    assert "pcl doctor --json" in output
+    assert "--json" in output
+    assert "not a sandbox" in output
+
+    assert main(["start", "--choice", "plugins", "--language", "zh"]) == 0
+    output = capsys.readouterr().out
+    assert "PromptControlLab adapter" in output
+    assert "pcl install-plugin all" in output
+    assert "pcl doctor --json" in output
+    assert "docs/choice_guide.zh.md" in output
 
 
 def test_cli_choose_recommends_adjacent_tool_paths(capsys: pytest.CaptureFixture[str]) -> None:
@@ -2220,7 +2244,8 @@ def test_cli_start_interactive_chinese_choose_menu_prints_tool_map(
     output = capsys.readouterr().out
 
     assert "8) 选择应该先用哪个相邻工具" in output
-    assert "请选择 1、2、3、4、5、6、7 或 8" in output
+    assert "1-9" in output
+    assert "Claude Code / Cursor / Codex prompt guard adapter" in output
     assert "新手模式: 选择先用哪个相邻工具" in output
     assert "工具选择地图" in output
     assert "安全评测和红队检查 (security): 先用 Promptfoo" in output
