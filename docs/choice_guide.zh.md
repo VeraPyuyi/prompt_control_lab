@@ -23,6 +23,7 @@ prompt-optimizer。它更适合接在这些工具之后，把已有结果整理�
 | “我不知道该先用哪个相邻工具。” | `pcl choose --need "<你的目标>" --language zh` |
 | “我要做安全评测或红队检查。” | `pcl choose --need "安全评测和红队检查" --language zh` |
 | “我已经有 Promptfoo / Langfuse / LangSmith / DeepEval 输出。” | `pcl start --choice import --tool auto --input results.json --out runs/from-external` |
+| “我想接入 Claude Code、Cursor 或 Codex 的 prompt guard。” | `pcl install-plugin all`，然后运行 `pcl doctor --json` |
 | “我想用本地 UI demo 看模型漂移、审计、历史或 prompt 对比。” | 先运行 `pcl quickstart --language zh --out demo --open-report`，再运行 `pcl ui --runs demo/runs --policy demo/examples/guard.policy.yaml --language zh` |
 | “我要跑论文里的诊断流程。” | `pcl research-quickstart --out runs/research-demo --language zh --open-report` |
 | “我要给 reviewer 看市场/证据 scorecard。” | `pcl start --choice ecosystem --out runs/ecosystem-demo` |
@@ -36,6 +37,7 @@ prompt-optimizer。它更适合接在这些工具之后，把已有结果整理�
 | 你需要 trace、agent debug、dataset 或 LangChain/LangGraph 观测。 | LangSmith | 需要把导出结果变成可复现证据包，并区分 prompt、模型、指标和切分变化时。 |
 | 你需要开源 tracing、prompt 管理、eval、成本追踪或自托管。 | Langfuse | 需要补 soft-hard gap、trajectory、Riccati、tv-soft 诊断和有边界的研究结论时。 |
 | 你想要好用的 prompt 写作和改写界面。 | prompt-optimizer | 需要证明优化后的 prompt 在干净协议下真的更好时。 |
+| 你需要给 Claude Code、Cursor、Codex 或 CI 安装 prompt guard adapter。 | PCL adapters | 在 prompt 进入 coding agent 前运行本地 policy guard，并给 hook 输出稳定 JSON。 |
 | 你想要一个本地审阅工作台来查看模型漂移、diff 审计、历史和报告。 | PCL 本地 UI | 在一个浏览器界面里查看 PCL 的 guard、报告、模型漂移、审计、历史和 workflow artifacts。 |
 | 你已经有 baseline / candidate 输出。 | PCL | 需要 evidence card、claim check、gap status、模型溯源和 research bundle 验证时。 |
 
@@ -67,6 +69,7 @@ pcl start --choice choose --need "安全评测和红队检查" --language zh --o
 | DeepEval TestRun 输出 | 有指标，但 prompt/model/split provenance 和 claim 边界还需要审查。 | `pcl import deepeval --input test-run.json --out runs/from-deepeval` | `manifest.json`，再运行 `pcl evidence-card` |
 | LangSmith / Langfuse trace 或 eval 导出 | 有 trace，但 prompt 效果可能和模型、指标、切分变化混在一起。 | `pcl start --choice import --tool auto --input results.json --out runs/from-external` | `bridge_summary.html` |
 | prompt-optimizer 收藏或模板 | 有更好的 prompt 候选，但还不是成对打分证据。 | `pcl import prompt-optimizer --input favorites.json --out runs/from-prompt-optimizer` | `prompt_optimizer_gap_plan.html` |
+| IDE 或 CI adapter 工作流 | agent 执行前还没有团队 policy guard。 | `pcl install-plugin all` | `pcl doctor --json`，然后看 adapter 文档 |
 | PCL run artifacts | reviewer 需要一个可浏览的本地工作台来查看 guard、报告、模型漂移、审计和历史。 | `pcl ui --runs runs --policy examples/guard.policy.yaml` | 本地 dashboard 页面 |
 | 任意论文诊断 run | 还没有先打开研究证据包。 | `pcl research-quickstart --out runs/research-demo --language zh --open-report` | `research_bundle.zh.html` |
 

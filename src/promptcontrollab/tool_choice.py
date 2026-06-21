@@ -211,6 +211,72 @@ def tool_choice_lanes() -> list[JsonDict]:
             ),
         },
         {
+            "id": "agent-integration",
+            "label": "IDE and coding-agent integration",
+            "label_zh": "IDE 和编程 Agent 接入",
+            "use_first": "prompt_control_lab",
+            "when": "Claude Code hooks, Cursor rules/MCP, Codex skills, and CI templates.",
+            "when_zh": "Claude Code hook、Cursor rules/MCP、Codex skill 和 CI 模板。",
+            "pcl_short": "Install prompt guard adapters before the agent receives broad prompts.",
+            "pcl_short_zh": "在 agent 收到宽泛 prompt 前安装 prompt guard adapter。",
+            "keywords": [
+                "install plugin",
+                "install adapter",
+                "plugin",
+                "adapter",
+                "claude code",
+                "claude hook",
+                "cursor",
+                "cursor mcp",
+                "cursor rule",
+                "codex skill",
+                "codex",
+                "ide integration",
+                "github action",
+                "prompt hook",
+                "team prompt policy",
+                "安装插件",
+                "安装 adapter",
+                "插件",
+                "接入",
+                "适配器",
+                "规则文件",
+                "团队 policy",
+                "提示词守护",
+                "守护 prompt",
+            ],
+            "why": (
+                "PCL's strongest applied path is running guard policy before Claude Code, "
+                "Cursor, Codex, or CI sends an expensive prompt onward."
+            ),
+            "why_zh": (
+                "PCL 最直接的工程路径，是在 Claude Code、Cursor、Codex 或 CI "
+                "发送高成本 prompt 前先运行 guard policy。"
+            ),
+            "pcl_adds": (
+                "Install the adapter, keep policy local, and emit stable guard JSON for "
+                "IDE hooks or shell wrappers."
+            ),
+            "pcl_adds_zh": (
+                "安装 adapter，把 policy 留在本地，并为 IDE hook 或 shell wrapper "
+                "输出稳定 guard JSON。"
+            ),
+            "commands": [
+                "pcl install-plugin claude-code",
+                "pcl install-plugin cursor",
+                "pcl install-plugin codex",
+                "pcl guard --prompt \"Fix this bug\" --profile coding "
+                "--policy examples/guard.policy.yaml --json",
+            ],
+            "avoid": (
+                "Do not treat adapters as a full sandbox; they are preflight guardrails "
+                "and review signals."
+            ),
+            "avoid_zh": (
+                "不要把 adapter 当成完整沙箱；它们是执行前门禁和审阅信号。"
+            ),
+        },
+        {
             "id": "local-ui",
             "label": "Local UI and run review",
             "label_zh": "本地 UI 和运行审阅",
@@ -523,6 +589,13 @@ def market_gap_action_rows(*, language: str = "en") -> list[JsonDict]:
                 "open": "prompt_optimizer_gap_plan.html",
             },
             {
+                "lane": "agent-integration",
+                "input": "Claude Code / Cursor / Codex / CI 已经在团队工作流里",
+                "gap": "agent 收到 prompt 前还没有本地 policy guard 和稳定 JSON 信号。",
+                "command": "pcl install-plugin all",
+                "open": "pcl doctor --json，然后在 IDE/CI 中调用 pcl guard --json",
+            },
+            {
                 "lane": "local-ui",
                 "input": "已有 PCL run artifacts 或本地 reviewer 工作流",
                 "gap": (
@@ -591,6 +664,16 @@ def market_gap_action_rows(*, language: str = "en") -> list[JsonDict]:
                 "--out runs/from-prompt-optimizer"
             ),
             "open": "prompt_optimizer_gap_plan.html",
+        },
+        {
+            "lane": "agent-integration",
+            "input": "Claude Code, Cursor, Codex, or CI is already in the team workflow",
+            "gap": (
+                "The agent still receives prompts before a local policy guard emits "
+                "stable JSON signals."
+            ),
+            "command": "pcl install-plugin all",
+            "open": "pcl doctor --json, then call pcl guard --json from the IDE or CI adapter",
         },
         {
             "lane": "local-ui",

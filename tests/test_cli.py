@@ -2016,6 +2016,24 @@ def test_cli_choose_recommends_adjacent_tool_paths(capsys: pytest.CaptureFixture
         ]
         assert payload["market_gap_action"]["open"].startswith("local dashboard")
 
+    agent_integration_needs = [
+        "install Cursor plugin for prompt guard",
+        "Claude Code hook for team prompt policy",
+        "Codex skill for guarding prompts",
+        "\u5b89\u88c5 Cursor \u63d2\u4ef6 \u5b88\u62a4 prompt",
+    ]
+    for need in agent_integration_needs:
+        assert main(["choose", "--need", need, "--json"]) == 0
+        payload = json.loads(capsys.readouterr().out)
+        assert payload["matched"] == "agent-integration"
+        assert payload["use_first"] == "prompt_control_lab"
+        assert payload["commands"][:3] == [
+            "pcl install-plugin claude-code",
+            "pcl install-plugin cursor",
+            "pcl install-plugin codex",
+        ]
+        assert payload["market_gap_action"]["command"] == "pcl install-plugin all"
+
     assert main(["choose", "--need", "prompt 写作和提示词模板", "--language", "zh"]) == 0
     output = capsys.readouterr().out
     assert "prompt-optimizer 更适合做成熟的 prompt 写作" in output
