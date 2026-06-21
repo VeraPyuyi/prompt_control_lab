@@ -30,6 +30,17 @@ def test_beginner_guide_is_visible_from_readmes_and_tutorials() -> None:
         assert "pcl choose --need" in path.read_text(encoding="utf-8")
 
 
+def test_public_docs_use_current_ui_command_flag() -> None:
+    """Keep examples on the real `pcl ui --runs` flag, not the old `--run` typo."""
+
+    stale: list[str] = []
+    for path in _public_markdown_files():
+        text = path.read_text(encoding="utf-8")
+        if "pcl ui --run " in text:
+            stale.append(str(path))
+    assert not stale, "\n".join(stale)
+
+
 def test_public_markdown_local_links_resolve() -> None:
     """Ensure public README/docs links and image references point to existing files."""
 

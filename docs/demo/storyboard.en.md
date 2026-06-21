@@ -78,7 +78,7 @@ The local UI exposes the same workflow without requiring the viewer to remember 
 Commands:
 
 ```bash
-pcl ui --run runs/quick
+pcl ui --runs runs --policy examples/guard.policy.yaml
 ```
 
 On-screen decision: "Use the UI when reviewers need to inspect the same local evidence without reading raw JSON first."

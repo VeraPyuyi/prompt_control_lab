@@ -78,7 +78,7 @@ pcl improve --prompt-file prompts/current.txt --run runs/quick --out runs/improv
 命令：
 
 ```bash
-pcl ui --run runs/quick
+pcl ui --runs runs --policy examples/guard.policy.yaml --language zh
 ```
 
 ## 场景 05 - Analyze：生成可复现 Run
