@@ -3360,6 +3360,11 @@ def _format_start_guide(language: str = "en") -> str:
                 "生成 demo 并打开 `runs/quick/report.html`。",
             ),
             (
+                "打开本地 UI 工作台",
+                "pcl ui --runs runs --policy examples/guard.policy.yaml --language zh",
+                "查看 Workflows、Report、Model Drift、Audit 和 History。",
+            ),
+            (
                 "运行论文里的 prompt optimization 诊断",
                 "pcl research-quickstart --out runs/research-demo --language zh --open-report",
                 "打开 research_bundle.zh.html 查看论文证据包。",
@@ -3410,6 +3415,11 @@ def _format_start_guide(language: str = "en") -> str:
                 "pcl quickstart --out demo --open-report "
                 "(same as: pcl start --choice demo --out demo)",
                 "A demo run and `runs/quick/report.html`.",
+            ),
+            (
+                "Open the local UI reviewer cockpit",
+                "pcl ui --runs runs --policy examples/guard.policy.yaml",
+                "Workflows, Report, Model Drift, Audit, and History in one browser view.",
             ),
             (
                 "Run the paper-derived prompt optimization diagnostics",
