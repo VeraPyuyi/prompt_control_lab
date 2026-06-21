@@ -58,6 +58,17 @@ def test_top_level_help_stays_beginner_friendly() -> None:
     assert 'pcl choose --need "<your goal>"' in help_text
 
 
+def test_no_argument_cli_opens_beginner_guide(capsys: pytest.CaptureFixture[str]) -> None:
+    assert main([]) == 0
+    output = capsys.readouterr().out
+
+    assert "PromptControlLab beginner guide" in output
+    assert "Copy the one command that matches your goal" in output
+    assert "pcl quickstart --out demo --open-report" in output
+    assert "pcl research-quickstart --out runs/research-demo --open-report" in output
+    assert 'pcl choose --need "security evals and red-team checks"' in output
+
+
 def _write_scored_run(
     run_dir: Path,
     *,

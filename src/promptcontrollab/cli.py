@@ -96,8 +96,12 @@ def main(argv: Sequence[str] | None = None) -> int:
     """Run the CLI."""
 
     _ensure_utf8_for_windows_pipes()
+    cli_args = list(argv) if argv is not None else sys.argv[1:]
+    if not cli_args:
+        print(_format_start_guide("en"))
+        return 0
     parser = build_parser()
-    args = parser.parse_args(argv)
+    args = parser.parse_args(cli_args)
     try:
         args.func(args)
     except (PromptControlLabError, ValueError, OSError, subprocess.SubprocessError) as exc:
