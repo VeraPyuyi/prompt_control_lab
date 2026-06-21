@@ -3,6 +3,8 @@
 
 from __future__ import annotations
 
+import re
+
 from promptcontrollab.files import JsonDict
 
 
@@ -284,7 +286,7 @@ def choose_tool_for_need(need: str) -> JsonDict:
         score = 0
         if text == str(lane.get("id", "")).lower():
             score += 5
-        score += sum(1 for keyword in keyword_list if keyword in text)
+        score += sum(1 for keyword in keyword_list if _keyword_matches(text, keyword))
         if lane.get("id") == "research-evidence" and evidence_question:
             score += 4
         if score > best_score:
@@ -325,6 +327,12 @@ def _looks_like_evidence_question(text: str) -> bool:
         "really better",
         "actually better",
         "actually improved",
+        "compare prompts",
+        "compare two prompts",
+        "which prompt is better",
+        "a/b test",
+        "ab test",
+        "prompt regression",
         "prove",
         "proof",
         "evidence",
@@ -336,6 +344,15 @@ def _looks_like_evidence_question(text: str) -> bool:
         "before publication",
         "is my optimized prompt",
         "optimized prompt is",
+        "比较两个提示词",
+        "比较两个 prompt",
+        "哪个更好",
+        "哪一个更好",
+        "a/b 测试",
+        "ab 测试",
+        "回归测试",
+        "prompt回归",
+        "prompt 回归",
         "是否真的",
         "是不是真的",
         "真的更好",
@@ -352,6 +369,17 @@ def _looks_like_evidence_question(text: str) -> bool:
         "是否能说明",
     ]
     return any(term in text for term in evidence_terms)
+
+
+def _keyword_matches(text: str, keyword: str) -> bool:
+    """Return true when a keyword matches without accidental word-substring hits."""
+
+    if not keyword:
+        return False
+    if re.fullmatch(r"[a-z0-9][a-z0-9 -]*[a-z0-9]", keyword):
+        pattern = r"(?<![a-z0-9])" + re.escape(keyword) + r"(?![a-z0-9])"
+        return re.search(pattern, text) is not None
+    return keyword in text
 
 
 def market_gap_action_for_lane(lane_id: str, *, language: str = "en") -> JsonDict:

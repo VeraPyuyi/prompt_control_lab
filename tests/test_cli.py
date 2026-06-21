@@ -1946,6 +1946,15 @@ def test_cli_choose_recommends_adjacent_tool_paths(capsys: pytest.CaptureFixture
             ],
         ),
         (
+            "compare two prompts and decide which one is better",
+            [
+                "choose",
+                "--need",
+                "compare two prompts and decide which one is better",
+                "--json",
+            ],
+        ),
+        (
             "我想知道优化后的提示词是不是真的更好",
             [
                 "choose",
@@ -1953,6 +1962,24 @@ def test_cli_choose_recommends_adjacent_tool_paths(capsys: pytest.CaptureFixture
                 "我想知道优化后的提示词是不是真的更好",
                 "--language",
                 "zh",
+                "--json",
+            ],
+        ),
+        (
+            "比较两个提示词哪个更好",
+            [
+                "choose",
+                "--need",
+                "比较两个提示词哪个更好",
+                "--json",
+            ],
+        ),
+        (
+            "上线前做prompt回归测试",
+            [
+                "choose",
+                "--need",
+                "上线前做prompt回归测试",
                 "--json",
             ],
         ),
