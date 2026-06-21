@@ -63,8 +63,7 @@ Claude Code 和 GitHub Action 模板。prompt-optimizer 桥接也能通过 wheel
 
 ```bash
 python -m pip install --force-reinstall --no-deps dist/promptcontrollab-0.1.0-py3-none-any.whl
-pcl research-demo --out ./tmp-pcl-research-demo
-pcl diagnose --run ./tmp-pcl-research-demo
+pcl research-quickstart --out ./tmp-pcl-research-demo --language zh --open-report
 ```
 
 预期结果：wheel 安装后的包可以生成 `research_bundle.html`、`research_diagnostics.html`、

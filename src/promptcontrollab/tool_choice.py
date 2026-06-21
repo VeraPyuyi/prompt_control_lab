@@ -257,8 +257,7 @@ def tool_choice_lanes() -> list[JsonDict]:
                 "和 time-varying soft-control 诊断。"
             ),
             "commands": [
-                "pcl research-demo --out runs/research-demo",
-                "pcl diagnose --run runs/research-demo",
+                "pcl research-quickstart --out runs/research-demo --open-report",
             ],
             "avoid": (
                 "Do not start with PCL if the only need is a nicer prompt editor "
