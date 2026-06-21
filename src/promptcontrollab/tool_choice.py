@@ -266,7 +266,7 @@ def tool_choice_lanes() -> list[JsonDict]:
             ),
             "commands": [
                 "pcl quickstart --out demo --open-report",
-                "pcl ui --runs runs --policy examples/guard.policy.yaml",
+                "pcl ui --runs demo/runs --policy demo/examples/guard.policy.yaml",
             ],
             "avoid": (
                 "Do not use the local UI as a hosted observability replacement; it is a "
@@ -514,7 +514,10 @@ def market_gap_action_rows(*, language: str = "en") -> list[JsonDict]:
                     "有 artifacts，但还缺一个能同时查看 guard、报告、模型漂移、"
                     "审计和历史的本地界面。"
                 ),
-                "command": "pcl ui --runs runs --policy examples/guard.policy.yaml",
+                "command": (
+                    "pcl ui --runs demo/runs --policy demo/examples/guard.policy.yaml "
+                    "--language zh"
+                ),
                 "open": "本地 dashboard 的 Workflows / Report / Drift / Audit / History 页面",
             },
             {
@@ -581,7 +584,7 @@ def market_gap_action_rows(*, language: str = "en") -> list[JsonDict]:
                 "Artifacts exist, but the reviewer still needs one local view for guard, "
                 "report, model drift, audit, and history."
             ),
-            "command": "pcl ui --runs runs --policy examples/guard.policy.yaml",
+            "command": "pcl ui --runs demo/runs --policy demo/examples/guard.policy.yaml",
             "open": "local dashboard Workflows / Report / Drift / Audit / History tabs",
         },
         {

@@ -25,7 +25,7 @@ actually supports.**
 | "I do not know which adjacent tool fits." | `pcl choose --need "<your goal>"` |
 | "I need security or red-team evals." | `pcl choose --need "security evals and red-team checks"` |
 | "I already have Promptfoo/Langfuse/LangSmith/DeepEval output." | `pcl start --choice import --tool auto --input results.json --out runs/from-external` |
-| "I need a local UI for model drift, audit, history, or prompt comparison." | `pcl ui --runs runs --policy examples/guard.policy.yaml` |
+| "I need a local UI demo for model drift, audit, history, or prompt comparison." | `pcl quickstart --out demo --open-report`, then `pcl ui --runs demo/runs --policy demo/examples/guard.policy.yaml` |
 | "I need the paper-derived diagnostics." | `pcl research-quickstart --out runs/research-demo --open-report` |
 | "I need a reviewer-facing market/evidence scorecard." | `pcl start --choice ecosystem --out runs/ecosystem-demo` |
 

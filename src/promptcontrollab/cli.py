@@ -3361,7 +3361,7 @@ def _format_start_guide(language: str = "en") -> str:
             ),
             (
                 "打开本地 UI 工作台",
-                "pcl ui --runs runs --policy examples/guard.policy.yaml --language zh",
+                "pcl ui --runs demo/runs --policy demo/examples/guard.policy.yaml --language zh",
                 "查看 Workflows、Report、Model Drift、Audit 和 History。",
             ),
             (
@@ -3418,7 +3418,7 @@ def _format_start_guide(language: str = "en") -> str:
             ),
             (
                 "Open the local UI reviewer cockpit",
-                "pcl ui --runs runs --policy examples/guard.policy.yaml",
+                "pcl ui --runs demo/runs --policy demo/examples/guard.policy.yaml",
                 "Workflows, Report, Model Drift, Audit, and History in one browser view.",
             ),
             (

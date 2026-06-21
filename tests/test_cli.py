@@ -1814,7 +1814,7 @@ def test_cli_start_guide_prints_goal_based_paths(capsys: pytest.CaptureFixture[s
     assert "pcl start --choice demo --out demo" in output
     assert "`runs/quick/report.html`" in output
     assert "Open the local UI reviewer cockpit" in output
-    assert "pcl ui --runs runs --policy examples/guard.policy.yaml" in output
+    assert "pcl ui --runs demo/runs --policy demo/examples/guard.policy.yaml" in output
     assert "paper-derived prompt optimization diagnostics" in output
     assert "pcl research-quickstart --out runs/research-demo --open-report" in output
     assert "Compare adjacent tools and PCL-added evidence" in output
@@ -1843,7 +1843,10 @@ def test_cli_start_guide_supports_chinese(capsys: pytest.CaptureFixture[str]) ->
     assert "先看产品长什么样" in output
     assert "pcl quickstart --language zh --out demo --open-report" in output
     assert "pcl start --choice demo --language zh --out demo" in output
-    assert "pcl ui --runs runs --policy examples/guard.policy.yaml --language zh" in output
+    assert (
+        "pcl ui --runs demo/runs --policy demo/examples/guard.policy.yaml --language zh"
+        in output
+    )
     assert "打开 `runs/quick/report.html`" in output
     assert "运行论文里的 prompt optimization 诊断" in output
     assert "pcl research-quickstart --out runs/research-demo --language zh --open-report" in output
@@ -2007,7 +2010,7 @@ def test_cli_choose_recommends_adjacent_tool_paths(capsys: pytest.CaptureFixture
         assert payload["use_first"] == "prompt_control_lab"
         assert payload["commands"] == [
             "pcl quickstart --out demo --open-report",
-            "pcl ui --runs runs --policy examples/guard.policy.yaml",
+            "pcl ui --runs demo/runs --policy demo/examples/guard.policy.yaml",
         ]
         assert payload["market_gap_action"]["open"].startswith("local dashboard")
 

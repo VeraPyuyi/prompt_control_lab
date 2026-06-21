@@ -23,7 +23,7 @@ prompt-optimizer。它更适合接在这些工具之后，把已有结果整理�
 | “我不知道该先用哪个相邻工具。” | `pcl choose --need "<你的目标>" --language zh` |
 | “我要做安全评测或红队检查。” | `pcl choose --need "安全评测和红队检查" --language zh` |
 | “我已经有 Promptfoo / Langfuse / LangSmith / DeepEval 输出。” | `pcl start --choice import --tool auto --input results.json --out runs/from-external` |
-| “我想用本地 UI 看模型漂移、审计、历史或 prompt 对比。” | `pcl ui --runs runs --policy examples/guard.policy.yaml` |
+| “我想用本地 UI demo 看模型漂移、审计、历史或 prompt 对比。” | 先运行 `pcl quickstart --language zh --out demo --open-report`，再运行 `pcl ui --runs demo/runs --policy demo/examples/guard.policy.yaml --language zh` |
 | “我要跑论文里的诊断流程。” | `pcl research-quickstart --out runs/research-demo --language zh --open-report` |
 | “我要给 reviewer 看市场/证据 scorecard。” | `pcl start --choice ecosystem --out runs/ecosystem-demo` |
 
