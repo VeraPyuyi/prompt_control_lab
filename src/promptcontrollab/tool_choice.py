@@ -211,6 +211,72 @@ def tool_choice_lanes() -> list[JsonDict]:
             ),
         },
         {
+            "id": "local-ui",
+            "label": "Local UI and run review",
+            "label_zh": "本地 UI 和运行审阅",
+            "use_first": "prompt_control_lab",
+            "when": "Local dashboard, model drift, history, audit, and reviewer UI.",
+            "when_zh": "本地仪表盘、模型漂移、历史、审计和 reviewer 界面。",
+            "pcl_short": (
+                "Open guard, report, model drift, audit, history, and workflow tabs "
+                "locally."
+            ),
+            "pcl_short_zh": "在本地打开 guard、报告、模型漂移、审计、历史和 workflow 页面。",
+            "keywords": [
+                "local ui",
+                "ui",
+                "dashboard",
+                "streamlit",
+                "model drift",
+                "drift",
+                "history",
+                "audit dashboard",
+                "run report",
+                "reviewer ui",
+                "visualize",
+                "visualization",
+                "本地ui",
+                "本地 ui",
+                "本地界面",
+                "界面",
+                "仪表盘",
+                "看板",
+                "可视化",
+                "模型漂移",
+                "漂移",
+                "历史",
+                "审计看板",
+                "运行报告",
+            ],
+            "why": (
+                "PCL already owns the local artifact model, so its UI is the shortest path "
+                "from prompt evidence to a reviewer-readable cockpit."
+            ),
+            "why_zh": (
+                "PCL 已经记录本地 artifacts，所以它的 UI 是把 prompt 证据变成"
+                "可审阅工作台的最短路径。"
+            ),
+            "pcl_adds": (
+                "Use the local dashboard when the next question is what happened across "
+                "guard, report, model drift, audit, and history artifacts."
+            ),
+            "pcl_adds_zh": (
+                "当你想同时查看 guard、报告、模型漂移、审计和历史 artifacts 时，"
+                "直接打开本地 dashboard。"
+            ),
+            "commands": [
+                "pcl quickstart --out demo --open-report",
+                "pcl ui --runs runs --policy examples/guard.policy.yaml",
+            ],
+            "avoid": (
+                "Do not use the local UI as a hosted observability replacement; it is a "
+                "local reviewer cockpit for PCL artifacts."
+            ),
+            "avoid_zh": (
+                "不要把本地 UI 当成托管 observability 平台；它是审阅 PCL artifacts 的本地工作台。"
+            ),
+        },
+        {
             "id": "research-evidence",
             "label": "Research evidence and diagnostics",
             "label_zh": "研究证据和论文诊断",
@@ -442,6 +508,16 @@ def market_gap_action_rows(*, language: str = "en") -> list[JsonDict]:
                 "open": "prompt_optimizer_gap_plan.html",
             },
             {
+                "lane": "local-ui",
+                "input": "已有 PCL run artifacts 或本地 reviewer 工作流",
+                "gap": (
+                    "有 artifacts，但还缺一个能同时查看 guard、报告、模型漂移、"
+                    "审计和历史的本地界面。"
+                ),
+                "command": "pcl ui --runs runs --policy examples/guard.policy.yaml",
+                "open": "本地 dashboard 的 Workflows / Report / Drift / Audit / History 页面",
+            },
+            {
                 "lane": "research-evidence",
                 "input": "任意 baseline / candidate run",
                 "gap": "还没有先打开论文诊断证据包，用户不容易理解各项诊断之间的关系。",
@@ -497,6 +573,16 @@ def market_gap_action_rows(*, language: str = "en") -> list[JsonDict]:
                 "--out runs/from-prompt-optimizer"
             ),
             "open": "prompt_optimizer_gap_plan.html",
+        },
+        {
+            "lane": "local-ui",
+            "input": "Existing PCL run artifacts or a local reviewer workflow",
+            "gap": (
+                "Artifacts exist, but the reviewer still needs one local view for guard, "
+                "report, model drift, audit, and history."
+            ),
+            "command": "pcl ui --runs runs --policy examples/guard.policy.yaml",
+            "open": "local dashboard Workflows / Report / Drift / Audit / History tabs",
         },
         {
             "lane": "research-evidence",

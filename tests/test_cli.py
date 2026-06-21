@@ -1993,6 +1993,21 @@ def test_cli_choose_recommends_adjacent_tool_paths(capsys: pytest.CaptureFixture
             "pcl research-quickstart --out runs/research-demo --open-report"
         ]
 
+    local_ui_needs = [
+        "local UI dashboard for model drift and prompt comparison",
+        "本地UI查看模型漂移和提示词对比",
+    ]
+    for need in local_ui_needs:
+        assert main(["choose", "--need", need, "--json"]) == 0
+        payload = json.loads(capsys.readouterr().out)
+        assert payload["matched"] == "local-ui"
+        assert payload["use_first"] == "prompt_control_lab"
+        assert payload["commands"] == [
+            "pcl quickstart --out demo --open-report",
+            "pcl ui --runs runs --policy examples/guard.policy.yaml",
+        ]
+        assert payload["market_gap_action"]["open"].startswith("local dashboard")
+
     assert main(["choose", "--need", "prompt 写作和提示词模板", "--language", "zh"]) == 0
     output = capsys.readouterr().out
     assert "prompt-optimizer 更适合做成熟的 prompt 写作" in output

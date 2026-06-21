@@ -1448,8 +1448,8 @@ def test_ui_ecosystem_choice_rows_explain_adjacent_tool_paths() -> None:
     en_path = app.adoption_path_rows("en")
     zh_path = app.adoption_path_rows("zh")
 
-    assert len(en_rows) == 6
-    assert len(zh_rows) == 6
+    assert len(en_rows) == 7
+    assert len(zh_rows) == 7
     combined_en = " ".join(str(row) for row in en_rows)
     combined_zh = " ".join(str(row) for row in zh_rows)
     for name in ["Promptfoo", "DeepEval", "LangSmith", "Langfuse", "prompt-optimizer"]:
@@ -1457,6 +1457,8 @@ def test_ui_ecosystem_choice_rows_explain_adjacent_tool_paths() -> None:
         assert name in combined_zh
     assert "paired uncertainty" in combined_en.lower()
     assert "Pytest-style LLM unit tests" in combined_en
+    assert "Local dashboard" in combined_en
+    assert "model drift" in combined_en
     assert "成对不确定性" in combined_zh
     assert "LLM 单元测试" in combined_zh
     assert "证据" in combined_zh

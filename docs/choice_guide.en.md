@@ -25,6 +25,7 @@ actually supports.**
 | "I do not know which adjacent tool fits." | `pcl choose --need "<your goal>"` |
 | "I need security or red-team evals." | `pcl choose --need "security evals and red-team checks"` |
 | "I already have Promptfoo/Langfuse/LangSmith/DeepEval output." | `pcl start --choice import --tool auto --input results.json --out runs/from-external` |
+| "I need a local UI for model drift, audit, history, or prompt comparison." | `pcl ui --runs runs --policy examples/guard.policy.yaml` |
 | "I need the paper-derived diagnostics." | `pcl research-quickstart --out runs/research-demo --open-report` |
 | "I need a reviewer-facing market/evidence scorecard." | `pcl start --choice ecosystem --out runs/ecosystem-demo` |
 
@@ -37,6 +38,7 @@ actually supports.**
 | You need traces, agent debugging, datasets, or LangChain/LangGraph observability. | LangSmith | A reproducible evidence bundle that separates prompt effects from model, metric, and split changes. |
 | You need open-source tracing, prompt management, evals, cost, or self-hosting. | Langfuse | Soft-hard gap, trajectory/Riccati/tv-soft diagnostics, and bounded research claims. |
 | You want a polished prompt writing app. | prompt-optimizer | Proof that the optimized prompt is reproducibly better before deployment or publication. |
+| You want a local reviewer cockpit for model drift, diff audit, history, and reports. | PCL local UI | One browser view over PCL's guard, report, model drift, audit, history, and workflow artifacts. |
 | You already have baseline/candidate outputs. | PCL | Evidence card, claim check, gap status, provenance, and research bundle verification. |
 
 ## Copy-Paste Paths
@@ -68,6 +70,7 @@ The same advisor is available in the local UI under **Research Overview**.
 | DeepEval TestRun output | Metrics exist, but prompt/model/split provenance and claim boundary need review. | `pcl import deepeval --input test-run.json --out runs/from-deepeval` | `manifest.json`, then `pcl evidence-card` |
 | LangSmith/Langfuse trace or eval export | Traces exist, but prompt effects may be confounded with model, metric, or split changes. | `pcl start --choice import --tool auto --input results.json --out runs/from-external` | `bridge_summary.html` |
 | prompt-optimizer favorites/templates | Better prompt candidates exist, but they are not yet paired scored evidence. | `pcl import prompt-optimizer --input favorites.json --out runs/from-prompt-optimizer` | `prompt_optimizer_gap_plan.html` |
+| PCL run artifacts | Reviewer needs one navigable local cockpit for guard, report, model drift, audit, and history. | `pcl ui --runs runs --policy examples/guard.policy.yaml` | Local dashboard tabs |
 | Any paper-diagnostic run | The research evidence bundle has not been opened first. | `pcl research-quickstart --out runs/research-demo --open-report` | `research_bundle.html` |
 
 Generate the ecosystem scorecard and market-readiness summary:
