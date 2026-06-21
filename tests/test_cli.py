@@ -1782,6 +1782,9 @@ def test_cli_start_guide_prints_goal_based_paths(capsys: pytest.CaptureFixture[s
     assert "Promptfoo -> eval / CI / red-team" in output
     assert "DeepEval -> Pytest-style LLM tests" in output
     assert "prompt-optimizer -> prompt writing" in output
+    assert "Five-minute adoption path" in output
+    assert "bridge_summary.html" in output
+    assert "research_bundle.html" in output
     assert "pcl start" in output
 
 
@@ -1804,6 +1807,9 @@ def test_cli_start_guide_supports_chinese(capsys: pytest.CaptureFixture[str]) ->
     assert "Promptfoo -> eval / CI / red-team" in output
     assert "DeepEval -> Pytest-style LLM tests" in output
     assert "prompt-optimizer -> prompt 写作" in output
+    assert "5 分钟采用路径" in output
+    assert "bridge_summary.html" in output
+    assert "research_bundle.zh.html" in output
     assert "pcl start --language zh" in output
 
 

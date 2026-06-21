@@ -3293,6 +3293,7 @@ def _format_start_guide(language: str = "en") -> str:
             "  LangSmith / Langfuse -> trace / observability; PCL 补 prompt-only 证据和论文诊断。",
             "  prompt-optimizer -> prompt 写作; PCL 证明优化是否可靠。",
         ]
+        adoption_title = "5 分钟采用路径:"
         final_lines = ["如果想用交互菜单, 运行:", "  pcl start --language zh"]
     else:
         rows = [
@@ -3357,6 +3358,7 @@ def _format_start_guide(language: str = "en") -> str:
             "  prompt-optimizer -> prompt writing; "
             "PCL proves whether the optimization is reliable.",
         ]
+        adoption_title = "Five-minute adoption path:"
         final_lines = ["If you prefer an interactive menu, run:", "  pcl start"]
     for index, (goal, command, next_step) in enumerate(rows, start=1):
         lines.extend(
@@ -3367,7 +3369,10 @@ def _format_start_guide(language: str = "en") -> str:
                 "",
             ]
         )
-    lines.extend([*ecosystem_lines, ""])
+    lines.extend([*ecosystem_lines, "", adoption_title])
+    for row in adoption_path_rows(language=language):
+        lines.append(f"  {row.get('minute')}. {row.get('action')} -> {row.get('result')}")
+    lines.append("")
     lines.extend(final_lines)
     return "\n".join(lines)
 
