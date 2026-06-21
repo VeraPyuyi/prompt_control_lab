@@ -5,6 +5,8 @@ from importlib import resources
 from pathlib import Path
 from typing import Any, cast
 
+import pytest
+
 from promptcontrollab.cli import main
 from promptcontrollab.files import JsonDict
 from promptcontrollab.github_app import (
@@ -542,6 +544,22 @@ def test_install_plugin_writes_templates_without_overwrite(tmp_path: Path) -> No
     assert "PromptControlLab Gate" in action_target.read_text(encoding="utf-8")
 
 
+def test_install_plugin_dry_run_previews_without_writing(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    codex_target = tmp_path / "codex-skill"
+
+    assert main(["install-plugin", "codex", "--target", str(codex_target), "--dry-run"]) == 0
+    payload = json.loads(capsys.readouterr().out)
+
+    assert payload["plugin"] == "codex"
+    assert payload["dry_run"] is True
+    assert payload["target"] == str(codex_target)
+    assert any(path.endswith("SKILL.md") for path in payload["would_write"])
+    assert not codex_target.exists()
+
+
 def test_install_plugin_all_uses_target_as_root(tmp_path: Path) -> None:
     target = tmp_path / "templates"
 
@@ -554,6 +572,28 @@ def test_install_plugin_all_uses_target_as_root(tmp_path: Path) -> None:
     copied_names = [path.name for path in target.rglob("*")]
     assert "__pycache__" not in copied_names
     assert not any(path.suffix == ".pyc" for path in target.rglob("*"))
+
+
+def test_install_plugin_all_dry_run_uses_target_as_root_without_writing(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    target = tmp_path / "templates"
+
+    assert main(["install-plugin", "all", "--target", str(target), "--dry-run"]) == 0
+    payload = json.loads(capsys.readouterr().out)
+
+    assert payload["plugin"] == "all"
+    assert payload["dry_run"] is True
+    assert len(payload["installed"]) == 4
+    targets = {item["plugin"]: item["target"] for item in payload["installed"]}
+    assert targets["codex"] == str(target / "codex")
+    assert targets["cursor"] == str(target / "cursor" / "prompt_control_lab.mdc")
+    assert targets["claude-code"] == str(target / "claude-code")
+    assert targets["github-action"] == str(
+        target / "github-action" / "prompt-control-lab-gate.yml"
+    )
+    assert not target.exists()
 
 
 def test_template_data_is_available_as_package_resource() -> None:

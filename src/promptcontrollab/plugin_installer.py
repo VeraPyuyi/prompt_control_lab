@@ -12,7 +12,13 @@ from promptcontrollab.files import JsonDict
 PLUGIN_CHOICES = {"codex", "cursor", "claude-code", "github-action", "all"}
 
 
-def install_plugin(plugin: str, *, target: Path | None = None, force: bool = False) -> JsonDict:
+def install_plugin(
+    plugin: str,
+    *,
+    target: Path | None = None,
+    force: bool = False,
+    dry_run: bool = False,
+) -> JsonDict:
     """Install one integration template."""
 
     if plugin not in PLUGIN_CHOICES:
@@ -21,11 +27,13 @@ def install_plugin(plugin: str, *, target: Path | None = None, force: bool = Fal
     if plugin == "all":
         targets = _all_targets(target)
         installed = [
-            install_plugin(name, target=targets[name], force=force)
+            install_plugin(name, target=targets[name], force=force, dry_run=dry_run)
             for name in ["codex", "cursor", "claude-code", "github-action"]
         ]
-        return {"plugin": "all", "installed": installed}
+        return {"plugin": "all", "dry_run": dry_run, "installed": installed}
     destination = target or _default_target(plugin)
+    if dry_run:
+        return _preview_install(plugin, destination)
     if plugin == "codex":
         _copy_resource_dir("codex_skill", destination, force=force)
     elif plugin == "cursor":
@@ -35,6 +43,27 @@ def install_plugin(plugin: str, *, target: Path | None = None, force: bool = Fal
     elif plugin == "github-action":
         _copy_resource_file("github_action/prompt-control-lab-gate.yml", destination, force=force)
     return {"plugin": plugin, "target": str(destination)}
+
+
+def _preview_install(plugin: str, destination: Path) -> JsonDict:
+    if plugin == "codex":
+        would_write = _preview_resource_dir("codex_skill", destination)
+    elif plugin == "cursor":
+        would_write = [str(destination)]
+    elif plugin == "claude-code":
+        would_write = _preview_resource_dir("claude_code", destination)
+    elif plugin == "github-action":
+        would_write = [str(destination)]
+    else:
+        msg = f"Unknown plugin `{plugin}`"
+        raise ValueError(msg)
+    return {
+        "plugin": plugin,
+        "target": str(destination),
+        "dry_run": True,
+        "would_write": would_write,
+        "would_overwrite": destination.exists(),
+    }
 
 
 def _default_target(plugin: str) -> Path:
@@ -100,6 +129,18 @@ def _copy_resource_dir(relative: str, destination: Path, *, force: bool) -> None
             out = destination / relative_path
             out.parent.mkdir(parents=True, exist_ok=True)
             shutil.copyfile(item, out)
+
+
+def _preview_resource_dir(relative: str, destination: Path) -> list[str]:
+    source = _resource_root().joinpath(relative)
+    would_write: list[str] = []
+    with resources.as_file(source) as source_path:
+        for item in source_path.rglob("*"):
+            if item.is_dir() or _is_generated_python_cache(item):
+                continue
+            relative_path = item.relative_to(source_path)
+            would_write.append(str(destination / relative_path))
+    return sorted(would_write)
 
 
 def _is_generated_python_cache(path: Path) -> bool:

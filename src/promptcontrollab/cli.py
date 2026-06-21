@@ -1090,6 +1090,11 @@ def build_parser() -> argparse.ArgumentParser:
     )
     install_parser.add_argument("--target", type=Path, default=None, help="Override install path.")
     install_parser.add_argument("--force", action="store_true", help="Overwrite existing files.")
+    install_parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Preview target files without writing templates.",
+    )
     install_parser.set_defaults(func=_cmd_install_plugin)
 
     doctor_parser = subcommands.add_parser("doctor", help="Check local setup and integrations.")
@@ -2593,7 +2598,12 @@ def _cmd_github_app_serve(args: argparse.Namespace) -> None:
 
 
 def _cmd_install_plugin(args: argparse.Namespace) -> None:
-    payload = install_plugin(args.plugin, target=args.target, force=args.force)
+    payload = install_plugin(
+        args.plugin,
+        target=args.target,
+        force=args.force,
+        dry_run=args.dry_run,
+    )
     print(json.dumps(payload, indent=2, ensure_ascii=False, sort_keys=True))
 
 
@@ -3376,11 +3386,13 @@ def _format_start_plugins_guide(language: str = "en") -> str:
             [
                 "PromptControlLab adapter 接入路径",
                 "",
-                "1. 安装本地 adapter 模板:",
+                "1. 先预览将写入哪些 adapter 文件:",
+                "   pcl install-plugin all --dry-run",
+                "2. 确认后安装本地 adapter 模板:",
                 "   pcl install-plugin all",
-                "2. 检查本地安装和 hook 是否可运行:",
+                "3. 检查本地安装和 hook 是否可运行:",
                 "   pcl doctor --json",
-                "3. 在 IDE / CI adapter 中调用稳定 JSON 输出:",
+                "4. 在 IDE / CI adapter 中调用稳定 JSON 输出:",
                 (
                     '   pcl guard --prompt "修复这个 bug" --profile coding '
                     "--policy examples/guard.policy.yaml --json"
@@ -3397,11 +3409,13 @@ def _format_start_plugins_guide(language: str = "en") -> str:
         [
             "PromptControlLab adapter setup",
             "",
-            "1. Install the local adapter templates:",
+            "1. Preview which adapter files would be written:",
+            "   pcl install-plugin all --dry-run",
+            "2. Install the local adapter templates after review:",
             "   pcl install-plugin all",
-            "2. Check that local hooks and adapters can run:",
+            "3. Check that local hooks and adapters can run:",
             "   pcl doctor --json",
-            "3. Call the stable guard JSON from your IDE or CI adapter:",
+            "4. Call the stable guard JSON from your IDE or CI adapter:",
             (
                 '   pcl guard --prompt "Fix this bug" --profile coding '
                 "--policy examples/guard.policy.yaml --json"

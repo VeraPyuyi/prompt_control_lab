@@ -50,6 +50,7 @@ python -m build --wheel --no-isolation
 pipx install dist/promptcontrollab-0.1.0-py3-none-any.whl
 pcl --help
 pcl doctor
+pcl install-plugin all --target ./tmp-pcl-templates --dry-run
 pcl install-plugin all --target ./tmp-pcl-templates
 pcl import prompt-optimizer --input examples/external/prompt_optimizer_favorites.json --out ./tmp-pcl-prompt-optimizer
 pcl scaffold-check --run ./tmp-pcl-prompt-optimizer
@@ -86,13 +87,15 @@ uv pip install -e ".[dev,ui]"
 插件模板打包在 `promptcontrollab.template_data` 下。wheel 安装后，建议验证：
 
 ```bash
+pcl install-plugin all --target ./tmp-pcl-templates --dry-run
 pcl install-plugin codex --target ./tmp-pcl-codex
 pcl install-plugin cursor --target ./tmp-pcl-cursor
 pcl install-plugin claude-code --target ./tmp-pcl-claude
 pcl install-plugin github-action --target ./tmp-pcl-action
 ```
 
-默认不会覆盖已有文件；只有传入 `--force` 才会覆盖。
+先用 `--dry-run` 预览将写入的文件。默认不会覆盖已有文件；只有传入 `--force`
+才会覆盖。
 
 ## 发布边界
 

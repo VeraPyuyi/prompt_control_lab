@@ -53,6 +53,7 @@ Create a temporary environment or use `pipx`:
 pipx install dist/promptcontrollab-0.1.0-py3-none-any.whl
 pcl --help
 pcl doctor
+pcl install-plugin all --target ./tmp-pcl-templates --dry-run
 pcl install-plugin all --target ./tmp-pcl-templates
 pcl import prompt-optimizer --input examples/external/prompt_optimizer_favorites.json --out ./tmp-pcl-prompt-optimizer
 pcl scaffold-check --run ./tmp-pcl-prompt-optimizer
@@ -92,13 +93,15 @@ The adapter templates are packaged under `promptcontrollab.template_data`.
 After installing from a wheel, verify:
 
 ```bash
+pcl install-plugin all --target ./tmp-pcl-templates --dry-run
 pcl install-plugin codex --target ./tmp-pcl-codex
 pcl install-plugin cursor --target ./tmp-pcl-cursor
 pcl install-plugin claude-code --target ./tmp-pcl-claude
 pcl install-plugin github-action --target ./tmp-pcl-action
 ```
 
-Existing files are not overwritten unless `--force` is used.
+Use `--dry-run` to preview target files before writing. Existing files are not
+overwritten unless `--force` is used.
 
 ## Release Boundary
 

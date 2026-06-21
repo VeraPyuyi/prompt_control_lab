@@ -1898,6 +1898,7 @@ def test_cli_start_choice_plugins_prints_adapter_setup(
     output = capsys.readouterr().out
 
     assert "PromptControlLab adapter setup" in output
+    assert "pcl install-plugin all --dry-run" in output
     assert "pcl install-plugin all" in output
     assert "pcl doctor --json" in output
     assert "--json" in output
@@ -1906,6 +1907,7 @@ def test_cli_start_choice_plugins_prints_adapter_setup(
     assert main(["start", "--choice", "plugins", "--language", "zh"]) == 0
     output = capsys.readouterr().out
     assert "PromptControlLab adapter" in output
+    assert "pcl install-plugin all --dry-run" in output
     assert "pcl install-plugin all" in output
     assert "pcl doctor --json" in output
     assert "docs/choice_guide.zh.md" in output
