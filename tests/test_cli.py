@@ -2001,7 +2001,9 @@ def test_cli_choose_recommends_adjacent_tool_paths(capsys: pytest.CaptureFixture
 
     local_ui_needs = [
         "local UI dashboard for model drift and prompt comparison",
+        "I want to see the product demo first",
         "本地UI查看模型漂移和提示词对比",
+        "我想先看看产品demo",
     ]
     for need in local_ui_needs:
         assert main(["choose", "--need", need, "--json"]) == 0
