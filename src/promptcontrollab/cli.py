@@ -3346,143 +3346,124 @@ def _format_start_guide(language: str = "en") -> str:
     if language == "zh":
         rows = [
             (
-                "不知道应该先用哪个工具",
-                'pcl choose --need "安全评测和红队检查" --language zh',
-                "先得到 Promptfoo / DeepEval / LangSmith / Langfuse / "
-                "prompt-optimizer / PCL 的选择建议。",
-            ),
-            (
-                "运行论文里的 prompt optimization 诊断",
-                "pcl research-quickstart --out runs/research-demo --language zh --open-report "
-                "(同: pcl research-demo ... && pcl diagnose ...)",
-                "打开 research_bundle.zh.html 查看论文证据包。",
-            ),
-            (
                 "先看产品长什么样",
                 "pcl quickstart --language zh --out demo --open-report "
                 "(同: pcl start --choice demo --language zh --out demo)",
-                "进入 `demo`, 打开 `runs/quick/report.html`, "
-                "或运行 `pcl ui --runs runs --policy examples/guard.policy.yaml`。",
+                "生成 demo 并打开 `runs/quick/report.html`。",
+            ),
+            (
+                "运行论文里的 prompt optimization 诊断",
+                "pcl research-quickstart --out runs/research-demo --language zh --open-report",
+                "打开 research_bundle.zh.html 查看论文证据包。",
+            ),
+            (
+                "不知道应该先用哪个工具",
+                'pcl choose --need "安全评测和红队检查" --language zh',
+                "Promptfoo / DeepEval / LangSmith / Langfuse / prompt-optimizer / PCL 的选择建议。",
             ),
             (
                 "对比相邻工具和 PCL 补充证据",
                 "pcl start --choice ecosystem --out runs/ecosystem-demo",
-                (
-                    "打开 `ecosystem_scorecard.html`, 先看 Market readiness, "
-                    "再看外部工具强项和 PCL 证据缺口。"
-                ),
+                "打开 `ecosystem_scorecard.html`, 先看 Market readiness。",
             ),
             (
                 "把外部评测结果导入成证据",
                 "pcl start --choice import --tool auto --input results.json "
                 "--out runs/from-external",
-                "然后运行 `pcl scaffold-check`、`pcl evidence-card` 或 `pcl evidence-audit`。",
+                "`manifest.json` 和 `bridge_summary.html`。",
             ),
             (
                 "在 coding agent 执行前守护 prompt",
                 "pcl guard --prompt \"修复这个 bug\" "
                 "--profile coding --policy examples/guard.policy.yaml",
-                "复制改写后的 prompt, 或安装 Claude Code、Cursor、Codex adapter。",
+                "复制改写后的 prompt。",
             ),
             (
                 "审计 agent 到底改了什么",
                 "pcl audit-diff --before HEAD~1 --after HEAD --out runs/audit",
-                "然后生成 PR summary, 或构建 agent_run.json artifact。",
+                "生成审计 artifact, 之后可做 PR summary。",
             ),
         ]
-        lines = ["PromptControlLab 新手路径指南", "", "选择最符合你目标的路径:", ""]
+        lines = ["PromptControlLab 新手路径指南", "", "复制最符合你目标的一条命令:", ""]
         start_label = "起点"
-        next_label = "下一步"
-        ecosystem_lines = [
-            "生态选择地图:",
-            "  先看 Market readiness -> 判断 PCL 应该领先什么、学习什么、暂时不要做什么。",
-            "  Promptfoo -> eval / CI / red-team; PCL 补成对统计和 claim 边界。",
-            "  DeepEval -> Pytest-style LLM tests; PCL 补 provenance 和 claim check。",
-            "  LangSmith / Langfuse -> trace / observability; PCL 补 prompt-only 证据和论文诊断。",
-            "  prompt-optimizer -> prompt 写作; PCL 证明优化是否可靠。",
+        result_label = "得到"
+        final_lines = [
+            "更多选择逻辑: docs/choice_guide.zh.md",
+            (
+                "相邻工具地图: Promptfoo -> eval / CI / red-team; "
+                "DeepEval -> Pytest-style LLM tests; prompt-optimizer -> prompt 写作。"
+            ),
+            "如果想用交互菜单: pcl start --language zh",
         ]
-        adoption_title = "5 分钟采用路径:"
-        final_lines = ["如果想用交互菜单, 运行:", "  pcl start --language zh"]
     else:
         rows = [
-            (
-                "Choose the right adjacent tool",
-                'pcl choose --need "security evals and red-team checks"',
-                "Get a direct recommendation for Promptfoo, DeepEval, "
-                "LangSmith/Langfuse, prompt-optimizer, or PCL.",
-            ),
-            (
-                "Run the paper-derived prompt optimization diagnostics",
-                "pcl research-quickstart --out runs/research-demo --open-report "
-                "(same as: pcl research-demo ... && pcl diagnose ...)",
-                "Open research_bundle.html as the paper evidence bundle.",
-            ),
             (
                 "See the product first",
                 "pcl quickstart --out demo --open-report "
                 "(same as: pcl start --choice demo --out demo)",
-                "Enter `demo`, open `runs/quick/report.html`, "
-                "or run `pcl ui --runs runs --policy examples/guard.policy.yaml`.",
+                "A demo run and `runs/quick/report.html`.",
+            ),
+            (
+                "Run the paper-derived prompt optimization diagnostics",
+                "pcl research-quickstart --out runs/research-demo --open-report",
+                "research_bundle.html as the paper evidence bundle.",
+            ),
+            (
+                "Choose the right adjacent tool",
+                'pcl choose --need "security evals and red-team checks"',
+                (
+                    "A direct recommendation for Promptfoo, DeepEval, "
+                    "LangSmith/Langfuse, prompt-optimizer, or PCL."
+                ),
             ),
             (
                 "Compare adjacent tools and PCL-added evidence",
                 "pcl start --choice ecosystem --out runs/ecosystem-demo",
-                (
-                    "Open `ecosystem_scorecard.html`; read Market readiness first, "
-                    "then inspect external-tool strengths and PCL evidence gaps."
-                ),
+                "ecosystem_scorecard.html with Market readiness.",
             ),
             (
                 "Import external eval results as evidence",
                 "pcl start --choice import --tool auto --input results.json "
                 "--out runs/from-external",
-                "Then run `pcl scaffold-check`, `pcl evidence-card`, or `pcl evidence-audit`.",
+                "`manifest.json` and `bridge_summary.html`.",
             ),
             (
                 "Guard a coding-agent prompt before it runs",
                 "pcl guard --prompt \"Fix this bug\" "
                 "--profile coding --policy examples/guard.policy.yaml",
-                "Copy the improved prompt or install a Claude Code, Cursor, or Codex adapter.",
+                "An improved prompt and guard result.",
             ),
             (
                 "Audit what an agent changed",
                 "pcl audit-diff --before HEAD~1 --after HEAD --out runs/audit",
-                "Then generate a PR summary or build an agent_run.json artifact.",
+                "Diff audit artifacts; optionally build a PR summary.",
             ),
         ]
         lines = [
             "PromptControlLab beginner guide",
             "",
-            "Choose the path that matches your goal:",
+            "Copy the one command that matches your goal:",
             "",
         ]
         start_label = "Start"
-        next_label = "Next"
-        ecosystem_lines = [
-            "Ecosystem choice map:",
-            "  Market readiness -> where PCL should lead, learn, and avoid overbuilding.",
-            "  Promptfoo -> eval / CI / red-team; PCL adds paired stats and claim boundaries.",
-            "  DeepEval -> Pytest-style LLM tests; PCL adds provenance and claim checks.",
-            "  LangSmith / Langfuse -> traces / observability; "
-            "PCL adds prompt-only evidence and paper diagnostics.",
-            "  prompt-optimizer -> prompt writing; "
-            "PCL proves whether the optimization is reliable.",
+        result_label = "You get"
+        final_lines = [
+            "More choice logic: docs/choice_guide.en.md",
+            (
+                "Adjacent-tool map: Promptfoo -> eval / CI / red-team; "
+                "DeepEval -> Pytest-style LLM tests; prompt-optimizer -> prompt writing."
+            ),
+            "Interactive menu: pcl start",
         ]
-        adoption_title = "Five-minute adoption path:"
-        final_lines = ["If you prefer an interactive menu, run:", "  pcl start"]
     for index, (goal, command, next_step) in enumerate(rows, start=1):
         lines.extend(
             [
                 f"{index}. {goal}",
                 f"   {start_label}: {command}",
-                f"   {next_label}: {next_step}",
+                f"   {result_label}: {next_step}",
                 "",
             ]
         )
-    lines.extend([*ecosystem_lines, "", adoption_title])
-    for row in adoption_path_rows(language=language):
-        lines.append(f"  {row.get('minute')}. {row.get('action')} -> {row.get('result')}")
-    lines.append("")
     lines.extend(final_lines)
     return "\n".join(lines)
 

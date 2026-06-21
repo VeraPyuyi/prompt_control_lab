@@ -1812,22 +1812,21 @@ def test_cli_start_guide_prints_goal_based_paths(capsys: pytest.CaptureFixture[s
     assert "See the product first" in output
     assert "pcl quickstart --out demo --open-report" in output
     assert "pcl start --choice demo --out demo" in output
-    assert "open `runs/quick/report.html`" in output
+    assert "`runs/quick/report.html`" in output
     assert "paper-derived prompt optimization diagnostics" in output
     assert "pcl research-quickstart --out runs/research-demo --open-report" in output
     assert "Compare adjacent tools and PCL-added evidence" in output
     assert "pcl start --choice ecosystem --out runs/ecosystem-demo" in output
     assert "Market readiness" in output
-    assert "avoid overbuilding" in output
     assert "Import external eval results as evidence" in output
     assert "pcl start --choice import --tool auto --input results.json" in output
     assert "Guard a coding-agent prompt" in output
     assert "Audit what an agent changed" in output
-    assert "Ecosystem choice map" in output
+    assert "More choice logic: docs/choice_guide.en.md" in output
+    assert "Adjacent-tool map" in output
     assert "Promptfoo -> eval / CI / red-team" in output
     assert "DeepEval -> Pytest-style LLM tests" in output
     assert "prompt-optimizer -> prompt writing" in output
-    assert "Five-minute adoption path" in output
     assert "bridge_summary.html" in output
     assert "research_bundle.html" in output
     assert "pcl start" in output
@@ -1849,12 +1848,12 @@ def test_cli_start_guide_supports_chinese(capsys: pytest.CaptureFixture[str]) ->
     assert "pcl start --choice import --tool auto --input results.json" in output
     assert "在 coding agent 执行前守护 prompt" in output
     assert "审计 agent 到底改了什么" in output
-    assert "生态选择地图" in output
+    assert "docs/choice_guide.zh.md" in output
+    assert "相邻工具地图" in output
     assert "Market readiness" in output
     assert "Promptfoo -> eval / CI / red-team" in output
     assert "DeepEval -> Pytest-style LLM tests" in output
     assert "prompt-optimizer -> prompt 写作" in output
-    assert "5 分钟采用路径" in output
     assert "bridge_summary.html" in output
     assert "research_bundle.zh.html" in output
     assert "pcl start --language zh" in output
