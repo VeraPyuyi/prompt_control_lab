@@ -1918,6 +1918,37 @@ def test_cli_choose_recommends_adjacent_tool_paths(capsys: pytest.CaptureFixture
         assert payload["matched"] == matched
         assert payload["use_first"] == use_first
 
+    evidence_questions = [
+        (
+            "I want to know if my optimized prompt is really better",
+            [
+                "choose",
+                "--need",
+                "I want to know if my optimized prompt is really better",
+                "--json",
+            ],
+        ),
+        (
+            "我想知道优化后的提示词是不是真的更好",
+            [
+                "choose",
+                "--need",
+                "我想知道优化后的提示词是不是真的更好",
+                "--language",
+                "zh",
+                "--json",
+            ],
+        ),
+    ]
+    for _label, args in evidence_questions:
+        assert main(args) == 0
+        payload = json.loads(capsys.readouterr().out)
+        assert payload["matched"] == "research-evidence"
+        assert payload["use_first"] == "prompt_control_lab"
+        assert payload["commands"] == [
+            "pcl research-quickstart --out runs/research-demo --open-report"
+        ]
+
     assert main(["choose", "--need", "prompt 写作和提示词模板", "--language", "zh"]) == 0
     output = capsys.readouterr().out
     assert "prompt-optimizer 更适合做成熟的 prompt 写作" in output

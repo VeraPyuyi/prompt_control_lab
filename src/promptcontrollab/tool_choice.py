@@ -272,6 +272,7 @@ def choose_tool_for_need(need: str) -> JsonDict:
     """Return the best adjacent-tool lane for a free-text need."""
 
     text = need.lower().strip()
+    evidence_question = _looks_like_evidence_question(text)
     lanes = tool_choice_lanes()
     best_lane: JsonDict | None = None
     best_score = 0
@@ -284,6 +285,8 @@ def choose_tool_for_need(need: str) -> JsonDict:
         if text == str(lane.get("id", "")).lower():
             score += 5
         score += sum(1 for keyword in keyword_list if keyword in text)
+        if lane.get("id") == "research-evidence" and evidence_question:
+            score += 4
         if score > best_score:
             best_lane = lane
             best_score = score
@@ -313,6 +316,42 @@ def choose_tool_for_need(need: str) -> JsonDict:
         "adoption_path": adoption_path_rows(language="en"),
         "adoption_path_zh": adoption_path_rows(language="zh"),
     }
+
+
+def _looks_like_evidence_question(text: str) -> bool:
+    """Return true when the user asks whether an optimization claim is reliable."""
+
+    evidence_terms = [
+        "really better",
+        "actually better",
+        "actually improved",
+        "prove",
+        "proof",
+        "evidence",
+        "reliable",
+        "reliability",
+        "safe to claim",
+        "can safely claim",
+        "before deployment",
+        "before publication",
+        "is my optimized prompt",
+        "optimized prompt is",
+        "是否真的",
+        "是不是真的",
+        "真的更好",
+        "是否可靠",
+        "可靠提升",
+        "证明",
+        "证据",
+        "验证",
+        "上线前",
+        "部署前",
+        "发表前",
+        "能不能声称",
+        "能否声称",
+        "是否能说明",
+    ]
+    return any(term in text for term in evidence_terms)
 
 
 def market_gap_action_for_lane(lane_id: str, *, language: str = "en") -> JsonDict:
