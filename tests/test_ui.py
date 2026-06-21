@@ -1428,7 +1428,8 @@ def test_ui_tutorial_onboarding_paths_cover_main_user_goals() -> None:
 
     combined_en = " ".join(str(row) for row in en_paths)
     combined_zh = " ".join(str(row) for row in zh_paths)
-    assert "research-demo" in combined_en
+    assert "research-quickstart" in combined_en
+    assert "research-quickstart" in combined_zh
     assert "Import external run" in combined_en
     assert "evidence-audit" in combined_en
     assert "Guard Prompt" in combined_en

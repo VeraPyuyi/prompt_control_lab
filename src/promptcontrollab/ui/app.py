@@ -110,7 +110,7 @@ TEXT = {
             "soft-hard gap, trajectory, Riccati surrogate, and time-varying soft-control."
         ),
         "research_empty": "No research diagnostics found for this run.",
-        "research_demo_command": "pcl research-demo --out runs/research-demo",
+        "research_demo_command": "pcl research-quickstart --out runs/research-demo --open-report",
         "research_pipeline": "Research workflow",
         "research_at_a_glance": "At a glance",
         "research_overview_graphic": "Research overview graphic",
@@ -381,7 +381,9 @@ TEXT = {
             "Riccati surrogate 和 time-varying soft-control。"
         ),
         "research_empty": "当前 run 还没有研究诊断 artifact。",
-        "research_demo_command": "pcl research-demo --out runs/research-demo",
+        "research_demo_command": (
+            "pcl research-quickstart --out runs/research-demo --language zh --open-report"
+        ),
         "research_pipeline": "研究流程",
         "research_at_a_glance": "一眼看懂",
         "research_overview_graphic": "研究总览图",
@@ -835,7 +837,7 @@ ONBOARDING_PATHS = {
         },
         {
             "goal": "I need the paper-derived prompt optimization diagnostics.",
-            "start": "Research Overview -> `pcl research-demo` -> `pcl diagnose`",
+            "start": "Research Overview -> `pcl research-quickstart`",
             "next": "Check evidence card, claim-check, gap-status, soft-hard, trajectory, Riccati, and tv-soft readiness.",
         },
         {
@@ -862,7 +864,7 @@ ONBOARDING_PATHS = {
         },
         {
             "goal": "我需要论文里的 prompt optimization 诊断能力。",
-            "start": "Research Overview -> `pcl research-demo` -> `pcl diagnose`",
+            "start": "研究总览 -> `pcl research-quickstart`",
             "next": "检查 evidence card、claim-check、gap-status、soft-hard、trajectory、Riccati 和 tv-soft 是否就绪。",
         },
         {
