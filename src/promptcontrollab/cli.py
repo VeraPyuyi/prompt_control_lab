@@ -3357,7 +3357,7 @@ def _format_start_guide(language: str = "en") -> str:
                 "先看产品长什么样",
                 "pcl quickstart --language zh --out demo --open-report "
                 "(同: pcl start --choice demo --language zh --out demo)",
-                "生成 demo 并打开 `runs/quick/report.html`。",
+                "生成 demo 并打开 `demo/runs/quick/report.html`。",
             ),
             (
                 "打开本地 UI 工作台",
@@ -3414,7 +3414,7 @@ def _format_start_guide(language: str = "en") -> str:
                 "See the product first",
                 "pcl quickstart --out demo --open-report "
                 "(same as: pcl start --choice demo --out demo)",
-                "A demo run and `runs/quick/report.html`.",
+                "A demo run and `demo/runs/quick/report.html`.",
             ),
             (
                 "Open the local UI reviewer cockpit",

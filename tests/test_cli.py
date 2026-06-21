@@ -1812,7 +1812,7 @@ def test_cli_start_guide_prints_goal_based_paths(capsys: pytest.CaptureFixture[s
     assert "See the product first" in output
     assert "pcl quickstart --out demo --open-report" in output
     assert "pcl start --choice demo --out demo" in output
-    assert "`runs/quick/report.html`" in output
+    assert "`demo/runs/quick/report.html`" in output
     assert "Open the local UI reviewer cockpit" in output
     assert "pcl ui --runs demo/runs --policy demo/examples/guard.policy.yaml" in output
     assert "paper-derived prompt optimization diagnostics" in output
@@ -1847,7 +1847,7 @@ def test_cli_start_guide_supports_chinese(capsys: pytest.CaptureFixture[str]) ->
         "pcl ui --runs demo/runs --policy demo/examples/guard.policy.yaml --language zh"
         in output
     )
-    assert "打开 `runs/quick/report.html`" in output
+    assert "打开 `demo/runs/quick/report.html`" in output
     assert "运行论文里的 prompt optimization 诊断" in output
     assert "pcl research-quickstart --out runs/research-demo --language zh --open-report" in output
     assert "把外部评测结果导入成证据" in output
