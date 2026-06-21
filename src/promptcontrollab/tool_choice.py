@@ -594,9 +594,13 @@ def format_tool_choice(payload: JsonDict, *, language: str = "en") -> str:
                     f"先打开: {action.get('open', '')}",
                 ]
             )
-        lines.extend(["", "5 分钟采用路径:"])
-        lines.extend(_adoption_path_text_lines(language="zh"))
-        lines.extend(["", f"不要做: {payload.get('avoid_zh') or payload.get('avoid', '')}"])
+        lines.extend(
+            [
+                "",
+                "详细路径: 加 `--out runs/tool-choice.json` 保存 Markdown 审查材料。",
+                f"不要做: {payload.get('avoid_zh') or payload.get('avoid', '')}",
+            ]
+        )
         return "\n".join(lines)
     lines = [
         "Tool choice recommendation",
@@ -620,9 +624,13 @@ def format_tool_choice(payload: JsonDict, *, language: str = "en") -> str:
                 f"Open first: {action.get('open', '')}",
             ]
         )
-    lines.extend(["", "Five-minute adoption path:"])
-    lines.extend(_adoption_path_text_lines(language="en"))
-    lines.extend(["", f"Avoid: {payload.get('avoid', '')}"])
+    lines.extend(
+        [
+            "",
+            "More detail: add `--out runs/tool-choice.json` to save a Markdown review note.",
+            f"Avoid: {payload.get('avoid', '')}",
+        ]
+    )
     return "\n".join(lines)
 
 

@@ -1877,7 +1877,8 @@ def test_cli_choose_recommends_adjacent_tool_paths(capsys: pytest.CaptureFixture
     assert "pcl import prompt-optimizer" in output
     assert "scaffold-check" in output
     assert "Open first: prompt_optimizer_gap_plan.html" in output
-    assert "Five-minute adoption path" in output
+    assert "More detail: add `--out runs/tool-choice.json`" in output
+    assert "Five-minute adoption path" not in output
 
     assert main(["choose", "--need", "安全评测和红队检查", "--language", "zh", "--json"]) == 0
     payload = json.loads(capsys.readouterr().out)
@@ -1903,7 +1904,8 @@ def test_cli_choose_recommends_adjacent_tool_paths(capsys: pytest.CaptureFixture
     assert "\u8bc1\u636e\u7f3a\u53e3:" in output
     assert "\u4e0b\u4e00\u6b65\u8fd0\u884c:" in output
     assert "\u5148\u6253\u5f00: evidence_audit_result.html" in output
-    assert "5 \u5206\u949f\u91c7\u7528\u8def\u5f84" in output
+    assert "\u8be6\u7ec6\u8def\u5f84:" in output
+    assert "5 \u5206\u949f\u91c7\u7528\u8def\u5f84" not in output
     assert "Evidence gap:" not in output
 
     cases = [
