@@ -34,11 +34,11 @@ dependencies = []
 
 [project.optional-dependencies]
 research = [
-  "numpy>=1.24",
+  "numpy>=1.24,<2.0",
   "scipy>=1.10"
 ]
 hf = [
-  "numpy>=1.24",
+  "numpy>=1.24,<2.0",
   "torch>=2.1",
   "transformers>=4.40"
 ]
@@ -56,7 +56,7 @@ dev = [
   "build>=1.2",
   "hatchling>=1.24",
   "mypy>=1.10",
-  "numpy>=1.24",
+  "numpy>=1.24,<2.0",
   "pytest>=8.0",
   "ruff>=0.5",
   "scipy>=1.10"
