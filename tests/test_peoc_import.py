@@ -4,7 +4,7 @@ import hashlib
 import json
 import os
 from pathlib import Path
-from typing import NoReturn
+from typing import Any, NoReturn
 
 import pytest
 
@@ -829,17 +829,17 @@ def test_import_commit_failure_removes_new_output_directories(
     bundle_root = tmp_path / "bundle"
     out_dir = tmp_path / "run"
     _write_minimal_bundle(bundle_root)
-    original_replace = os.replace
 
-    def fail_on_portable_destination(source: Path, destination: Path) -> None:
-        target = Path(destination)
-        if out_dir in target.parents and "source" in target.relative_to(out_dir).parts:
-            raise OSError("simulated commit failure")
-        original_replace(source, destination)
+    def fail_on_portable_destination(
+        source: Path,
+        destination: Path,
+        source_identity: Any,
+    ) -> NoReturn:
+        raise OSError("simulated commit failure")
 
     monkeypatch.setattr(
-        os,
-        "replace",
+        peoc_import_module,
+        "_publish_new_portable",
         fail_on_portable_destination,
     )
 
@@ -929,6 +929,225 @@ def test_portable_import_copies_small_json_and_csv_but_never_npz(
         and row["sha256"].startswith("sha256:")
         for row in manifest["sources"]
     )
+
+
+def test_portable_import_falls_back_when_hard_links_are_unavailable(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    bundle_root = tmp_path / "bundle"
+    out_dir = tmp_path / "portable"
+    _write_minimal_bundle(bundle_root)
+
+    def hard_links_unavailable(source: Path, destination: Path) -> None:
+        raise OSError("hard links are unavailable")
+
+    monkeypatch.setattr(os, "link", hard_links_unavailable)
+
+    import_peoc_bundle(
+        PeocImportOptions(
+            bundle_root=bundle_root,
+            out_dir=out_dir,
+            portable=True,
+        )
+    )
+
+    copied_hard = out_dir / "source" / HARD_SUMMARY
+    assert copied_hard.read_bytes() == (bundle_root / HARD_SUMMARY).read_bytes()
+
+
+def test_portable_overwrite_rejects_unregistered_existing_destination(
+    tmp_path: Path,
+) -> None:
+    bundle_root = tmp_path / "bundle"
+    out_dir = tmp_path / "run"
+    _write_minimal_bundle(bundle_root)
+    import_peoc_bundle(PeocImportOptions(bundle_root=bundle_root, out_dir=out_dir))
+    original_manifest = (out_dir / "manifest.json").read_bytes()
+    collision = out_dir / "source" / HARD_SUMMARY
+    collision.parent.mkdir(parents=True, exist_ok=True)
+    collision.write_text("user-owned content", encoding="utf-8")
+
+    with pytest.raises(ValueError, match=r"not registered|unregistered"):
+        import_peoc_bundle(
+            PeocImportOptions(
+                bundle_root=bundle_root,
+                out_dir=out_dir,
+                portable=True,
+                overwrite=True,
+            )
+        )
+
+    assert collision.read_text(encoding="utf-8") == "user-owned content"
+    assert (out_dir / "manifest.json").read_bytes() == original_manifest
+
+
+def test_portable_overwrite_replaces_registered_copies_and_preserves_unrelated(
+    tmp_path: Path,
+) -> None:
+    bundle_root = tmp_path / "bundle"
+    out_dir = tmp_path / "run"
+    _write_minimal_bundle(bundle_root)
+    import_peoc_bundle(
+        PeocImportOptions(
+            bundle_root=bundle_root,
+            out_dir=out_dir,
+            portable=True,
+        )
+    )
+    copied_hard = out_dir / "source" / HARD_SUMMARY
+    previous_copy = copied_hard.read_bytes()
+    unrelated = out_dir / "source" / "user-notes.txt"
+    unrelated.write_text("keep me", encoding="utf-8")
+    hard_path = bundle_root / HARD_SUMMARY
+    hard_payload = read_json(hard_path)
+    hard_payload["summary"][0]["mean"] = 0.13
+    _write_json(hard_path, hard_payload)
+
+    import_peoc_bundle(
+        PeocImportOptions(
+            bundle_root=bundle_root,
+            out_dir=out_dir,
+            portable=True,
+            overwrite=True,
+        )
+    )
+
+    assert copied_hard.read_bytes() == hard_path.read_bytes()
+    assert copied_hard.read_bytes() != previous_copy
+    assert unrelated.read_text(encoding="utf-8") == "keep me"
+
+
+def test_portable_commit_rejects_unregistered_destination_created_after_preflight(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    bundle_root = tmp_path / "bundle"
+    out_dir = tmp_path / "run"
+    _write_minimal_bundle(bundle_root)
+    import_peoc_bundle(PeocImportOptions(bundle_root=bundle_root, out_dir=out_dir))
+    original_manifest = (out_dir / "manifest.json").read_bytes()
+    collision = out_dir / "source" / HARD_SUMMARY
+    original_preflight = peoc_import_module._preflight_staged_targets
+
+    def preflight_then_create_collision(
+        output_dir: Path,
+        targets: list[tuple[Path, Path]],
+        *,
+        overwrite: bool,
+        registered_portable_targets: set[Path],
+    ) -> None:
+        original_preflight(
+            output_dir,
+            targets,
+            overwrite=overwrite,
+            registered_portable_targets=registered_portable_targets,
+        )
+        collision.parent.mkdir(parents=True, exist_ok=True)
+        collision.write_text("race-created content", encoding="utf-8")
+
+    monkeypatch.setattr(
+        peoc_import_module,
+        "_preflight_staged_targets",
+        preflight_then_create_collision,
+    )
+
+    with pytest.raises(ValueError, match=r"not registered|unregistered"):
+        import_peoc_bundle(
+            PeocImportOptions(
+                bundle_root=bundle_root,
+                out_dir=out_dir,
+                portable=True,
+                overwrite=True,
+            )
+        )
+
+    assert collision.read_text(encoding="utf-8") == "race-created content"
+    assert (out_dir / "manifest.json").read_bytes() == original_manifest
+
+
+def test_commit_rollback_preserves_portable_file_replaced_after_publication(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    bundle_root = tmp_path / "bundle"
+    out_dir = tmp_path / "run"
+    _write_minimal_bundle(bundle_root)
+    import_peoc_bundle(PeocImportOptions(bundle_root=bundle_root, out_dir=out_dir))
+    original_manifest = (out_dir / "manifest.json").read_bytes()
+    original_publish = peoc_import_module._publish_new_portable
+    original_validate = peoc_import_module._validate_published_artifact
+    raced_path: Path | None = None
+    portable_publications = 0
+
+    def fail_second_portable_publication(
+        source: Path,
+        destination: Path,
+        source_identity: Any,
+    ) -> Any:
+        nonlocal portable_publications
+        portable_publications += 1
+        if portable_publications == 2:
+            raise OSError("simulated later commit failure")
+        return original_publish(source, destination, source_identity)
+
+    def validate_then_replace(
+        output_dir: Path,
+        destination: Path,
+        guard: Any,
+        placed: Any,
+    ) -> None:
+        nonlocal raced_path
+        original_validate(output_dir, destination, guard, placed)
+        if raced_path is None and "source" in destination.relative_to(out_dir).parts:
+            destination.unlink()
+            destination.write_text("external replacement", encoding="utf-8")
+            raced_path = destination
+
+    monkeypatch.setattr(
+        peoc_import_module,
+        "_publish_new_portable",
+        fail_second_portable_publication,
+    )
+    monkeypatch.setattr(
+        peoc_import_module,
+        "_validate_published_artifact",
+        validate_then_replace,
+    )
+
+    with pytest.raises(OSError, match="simulated later commit failure"):
+        import_peoc_bundle(
+            PeocImportOptions(
+                bundle_root=bundle_root,
+                out_dir=out_dir,
+                portable=True,
+                overwrite=True,
+            )
+        )
+
+    assert raced_path is not None
+    assert raced_path.read_text(encoding="utf-8") == "external replacement"
+    assert (out_dir / "manifest.json").read_bytes() == original_manifest
+
+
+def test_directory_guard_rejects_parent_replaced_after_validation(
+    tmp_path: Path,
+) -> None:
+    out_dir = tmp_path / "run"
+    parent = out_dir / "source" / "nested"
+    parent.mkdir(parents=True)
+    destination = parent / "artifact.json"
+    guard = peoc_import_module._capture_directory_guard(out_dir, destination)
+    moved_parent = parent.with_name("nested-before-race")
+    parent.rename(moved_parent)
+    parent.mkdir()
+
+    with pytest.raises(ValueError, match=r"changed during PEOC import"):
+        peoc_import_module._validate_directory_guard(
+            out_dir,
+            destination,
+            guard,
+        )
 
 
 def test_overwrite_removes_only_previously_registered_portable_copies(

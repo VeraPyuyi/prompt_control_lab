@@ -79,6 +79,30 @@ class _TrajectoryBinaryResults:
     all_invalid: list[JsonDict]
 
 
+@dataclass(frozen=True)
+class _FileIdentity:
+    device: int
+    inode: int
+    size: int
+    sha256: str
+
+
+@dataclass(frozen=True)
+class _PlacedArtifact:
+    path: Path
+    identity: _FileIdentity
+
+
+@dataclass(frozen=True)
+class _DirectoryGuard:
+    root_resolved: Path
+    root_device: int
+    root_inode: int
+    parent_resolved: Path
+    parent_device: int
+    parent_inode: int
+
+
 def _sha256_file(path: Path) -> str:
     return _file_integrity(path)[1]
 
@@ -449,7 +473,13 @@ def _commit_staged_import(
         (source, out_dir / source.relative_to(staging_dir))
         for source in staged_files
     ]
-    _preflight_staged_targets(out_dir, targets, overwrite=overwrite)
+    registered_portable_targets = set(previous_portable_targets)
+    _preflight_staged_targets(
+        out_dir,
+        targets,
+        overwrite=overwrite,
+        registered_portable_targets=registered_portable_targets,
+    )
     staged_destinations = {destination.resolve() for _, destination in targets}
     obsolete_targets = [
         target
@@ -458,7 +488,7 @@ def _commit_staged_import(
     ]
 
     backup_root = staging_dir.parent / "backup"
-    placed: list[Path] = []
+    placed: list[_PlacedArtifact] = []
     backups: list[tuple[Path, Path]] = []
     created_directories: list[Path] = []
     try:
@@ -471,19 +501,56 @@ def _commit_staged_import(
             backups.append((backup, destination))
         for source, destination in targets:
             _mkdir_with_tracking(destination.parent, created_directories)
+            _validate_staged_target_path(out_dir, destination)
+            directory_guard = _capture_directory_guard(out_dir, destination)
+            portable_target = _is_portable_target(out_dir, destination)
             if destination.exists():
+                if (
+                    portable_target
+                    and destination not in registered_portable_targets
+                ):
+                    raise ValueError(
+                        "Portable destination exists but is not registered by the "
+                        f"previous source_manifest.json: {destination}"
+                    )
                 relative = destination.relative_to(out_dir)
                 backup = backup_root / relative
                 backup.parent.mkdir(parents=True, exist_ok=True)
                 os.replace(destination, backup)
                 backups.append((backup, destination))
-            os.replace(source, destination)
-            placed.append(destination)
+                _validate_directory_guard(out_dir, destination, directory_guard)
+                directory_guard = _capture_directory_guard(out_dir, destination)
+            source_identity = _capture_file_identity(source)
+            if portable_target and destination not in registered_portable_targets:
+                artifact = _publish_new_portable(
+                    source,
+                    destination,
+                    source_identity,
+                )
+                placed.append(artifact)
+                _validate_published_artifact(
+                    out_dir,
+                    destination,
+                    directory_guard,
+                    artifact,
+                )
+                source.unlink()
+            else:
+                os.replace(source, destination)
+                artifact = _PlacedArtifact(destination, source_identity)
+                placed.append(artifact)
+                _validate_published_artifact(
+                    out_dir,
+                    destination,
+                    directory_guard,
+                    artifact,
+                )
     except Exception:
-        for destination in reversed(placed):
-            if destination.is_file():
-                destination.unlink()
+        for artifact in reversed(placed):
+            _unlink_if_owned(artifact)
         for backup, destination in reversed(backups):
+            if os.path.lexists(destination):
+                continue
             destination.parent.mkdir(parents=True, exist_ok=True)
             os.replace(backup, destination)
         for directory in reversed(created_directories):
@@ -603,13 +670,10 @@ def _preflight_staged_targets(
     targets: list[tuple[Path, Path]],
     *,
     overwrite: bool,
+    registered_portable_targets: set[Path],
 ) -> None:
     for _, destination in targets:
-        resolved = destination.resolve()
-        if not _is_relative_to(resolved, out_dir):
-            raise ValueError(
-                f"Staged PEOC artifact escapes output directory: {destination}"
-            )
+        _validate_staged_target_path(out_dir, destination)
         if destination.is_dir():
             raise ValueError(
                 f"PEOC artifact path collides with a directory: {destination}"
@@ -619,6 +683,15 @@ def _preflight_staged_targets(
                 "PEOC artifact already exists; pass --overwrite to replace it: "
                 f"{destination}"
             )
+        if (
+            destination.exists()
+            and _is_portable_target(out_dir, destination)
+            and destination not in registered_portable_targets
+        ):
+            raise ValueError(
+                "Portable destination exists but is not registered by the previous "
+                f"source_manifest.json: {destination}"
+            )
         parent = destination.parent
         while parent != out_dir:
             if parent.exists() and not parent.is_dir():
@@ -626,6 +699,217 @@ def _preflight_staged_targets(
                     f"PEOC artifact parent path is not a directory: {parent}"
                 )
             parent = parent.parent
+
+
+def _validate_staged_target_path(out_dir: Path, destination: Path) -> None:
+    resolved = destination.resolve()
+    if not _is_relative_to(resolved, out_dir):
+        raise ValueError(
+            f"Staged PEOC artifact escapes output directory: {destination}"
+        )
+
+
+def _capture_directory_guard(
+    out_dir: Path,
+    destination: Path,
+) -> _DirectoryGuard:
+    root_resolved = out_dir.resolve(strict=True)
+    parent_resolved = destination.parent.resolve(strict=True)
+    if (
+        not out_dir.is_dir()
+        or not destination.parent.is_dir()
+        or not _is_relative_to(parent_resolved, root_resolved)
+    ):
+        raise ValueError(
+            f"PEOC artifact parent resolves outside output: {destination.parent}"
+        )
+    _reject_linked_parent_components(out_dir, destination.parent)
+    root_stat = out_dir.stat()
+    parent_stat = destination.parent.stat()
+    return _DirectoryGuard(
+        root_resolved=root_resolved,
+        root_device=root_stat.st_dev,
+        root_inode=root_stat.st_ino,
+        parent_resolved=parent_resolved,
+        parent_device=parent_stat.st_dev,
+        parent_inode=parent_stat.st_ino,
+    )
+
+
+def _validate_directory_guard(
+    out_dir: Path,
+    destination: Path,
+    expected: _DirectoryGuard,
+) -> None:
+    try:
+        observed = _capture_directory_guard(out_dir, destination)
+    except (OSError, ValueError) as exc:
+        raise ValueError(
+            f"Destination parent changed during PEOC import: {destination.parent}"
+        ) from exc
+    if observed != expected:
+        raise ValueError(
+            f"Destination parent changed during PEOC import: {destination.parent}"
+        )
+
+
+def _reject_linked_parent_components(out_dir: Path, parent: Path) -> None:
+    try:
+        relative = parent.relative_to(out_dir)
+    except ValueError as exc:
+        raise ValueError(
+            f"PEOC artifact parent is outside output: {parent}"
+        ) from exc
+    current = out_dir
+    for part in relative.parts:
+        current /= part
+        if current.is_symlink():
+            raise ValueError(
+                f"PEOC artifact parent uses a symbolic link: {current}"
+            )
+
+
+def _capture_file_identity(path: Path) -> _FileIdentity:
+    if path.is_symlink() or not path.is_file():
+        raise ValueError(f"PEOC staged artifact is not a regular file: {path}")
+    before = path.stat()
+    size, sha256 = _file_integrity(path)
+    after = path.stat()
+    if (
+        before.st_dev != after.st_dev
+        or before.st_ino != after.st_ino
+        or before.st_size != after.st_size
+        or after.st_size != size
+    ):
+        raise ValueError(f"PEOC staged artifact changed while reading: {path}")
+    return _FileIdentity(
+        device=after.st_dev,
+        inode=after.st_ino,
+        size=size,
+        sha256=sha256,
+    )
+
+
+def _publish_new_portable(
+    source: Path,
+    destination: Path,
+    source_identity: _FileIdentity,
+) -> _PlacedArtifact:
+    try:
+        # Staging shares the output volume, so linking publishes the complete
+        # file atomically without replacing a racing writer.
+        os.link(source, destination)
+        return _PlacedArtifact(destination, source_identity)
+    except FileExistsError as exc:
+        raise _portable_destination_collision(destination) from exc
+    except OSError:
+        # Some writable filesystems do not support hard links. Exclusive creation
+        # keeps the no-clobber guarantee while providing a portable copy fallback.
+        pass
+
+    created_token: tuple[int, int] | None = None
+    try:
+        with source.open("rb") as input_stream, destination.open("xb") as output_stream:
+            created_stat = os.fstat(output_stream.fileno())
+            created_token = (created_stat.st_dev, created_stat.st_ino)
+            shutil.copyfileobj(input_stream, output_stream, _CHUNK_SIZE)
+            output_stream.flush()
+        copied_identity = _capture_file_identity(destination)
+    except FileExistsError as exc:
+        raise _portable_destination_collision(destination) from exc
+    except Exception:
+        if created_token is not None:
+            _unlink_if_file_token(destination, created_token)
+        raise
+
+    if (
+        copied_identity.device != created_token[0]
+        or copied_identity.inode != created_token[1]
+        or copied_identity.size != source_identity.size
+        or copied_identity.sha256 != source_identity.sha256
+    ):
+        _unlink_if_file_token(destination, created_token)
+        raise ValueError(
+            f"Portable fallback copy verification failed for {destination}"
+        )
+    return _PlacedArtifact(destination, copied_identity)
+
+
+def _portable_destination_collision(destination: Path) -> ValueError:
+    return ValueError(
+        "Portable destination appeared during commit but is not registered by "
+        f"the previous source_manifest.json: {destination}"
+    )
+
+
+def _unlink_if_file_token(path: Path, expected: tuple[int, int]) -> None:
+    try:
+        if path.is_symlink() or not path.is_file():
+            return
+        observed = path.stat()
+        if (observed.st_dev, observed.st_ino) == expected:
+            path.unlink()
+    except OSError:
+        return
+
+
+def _path_matches_file_identity(path: Path, expected: _FileIdentity) -> bool:
+    try:
+        if path.is_symlink() or not path.is_file():
+            return False
+        before = path.stat()
+        if (
+            before.st_dev != expected.device
+            or before.st_ino != expected.inode
+            or before.st_size != expected.size
+        ):
+            return False
+        size, sha256 = _file_integrity(path)
+        after = path.stat()
+    except OSError:
+        return False
+    return (
+        before.st_dev == after.st_dev == expected.device
+        and before.st_ino == after.st_ino == expected.inode
+        and before.st_size == after.st_size == size == expected.size
+        and sha256 == expected.sha256
+    )
+
+
+def _validate_published_artifact(
+    out_dir: Path,
+    destination: Path,
+    directory_guard: _DirectoryGuard,
+    artifact: _PlacedArtifact,
+) -> None:
+    _validate_directory_guard(out_dir, destination, directory_guard)
+    if not _path_matches_file_identity(destination, artifact.identity):
+        raise ValueError(
+            f"Published PEOC artifact changed during commit: {destination}"
+        )
+    try:
+        resolved = destination.resolve(strict=True)
+    except OSError as exc:
+        raise ValueError(
+            f"Published PEOC artifact became unavailable: {destination}"
+        ) from exc
+    if not _is_relative_to(resolved, directory_guard.root_resolved):
+        raise ValueError(
+            f"Published PEOC artifact escaped output directory: {destination}"
+        )
+
+
+def _unlink_if_owned(artifact: _PlacedArtifact) -> None:
+    if _path_matches_file_identity(artifact.path, artifact.identity):
+        artifact.path.unlink()
+
+
+def _is_portable_target(out_dir: Path, destination: Path) -> bool:
+    try:
+        relative = destination.relative_to(out_dir)
+    except ValueError:
+        return False
+    return len(relative.parts) > 1 and relative.parts[0] == "source"
 
 
 def _copy_portable_sources(
