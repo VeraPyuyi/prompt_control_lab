@@ -40,6 +40,17 @@ def _recovery_files_with_content(out_dir: Path, content: str) -> list[Path]:
     ]
 
 
+def _recovery_files_with_sha256(out_dir: Path, digest: str) -> list[Path]:
+    recovery_root = out_dir / ".peoc-recovery"
+    if not recovery_root.is_dir():
+        return []
+    return [
+        path
+        for path in recovery_root.rglob("*")
+        if path.is_file() and hashlib.sha256(path.read_bytes()).hexdigest() == digest
+    ]
+
+
 def _write_minimal_bundle(root: Path) -> None:
     (root / "README_MANIFEST.md").parent.mkdir(parents=True, exist_ok=True)
     (root / "README_MANIFEST.md").write_text("# PEOC evidence bundle\n", encoding="utf-8")
@@ -1027,6 +1038,7 @@ def test_portable_overwrite_replaces_registered_copies_and_preserves_unrelated(
     assert copied_hard.read_bytes() == hard_path.read_bytes()
     assert copied_hard.read_bytes() != previous_copy
     assert unrelated.read_text(encoding="utf-8") == "keep me"
+    assert not (out_dir / ".peoc-recovery").exists()
 
 
 def test_portable_overwrite_rejects_modified_registered_copy(
@@ -1107,6 +1119,70 @@ def test_registered_replacement_rejects_destination_created_after_backup(
     assert copied_hard.read_text(encoding="utf-8") == "racing writer content"
     assert unrelated.read_text(encoding="utf-8") == "keep me"
     assert (out_dir / "manifest.json").read_bytes() == original_manifest
+
+
+def test_rollback_preserves_unchanged_backup_when_destination_reappears(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    bundle_root = tmp_path / "bundle"
+    out_dir = tmp_path / "run"
+    _write_minimal_bundle(bundle_root)
+    import_peoc_bundle(
+        PeocImportOptions(
+            bundle_root=bundle_root,
+            out_dir=out_dir,
+            portable=True,
+        )
+    )
+    assert not (out_dir / ".peoc-recovery").exists()
+
+    copied_hard = out_dir / "source" / HARD_SUMMARY
+    old_digest = hashlib.sha256(copied_hard.read_bytes()).hexdigest()
+    occupied_recovery = (
+        out_dir
+        / ".peoc-recovery"
+        / HARD_SUMMARY.parent
+        / f"{HARD_SUMMARY.name}.{old_digest[:16]}.recovered"
+    )
+    occupied_recovery.parent.mkdir(parents=True)
+    occupied_recovery.write_text("pre-existing recovery item", encoding="utf-8")
+    destination_racer = "destination reappeared during rollback"
+    original_replace = os.replace
+    injected = False
+
+    def hard_links_unavailable(source: Path, destination: Path) -> None:
+        raise OSError("hard links are unavailable")
+
+    def create_racer_after_backup(source: Path, destination: Path) -> None:
+        nonlocal injected
+        original_replace(source, destination)
+        if not injected and Path(source) == copied_hard:
+            copied_hard.write_text(destination_racer, encoding="utf-8")
+            injected = True
+
+    monkeypatch.setattr(os, "link", hard_links_unavailable)
+    monkeypatch.setattr(os, "replace", create_racer_after_backup)
+
+    with pytest.raises(ValueError) as error:
+        import_peoc_bundle(
+            PeocImportOptions(
+                bundle_root=bundle_root,
+                out_dir=out_dir,
+                portable=True,
+                overwrite=True,
+            )
+        )
+
+    assert injected is True
+    assert copied_hard.read_text(encoding="utf-8") == destination_racer
+    assert occupied_recovery.read_text(
+        encoding="utf-8"
+    ) == "pre-existing recovery item"
+    recovered = _recovery_files_with_sha256(out_dir, old_digest)
+    assert recovered
+    assert ".peoc-recovery" in str(error.value)
+    assert any(str(path) in str(error.value) for path in recovered)
 
 
 def test_obsolete_cleanup_rejects_file_changed_after_identity_check(

@@ -576,14 +576,22 @@ def _commit_staged_import(
                     artifact,
                 )
         _validate_backups_for_cleanup(out_dir, backups)
-    except Exception:
+    except Exception as exc:
         for artifact in reversed(placed):
             _unlink_if_owned(artifact)
+        recovery_paths: list[Path] = []
         for backup_artifact in reversed(backups):
-            _restore_backup_no_clobber(out_dir, backup_artifact)
+            recovery_path = _restore_backup_no_clobber(
+                out_dir,
+                backup_artifact,
+            )
+            if recovery_path is not None:
+                recovery_paths.append(recovery_path)
         for directory in reversed(created_directories):
             with suppress(OSError):
                 directory.rmdir()
+        if recovery_paths:
+            raise _error_with_recovery_paths(exc, recovery_paths) from exc
         raise
     _prune_empty_output_directories(
         [registered.path.parent for registered in obsolete_targets],
@@ -884,8 +892,10 @@ def _move_to_backup(
                 f"{destination}"
             )
         _validate_directory_guard(out_dir, destination, directory_guard)
-    except Exception:
-        _restore_backup_no_clobber(out_dir, artifact)
+    except Exception as exc:
+        recovery_path = _restore_backup_no_clobber(out_dir, artifact)
+        if recovery_path is not None:
+            raise _error_with_recovery_paths(exc, [recovery_path]) from exc
         raise
     return artifact
 
@@ -893,18 +903,19 @@ def _move_to_backup(
 def _restore_backup_no_clobber(
     out_dir: Path,
     artifact: _BackupArtifact,
-) -> bool:
+) -> Path | None:
     if not artifact.backup.is_file():
-        return False
-    actual_identity = _capture_file_identity(artifact.backup)
+        return None
+    try:
+        actual_identity = _capture_file_identity(artifact.backup)
+    except (OSError, ValueError):
+        return _preserve_backup_without_identity(out_dir, artifact)
     if os.path.lexists(artifact.destination):
-        _preserve_unresolved_backup_if_needed(
+        return _preserve_unresolved_backup(
             out_dir,
             artifact,
             actual_identity,
-            safe_identities=(artifact.identity,),
         )
-        return False
     try:
         _validate_staged_target_path(out_dir, artifact.destination)
         directory_guard = _capture_directory_guard(out_dir, artifact.destination)
@@ -920,26 +931,23 @@ def _restore_backup_no_clobber(
             restored,
         )
     except (OSError, ValueError):
-        _preserve_current_unresolved_backup(
-            out_dir,
-            artifact,
-            safe_identities=(artifact.identity,),
-        )
-        return False
+        return _preserve_current_backup(out_dir, artifact)
     if not _path_has_same_content(restored.path, actual_identity):
-        _preserve_current_unresolved_backup(
-            out_dir,
-            artifact,
-            safe_identities=(artifact.identity,),
-        )
-        return False
+        return _preserve_current_backup(out_dir, artifact)
     _unlink_if_owned(_PlacedArtifact(artifact.backup, actual_identity))
-    _preserve_current_unresolved_backup(
+    if not artifact.backup.is_file():
+        return None
+    try:
+        remaining_identity = _capture_file_identity(artifact.backup)
+    except (OSError, ValueError):
+        return _preserve_backup_without_identity(out_dir, artifact)
+    if _same_file_content(remaining_identity, actual_identity):
+        return None
+    return _preserve_unresolved_backup(
         out_dir,
         artifact,
-        safe_identities=(artifact.identity, actual_identity),
+        remaining_identity,
     )
-    return True
 
 
 def _validate_backups_for_cleanup(
@@ -963,35 +971,16 @@ def _validate_backups_for_cleanup(
         )
 
 
-def _preserve_current_unresolved_backup(
+def _preserve_current_backup(
     out_dir: Path,
     artifact: _BackupArtifact,
-    *,
-    safe_identities: tuple[_FileIdentity, ...],
-) -> Path | None:
+) -> Path:
     if not artifact.backup.is_file():
-        return None
-    actual_identity = _capture_file_identity(artifact.backup)
-    return _preserve_unresolved_backup_if_needed(
-        out_dir,
-        artifact,
-        actual_identity,
-        safe_identities=safe_identities,
-    )
-
-
-def _preserve_unresolved_backup_if_needed(
-    out_dir: Path,
-    artifact: _BackupArtifact,
-    actual_identity: _FileIdentity,
-    *,
-    safe_identities: tuple[_FileIdentity, ...],
-) -> Path | None:
-    if any(
-        _same_file_content(actual_identity, safe_identity)
-        for safe_identity in safe_identities
-    ):
-        return None
+        raise ValueError(f"PEOC backup became unavailable: {artifact.backup}")
+    try:
+        actual_identity = _capture_file_identity(artifact.backup)
+    except (OSError, ValueError):
+        return _preserve_backup_without_identity(out_dir, artifact)
     return _preserve_unresolved_backup(out_dir, artifact, actual_identity)
 
 
@@ -1058,6 +1047,71 @@ def _publish_recovery_snapshot(
         "Could not allocate an exclusive recovery path for PEOC backup: "
         f"{artifact.destination}"
     )
+
+
+def _preserve_backup_without_identity(
+    out_dir: Path,
+    artifact: _BackupArtifact,
+) -> Path:
+    relative = artifact.destination.relative_to(out_dir)
+    recovery_parent = out_dir / _RECOVERY_DIRECTORY / relative.parent
+    base_name = f"{relative.name}.unverified.recovered"
+
+    for collision_index in range(1000):
+        suffix = "" if collision_index == 0 else f".{collision_index}"
+        candidate = recovery_parent / f"{base_name}{suffix}"
+        _validate_staged_target_path(out_dir, candidate)
+        recovery_parent.mkdir(parents=True, exist_ok=True)
+        directory_guard = _capture_directory_guard(out_dir, candidate)
+        if os.path.lexists(candidate):
+            continue
+        created_token: tuple[int, int] | None = None
+        try:
+            try:
+                os.link(artifact.backup, candidate)
+            except FileExistsError:
+                continue
+            except OSError:
+                with (
+                    artifact.backup.open("rb") as input_stream,
+                    candidate.open("xb") as output_stream,
+                ):
+                    created_stat = os.fstat(output_stream.fileno())
+                    created_token = (created_stat.st_dev, created_stat.st_ino)
+                    shutil.copyfileobj(input_stream, output_stream, _CHUNK_SIZE)
+                    output_stream.flush()
+            _validate_directory_guard(out_dir, candidate, directory_guard)
+            if candidate.is_symlink() or not candidate.is_file():
+                raise ValueError(
+                    f"Unverified PEOC recovery is not a regular file: {candidate}"
+                )
+        except FileExistsError:
+            continue
+        except Exception:
+            if created_token is not None:
+                _unlink_if_file_token(candidate, created_token)
+            raise
+        return candidate
+    raise ValueError(
+        "Could not allocate an exclusive unverified recovery path for PEOC "
+        f"backup: {artifact.destination}"
+    )
+
+
+def _error_with_recovery_paths(
+    original: Exception,
+    recovery_paths: list[Path],
+) -> Exception:
+    paths = ", ".join(
+        str(path)
+        for path in sorted(set(recovery_paths), key=lambda item: item.as_posix())
+    )
+    message = f"{original} Recovery backup path(s): {paths}"
+    if isinstance(original, OSError):
+        return OSError(message)
+    if isinstance(original, ValueError):
+        return ValueError(message)
+    return RuntimeError(message)
 
 
 def _same_file_content(left: _FileIdentity, right: _FileIdentity) -> bool:
