@@ -9,6 +9,7 @@ from typing import Any, NoReturn
 import pytest
 
 import promptcontrollab.peoc_import as peoc_import_module
+from promptcontrollab.cli import main
 from promptcontrollab.files import JsonDict, read_json
 from promptcontrollab.peoc_import import (
     HARD_SUMMARY,
@@ -766,6 +767,281 @@ def test_import_peoc_bundle_writes_strict_self_contained_case_study(
     assert bundle_path not in case_html
     assert "FAILED_VALIDATION" in case_html
     assert "UNUSABLE" in case_html
+
+
+def test_research_import_peoc_cli_writes_primary_outputs(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    bundle_root = tmp_path / "bundle"
+    out_dir = tmp_path / "run"
+    _write_minimal_bundle(bundle_root)
+
+    assert (
+        main(
+            [
+                "research-import",
+                "peoc",
+                "--bundle",
+                str(bundle_root),
+                "--out",
+                str(out_dir),
+            ]
+        )
+        == 0
+    )
+
+    captured = capsys.readouterr()
+    assert captured.err == ""
+    assert "REAL PEOC BUNDLE" in captured.out
+    assert "FAILED_VALIDATION" in captured.out
+    assert "UNUSABLE" in captured.out
+    assert str(out_dir.resolve() / "research_case_study.html") in captured.out
+    assert str(bundle_root.resolve()) not in captured.out
+    assert "Warnings:" in captured.out
+    assert "non_finite_value" in captured.out
+    assert "blocking_sections=soft_evaluation=unusable" in captured.out
+    assert "{'section':" not in captured.out
+    assert "pcl evidence-card --run" in captured.out
+    assert (out_dir / "manifest.json").is_file()
+    assert (out_dir / "source_manifest.json").is_file()
+    assert (out_dir / "peoc_evidence.json").is_file()
+    assert (out_dir / "research_case_study.json").is_file()
+    assert (out_dir / "research_case_study.md").is_file()
+    assert (out_dir / "research_case_study.html").is_file()
+
+
+def test_research_import_peoc_cli_prints_plain_chinese_guidance(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    bundle_root = tmp_path / "bundle"
+    out_dir = tmp_path / "run-zh"
+    _write_minimal_bundle(bundle_root)
+
+    assert (
+        main(
+            [
+                "research-import",
+                "peoc",
+                "--bundle",
+                str(bundle_root),
+                "--out",
+                str(out_dir),
+                "--language",
+                "zh",
+            ]
+        )
+        == 0
+    )
+
+    captured = capsys.readouterr()
+    assert captured.err == ""
+    assert "证据来源: REAL PEOC BUNDLE" in captured.out
+    assert "输出目录:" in captured.out
+    assert "状态计数:" in captured.out
+    assert "FAILED_VALIDATION" in captured.out
+    assert "UNUSABLE" in captured.out
+    assert "最强安全结论:" in captured.out
+    assert "结论边界:" in captured.out
+    assert "警告:" in captured.out
+    assert "案例报告:" in captured.out
+    assert "下一步:" in captured.out
+
+
+@pytest.mark.parametrize(
+    ("argv", "expected"),
+    [
+        (["research-import", "--help"], "peoc"),
+        (
+            ["research-import", "peoc", "--help"],
+            "--hard-summary",
+        ),
+    ],
+)
+def test_research_import_peoc_help(
+    argv: list[str],
+    expected: str,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    with pytest.raises(SystemExit) as exc_info:
+        main(argv)
+
+    assert exc_info.value.code == 0
+    output = capsys.readouterr().out
+    assert expected in output
+    if "peoc" in argv:
+        assert "--trajectory-file" in output
+        assert "--portable" in output
+        assert "--overwrite" in output
+
+
+def test_research_import_peoc_portable_never_copies_npz(
+    tmp_path: Path,
+) -> None:
+    bundle_root = tmp_path / "bundle"
+    out_dir = tmp_path / "portable"
+    _write_minimal_bundle(bundle_root)
+
+    assert (
+        main(
+            [
+                "research-import",
+                "peoc",
+                "--bundle",
+                str(bundle_root),
+                "--out",
+                str(out_dir),
+                "--portable",
+            ]
+        )
+        == 0
+    )
+
+    assert not list(out_dir.rglob("*.npz"))
+    source_manifest = read_json(out_dir / "source_manifest.json")
+    binary_rows = [
+        row
+        for row in source_manifest["sources"]
+        if row["role"] == "trajectory_binary"
+    ]
+    assert binary_rows
+    assert all(row["copied_path"] is None for row in binary_rows)
+
+
+def test_research_import_peoc_cli_requires_overwrite_for_rerun(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    bundle_root = tmp_path / "bundle"
+    out_dir = tmp_path / "run"
+    _write_minimal_bundle(bundle_root)
+    base_args = [
+        "research-import",
+        "peoc",
+        "--bundle",
+        str(bundle_root),
+        "--out",
+        str(out_dir),
+    ]
+
+    assert main(base_args) == 0
+    capsys.readouterr()
+    assert main(base_args) == 2
+    failed = capsys.readouterr()
+    assert "pcl: error:" in failed.err
+    assert "--overwrite" in failed.err
+    assert "Traceback" not in failed.err
+
+    assert main([*base_args, "--overwrite"]) == 0
+    assert capsys.readouterr().err == ""
+
+
+def test_research_import_peoc_cli_reports_invalid_bundle_without_traceback(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    missing_bundle = tmp_path / "missing"
+
+    assert (
+        main(
+            [
+                "research-import",
+                "peoc",
+                "--bundle",
+                str(missing_bundle),
+                "--out",
+                str(tmp_path / "run"),
+            ]
+        )
+        == 2
+    )
+
+    captured = capsys.readouterr()
+    assert captured.out == ""
+    assert "pcl: error:" in captured.err
+    assert str(missing_bundle.resolve()) in captured.err
+    assert "Traceback" not in captured.err
+
+
+def test_research_import_peoc_cli_wires_explicit_source_overrides(
+    tmp_path: Path,
+) -> None:
+    bundle_root = tmp_path / "bundle"
+    out_dir = tmp_path / "run"
+    _write_minimal_bundle(bundle_root)
+    custom_root = bundle_root / "custom"
+    custom_root.mkdir()
+
+    custom_hard = custom_root / "hard.json"
+    custom_hard.write_bytes((bundle_root / HARD_SUMMARY).read_bytes())
+    default_stage = (
+        bundle_root
+        / "experiments"
+        / "redesign_v2"
+        / "stage_heterogeneity"
+        / "shi_r27_summary.json"
+    )
+    custom_stage = custom_root / "stage.json"
+    custom_stage.write_bytes(default_stage.read_bytes())
+    default_trajectory_root = (
+        bundle_root / "experiments" / "turnpike_trace" / "results_a800"
+    )
+    custom_stationary = custom_root / "stationary_arith_custom_s0.json"
+    custom_heterogeneous = custom_root / "turnpike_gsm8k_custom_s0.json"
+    custom_stationary.write_bytes(
+        (default_trajectory_root / "stationary_arith_Qwen2.5-7B-Instruct_s0.json").read_bytes()
+    )
+    custom_heterogeneous.write_bytes(
+        (default_trajectory_root / "turnpike_gsm8k_Qwen2.5-7B-Instruct_s0.json").read_bytes()
+    )
+
+    assert (
+        main(
+            [
+                "research-import",
+                "peoc",
+                "--bundle",
+                str(bundle_root),
+                "--out",
+                str(out_dir),
+                "--hard-summary",
+                "custom/hard.json",
+                "--trajectory-file",
+                "custom/stationary_arith_custom_s0.json",
+                "--trajectory-file",
+                "custom/turnpike_gsm8k_custom_s0.json",
+                "--heterogeneity-summary",
+                "custom/stage.json",
+            ]
+        )
+        == 0
+    )
+
+    sources = read_json(out_dir / "source_manifest.json")["sources"]
+    selected = {
+        row["role"]: (row["relative_path"], row["selection"])
+        for row in sources
+        if row["role"]
+        in {
+            "hard_test_summary",
+            "stage_heterogeneity",
+            "trajectory_stationary",
+            "trajectory_heterogeneous",
+        }
+    }
+    assert selected == {
+        "hard_test_summary": ("custom/hard.json", "override"),
+        "stage_heterogeneity": ("custom/stage.json", "override"),
+        "trajectory_stationary": (
+            "custom/stationary_arith_custom_s0.json",
+            "override",
+        ),
+        "trajectory_heterogeneous": (
+            "custom/turnpike_gsm8k_custom_s0.json",
+            "override",
+        ),
+    }
 
 
 def test_import_requires_overwrite_and_preserves_unrelated_files(tmp_path: Path) -> None:

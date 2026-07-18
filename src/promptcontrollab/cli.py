@@ -52,6 +52,11 @@ from promptcontrollab.ingest import (
 )
 from promptcontrollab.model_drift import run_model_drift
 from promptcontrollab.model_identity import detect_model_identity
+from promptcontrollab.peoc_import import (
+    PeocImportOptions,
+    PeocSourceOverrides,
+    import_peoc_bundle,
+)
 from promptcontrollab.plugin_installer import install_plugin
 from promptcontrollab.pr_summary import write_pr_summary
 from promptcontrollab.prompt_context import load_prompt_context
@@ -1117,6 +1122,63 @@ def build_parser() -> argparse.ArgumentParser:
     export_parser.add_argument("--run", type=Path, required=True, help="Run directory.")
     export_parser.add_argument("--out", type=Path, required=True, help="Zip output path.")
     export_parser.set_defaults(func=_cmd_export_report)
+
+    research_import_parser = subcommands.add_parser(
+        "research-import",
+        help="Import real research evidence through a named adapter.",
+    )
+    research_import_subcommands = research_import_parser.add_subparsers(
+        dest="research_import_adapter",
+        metavar="adapter",
+        required=True,
+    )
+    peoc_import_parser = research_import_subcommands.add_parser(
+        "peoc",
+        help="Import a real PEOC NMI replication bundle.",
+    )
+    peoc_import_parser.add_argument(
+        "--bundle",
+        type=Path,
+        required=True,
+        help="PEOC NMI replication bundle directory.",
+    )
+    peoc_import_parser.add_argument(
+        "--out",
+        type=Path,
+        required=True,
+        help="Output run directory.",
+    )
+    peoc_import_parser.add_argument(
+        "--hard-summary",
+        type=Path,
+        default=None,
+        help="Override the hard-test summary path within the bundle.",
+    )
+    peoc_import_parser.add_argument(
+        "--trajectory-file",
+        type=Path,
+        action="append",
+        default=[],
+        help="Override a trajectory JSON source; repeat for each source.",
+    )
+    peoc_import_parser.add_argument(
+        "--heterogeneity-summary",
+        type=Path,
+        default=None,
+        help="Override the stage-heterogeneity summary path within the bundle.",
+    )
+    peoc_import_parser.add_argument(
+        "--portable",
+        action="store_true",
+        help="Copy eligible small JSON/CSV sources; NPZ files remain references.",
+    )
+    peoc_import_parser.add_argument("--language", choices=["en", "zh"], default="en")
+    peoc_import_parser.add_argument(
+        "--overwrite",
+        action="store_true",
+        help="Replace previously generated PEOC import artifacts.",
+    )
+    peoc_import_parser.set_defaults(func=_cmd_research_import_peoc)
 
     research_demo_parser = subcommands.add_parser(
         "research-demo",
@@ -2669,6 +2731,153 @@ def _cmd_ui(args: argparse.Namespace) -> None:
 def _cmd_export_report(args: argparse.Namespace) -> None:
     payload = export_report_zip(run_dir=args.run, zip_path=args.out)
     print(json.dumps(payload, indent=2, ensure_ascii=False, sort_keys=True))
+
+
+def _cmd_research_import_peoc(args: argparse.Namespace) -> None:
+    overrides = PeocSourceOverrides(
+        hard_summary=args.hard_summary,
+        trajectory_files=tuple(args.trajectory_file),
+        heterogeneity_summary=args.heterogeneity_summary,
+    )
+    result = import_peoc_bundle(
+        PeocImportOptions(
+            bundle_root=args.bundle,
+            out_dir=args.out,
+            overrides=overrides,
+            portable=args.portable,
+            language=args.language,
+            overwrite=args.overwrite,
+        )
+    )
+    output_dir = Path(str(result["output_dir"]))
+    case_study = read_json(output_dir / "research_case_study.json")
+    print(
+        _format_peoc_import_output(
+            result=result,
+            case_study=case_study,
+            language=args.language,
+        )
+    )
+
+
+def _format_peoc_import_output(
+    *,
+    result: JsonDict,
+    case_study: JsonDict,
+    language: str,
+) -> str:
+    output_dir = Path(str(result.get("output_dir", "")))
+    case_study_path = output_dir / "research_case_study.html"
+    source_count = int(result.get("source_count", 0))
+    status_counts = result.get("status_counts")
+    statuses = status_counts if isinstance(status_counts, dict) else {}
+    boundary_value = result.get("claim_boundary")
+    boundary = boundary_value if isinstance(boundary_value, dict) else {}
+    boundary_status = str(boundary.get("status", "unknown"))
+    full_support = str(bool(boundary.get("full_research_support", False))).lower()
+    blocking = _format_peoc_blocking_sections(boundary.get("blocking_sections"))
+    warning_rows = case_study.get("warnings")
+    warnings = warning_rows if isinstance(warning_rows, list) else []
+    warning_counts: dict[str, int] = {}
+    for warning in warnings:
+        code = (
+            str(warning.get("code", "unknown"))
+            if isinstance(warning, dict)
+            else "unknown"
+        )
+        warning_counts[code] = warning_counts.get(code, 0) + 1
+    warning_summary = sorted(
+        warning_counts.items(),
+        key=lambda item: (-item[1], item[0]),
+    )
+    status_order = [
+        "available",
+        "partial",
+        "unusable",
+        "failed_validation",
+        "missing",
+    ]
+    status_lines = [
+        f"  - {status.upper()}: {int(statuses.get(status, 0))}"
+        for status in status_order
+        if status in statuses
+    ]
+    warning_lines = [f"  - {code}: {count}" for code, count in warning_summary[:8]]
+    if len(warning_summary) > 8:
+        warning_lines.append(f"  - other_codes: {len(warning_summary) - 8}")
+    command = f'pcl evidence-card --run "{output_dir}"'
+
+    if language == "zh":
+        safe_claim = (
+            "当前证据只支持在已导入的任务、模型、种子和实验协议范围内报告结果; "
+            "不能据此声称完整研究支持或通用基准结论。"
+        )
+        lines = [
+            "PEOC 研究证据导入",
+            "证据来源: REAL PEOC BUNDLE",
+            f"输出目录: {output_dir}",
+            f"源文件数量: {source_count}",
+            "状态计数:",
+            *status_lines,
+            f"最强安全结论: {safe_claim}",
+            (
+                "结论边界: "
+                f"full_research_support={full_support}; "
+                f"status={boundary_status}; 阻断部分={blocking}"
+            ),
+            f"警告: {len(warnings)} 条, 归为 {len(warning_counts)} 类",
+            *warning_lines,
+            f"案例报告: {case_study_path}",
+            "下一步:",
+            "  - 先打开上面的 HTML 案例报告, 查看每项证据及其限制。",
+            f"  - {command}",
+        ]
+        return "\n".join(lines)
+
+    safe_claim = str(
+        case_study.get(
+            "safe_claim",
+            (
+                "The imported evidence supports only task-, model-, seed-, and "
+                "protocol-bounded findings."
+            ),
+        )
+    )
+    lines = [
+        "PEOC research evidence import",
+        "Evidence source: REAL PEOC BUNDLE",
+        f"Output directory: {output_dir}",
+        f"Source count: {source_count}",
+        "Status counts:",
+        *status_lines,
+        f"Strongest safe claim: {safe_claim}",
+        (
+            "Claim boundary: "
+            f"full_research_support={full_support}; "
+            f"status={boundary_status}; blocking_sections={blocking}"
+        ),
+        f"Warnings: {len(warnings)} total across {len(warning_counts)} code(s)",
+        *warning_lines,
+        f"Case study: {case_study_path}",
+        "Next:",
+        "  - Open the HTML case study above to review each evidence limitation.",
+        f"  - {command}",
+    ]
+    return "\n".join(lines)
+
+
+def _format_peoc_blocking_sections(value: object) -> str:
+    if not isinstance(value, list) or not value:
+        return "none"
+    entries: list[str] = []
+    for item in value:
+        if isinstance(item, dict):
+            section = str(item.get("section", "unknown"))
+            status = str(item.get("status", "unknown"))
+            entries.append(f"{section}={status}")
+        else:
+            entries.append(str(item))
+    return ", ".join(entries)
 
 
 def _cmd_research_demo(args: argparse.Namespace) -> None:
