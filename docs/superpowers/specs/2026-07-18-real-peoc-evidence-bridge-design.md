@@ -139,6 +139,9 @@ runs/peoc-real/
   claim_check.json
   claim_check.md
   claim_check.html
+  research_gap_plan.json
+  research_gap_plan.md
+  research_gap_plan.html
   research_gap_status.json
   research_gap_status.md
   research_gap_status.html
@@ -374,8 +377,9 @@ Existing modules are extended, rather than duplicated:
 
 - `evidence_card.py` reads `peoc_evidence.json` when present.
 - `claim_check.py` applies the explicit evidence statuses and claim boundary.
-- `research_workflow.py` includes PEOC artifacts in the research bundle and gap
-  status.
+- `research_workflow.py` writes a gap plan from the missing/unusable PEOC
+  sections, derives gap status from that plan, and includes all PEOC artifacts
+  in the research bundle.
 - `ui/data.py` normalizes PEOC evidence for the Research Overview.
 - `ui/app.py` renders the real-evidence case study and limitations.
 - `ui/components.py` renders responsive metric cards.
