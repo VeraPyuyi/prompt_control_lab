@@ -329,6 +329,51 @@ def test_build_peoc_evidence_normalizes_non_finite_source_metadata(
     )
 
 
+def test_build_peoc_evidence_rejects_changed_required_hard_source(
+    tmp_path: Path,
+) -> None:
+    bundle_root = tmp_path / "bundle"
+    _write_minimal_bundle(bundle_root)
+    manifest = discover_peoc_sources(bundle_root, PeocSourceOverrides())
+    hard_path = bundle_root / HARD_SUMMARY
+    hard_path.write_text(hard_path.read_text(encoding="utf-8") + "\n", encoding="utf-8")
+
+    with pytest.raises(
+        ValueError,
+        match=r"hard-test summary source changed after discovery",
+    ):
+        build_peoc_evidence(bundle_root, manifest)
+
+
+def test_build_peoc_evidence_retains_changed_optional_json_as_unusable(
+    tmp_path: Path,
+) -> None:
+    bundle_root = tmp_path / "bundle"
+    _write_minimal_bundle(bundle_root)
+    manifest = discover_peoc_sources(bundle_root, PeocSourceOverrides())
+    soft_path = (
+        bundle_root
+        / "experiments"
+        / "redesign_v2"
+        / "results_server_pull_20260524"
+        / "strong_main_grid"
+        / "summary_soft_segmented.json"
+    )
+    soft_path.write_text(soft_path.read_text(encoding="utf-8") + "\n", encoding="utf-8")
+
+    evidence = build_peoc_evidence(bundle_root, manifest)
+
+    soft = evidence["sections"]["soft_evaluation"]
+    assert soft["origin"] == "real"
+    assert soft["status"] == "unusable"
+    assert "source changed after discovery" in soft["observations"]["error"]
+    assert any(
+        warning["code"] == "source_integrity_mismatch"
+        and warning["source_role"] == "soft_segmented_summary"
+        for warning in evidence["warnings"]
+    )
+
+
 def test_build_peoc_evidence_retains_malformed_optional_source_as_unusable(
     tmp_path: Path,
 ) -> None:
@@ -420,6 +465,66 @@ def test_build_peoc_evidence_retains_malformed_trajectory_source_as_unusable(
     )
 
 
+def test_build_peoc_evidence_marks_mixed_valid_and_invalid_trajectory_partial(
+    tmp_path: Path,
+) -> None:
+    bundle_root = tmp_path / "bundle"
+    _write_minimal_bundle(bundle_root)
+    malformed = (
+        bundle_root
+        / "experiments"
+        / "turnpike_trace"
+        / "results_a800"
+        / "stationary_arith_Mistral-7B-Instruct_s1.json"
+    )
+    malformed.write_text("{not-json", encoding="utf-8")
+
+    evidence = _build_fixture_evidence(bundle_root)
+
+    trajectory = evidence["sections"]["trajectory"]
+    assert trajectory["status"] == "partial"
+    assert trajectory["observations"]["headline_pair"]["seed"] == 0
+    assert any(
+        entry["status"] == "unusable"
+        and entry["source"]["relative_path"].endswith(
+            "stationary_arith_Mistral-7B-Instruct_s1.json"
+        )
+        for entry in trajectory["observations"]["entries"]
+    )
+
+
+def test_build_peoc_evidence_excludes_changed_trajectory_binary_reference(
+    tmp_path: Path,
+) -> None:
+    bundle_root = tmp_path / "bundle"
+    _write_minimal_bundle(bundle_root)
+    manifest = discover_peoc_sources(bundle_root, PeocSourceOverrides())
+    binary_path = (
+        bundle_root
+        / "experiments"
+        / "turnpike_trace"
+        / "results_a800"
+        / "stationary_arith_Qwen2.5-7B-Instruct_s0.npz"
+    )
+    binary_path.write_bytes(b"changed-after-discovery")
+
+    evidence = build_peoc_evidence(bundle_root, manifest)
+
+    trajectory = evidence["sections"]["trajectory"]
+    assert trajectory["status"] == "partial"
+    stationary = trajectory["observations"]["headline_pair"]["stationary"]
+    assert stationary["binary_references"] == []
+    assert len(stationary["invalid_binary_references"]) == 1
+    invalid_binary = stationary["invalid_binary_references"][0]
+    assert invalid_binary["origin"] == "real"
+    assert invalid_binary["status"] == "unusable"
+    assert any(
+        warning["code"] == "source_integrity_mismatch"
+        and warning["source_role"] == "trajectory_binary"
+        for warning in evidence["warnings"]
+    )
+
+
 def test_build_peoc_evidence_pairs_trajectories_and_infers_filename_seed(
     tmp_path: Path,
 ) -> None:
@@ -453,6 +558,34 @@ def test_build_peoc_evidence_retains_zero_count_hard_row_as_excluded(
     assert hard["excluded_row_count"] == 1
     assert hard["excluded_rows"][0]["reason"] == "non_positive_n"
     assert hard["excluded_rows"][0]["row"]["n"] == 0
+
+
+def test_build_peoc_evidence_accepts_very_large_positive_sample_count(
+    tmp_path: Path,
+) -> None:
+    bundle_root = tmp_path / "bundle"
+    _write_minimal_bundle(bundle_root)
+    hard_path = bundle_root / HARD_SUMMARY
+    hard_payload = json.loads(hard_path.read_text(encoding="utf-8"))
+    huge_n = 10**400
+    hard_payload["summary"].append(
+        {
+            "model": "Qwen/Qwen2.5-7B-Instruct",
+            "task": "svamp",
+            "method": "static_autograd",
+            "metric": "acc_hard_test",
+            "mean": 0.5,
+            "sd": 0.01,
+            "n": huge_n,
+        }
+    )
+    _write_json(hard_path, hard_payload)
+
+    evidence = _build_fixture_evidence(bundle_root)
+
+    hard = evidence["sections"]["hard_evaluation"]["observations"]
+    assert hard["valid_row_count"] == 3
+    assert any(row["n"] == huge_n for row in hard["rows"])
 
 
 def test_build_peoc_evidence_rejects_malformed_required_hard_summary(

@@ -37,12 +37,30 @@ class PeocSourceOverrides:
     heterogeneity_summary: Path | None = None
 
 
+@dataclass(frozen=True)
+class _TrajectoryBinaryResults:
+    valid: dict[str, list[JsonDict]]
+    invalid: dict[str, list[JsonDict]]
+    all_valid: list[JsonDict]
+    all_invalid: list[JsonDict]
+
+
 def _sha256_file(path: Path) -> str:
+    return _file_integrity(path)[1]
+
+
+def _file_integrity(path: Path) -> tuple[int, str]:
     digest = hashlib.sha256()
+    size = 0
     with path.open("rb") as stream:
         while chunk := stream.read(_CHUNK_SIZE):
+            size += len(chunk)
             digest.update(chunk)
-    return f"sha256:{digest.hexdigest()}"
+    return size, f"sha256:{digest.hexdigest()}"
+
+
+def _sha256_bytes(data: bytes) -> str:
+    return f"sha256:{hashlib.sha256(data).hexdigest()}"
 
 
 def discover_peoc_sources(
@@ -293,12 +311,13 @@ def _build_soft_section(
         return _missing_section(
             "No segmented soft-evaluation summary was discovered in this PEOC bundle."
         )
-    raw, error = _read_optional_json(root, source)
+    raw, error, warning_code = _read_optional_json(root, source)
     if error is not None or not isinstance(raw, dict) or not isinstance(raw.get("summary"), list):
         return _invalid_optional_section(
             source,
             warnings,
             error or "expected top-level summary list",
+            warning_code=warning_code or "invalid_optional_source",
         )
 
     normalized = _finite_json(
@@ -366,15 +385,22 @@ def _build_trajectory_section(
 
     entries: list[JsonDict] = []
     grouped: dict[tuple[str, int], dict[str, JsonDict]] = {}
+    binary_results = _verify_trajectory_binaries(root, binary_sources, warnings)
     for source in trajectory_sources:
         role = str(source.get("role"))
-        raw, error = _read_optional_json(root, source)
+        binary_key = Path(_relative_path(source)).as_posix()
+        binary_references = binary_results.valid.get(binary_key, [])
+        invalid_binary_references = binary_results.invalid.get(binary_key, [])
+        raw, error, warning_code = _read_optional_json(root, source)
         if error is not None or not isinstance(raw, dict):
             entries.append(
                 _invalid_trajectory_entry(
                     source,
                     warnings,
                     error or "expected a JSON object",
+                    warning_code=warning_code or "invalid_optional_source",
+                    binary_references=binary_references,
+                    invalid_binary_references=invalid_binary_references,
                 )
             )
             continue
@@ -393,6 +419,9 @@ def _build_trajectory_section(
                     source,
                     warnings,
                     "trajectory summary requires a model and integer seed or _s<seed> filename",
+                    warning_code="invalid_optional_source",
+                    binary_references=binary_references,
+                    invalid_binary_references=invalid_binary_references,
                 )
             )
             continue
@@ -408,7 +437,8 @@ def _build_trajectory_section(
             "seed": seed,
             "seed_source": seed_source,
             "summary": payload,
-            "binary_references": _trajectory_binary_references(source, binary_sources),
+            "binary_references": binary_references,
+            "invalid_binary_references": invalid_binary_references,
         }
         entries.append(entry)
         grouped.setdefault((normalized_model, seed), {})[role] = entry
@@ -429,13 +459,25 @@ def _build_trajectory_section(
             }
         )
     headline_pair = _headline_trajectory_pair(pairs)
-    status = "available" if headline_pair is not None else "unusable"
+    has_unusable_source = any(entry.get("status") != "available" for entry in entries)
+    invalid_binary_references = binary_results.all_invalid
+    if headline_pair is None:
+        status = "unusable"
+    elif has_unusable_source or invalid_binary_references:
+        status = "partial"
+    else:
+        status = "available"
     limitations = [
         "Trajectory decay is a diagnostic signal, not proof of operational model stability.",
         "Sibling NPZ files are referenced and hashed only; they are not loaded or copied.",
     ]
     if headline_pair is None:
         limitations.append("No complete stationary/heterogeneous model-and-seed pair was usable.")
+    elif status == "partial":
+        limitations.append(
+            "A complete pair is available, but at least one discovered trajectory source "
+            "or binary reference is unusable."
+        )
     return _section(
         origin="real",
         status=status,
@@ -446,7 +488,8 @@ def _build_trajectory_section(
             "entries": entries,
             "pairs": pairs,
             "headline_pair": headline_pair,
-            "binary_references": [_source_reference(source) for source in binary_sources],
+            "binary_references": binary_results.all_valid,
+            "invalid_binary_references": invalid_binary_references,
         },
         limitations=limitations,
     )
@@ -462,12 +505,13 @@ def _build_stage_section(
         return _missing_section(
             "No stage-heterogeneity validation summary was discovered in this PEOC bundle."
         )
-    raw, error = _read_optional_json(root, source)
+    raw, error, warning_code = _read_optional_json(root, source)
     if error is not None or not isinstance(raw, dict):
         return _invalid_optional_section(
             source,
             warnings,
             error or "expected a JSON object",
+            warning_code=warning_code or "invalid_optional_source",
         )
     normalized = _finite_json(
         raw,
@@ -540,9 +584,11 @@ def _invalid_optional_section(
     source: JsonDict,
     warnings: list[JsonDict],
     error: str,
+    *,
+    warning_code: str,
 ) -> JsonDict:
     role = str(source.get("role", "optional_source"))
-    _append_invalid_optional_warning(warnings, source, error)
+    _append_optional_warning(warnings, source, error, code=warning_code)
     return _section(
         origin="real",
         status="unusable",
@@ -559,8 +605,12 @@ def _invalid_trajectory_entry(
     source: JsonDict,
     warnings: list[JsonDict],
     error: str,
+    *,
+    warning_code: str,
+    binary_references: list[JsonDict],
+    invalid_binary_references: list[JsonDict],
 ) -> JsonDict:
-    _append_invalid_optional_warning(warnings, source, error)
+    _append_optional_warning(warnings, source, error, code=warning_code)
     return {
         "origin": "real",
         "status": "unusable",
@@ -568,18 +618,21 @@ def _invalid_trajectory_entry(
         "role": source.get("role"),
         "source": _source_reference(source),
         "error": error,
-        "binary_references": [],
+        "binary_references": binary_references,
+        "invalid_binary_references": invalid_binary_references,
     }
 
 
-def _append_invalid_optional_warning(
+def _append_optional_warning(
     warnings: list[JsonDict],
     source: JsonDict,
     error: str,
+    *,
+    code: str,
 ) -> None:
     warnings.append(
         {
-            "code": "invalid_optional_source",
+            "code": code,
             "source_role": str(source.get("role", "optional_source")),
             "relative_path": _relative_path(source),
             "json_path": "$",
@@ -602,19 +655,49 @@ def _first_source(sources: list[JsonDict], role: str) -> JsonDict | None:
 def _read_required_json(root: Path, source: JsonDict, *, label: str) -> object:
     path = _source_path(root, source, label=label)
     try:
-        return json.loads(path.read_text(encoding="utf-8-sig"))
-    except (OSError, json.JSONDecodeError) as exc:
+        data = path.read_bytes()
+    except OSError as exc:
+        msg = f"{label} source changed after discovery: {path}: {exc}"
+        raise ValueError(msg) from exc
+    integrity_error = _source_integrity_error(source, len(data), _sha256_bytes(data))
+    if integrity_error is not None:
+        msg = f"{label} source changed after discovery: {path}: {integrity_error}"
+        raise ValueError(msg)
+    try:
+        return json.loads(data.decode("utf-8-sig"))
+    except (UnicodeDecodeError, json.JSONDecodeError) as exc:
         msg = f"Invalid required {label} {path}: {exc}"
         raise ValueError(msg) from exc
 
 
-def _read_optional_json(root: Path, source: JsonDict) -> tuple[object | None, str | None]:
+def _read_optional_json(
+    root: Path,
+    source: JsonDict,
+) -> tuple[object | None, str | None, str | None]:
     role = str(source.get("role", "optional source"))
     try:
         path = _source_path(root, source, label=role)
-        return json.loads(path.read_text(encoding="utf-8-sig")), None
-    except (OSError, ValueError, json.JSONDecodeError) as exc:
-        return None, str(exc)
+    except ValueError as exc:
+        return None, str(exc), "invalid_optional_source"
+    try:
+        data = path.read_bytes()
+    except OSError as exc:
+        message = (
+            f"{role} source changed after discovery: {_relative_path(source)}: "
+            f"{type(exc).__name__}"
+        )
+        return None, message, "source_integrity_mismatch"
+    integrity_error = _source_integrity_error(source, len(data), _sha256_bytes(data))
+    if integrity_error is not None:
+        message = (
+            f"{role} source changed after discovery: {_relative_path(source)}: "
+            f"{integrity_error}"
+        )
+        return None, message, "source_integrity_mismatch"
+    try:
+        return json.loads(data.decode("utf-8-sig")), None, None
+    except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+        return None, str(exc), "invalid_optional_source"
 
 
 def _source_path(root: Path, source: JsonDict, *, label: str) -> Path:
@@ -642,6 +725,29 @@ def _source_reference(source: JsonDict) -> JsonDict:
         "copied_path",
     )
     return {key: source.get(key) for key in keys}
+
+
+def _source_integrity_error(
+    source: JsonDict,
+    observed_size: int,
+    observed_sha256: str,
+) -> str | None:
+    differences: list[str] = []
+    expected_size = source.get("bytes")
+    if isinstance(expected_size, int) and not isinstance(expected_size, bool):
+        if expected_size != observed_size:
+            differences.append(f"bytes expected {expected_size}, observed {observed_size}")
+    elif expected_size is not None:
+        differences.append(f"bytes metadata is invalid: {expected_size!r}")
+
+    expected_sha256 = source.get("sha256")
+    if not isinstance(expected_sha256, str) or not expected_sha256:
+        differences.append("sha256 metadata is unavailable")
+    elif expected_sha256 != observed_sha256:
+        differences.append(
+            f"sha256 expected {expected_sha256}, observed {observed_sha256}"
+        )
+    return "; ".join(differences) if differences else None
 
 
 def _finite_json(
@@ -697,7 +803,7 @@ def _summary_row_exclusion_reason(raw_row: object, normalized_row: object) -> st
         return "non_finite_n"
     if not _is_number(n):
         return "invalid_n"
-    if float(n) <= 0:
+    if n <= 0:
         return "non_positive_n"
     raw_mean = raw_row.get("mean")
     mean = normalized_row.get("mean")
@@ -738,18 +844,63 @@ def _normalize_model_id(model: str) -> str:
     return model.strip().replace("__", "/").lower()
 
 
-def _trajectory_binary_references(
-    trajectory_source: JsonDict,
+def _verify_trajectory_binaries(
+    root: Path,
     binary_sources: list[JsonDict],
-) -> list[JsonDict]:
-    trajectory_path = Path(_relative_path(trajectory_source))
-    references = [
-        _source_reference(source)
-        for source in binary_sources
-        if Path(_relative_path(source)).with_suffix(".json") == trajectory_path
-    ]
-    references.sort(key=lambda row: str(row.get("relative_path", "")))
-    return references
+    warnings: list[JsonDict],
+) -> _TrajectoryBinaryResults:
+    valid: dict[str, list[JsonDict]] = {}
+    invalid: dict[str, list[JsonDict]] = {}
+    all_valid: list[JsonDict] = []
+    all_invalid: list[JsonDict] = []
+    ordered_sources = sorted(
+        binary_sources,
+        key=lambda source: _relative_path(source),
+    )
+    for source in ordered_sources:
+        owner = Path(_relative_path(source)).with_suffix(".json").as_posix()
+        try:
+            path = _source_path(root, source, label="trajectory binary")
+            observed_size, observed_sha256 = _file_integrity(path)
+            integrity_error = _source_integrity_error(
+                source,
+                observed_size,
+                observed_sha256,
+            )
+        except (OSError, ValueError) as exc:
+            integrity_error = f"{type(exc).__name__}: source could not be read or resolved"
+        if integrity_error is None:
+            reference = _source_reference(source)
+            valid.setdefault(owner, []).append(reference)
+            all_valid.append(reference)
+            continue
+
+        error = (
+            "trajectory binary source changed after discovery: "
+            f"{_relative_path(source)}: "
+            f"{integrity_error}"
+        )
+        _append_optional_warning(
+            warnings,
+            source,
+            error,
+            code="source_integrity_mismatch",
+        )
+        unusable_reference: JsonDict = {
+            "origin": "real",
+            "status": "unusable",
+            "display_status": _display_status("real", "unusable"),
+            "source": _source_reference(source),
+            "error": error,
+        }
+        invalid.setdefault(owner, []).append(unusable_reference)
+        all_invalid.append(unusable_reference)
+    return _TrajectoryBinaryResults(
+        valid=valid,
+        invalid=invalid,
+        all_valid=all_valid,
+        all_invalid=all_invalid,
+    )
 
 
 def _headline_trajectory_pair(pairs: list[JsonDict]) -> JsonDict | None:
@@ -848,12 +999,13 @@ def _source_row(
     media_type: str,
     selection: str,
 ) -> JsonDict:
+    size, sha256 = _file_integrity(path)
     return {
         "role": role,
         "relative_path": path.relative_to(root).as_posix(),
         "resolved_path": str(path),
-        "bytes": path.stat().st_size,
-        "sha256": _sha256_file(path),
+        "bytes": size,
+        "sha256": sha256,
         "media_type": media_type,
         "selection": selection,
         "copied_path": None,
