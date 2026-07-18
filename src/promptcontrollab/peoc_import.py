@@ -48,6 +48,8 @@ _GENERATED_ARTIFACTS = (
 )
 _PORTABLE_EXTENSIONS = {".csv", ".json"}
 _REQUIRED_SOURCE_ROLES = {"bundle_manifest", "hard_test_summary"}
+_RECOVERY_DIRECTORY = ".peoc-recovery"
+_MAX_RECOVERY_SNAPSHOTS = 8
 
 
 @dataclass(frozen=True)
@@ -573,6 +575,7 @@ def _commit_staged_import(
                     directory_guard,
                     artifact,
                 )
+        _validate_backups_for_cleanup(out_dir, backups)
     except Exception:
         for artifact in reversed(placed):
             _unlink_if_owned(artifact)
@@ -891,7 +894,16 @@ def _restore_backup_no_clobber(
     out_dir: Path,
     artifact: _BackupArtifact,
 ) -> bool:
-    if os.path.lexists(artifact.destination) or not artifact.backup.is_file():
+    if not artifact.backup.is_file():
+        return False
+    actual_identity = _capture_file_identity(artifact.backup)
+    if os.path.lexists(artifact.destination):
+        _preserve_unresolved_backup_if_needed(
+            out_dir,
+            artifact,
+            actual_identity,
+            safe_identities=(artifact.identity,),
+        )
         return False
     try:
         _validate_staged_target_path(out_dir, artifact.destination)
@@ -899,7 +911,7 @@ def _restore_backup_no_clobber(
         restored = _publish_new_portable(
             artifact.backup,
             artifact.destination,
-            artifact.identity,
+            actual_identity,
         )
         _validate_published_artifact(
             out_dir,
@@ -908,12 +920,156 @@ def _restore_backup_no_clobber(
             restored,
         )
     except (OSError, ValueError):
+        _preserve_current_unresolved_backup(
+            out_dir,
+            artifact,
+            safe_identities=(artifact.identity,),
+        )
         return False
-    if not _path_matches_file_identity(restored.path, restored.identity):
+    if not _path_has_same_content(restored.path, actual_identity):
+        _preserve_current_unresolved_backup(
+            out_dir,
+            artifact,
+            safe_identities=(artifact.identity,),
+        )
         return False
-    with suppress(OSError):
-        artifact.backup.unlink()
+    _unlink_if_owned(_PlacedArtifact(artifact.backup, actual_identity))
+    _preserve_current_unresolved_backup(
+        out_dir,
+        artifact,
+        safe_identities=(artifact.identity, actual_identity),
+    )
     return True
+
+
+def _validate_backups_for_cleanup(
+    out_dir: Path,
+    backups: list[_BackupArtifact],
+) -> None:
+    for artifact in backups:
+        if not artifact.backup.is_file():
+            continue
+        actual_identity = _capture_file_identity(artifact.backup)
+        if _same_file_content(actual_identity, artifact.identity):
+            continue
+        preserved = _preserve_unresolved_backup(
+            out_dir,
+            artifact,
+            actual_identity,
+        )
+        raise ValueError(
+            "PEOC backup changed during commit; racing content was preserved at "
+            f"{preserved}"
+        )
+
+
+def _preserve_current_unresolved_backup(
+    out_dir: Path,
+    artifact: _BackupArtifact,
+    *,
+    safe_identities: tuple[_FileIdentity, ...],
+) -> Path | None:
+    if not artifact.backup.is_file():
+        return None
+    actual_identity = _capture_file_identity(artifact.backup)
+    return _preserve_unresolved_backup_if_needed(
+        out_dir,
+        artifact,
+        actual_identity,
+        safe_identities=safe_identities,
+    )
+
+
+def _preserve_unresolved_backup_if_needed(
+    out_dir: Path,
+    artifact: _BackupArtifact,
+    actual_identity: _FileIdentity,
+    *,
+    safe_identities: tuple[_FileIdentity, ...],
+) -> Path | None:
+    if any(
+        _same_file_content(actual_identity, safe_identity)
+        for safe_identity in safe_identities
+    ):
+        return None
+    return _preserve_unresolved_backup(out_dir, artifact, actual_identity)
+
+
+def _preserve_unresolved_backup(
+    out_dir: Path,
+    artifact: _BackupArtifact,
+    initial_identity: _FileIdentity,
+) -> Path:
+    identity = initial_identity
+    last_preserved: Path | None = None
+    for _ in range(_MAX_RECOVERY_SNAPSHOTS):
+        last_preserved = _publish_recovery_snapshot(
+            out_dir,
+            artifact,
+            identity,
+        )
+        if _path_matches_file_identity(artifact.backup, identity):
+            return last_preserved
+        identity = _capture_file_identity(artifact.backup)
+    raise ValueError(
+        "PEOC backup kept changing while preserving racing content; "
+        f"latest stable snapshot: {last_preserved}"
+    )
+
+
+def _publish_recovery_snapshot(
+    out_dir: Path,
+    artifact: _BackupArtifact,
+    identity: _FileIdentity,
+) -> Path:
+    relative = artifact.destination.relative_to(out_dir)
+    digest = identity.sha256.removeprefix("sha256:")[:16]
+    recovery_parent = out_dir / _RECOVERY_DIRECTORY / relative.parent
+    base_name = f"{relative.name}.{digest}.recovered"
+
+    for collision_index in range(1000):
+        suffix = "" if collision_index == 0 else f".{collision_index}"
+        candidate = recovery_parent / f"{base_name}{suffix}"
+        _validate_staged_target_path(out_dir, candidate)
+        recovery_parent.mkdir(parents=True, exist_ok=True)
+        directory_guard = _capture_directory_guard(out_dir, candidate)
+        if os.path.lexists(candidate):
+            if _path_has_same_content(candidate, identity):
+                return candidate
+            continue
+        try:
+            preserved = _publish_new_portable(
+                artifact.backup,
+                candidate,
+                identity,
+            )
+        except ValueError:
+            if os.path.lexists(candidate):
+                continue
+            raise
+        _validate_published_artifact(
+            out_dir,
+            candidate,
+            directory_guard,
+            preserved,
+        )
+        return candidate
+    raise ValueError(
+        "Could not allocate an exclusive recovery path for PEOC backup: "
+        f"{artifact.destination}"
+    )
+
+
+def _same_file_content(left: _FileIdentity, right: _FileIdentity) -> bool:
+    return left.size == right.size and left.sha256 == right.sha256
+
+
+def _path_has_same_content(path: Path, expected: _FileIdentity) -> bool:
+    try:
+        observed = _capture_file_identity(path)
+    except (OSError, ValueError):
+        return False
+    return _same_file_content(observed, expected)
 
 
 def _publish_new_portable(

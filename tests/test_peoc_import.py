@@ -29,6 +29,17 @@ def _write_json(path: Path, value: object) -> None:
     path.write_text(json.dumps(value), encoding="utf-8")
 
 
+def _recovery_files_with_content(out_dir: Path, content: str) -> list[Path]:
+    recovery_root = out_dir / ".peoc-recovery"
+    if not recovery_root.is_dir():
+        return []
+    return [
+        path
+        for path in recovery_root.rglob("*")
+        if path.is_file() and path.read_text(encoding="utf-8") == content
+    ]
+
+
 def _write_minimal_bundle(root: Path) -> None:
     (root / "README_MANIFEST.md").parent.mkdir(parents=True, exist_ok=True)
     (root / "README_MANIFEST.md").write_text("# PEOC evidence bundle\n", encoding="utf-8")
@@ -1142,6 +1153,155 @@ def test_obsolete_cleanup_rejects_file_changed_after_identity_check(
     assert copied_hard.read_text(encoding="utf-8") == "obsolete cleanup racer"
     assert unrelated.read_text(encoding="utf-8") == "keep me"
     assert (out_dir / "manifest.json").read_bytes() == original_manifest
+
+
+def test_registered_replacement_restores_raced_content_without_hard_links(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    bundle_root = tmp_path / "bundle"
+    out_dir = tmp_path / "run"
+    _write_minimal_bundle(bundle_root)
+    import_peoc_bundle(
+        PeocImportOptions(
+            bundle_root=bundle_root,
+            out_dir=out_dir,
+            portable=True,
+        )
+    )
+    copied_hard = out_dir / "source" / HARD_SUMMARY
+    unrelated = out_dir / "source" / "user-notes.txt"
+    unrelated.write_text("keep me", encoding="utf-8")
+    original_replace = os.replace
+    raced_content = "registered replacement fallback racer"
+    injected = False
+
+    def hard_links_unavailable(source: Path, destination: Path) -> None:
+        raise OSError("hard links are unavailable")
+
+    def replace_registered_file_during_move(source: Path, destination: Path) -> None:
+        nonlocal injected
+        if not injected and Path(source) == copied_hard:
+            copied_hard.write_text(raced_content, encoding="utf-8")
+            injected = True
+        original_replace(source, destination)
+
+    monkeypatch.setattr(os, "link", hard_links_unavailable)
+    monkeypatch.setattr(os, "replace", replace_registered_file_during_move)
+
+    with pytest.raises(ValueError, match=r"changed during commit|does not match"):
+        import_peoc_bundle(
+            PeocImportOptions(
+                bundle_root=bundle_root,
+                out_dir=out_dir,
+                portable=True,
+                overwrite=True,
+            )
+        )
+
+    assert injected is True
+    assert copied_hard.read_text(encoding="utf-8") == raced_content
+    assert unrelated.read_text(encoding="utf-8") == "keep me"
+
+
+def test_obsolete_cleanup_restores_raced_content_without_hard_links(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    bundle_root = tmp_path / "bundle"
+    out_dir = tmp_path / "run"
+    _write_minimal_bundle(bundle_root)
+    import_peoc_bundle(
+        PeocImportOptions(
+            bundle_root=bundle_root,
+            out_dir=out_dir,
+            portable=True,
+        )
+    )
+    copied_hard = out_dir / "source" / HARD_SUMMARY
+    unrelated = out_dir / "source" / "user-notes.txt"
+    unrelated.write_text("keep me", encoding="utf-8")
+    original_replace = os.replace
+    raced_content = "obsolete cleanup fallback racer"
+    injected = False
+
+    def hard_links_unavailable(source: Path, destination: Path) -> None:
+        raise OSError("hard links are unavailable")
+
+    def replace_registered_file_during_move(source: Path, destination: Path) -> None:
+        nonlocal injected
+        if not injected and Path(source) == copied_hard:
+            copied_hard.write_text(raced_content, encoding="utf-8")
+            injected = True
+        original_replace(source, destination)
+
+    monkeypatch.setattr(os, "link", hard_links_unavailable)
+    monkeypatch.setattr(os, "replace", replace_registered_file_during_move)
+
+    with pytest.raises(ValueError, match=r"changed during commit|does not match"):
+        import_peoc_bundle(
+            PeocImportOptions(
+                bundle_root=bundle_root,
+                out_dir=out_dir,
+                portable=False,
+                overwrite=True,
+            )
+        )
+
+    assert injected is True
+    assert copied_hard.read_text(encoding="utf-8") == raced_content
+    assert unrelated.read_text(encoding="utf-8") == "keep me"
+
+
+def test_rollback_preserves_backup_racer_when_destination_reappears(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    bundle_root = tmp_path / "bundle"
+    out_dir = tmp_path / "run"
+    _write_minimal_bundle(bundle_root)
+    import_peoc_bundle(
+        PeocImportOptions(
+            bundle_root=bundle_root,
+            out_dir=out_dir,
+            portable=True,
+        )
+    )
+    copied_hard = out_dir / "source" / HARD_SUMMARY
+    original_replace = os.replace
+    backup_racer = "raced content moved to backup"
+    destination_racer = "independent destination racer"
+    injected = False
+
+    def hard_links_unavailable(source: Path, destination: Path) -> None:
+        raise OSError("hard links are unavailable")
+
+    def race_both_sides_of_backup_move(source: Path, destination: Path) -> None:
+        nonlocal injected
+        if not injected and Path(source) == copied_hard:
+            copied_hard.write_text(backup_racer, encoding="utf-8")
+            original_replace(source, destination)
+            copied_hard.write_text(destination_racer, encoding="utf-8")
+            injected = True
+            return
+        original_replace(source, destination)
+
+    monkeypatch.setattr(os, "link", hard_links_unavailable)
+    monkeypatch.setattr(os, "replace", race_both_sides_of_backup_move)
+
+    with pytest.raises(ValueError, match=r"changed during commit|does not match"):
+        import_peoc_bundle(
+            PeocImportOptions(
+                bundle_root=bundle_root,
+                out_dir=out_dir,
+                portable=True,
+                overwrite=True,
+            )
+        )
+
+    assert injected is True
+    assert copied_hard.read_text(encoding="utf-8") == destination_racer
+    assert _recovery_files_with_content(out_dir, backup_racer)
 
 
 def test_portable_commit_rejects_unregistered_destination_created_after_preflight(
