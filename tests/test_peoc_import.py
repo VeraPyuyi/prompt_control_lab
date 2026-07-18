@@ -1128,6 +1128,98 @@ def test_failed_commit_retains_independent_backups_for_manual_recovery(
     assert str(retained[0]) in str(error.value)
 
 
+def test_backup_replace_move_then_raise_retains_ambiguous_transaction(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    bundle_root = tmp_path / "bundle"
+    out_dir = tmp_path / "run"
+    _write_minimal_bundle(bundle_root)
+    import_peoc_bundle(PeocImportOptions(bundle_root=bundle_root, out_dir=out_dir))
+    manifest = out_dir / "manifest.json"
+    old_payload = manifest.read_bytes()
+    old_sha256 = hashlib.sha256(old_payload).hexdigest()
+    original_replace = os.replace
+    injected = False
+
+    def move_then_raise(source: Path, destination: Path) -> None:
+        nonlocal injected
+        if not injected and Path(source) == manifest:
+            original_replace(source, destination)
+            injected = True
+            raise OSError("simulated replace completion followed by error")
+        original_replace(source, destination)
+
+    monkeypatch.setattr(os, "replace", move_then_raise)
+
+    with pytest.raises(ValueError, match=r"manual recovery is required") as error:
+        import_peoc_bundle(
+            PeocImportOptions(
+                bundle_root=bundle_root,
+                out_dir=out_dir,
+                overwrite=True,
+            )
+        )
+
+    assert injected is True
+    retained = _retained_transaction_directories(out_dir)
+    assert len(retained) == 1
+    backup = retained[0] / "backup" / "manifest.json"
+    assert backup.read_bytes() == old_payload
+    assert hashlib.sha256(backup.read_bytes()).hexdigest() == old_sha256
+    assert not manifest.exists()
+    message = str(error.value)
+    assert "backup move outcome is ambiguous" in message
+    assert "move_outcome=ambiguous" in message
+    assert f"backup={backup}" in message
+    assert f"sha256:sha256:{old_sha256}" not in message
+    assert f"sha256=sha256:{old_sha256}" in message
+
+
+def test_backup_replace_raise_before_move_preserves_original_and_transaction(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    bundle_root = tmp_path / "bundle"
+    out_dir = tmp_path / "run"
+    _write_minimal_bundle(bundle_root)
+    import_peoc_bundle(PeocImportOptions(bundle_root=bundle_root, out_dir=out_dir))
+    manifest = out_dir / "manifest.json"
+    old_payload = manifest.read_bytes()
+    original_replace = os.replace
+    injected = False
+
+    def raise_before_move(source: Path, destination: Path) -> None:
+        nonlocal injected
+        if not injected and Path(source) == manifest:
+            injected = True
+            raise OSError("simulated replace failure before move")
+        original_replace(source, destination)
+
+    monkeypatch.setattr(os, "replace", raise_before_move)
+
+    with pytest.raises(ValueError, match=r"manual recovery is required") as error:
+        import_peoc_bundle(
+            PeocImportOptions(
+                bundle_root=bundle_root,
+                out_dir=out_dir,
+                overwrite=True,
+            )
+        )
+
+    assert injected is True
+    assert manifest.read_bytes() == old_payload
+    retained = _retained_transaction_directories(out_dir)
+    assert len(retained) == 1
+    backup = retained[0] / "backup" / "manifest.json"
+    assert not backup.exists()
+    message = str(error.value)
+    assert "backup move outcome is ambiguous" in message
+    assert "move_outcome=ambiguous" in message
+    assert f"backup={backup}" in message
+    assert str(retained[0]) in message
+
+
 def test_obsolete_cleanup_rejects_file_changed_after_identity_check(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,

@@ -10,7 +10,7 @@ import re
 import shutil
 import tempfile
 from contextlib import suppress
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import TypeGuard, cast
 
@@ -106,6 +106,7 @@ class _BackupArtifact:
     destination: Path
     identity: _FileIdentity
     source_guard: _DirectoryGuard
+    move_outcome: str
 
 
 class _BackupMoveError(Exception):
@@ -1110,8 +1111,12 @@ def _move_to_backup(
         destination=destination,
         identity=identity,
         source_guard=source_guard,
+        move_outcome="ambiguous",
     )
-    os.replace(destination, backup)
+    try:
+        os.replace(destination, backup)
+    except Exception as exc:
+        raise _BackupMoveError(exc, artifact) from exc
     try:
         _validate_backup_source(backup_root, transaction_guard, artifact)
         backup_matches = _path_matches_file_identity(backup, identity)
@@ -1129,7 +1134,7 @@ def _move_to_backup(
         _validate_directory_guard(out_dir, destination, directory_guard)
     except Exception as exc:
         raise _BackupMoveError(exc, artifact) from exc
-    return artifact
+    return replace(artifact, move_outcome="verified")
 
 
 def _validate_backups_for_cleanup(
@@ -1199,11 +1204,18 @@ def _manual_recovery_error(
             f"destination={artifact.destination}; "
             f"backup={artifact.backup}; "
             f"bytes={artifact.identity.size}; "
-            f"sha256={artifact.identity.sha256}"
+            f"sha256={artifact.identity.sha256}; "
+            f"move_outcome={artifact.move_outcome}"
         )
         for artifact in recorded
     )
     guard_status = _transaction_guard_status(transaction_guard)
+    ambiguous_note = ""
+    if any(artifact.move_outcome == "ambiguous" for artifact in recorded):
+        ambiguous_note = (
+            " At least one backup move outcome is ambiguous; manual inspection "
+            f"path={transaction_dir}."
+        )
     if commit_completed:
         outcome = (
             "PEOC import committed new artifacts but transaction cleanup failed."
@@ -1215,7 +1227,8 @@ def _manual_recovery_error(
             "transaction."
         )
     return ValueError(
-        f"{outcome} No automatic backup restore was attempted; manual recovery is "
+        f"{outcome}{ambiguous_note} No automatic backup restore was attempted; "
+        "manual recovery is "
         f"required. transaction_dir={transaction_dir}; "
         f"backup_root={transaction_guard.backup_root.path}; "
         f"transaction_guard={guard_status}; "
