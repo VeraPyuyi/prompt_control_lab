@@ -31,11 +31,7 @@ def _write_json(path: Path, value: object) -> None:
 
 
 def _retained_transaction_directories(out_dir: Path) -> list[Path]:
-    return [
-        path
-        for path in out_dir.parent.glob(f".{out_dir.name}.peoc-import-*")
-        if path.is_dir()
-    ]
+    return [path for path in out_dir.parent.glob(f".{out_dir.name}.peoc-import-*") if path.is_dir()]
 
 
 def _retained_files_with_sha256(out_dir: Path, digest: str) -> list[Path]:
@@ -43,8 +39,7 @@ def _retained_files_with_sha256(out_dir: Path, digest: str) -> list[Path]:
         path
         for transaction in _retained_transaction_directories(out_dir)
         for path in transaction.rglob("*")
-        if path.is_file()
-        and hashlib.sha256(path.read_bytes()).hexdigest() == digest
+        if path.is_file() and hashlib.sha256(path.read_bytes()).hexdigest() == digest
     ]
 
 
@@ -355,8 +350,7 @@ def test_build_peoc_evidence_normalizes_non_finite_source_metadata(
     hard_reference = evidence["sections"]["hard_evaluation"]["observations"]["source"]
     assert hard_reference["bytes"] is None
     assert any(
-        warning["code"] == "non_finite_value"
-        and warning["json_path"].endswith(".bytes")
+        warning["code"] == "non_finite_value" and warning["json_path"].endswith(".bytes")
         for warning in evidence["warnings"]
     )
 
@@ -492,9 +486,7 @@ def test_build_peoc_evidence_retains_malformed_optional_source_as_unusable(
     assert soft["origin"] == "real"
     assert soft["status"] == "unusable"
     assert soft["source_roles"] == ["soft_segmented_summary"]
-    assert soft["observations"]["source"]["relative_path"].endswith(
-        "summary_soft_segmented.json"
-    )
+    assert soft["observations"]["source"]["relative_path"].endswith("summary_soft_segmented.json")
     assert any(
         warning["code"] == "invalid_optional_source"
         and warning["source_role"] == "soft_segmented_summary"
@@ -508,11 +500,7 @@ def test_build_peoc_evidence_retains_malformed_stage_source_as_unusable(
     bundle_root = tmp_path / "bundle"
     _write_minimal_bundle(bundle_root)
     stage_path = (
-        bundle_root
-        / "experiments"
-        / "redesign_v2"
-        / "stage_heterogeneity"
-        / "shi_r27_summary.json"
+        bundle_root / "experiments" / "redesign_v2" / "stage_heterogeneity" / "shi_r27_summary.json"
     )
     stage_path.write_text("{not-json", encoding="utf-8")
 
@@ -549,9 +537,7 @@ def test_build_peoc_evidence_retains_malformed_trajectory_source_as_unusable(
     assert trajectory["origin"] == "real"
     assert trajectory["status"] == "unusable"
     invalid_entries = [
-        entry
-        for entry in trajectory["observations"]["entries"]
-        if entry["status"] == "unusable"
+        entry for entry in trajectory["observations"]["entries"] if entry["status"] == "unusable"
     ]
     assert len(invalid_entries) == 1
     assert invalid_entries[0]["role"] == "trajectory_stationary"
@@ -802,13 +788,64 @@ def test_research_import_peoc_cli_writes_primary_outputs(
     assert "non_finite_value" in captured.out
     assert "blocking_sections=soft_evaluation=unusable" in captured.out
     assert "{'section':" not in captured.out
-    assert "pcl evidence-card --run" in captured.out
-    assert (out_dir / "manifest.json").is_file()
-    assert (out_dir / "source_manifest.json").is_file()
-    assert (out_dir / "peoc_evidence.json").is_file()
-    assert (out_dir / "research_case_study.json").is_file()
-    assert (out_dir / "research_case_study.md").is_file()
-    assert (out_dir / "research_case_study.html").is_file()
+    assert "Evidence card:" in captured.out
+    assert "Claim check:" in captured.out
+    assert "Research gap plan:" in captured.out
+    assert "Research bundle:" in captured.out
+    for artifact in [
+        "manifest.json",
+        "source_manifest.json",
+        "peoc_evidence.json",
+        "research_case_study.json",
+        "research_case_study.md",
+        "research_case_study.html",
+        "evidence_card.json",
+        "evidence_card.md",
+        "evidence_card.html",
+        "claim_check.json",
+        "claim_check.md",
+        "claim_check.html",
+        "research_gap_plan.json",
+        "research_gap_plan.md",
+        "research_gap_plan.html",
+        "research_gap_status.json",
+        "research_gap_status.md",
+        "research_gap_status.html",
+        "research_bundle.json",
+        "research_bundle.md",
+        "research_bundle.html",
+        "research_bundle.zh.html",
+    ]:
+        assert (out_dir / artifact).is_file(), artifact
+
+    card = read_json(out_dir / "evidence_card.json")
+    paper = card["sections"]["paper_replication_evidence"]
+    assert paper["origin"] == "real"
+    assert paper["failed_validation_count"] == 1
+    assert paper["unusable_count"] == 1
+    assert paper["missing_count"] == 2
+    assert card["evidence_tier"] != "tier_4_full_research_diagnostics"
+    assert card["recommendation"] in {"needs_review", "not_supported"}
+    assert card["sections"]["hidden_state_diagnostics"]["status"] == "review"
+    assert card["sections"]["time_varying_control"]["status"] == "review"
+
+    claim = read_json(out_dir / "claim_check.json")
+    assert claim["status"] == "fail"
+    assert "full support" not in str(claim["safe_claim"]).lower()
+
+    gap_status = read_json(out_dir / "research_gap_status.json")
+    assert gap_status["status"] == "needs_work"
+    gap_concepts = {str(row["concept"]) for row in gap_status["actions"]}
+    assert {
+        "Riccati surrogate",
+        "soft-to-hard projection gap",
+        "segmented soft evaluation",
+        "stage heterogeneity validation",
+    }.issubset(gap_concepts)
+
+    bundle = read_json(out_dir / "research_bundle.json")
+    assert bundle["evidence_origin"] == "real"
+    assert any(row.get("path") == "research_case_study.html" for row in bundle["review_order"])
 
 
 def test_research_import_peoc_cli_prints_plain_chinese_guidance(
@@ -900,11 +937,7 @@ def test_research_import_peoc_portable_never_copies_npz(
 
     assert not list(out_dir.rglob("*.npz"))
     source_manifest = read_json(out_dir / "source_manifest.json")
-    binary_rows = [
-        row
-        for row in source_manifest["sources"]
-        if row["role"] == "trajectory_binary"
-    ]
+    binary_rows = [row for row in source_manifest["sources"] if row["role"] == "trajectory_binary"]
     assert binary_rows
     assert all(row["copied_path"] is None for row in binary_rows)
 
@@ -927,6 +960,14 @@ def test_research_import_peoc_cli_requires_overwrite_for_rerun(
 
     assert main(base_args) == 0
     capsys.readouterr()
+    downstream_names = [
+        "evidence_card.json",
+        "claim_check.json",
+        "research_gap_plan.json",
+        "research_gap_status.json",
+        "research_bundle.json",
+    ]
+    first_outputs = {name: (out_dir / name).read_bytes() for name in downstream_names}
     assert main(base_args) == 2
     failed = capsys.readouterr()
     assert "pcl: error:" in failed.err
@@ -935,6 +976,86 @@ def test_research_import_peoc_cli_requires_overwrite_for_rerun(
 
     assert main([*base_args, "--overwrite"]) == 0
     assert capsys.readouterr().err == ""
+    assert {name: (out_dir / name).read_bytes() for name in downstream_names} == first_outputs
+
+
+def test_research_import_peoc_preflights_existing_downstream_artifacts(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    bundle_root = tmp_path / "bundle"
+    out_dir = tmp_path / "run"
+    _write_minimal_bundle(bundle_root)
+    out_dir.mkdir()
+    evidence_card = out_dir / "evidence_card.json"
+    evidence_card.write_text('{"owner": "existing"}\n', encoding="utf-8")
+
+    assert (
+        main(
+            [
+                "research-import",
+                "peoc",
+                "--bundle",
+                str(bundle_root),
+                "--out",
+                str(out_dir),
+            ]
+        )
+        == 2
+    )
+
+    captured = capsys.readouterr()
+    assert "--overwrite" in captured.err
+    assert "Traceback" not in captured.err
+    assert evidence_card.read_text(encoding="utf-8") == '{"owner": "existing"}\n'
+    assert not (out_dir / "manifest.json").exists()
+
+
+@pytest.mark.parametrize("failure_type", [ValueError, RuntimeError])
+def test_research_import_peoc_keeps_primary_artifacts_when_downstream_fails(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+    monkeypatch: pytest.MonkeyPatch,
+    failure_type: type[Exception],
+) -> None:
+    bundle_root = tmp_path / "bundle"
+    out_dir = tmp_path / "run"
+    _write_minimal_bundle(bundle_root)
+
+    def fail_downstream(_run_dir: Path) -> NoReturn:
+        raise failure_type("forced downstream failure")
+
+    monkeypatch.setattr("promptcontrollab.cli.write_evidence_card", fail_downstream)
+
+    assert (
+        main(
+            [
+                "research-import",
+                "peoc",
+                "--bundle",
+                str(bundle_root),
+                "--out",
+                str(out_dir),
+            ]
+        )
+        == 2
+    )
+
+    captured = capsys.readouterr()
+    assert captured.out == ""
+    assert "pcl: error: forced downstream failure" in captured.err
+    assert "primary import artifacts remain" in captured.err
+    assert "downstream evidence chain was not completed" in captured.err
+    assert "Traceback" not in captured.err
+    for artifact in [
+        "manifest.json",
+        "source_manifest.json",
+        "peoc_evidence.json",
+        "research_case_study.json",
+        "research_case_study.md",
+        "research_case_study.html",
+    ]:
+        assert (out_dir / artifact).is_file()
 
 
 def test_research_import_peoc_cli_reports_invalid_bundle_without_traceback(
@@ -976,17 +1097,11 @@ def test_research_import_peoc_cli_wires_explicit_source_overrides(
     custom_hard = custom_root / "hard.json"
     custom_hard.write_bytes((bundle_root / HARD_SUMMARY).read_bytes())
     default_stage = (
-        bundle_root
-        / "experiments"
-        / "redesign_v2"
-        / "stage_heterogeneity"
-        / "shi_r27_summary.json"
+        bundle_root / "experiments" / "redesign_v2" / "stage_heterogeneity" / "shi_r27_summary.json"
     )
     custom_stage = custom_root / "stage.json"
     custom_stage.write_bytes(default_stage.read_bytes())
-    default_trajectory_root = (
-        bundle_root / "experiments" / "turnpike_trace" / "results_a800"
-    )
+    default_trajectory_root = bundle_root / "experiments" / "turnpike_trace" / "results_a800"
     custom_stationary = custom_root / "stationary_arith_custom_s0.json"
     custom_heterogeneous = custom_root / "turnpike_gsm8k_custom_s0.json"
     custom_stationary.write_bytes(
@@ -1076,9 +1191,7 @@ def test_import_failure_does_not_replace_existing_artifacts_or_copy_sources(
     _write_minimal_bundle(bundle_root)
     import_peoc_bundle(PeocImportOptions(bundle_root=bundle_root, out_dir=out_dir))
     original_artifacts = {
-        path.name: path.read_bytes()
-        for path in out_dir.iterdir()
-        if path.is_file()
+        path.name: path.read_bytes() for path in out_dir.iterdir() if path.is_file()
     }
 
     hard_path = bundle_root / HARD_SUMMARY
@@ -1109,9 +1222,7 @@ def test_import_failure_does_not_replace_existing_artifacts_or_copy_sources(
         )
 
     assert {
-        path.name: path.read_bytes()
-        for path in out_dir.iterdir()
-        if path.is_file()
+        path.name: path.read_bytes() for path in out_dir.iterdir() if path.is_file()
     } == original_artifacts
     assert not (out_dir / "source").exists()
 
@@ -1200,27 +1311,20 @@ def test_portable_import_copies_small_json_and_csv_but_never_npz(
     assert any(source_root.rglob("*.json"))
     assert any(source_root.rglob("*.csv"))
     assert not any(source_root.rglob("*.npz"))
-    binary_rows = [
-        row for row in manifest["sources"] if row["role"] == "trajectory_binary"
-    ]
+    binary_rows = [row for row in manifest["sources"] if row["role"] == "trajectory_binary"]
     assert len(binary_rows) == 2
     assert all(row["copied_path"] is None for row in binary_rows)
     assert all(
         row.get("copied_path") is None
-        or (
-            str(row["copied_path"]).startswith("source/")
-            and "\\" not in str(row["copied_path"])
-        )
+        or (str(row["copied_path"]).startswith("source/") and "\\" not in str(row["copied_path"]))
         for row in manifest["sources"]
     )
     assert any(
-        row["role"] == "supporting_csv"
-        and row["copied_path"] == "source/tables/paired_results.csv"
+        row["role"] == "supporting_csv" and row["copied_path"] == "source/tables/paired_results.csv"
         for row in manifest["sources"]
     )
     assert any(
-        row["role"] == "trajectory_binary"
-        and row["sha256"].startswith("sha256:")
+        row["role"] == "trajectory_binary" and row["sha256"].startswith("sha256:")
         for row in manifest["sources"]
     )
 
@@ -1356,8 +1460,7 @@ def test_failed_commit_retains_independent_backups_for_manual_recovery(
     _write_minimal_bundle(bundle_root)
     import_peoc_bundle(PeocImportOptions(bundle_root=bundle_root, out_dir=out_dir))
     old_payloads = {
-        name: (out_dir / name).read_bytes()
-        for name in ("manifest.json", "peoc_evidence.json")
+        name: (out_dir / name).read_bytes() for name in ("manifest.json", "peoc_evidence.json")
     }
     original_replace = os.replace
     failed = False
@@ -1398,9 +1501,7 @@ def test_failed_commit_retains_independent_backups_for_manual_recovery(
 
     replacement = out_dir / "manifest.json"
     replacement.write_text("independent destination edit", encoding="utf-8")
-    assert (backup_root / "manifest.json").read_bytes() == old_payloads[
-        "manifest.json"
-    ]
+    assert (backup_root / "manifest.json").read_bytes() == old_payloads["manifest.json"]
     assert str(retained[0]) in str(error.value)
 
 
@@ -1787,10 +1888,7 @@ def test_failure_error_lists_all_recorded_backup_identities(
         "peoc_evidence.json",
         "research_case_study.json",
     )
-    old_payloads = {
-        name: (out_dir / name).read_bytes()
-        for name in tracked_names
-    }
+    old_payloads = {name: (out_dir / name).read_bytes() for name in tracked_names}
     original_replace = os.replace
     failed = False
 
@@ -1936,9 +2034,7 @@ def test_compromised_transaction_backup_guard_is_not_followed(
         nonlocal rejected_backup_guard
         if failure_started:
             rejected_backup_guard = True
-            raise ValueError(
-                f"transaction backup junction is compromised: {sentinel.parent}"
-            )
+            raise ValueError(f"transaction backup junction is compromised: {sentinel.parent}")
         original_validate_guard(guard)
 
     monkeypatch.setattr(os, "replace", fail_peoc_publication)
@@ -2054,11 +2150,12 @@ def test_portable_import_records_deterministic_file_and_total_limit_warnings(
         if warning["code"] == "portable_total_limit_exceeded"
     ]
     assert total_warnings
-    assert next(
-        row
-        for row in total_manifest["sources"]
-        if row["role"] == "hard_test_summary"
-    )["copied_path"] == f"source/{HARD_SUMMARY.as_posix()}"
+    assert (
+        next(row for row in total_manifest["sources"] if row["role"] == "hard_test_summary")[
+            "copied_path"
+        ]
+        == f"source/{HARD_SUMMARY.as_posix()}"
+    )
 
 
 def test_import_rejects_invalid_language_and_unsafe_output_paths(tmp_path: Path) -> None:
@@ -2075,9 +2172,7 @@ def test_import_rejects_invalid_language_and_unsafe_output_paths(tmp_path: Path)
         )
 
     with pytest.raises(ValueError, match="output"):
-        import_peoc_bundle(
-            PeocImportOptions(bundle_root=bundle_root, out_dir=bundle_root)
-        )
+        import_peoc_bundle(PeocImportOptions(bundle_root=bundle_root, out_dir=bundle_root))
 
     with pytest.raises(ValueError, match=r"inside.*bundle"):
         import_peoc_bundle(
@@ -2185,12 +2280,8 @@ def test_import_outputs_are_deterministic_across_equivalent_runs(tmp_path: Path)
     second_out = tmp_path / "second"
     _write_minimal_bundle(bundle_root)
 
-    first = import_peoc_bundle(
-        PeocImportOptions(bundle_root=bundle_root, out_dir=first_out)
-    )
-    second = import_peoc_bundle(
-        PeocImportOptions(bundle_root=bundle_root, out_dir=second_out)
-    )
+    first = import_peoc_bundle(PeocImportOptions(bundle_root=bundle_root, out_dir=first_out))
+    second = import_peoc_bundle(PeocImportOptions(bundle_root=bundle_root, out_dir=second_out))
 
     for name in first["artifacts"]:
         assert (first_out / name).read_bytes() == (second_out / name).read_bytes()

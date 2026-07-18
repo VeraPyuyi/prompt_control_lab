@@ -67,6 +67,7 @@ from promptcontrollab.reporting import generate_report
 from promptcontrollab.research_workflow import (
     run_research_diagnostics,
     verify_research_bundle_index,
+    write_peoc_research_gap_plan,
     write_research_bundle_index,
     write_research_demo,
     write_research_gap_status,
@@ -94,6 +95,30 @@ from promptcontrollab.workflow import (
     load_analyze_config,
     resolve_analyze_paths,
     run_quick_analysis,
+)
+
+_PEOC_DOWNSTREAM_ARTIFACTS = (
+    "evidence_card.json",
+    "evidence_card.md",
+    "evidence_card.html",
+    "claim_check.json",
+    "claim_check.md",
+    "claim_check.html",
+    "research_gap_plan.json",
+    "research_gap_plan.md",
+    "research_gap_plan.html",
+    "research_gap_commands.ps1",
+    "research_gap_commands.sh",
+    "research_gap_status.json",
+    "research_gap_status.md",
+    "research_gap_status.html",
+    "research_bundle.json",
+    "research_bundle.md",
+    "research_bundle.html",
+    "research_bundle.zh.html",
+    "research_bundle_verification.json",
+    "research_bundle_verification.md",
+    "research_bundle_verification.html",
 )
 
 
@@ -152,7 +177,7 @@ def build_parser() -> argparse.ArgumentParser:
         description="PromptControlLab prompt evaluation and diagnostics toolkit.",
         epilog=(
             "Start here: `pcl start --guide`, `pcl quickstart --out demo --open-report`, "
-            "or `pcl choose --need \"<your goal>\"`."
+            'or `pcl choose --need "<your goal>"`.'
         ),
     )
     subcommands = parser.add_subparsers(dest="command", metavar="command", required=True)
@@ -954,10 +979,7 @@ def build_parser() -> argparse.ArgumentParser:
         "--out",
         type=Path,
         default=None,
-        help=(
-            "Output JSON file or output directory. Defaults to "
-            "<run>/ecosystem_scorecard.json."
-        ),
+        help=("Output JSON file or output directory. Defaults to <run>/ecosystem_scorecard.json."),
     )
     ecosystem_scorecard_parser.add_argument(
         "--summary",
@@ -985,8 +1007,7 @@ def build_parser() -> argparse.ArgumentParser:
         action="append",
         default=[],
         help=(
-            "Test command to execute without shell syntax and record. "
-            "Repeat for multiple commands."
+            "Test command to execute without shell syntax and record. Repeat for multiple commands."
         ),
     )
     audit_parser.add_argument(
@@ -1969,9 +1990,7 @@ def _market_readiness_summary_lines(payload: JsonDict) -> list[str]:
             if not isinstance(item, dict):
                 continue
             lines.append(
-                "- "
-                f"{item.get('priority', '')} {item.get('tool', '')}: "
-                f"{item.get('move', '')}"
+                f"- {item.get('priority', '')} {item.get('tool', '')}: {item.get('move', '')}"
             )
     else:
         lines.append("- No next moves recorded.")
@@ -2679,8 +2698,8 @@ def _cmd_doctor(args: argparse.Namespace) -> None:
 
 def _cmd_ui(args: argparse.Namespace) -> None:
     project_config, project_config_path = load_project_config()
-    runs_dir = args.runs or _config_path(project_config, project_config_path, "runs_dir") or Path(
-        "runs"
+    runs_dir = (
+        args.runs or _config_path(project_config, project_config_path, "runs_dir") or Path("runs")
     )
     policy_path = args.policy or _config_path(
         project_config,
@@ -2689,9 +2708,7 @@ def _cmd_ui(args: argparse.Namespace) -> None:
     )
     default_view = get_config_str(project_config, "ui.default_view", "workflows")
     missing = [
-        module
-        for module in ["streamlit", "plotly"]
-        if importlib.util.find_spec(module) is None
+        module for module in ["streamlit", "plotly"] if importlib.util.find_spec(module) is None
     ]
     if missing:
         msg = (
@@ -2739,6 +2756,11 @@ def _cmd_research_import_peoc(args: argparse.Namespace) -> None:
         trajectory_files=tuple(args.trajectory_file),
         heterogeneity_summary=args.heterogeneity_summary,
     )
+    requested_output_dir = args.out.resolve()
+    _preflight_peoc_downstream_artifacts(
+        requested_output_dir,
+        overwrite=args.overwrite,
+    )
     result = import_peoc_bundle(
         PeocImportOptions(
             bundle_root=args.bundle,
@@ -2750,7 +2772,48 @@ def _cmd_research_import_peoc(args: argparse.Namespace) -> None:
         )
     )
     output_dir = Path(str(result["output_dir"]))
-    case_study = read_json(output_dir / "research_case_study.json")
+    try:
+        if args.overwrite:
+            _clear_peoc_downstream_artifacts(output_dir)
+        evidence_card = write_evidence_card(output_dir)
+        claim_check = run_claim_check(
+            output_dir,
+            claim="full-research",
+            out_path=output_dir / "claim_check.json",
+        )
+        gap_plan = write_peoc_research_gap_plan(output_dir)
+        gap_status = write_research_gap_status(run_dir=output_dir)
+        research_bundle = write_research_bundle_index(output_dir)
+        case_study = read_json(output_dir / "research_case_study.json")
+    except Exception as exc:
+        msg = (
+            f"{exc}; primary import artifacts remain at {output_dir}, but downstream "
+            "evidence chain was not completed."
+        )
+        raise PromptControlLabError(msg) from exc
+    result["downstream"] = {
+        "evidence_card": {
+            "path": str(output_dir / "evidence_card.html"),
+            "recommendation": evidence_card.get("recommendation"),
+            "evidence_tier": evidence_card.get("evidence_tier"),
+        },
+        "claim_check": {
+            "path": str(output_dir / "claim_check.html"),
+            "status": claim_check.get("status"),
+        },
+        "research_gap_plan": {
+            "path": str(output_dir / "research_gap_plan.html"),
+            "action_count": gap_plan.get("action_count"),
+        },
+        "research_gap_status": {
+            "path": str(output_dir / "research_gap_status.html"),
+            "status": gap_status.get("status"),
+        },
+        "research_bundle": {
+            "path": str(output_dir / "research_bundle.html"),
+            "status": research_bundle.get("status"),
+        },
+    }
     print(
         _format_peoc_import_output(
             result=result,
@@ -2758,6 +2821,33 @@ def _cmd_research_import_peoc(args: argparse.Namespace) -> None:
             language=args.language,
         )
     )
+
+
+def _clear_peoc_downstream_artifacts(output_dir: Path) -> None:
+    for name in _PEOC_DOWNSTREAM_ARTIFACTS:
+        path = output_dir / name
+        if path.is_symlink() or path.is_file():
+            path.unlink()
+
+
+def _preflight_peoc_downstream_artifacts(output_dir: Path, *, overwrite: bool) -> None:
+    paths = [output_dir / name for name in _PEOC_DOWNSTREAM_ARTIFACTS]
+    directory_collisions = [
+        str(path) for path in paths if path.exists() and path.is_dir() and not path.is_symlink()
+    ]
+    if directory_collisions:
+        joined = ", ".join(directory_collisions)
+        raise ValueError(
+            "Generated PEOC downstream artifact paths collide with directories and cannot "
+            f"be replaced: {joined}"
+        )
+    existing = [str(path) for path in paths if path.exists() or path.is_symlink()]
+    if existing and not overwrite:
+        joined = ", ".join(existing)
+        raise ValueError(
+            "Generated PEOC downstream artifacts already exist; pass --overwrite to replace "
+            f"only those artifacts: {joined}"
+        )
 
 
 def _format_peoc_import_output(
@@ -2771,6 +2861,18 @@ def _format_peoc_import_output(
     source_count = int(result.get("source_count", 0))
     status_counts = result.get("status_counts")
     statuses = status_counts if isinstance(status_counts, dict) else {}
+    downstream_value = result.get("downstream")
+    downstream = downstream_value if isinstance(downstream_value, dict) else {}
+    evidence_value = downstream.get("evidence_card")
+    evidence = evidence_value if isinstance(evidence_value, dict) else {}
+    claim_value = downstream.get("claim_check")
+    claim = claim_value if isinstance(claim_value, dict) else {}
+    plan_value = downstream.get("research_gap_plan")
+    plan = plan_value if isinstance(plan_value, dict) else {}
+    gap_value = downstream.get("research_gap_status")
+    gap = gap_value if isinstance(gap_value, dict) else {}
+    bundle_value = downstream.get("research_bundle")
+    bundle = bundle_value if isinstance(bundle_value, dict) else {}
     boundary_value = result.get("claim_boundary")
     boundary = boundary_value if isinstance(boundary_value, dict) else {}
     boundary_status = str(boundary.get("status", "unknown"))
@@ -2780,11 +2882,7 @@ def _format_peoc_import_output(
     warnings = warning_rows if isinstance(warning_rows, list) else []
     warning_counts: dict[str, int] = {}
     for warning in warnings:
-        code = (
-            str(warning.get("code", "unknown"))
-            if isinstance(warning, dict)
-            else "unknown"
-        )
+        code = str(warning.get("code", "unknown")) if isinstance(warning, dict) else "unknown"
         warning_counts[code] = warning_counts.get(code, 0) + 1
     warning_summary = sorted(
         warning_counts.items(),
@@ -2805,8 +2903,6 @@ def _format_peoc_import_output(
     warning_lines = [f"  - {code}: {count}" for code, count in warning_summary[:8]]
     if len(warning_summary) > 8:
         warning_lines.append(f"  - other_codes: {len(warning_summary) - 8}")
-    command = f'pcl evidence-card --run "{output_dir}"'
-
     if language == "zh":
         safe_claim = (
             "当前证据只支持在已导入的任务、模型、种子和实验协议范围内报告结果; "
@@ -2828,9 +2924,28 @@ def _format_peoc_import_output(
             f"警告: {len(warnings)} 条, 归为 {len(warning_counts)} 类",
             *warning_lines,
             f"案例报告: {case_study_path}",
+            (
+                f"证据卡: {evidence.get('path', output_dir / 'evidence_card.html')} "
+                f"(recommendation={evidence.get('recommendation', 'unknown')})"
+            ),
+            (
+                f"主张检查: {claim.get('path', output_dir / 'claim_check.html')} "
+                f"(status={claim.get('status', 'unknown')})"
+            ),
+            (
+                f"研究缺口计划: {plan.get('path', output_dir / 'research_gap_plan.html')} "
+                f"(actions={plan.get('action_count', 'unknown')})"
+            ),
+            (
+                f"研究缺口状态: {gap.get('path', output_dir / 'research_gap_status.html')} "
+                f"(status={gap.get('status', 'unknown')})"
+            ),
+            (
+                f"研究证据包: {bundle.get('path', output_dir / 'research_bundle.html')} "
+                f"(status={bundle.get('status', 'unknown')})"
+            ),
             "下一步:",
-            "  - 先打开上面的 HTML 案例报告, 查看每项证据及其限制。",
-            f"  - {command}",
+            "  - 先打开研究证据包, 再按顺序查看案例、证据卡和主张检查。",
         ]
         return "\n".join(lines)
 
@@ -2859,9 +2974,28 @@ def _format_peoc_import_output(
         f"Warnings: {len(warnings)} total across {len(warning_counts)} code(s)",
         *warning_lines,
         f"Case study: {case_study_path}",
+        (
+            f"Evidence card: {evidence.get('path', output_dir / 'evidence_card.html')} "
+            f"(recommendation={evidence.get('recommendation', 'unknown')})"
+        ),
+        (
+            f"Claim check: {claim.get('path', output_dir / 'claim_check.html')} "
+            f"(status={claim.get('status', 'unknown')})"
+        ),
+        (
+            f"Research gap plan: {plan.get('path', output_dir / 'research_gap_plan.html')} "
+            f"(actions={plan.get('action_count', 'unknown')})"
+        ),
+        (
+            f"Research gap status: {gap.get('path', output_dir / 'research_gap_status.html')} "
+            f"(status={gap.get('status', 'unknown')})"
+        ),
+        (
+            f"Research bundle: {bundle.get('path', output_dir / 'research_bundle.html')} "
+            f"(status={bundle.get('status', 'unknown')})"
+        ),
         "Next:",
-        "  - Open the HTML case study above to review each evidence limitation.",
-        f"  - {command}",
+        "  - Open the research bundle, then review the case study, evidence card, and claim check.",
     ]
     return "\n".join(lines)
 
@@ -2917,8 +3051,7 @@ def _format_research_demo_output(
     if language == "zh":
         lines = [
             f"已写出研究 demo: {out_dir}",
-            "做了什么: 生成一个用于论文诊断的小型 synthetic 证据包"
-            f"({readable_diagnostics})。",
+            f"做了什么: 生成一个用于论文诊断的小型 synthetic 证据包({readable_diagnostics})。",
             f"诊断项: {', '.join(diagnostic_names)}",
             *_research_cli_summary_lines(
                 summary_dir=out_dir,
@@ -3007,17 +3140,11 @@ def _research_cli_summary_lines(
     open_first = summary.get("open_first")
     if language == "zh":
         lines = [
-            (
-                "概览: "
-                f"诊断={diagnostics_ready}; 主张检查={claim_status}; "
-                f"证据层级={readable_tier}"
-            ),
+            (f"概览: 诊断={diagnostics_ready}; 主张检查={claim_status}; 证据层级={readable_tier}"),
         ]
         if isinstance(open_first, str) and open_first:
             open_path = (
-                "research_bundle.zh.html"
-                if open_first == "research_bundle.html"
-                else open_first
+                "research_bundle.zh.html" if open_first == "research_bundle.html" else open_first
             )
             lines.append(f"先打开: {summary_dir / open_path}")
         if isinstance(next_action, str) and next_action:
@@ -3578,11 +3705,7 @@ def _start_choice(value: str | None, *, language: str = "en") -> str:
         "adapters": "plugins",
     }
     if raw not in choices:
-        msg = (
-            "\u8bf7\u9009\u62e9 1-9"
-            if language == "zh"
-            else "Choose 1-9"
-        )
+        msg = "\u8bf7\u9009\u62e9 1-9" if language == "zh" else "Choose 1-9"
         raise ValueError(msg)
     return choices[raw]
 
@@ -3678,7 +3801,7 @@ def _format_start_guide(language: str = "en") -> str:
             ),
             (
                 "在 coding agent 执行前守护 prompt",
-                "pcl guard --prompt \"修复这个 bug\" "
+                'pcl guard --prompt "修复这个 bug" '
                 "--profile coding --policy examples/guard.policy.yaml",
                 "复制改写后的 prompt。",
             ),
@@ -3743,7 +3866,7 @@ def _format_start_guide(language: str = "en") -> str:
             ),
             (
                 "Guard a coding-agent prompt before it runs",
-                "pcl guard --prompt \"Fix this bug\" "
+                'pcl guard --prompt "Fix this bug" '
                 "--profile coding --policy examples/guard.policy.yaml",
                 "An improved prompt and guard result.",
             ),

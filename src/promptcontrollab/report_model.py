@@ -14,6 +14,9 @@ class ReportModel:
 
     run_dir: Path
     manifest: JsonDict
+    source_manifest: JsonDict
+    peoc_evidence: JsonDict
+    peoc_case_study: JsonDict
     metrics: JsonDict
     baseline_metrics: JsonDict
     candidate_metrics: JsonDict
@@ -59,6 +62,9 @@ class ReportModel:
         return cls(
             run_dir=run_dir,
             manifest=manifest,
+            source_manifest=_read_optional(run_dir / "source_manifest.json"),
+            peoc_evidence=_read_optional(run_dir / "peoc_evidence.json"),
+            peoc_case_study=_read_optional(run_dir / "research_case_study.json"),
             metrics=metrics,
             baseline_metrics=baseline_metrics,
             candidate_metrics=candidate_metrics,
@@ -138,6 +144,11 @@ def _read_optional(path: Path) -> JsonDict:
 def _existing_artifacts(run_dir: Path, diagnostics: dict[str, JsonDict]) -> list[str]:
     names = [
         "manifest.json",
+        "source_manifest.json",
+        "peoc_evidence.json",
+        "research_case_study.json",
+        "research_case_study.md",
+        "research_case_study.html",
         "metrics.json",
         "baseline/metrics.json",
         "candidate/metrics.json",

@@ -51,6 +51,53 @@ def test_claim_check_fails_when_core_comparison_is_incomplete(tmp_path: Path) ->
     assert "not as evidence" in payload["safe_claim"]
 
 
+def test_claim_check_rejects_full_research_when_peoc_boundary_is_fail_closed(
+    tmp_path: Path,
+) -> None:
+    run = _full_research_run(tmp_path)
+    statuses = {
+        "hard_evaluation": "available",
+        "soft_evaluation": "available",
+        "trajectory": "partial",
+        "stage_heterogeneity": "available",
+        "riccati": "available",
+        "soft_hard": "available",
+    }
+    _write_json(
+        run / "peoc_evidence.json",
+        {
+            "schema": "prompt_control_lab.peoc_evidence.v1",
+            "sections": {
+                name: {"origin": "real", "status": status, "observations": {}}
+                for name, status in statuses.items()
+            },
+            "claim_boundary": {
+                "full_research_support": False,
+                "status": "not_supported",
+                "blocking_sections": [{"section": "trajectory", "status": "partial"}],
+            },
+        },
+    )
+    _write_json(
+        run / "research_case_study.json",
+        {
+            "schema": "prompt_control_lab.peoc_case_study.v1",
+            "safe_claim": "The imported PEOC evidence supports a bounded partial result only.",
+        },
+    )
+
+    payload = run_claim_check(run, claim="full-research")
+
+    assert payload["status"] == "fail"
+    assert payload["evidence_tier"] == "tier_3_partial_research_diagnostics"
+    assert payload["recommendation"] == "needs_review"
+    assert payload["safe_claim"] == (
+        "The imported PEOC evidence supports a bounded partial result only."
+    )
+    assert "full support" not in payload["safe_claim"].lower()
+    assert "paper_replication_evidence" in payload["next_tier_missing"]
+
+
 def test_cli_claim_check_writes_json_and_markdown(tmp_path: Path) -> None:
     run = _paired_only_run(tmp_path)
     out = tmp_path / "claim_check.json"

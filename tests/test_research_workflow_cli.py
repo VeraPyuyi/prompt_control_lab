@@ -5,6 +5,7 @@ from typing import Any
 
 import pytest
 
+import promptcontrollab.research_workflow as research_workflow
 from promptcontrollab.cli import main
 from promptcontrollab.files import read_json, write_json
 
@@ -461,9 +462,7 @@ def test_diagnose_summarizes_ecosystem_demo_evidence_gaps(tmp_path: Path) -> Non
     assert "Research Diagnostics Report" in (out / "research_diagnostics.html").read_text(
         encoding="utf-8"
     )
-    assert "Research Evidence Bundle" in (out / "research_bundle.html").read_text(
-        encoding="utf-8"
-    )
+    assert "Research Evidence Bundle" in (out / "research_bundle.html").read_text(encoding="utf-8")
     assert "exit 1" in (out / "research_gap_commands.ps1").read_text(encoding="utf-8")
     assert "Promptfoo" in report
     assert "Risk: `None`" not in report
@@ -539,9 +538,7 @@ def test_gap_status_checks_expected_research_artifacts(tmp_path: Path) -> None:
     assert status["missing_count"] == 1
     assert status["actions"][0]["status"] == "present"
     assert status["actions"][1]["status"] == "missing"
-    assert "hidden-state trajectory" in (run / "research_gap_status.md").read_text(
-        encoding="utf-8"
-    )
+    assert "hidden-state trajectory" in (run / "research_gap_status.md").read_text(encoding="utf-8")
     assert "Research Evidence Gap Status" in (run / "research_gap_status.html").read_text(
         encoding="utf-8"
     )
@@ -550,6 +547,250 @@ def test_gap_status_checks_expected_research_artifacts(tmp_path: Path) -> None:
     )
     assert (run / "research_bundle.html").exists()
     assert read_json(run / "research_bundle.json")["gap_status"] == "needs_work"
+
+
+def test_peoc_gap_plan_bundle_and_hash_verification_are_fail_closed(tmp_path: Path) -> None:
+    run = tmp_path / "peoc-run"
+    private_source = r"D:\private\peoc\nmi_replication_bundle"
+    _write_peoc_research_artifacts(run, private_source=private_source)
+
+    assert hasattr(research_workflow, "write_peoc_research_gap_plan")
+    plan = research_workflow.write_peoc_research_gap_plan(run)
+
+    concepts = {str(action["concept"]) for action in plan["actions"]}
+    assert {
+        "Riccati surrogate",
+        "soft-to-hard projection gap",
+        "segmented soft evaluation",
+        "stage heterogeneity validation",
+    }.issubset(concepts)
+    assert all(
+        {"concept", "artifact", "required_inputs", "command", "explains", "step"} <= set(action)
+        for action in plan["actions"]
+    )
+    assert all(
+        str(action["artifact"]) not in {"source/soft.json", "source/stage.json"}
+        for action in plan["actions"]
+    )
+
+    status = research_workflow.write_research_gap_status(run_dir=run)
+    assert status["status"] == "needs_work"
+    assert status["missing_count"] >= 4
+
+    assert main(["evidence-card", "--run", str(run)]) == 0
+    assert (
+        main(
+            [
+                "claim-check",
+                "--run",
+                str(run),
+                "--claim",
+                "full-research",
+                "--out",
+                str(run / "claim_check.json"),
+            ]
+        )
+        == 0
+    )
+    bundle = research_workflow.write_research_bundle_index(run)
+
+    for artifact in [
+        "source_manifest.json",
+        "peoc_evidence.json",
+        "research_case_study.json",
+        "research_case_study.md",
+        "research_case_study.html",
+    ]:
+        row = _artifact(bundle, artifact)
+        assert row["exists"] is True
+        assert row["hash_status"] == "hashed"
+        assert str(row["sha256"]).startswith("sha256:")
+    assert any(
+        item.get("path") == "research_case_study.html" and item.get("exists") is True
+        for item in bundle["review_order"]
+    )
+    assert bundle["evidence_origin"] == "real"
+    assert bundle["evidence_tier"] != "tier_4_full_research_diagnostics"
+    assert private_source not in (run / "research_bundle.html").read_text(encoding="utf-8")
+
+    evidence_path = run / "peoc_evidence.json"
+    evidence_path.write_text(
+        evidence_path.read_text(encoding="utf-8") + "\n",
+        encoding="utf-8",
+    )
+    verification = research_workflow.verify_research_bundle_index(run)
+    assert verification["status"] == "fail"
+    assert _verification_result(verification, "peoc_evidence.json")["status"] == "mismatch"
+
+
+@pytest.mark.parametrize("trajectory_status", ["partial", "unusable", "missing"])
+def test_peoc_gap_plan_requests_trajectory_rerun_for_limited_import(
+    tmp_path: Path,
+    trajectory_status: str,
+) -> None:
+    run = tmp_path / trajectory_status
+    write_json(
+        run / "peoc_evidence.json",
+        {
+            "sections": {
+                "hard_evaluation": {"status": "available"},
+                "soft_evaluation": {"status": "available"},
+                "trajectory": {"status": trajectory_status},
+                "stage_heterogeneity": {"status": "available"},
+                "riccati": {"status": "available"},
+                "soft_hard": {"status": "available"},
+            }
+        },
+    )
+
+    plan = research_workflow.write_peoc_research_gap_plan(run)
+
+    action = next(item for item in plan["actions"] if item["concept"] == "trajectory replication")
+    assert action["artifact"] == "peoc_reruns/trajectory_replication_summary.json"
+    assert action["command"].startswith("<PEOC-trajectory-rerun-command")
+    assert trajectory_status in action["explains"]
+
+
+def test_peoc_gap_plan_covers_every_non_available_section(tmp_path: Path) -> None:
+    run = tmp_path / "blocked-sections"
+    write_json(
+        run / "peoc_evidence.json",
+        {
+            "sections": {
+                "hard_evaluation": {"status": "unusable"},
+                "soft_evaluation": {"status": "missing"},
+                "trajectory": {"status": "available"},
+                "stage_heterogeneity": {"status": "partial"},
+                "riccati": {"status": "failed_validation"},
+                "soft_hard": {"status": "unusable"},
+            }
+        },
+    )
+
+    plan = research_workflow.write_peoc_research_gap_plan(run)
+    status = research_workflow.write_research_gap_status(run_dir=run)
+
+    concepts = {str(action["concept"]) for action in plan["actions"]}
+    assert {
+        "hard prompt evaluation",
+        "segmented soft evaluation",
+        "stage heterogeneity validation",
+        "Riccati surrogate",
+        "soft-to-hard projection gap",
+    } <= concepts
+    assert status["status"] == "needs_work"
+    assert status["missing_count"] >= 5
+
+
+def test_peoc_gap_plan_accepts_available_soft_section_with_excluded_rows(
+    tmp_path: Path,
+) -> None:
+    run = tmp_path / "available-soft"
+    write_json(
+        run / "peoc_evidence.json",
+        {
+            "sections": {
+                "hard_evaluation": {"status": "available"},
+                "soft_evaluation": {
+                    "status": "available",
+                    "observations": {
+                        "valid_row_count": 1,
+                        "zero_count_row_count": 1,
+                    },
+                },
+                "trajectory": {"status": "available"},
+                "stage_heterogeneity": {"status": "available"},
+                "riccati": {"status": "available"},
+                "soft_hard": {"status": "available"},
+            }
+        },
+    )
+
+    plan = research_workflow.write_peoc_research_gap_plan(run)
+    status = research_workflow.write_research_gap_status(run_dir=run)
+
+    assert plan["actions"] == []
+    assert status["status"] == "complete"
+
+
+def test_peoc_gap_plan_requires_imported_evidence(tmp_path: Path) -> None:
+    with pytest.raises(ValueError, match=r"peoc_evidence\.json"):
+        research_workflow.write_peoc_research_gap_plan(tmp_path / "missing")
+
+
+def _write_peoc_research_artifacts(run: Path, *, private_source: str) -> None:
+    write_json(
+        run / "source_manifest.json",
+        {
+            "schema": "prompt_control_lab.peoc_source_manifest.v1",
+            "sources": [
+                {
+                    "role": "soft_segmented_summary",
+                    "relative_path": "source/soft.json",
+                    "resolved_path": private_source + r"\source\soft.json",
+                },
+                {
+                    "role": "stage_heterogeneity",
+                    "relative_path": "source/stage.json",
+                    "resolved_path": private_source + r"\source\stage.json",
+                },
+            ],
+        },
+    )
+    write_json(
+        run / "peoc_evidence.json",
+        {
+            "schema": "prompt_control_lab.peoc_evidence.v1",
+            "sections": {
+                "hard_evaluation": {
+                    "origin": "real",
+                    "status": "available",
+                    "observations": {"methods": ["pez", "tv_pmp"]},
+                },
+                "trajectory": {
+                    "origin": "real",
+                    "status": "available",
+                    "observations": {"headline_pair": {"model": "Qwen", "seed": 0}},
+                },
+                "soft_evaluation": {
+                    "origin": "real",
+                    "status": "unusable",
+                    "observations": {
+                        "summary_row_count": 2,
+                        "valid_row_count": 0,
+                        "zero_count_row_count": 2,
+                    },
+                },
+                "stage_heterogeneity": {
+                    "origin": "real",
+                    "status": "failed_validation",
+                    "observations": {"verdict": "FAIL"},
+                },
+                "riccati": {"origin": "none", "status": "missing", "observations": {}},
+                "soft_hard": {"origin": "none", "status": "missing", "observations": {}},
+            },
+            "claim_boundary": {
+                "status": "not_supported",
+                "full_research_support": False,
+                "statement": "The imported bundle does not support full research claims.",
+                "blocking_sections": [
+                    {"section": "soft_evaluation", "status": "unusable"},
+                    {"section": "stage_heterogeneity", "status": "failed_validation"},
+                    {"section": "riccati", "status": "missing"},
+                    {"section": "soft_hard", "status": "missing"},
+                ],
+            },
+        },
+    )
+    write_json(
+        run / "research_case_study.json",
+        {
+            "schema": "prompt_control_lab.peoc_case_study.v1",
+            "safe_claim": "Bounded imported evidence only.",
+        },
+    )
+    (run / "research_case_study.md").write_text("# Real case\n", encoding="utf-8")
+    (run / "research_case_study.html").write_text("<h1>Real case</h1>\n", encoding="utf-8")
 
 
 def test_diagnose_requires_enough_inputs(tmp_path: Path) -> None:

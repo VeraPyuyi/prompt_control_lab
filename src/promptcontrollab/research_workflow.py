@@ -34,8 +34,7 @@ PAPER_MAPPING: list[JsonDict] = [
         "commands": ["pcl stats"],
         "artifact": "stats.json",
         "meaning": (
-            "Reports paired mean delta, bootstrap CI, permutation p-value, "
-            "and Holm correction."
+            "Reports paired mean delta, bootstrap CI, permutation p-value, and Holm correction."
         ),
     },
     {
@@ -43,8 +42,7 @@ PAPER_MAPPING: list[JsonDict] = [
         "commands": ["pcl soft-hard"],
         "artifact": "diagnostics/soft_hard.json",
         "meaning": (
-            "Measures whether learned soft vectors are close to deployable "
-            "token embeddings."
+            "Measures whether learned soft vectors are close to deployable token embeddings."
         ),
     },
     {
@@ -599,6 +597,212 @@ def _write_research_outputs(*, summary_dir: Path, payload: JsonDict) -> None:
     write_research_bundle_index(summary_dir)
 
 
+def write_peoc_research_gap_plan(run_dir: Path) -> JsonDict:
+    """Write fail-closed follow-up actions for imported PEOC evidence gaps."""
+
+    evidence_path = run_dir / "peoc_evidence.json"
+    if not evidence_path.exists():
+        msg = (
+            f"No peoc_evidence.json found in {run_dir}. "
+            "Run `pcl research-import peoc` before creating a PEOC gap plan."
+        )
+        raise ValueError(msg)
+    evidence = read_json(evidence_path)
+    sections_value = evidence.get("sections")
+    if not isinstance(sections_value, dict):
+        msg = f"Invalid peoc_evidence.json in {run_dir}: expected a sections object."
+        raise ValueError(msg)
+    sections = sections_value
+
+    actions = [
+        action
+        for section_name, action in [
+            (
+                "hard_evaluation",
+                _peoc_hard_evaluation_action(
+                    source_status=_peoc_section_status(sections, "hard_evaluation")
+                ),
+            ),
+            (
+                "soft_evaluation",
+                _peoc_soft_evaluation_action(
+                    source_status=_peoc_section_status(sections, "soft_evaluation")
+                ),
+            ),
+            (
+                "trajectory",
+                _peoc_trajectory_action(source_status=_peoc_section_status(sections, "trajectory")),
+            ),
+            (
+                "stage_heterogeneity",
+                _peoc_stage_action(
+                    source_status=_peoc_section_status(sections, "stage_heterogeneity")
+                ),
+            ),
+            (
+                "riccati",
+                _peoc_riccati_action(source_status=_peoc_section_status(sections, "riccati")),
+            ),
+            (
+                "soft_hard",
+                _peoc_soft_hard_action(source_status=_peoc_section_status(sections, "soft_hard")),
+            ),
+        ]
+        if _peoc_section_status(sections, section_name) != "available" and action
+    ]
+
+    numbered_actions = _numbered_actions([action for action in actions if action])
+    plan: JsonDict = {
+        "kind": "research_gap_plan",
+        "run_dir": str(run_dir),
+        "diagnostic_type": "peoc_replication_evidence_gap",
+        "source_evidence": "peoc_evidence.json",
+        "action_count": len(numbered_actions),
+        "actions": numbered_actions,
+        "boundary": (
+            "This plan is a copy-paste guide for collecting missing paper-derived evidence. "
+            "Commands with placeholders must be edited before use; no missing diagnostic is "
+            "treated as measured until its artifact exists. For PEOC imports, existing missing, "
+            "partial, unusable, and failed-validation sources remain incomplete; actions target "
+            "future usable outputs. PromptControlLab commands are listed only where "
+            "PromptControlLab can generate the diagnostic."
+        ),
+    }
+    ensure_dir(run_dir)
+    write_json(run_dir / "research_gap_plan.json", plan)
+    (run_dir / "research_gap_plan.md").write_text(
+        _render_research_gap_plan_markdown(plan),
+        encoding="utf-8",
+    )
+    (run_dir / "research_gap_plan.html").write_text(
+        render_research_gap_plan_html(plan),
+        encoding="utf-8",
+    )
+    (run_dir / "research_gap_commands.ps1").write_text(
+        _render_gap_commands_ps1(plan),
+        encoding="utf-8",
+    )
+    (run_dir / "research_gap_commands.sh").write_text(
+        _render_gap_commands_sh(plan),
+        encoding="utf-8",
+    )
+    return plan
+
+
+def _peoc_section(sections: dict[object, object], name: str) -> JsonDict:
+    value = sections.get(name)
+    return value if isinstance(value, dict) else {}
+
+
+def _peoc_section_status(sections: dict[object, object], name: str) -> str:
+    return str(_peoc_section(sections, name).get("status") or "missing")
+
+
+def _peoc_hard_evaluation_action(*, source_status: str) -> JsonDict:
+    return {
+        "concept": "hard prompt evaluation",
+        "required_inputs": [
+            "PEOC hard-prompt evaluation configuration",
+            "matching task/model/seed evaluation samples",
+        ],
+        "command": (
+            "<PEOC-hard-evaluation-rerun-command writing "
+            "peoc_reruns/hard_evaluation_summary.usable.json>"
+        ),
+        "artifact": "peoc_reruns/hard_evaluation_summary.usable.json",
+        "explains": (
+            "Re-collects a future usable hard-prompt aggregate because the imported hard "
+            f"evaluation status is {source_status}; it does not infer a universally best method."
+        ),
+    }
+
+
+def _peoc_soft_evaluation_action(*, source_status: str) -> JsonDict:
+    return {
+        "concept": "segmented soft evaluation",
+        "required_inputs": [
+            "PEOC segmented-soft experiment configuration",
+            "non-empty task/model evaluation samples",
+        ],
+        "command": (
+            "<PEOC-segmented-soft-rerun-command writing "
+            "peoc_reruns/summary_soft_segmented.usable.json>"
+        ),
+        "artifact": "peoc_reruns/summary_soft_segmented.usable.json",
+        "explains": (
+            "Re-collects a future usable segmented-soft summary with finite, positive-count "
+            f"results because the imported soft evaluation status is {source_status}."
+        ),
+    }
+
+
+def _peoc_trajectory_action(*, source_status: str) -> JsonDict:
+    return {
+        "concept": "trajectory replication",
+        "required_inputs": [
+            "PEOC stationary and heterogeneous trajectory summaries",
+            "matching model/seed raw trajectory references",
+        ],
+        "command": (
+            "<PEOC-trajectory-rerun-command writing "
+            "peoc_reruns/trajectory_replication_summary.json>"
+        ),
+        "artifact": "peoc_reruns/trajectory_replication_summary.json",
+        "explains": (
+            "Re-collects a complete paired trajectory summary because the imported trajectory "
+            f"evidence status is {source_status}."
+        ),
+    }
+
+
+def _peoc_stage_action(*, source_status: str) -> JsonDict:
+    return {
+        "concept": "stage heterogeneity validation",
+        "required_inputs": [
+            "PEOC stage-heterogeneity validation configuration",
+            "held-out validation cells and rerun seeds",
+        ],
+        "command": (
+            "<PEOC-stage-heterogeneity-rerun-command writing "
+            "peoc_reruns/stage_heterogeneity_validation.usable.json>"
+        ),
+        "artifact": "peoc_reruns/stage_heterogeneity_validation.usable.json",
+        "explains": (
+            "Records a future usable validation rerun because the imported stage-heterogeneity "
+            f"status is {source_status}; the imported result remains negative or incomplete."
+        ),
+    }
+
+
+def _peoc_riccati_action(*, source_status: str) -> JsonDict:
+    return {
+        "concept": "Riccati surrogate",
+        "required_inputs": ["inputs/hidden_states.npz"],
+        "command": "pcl riccati --trajectory inputs/hidden_states.npz --out peoc_reruns",
+        "artifact": "peoc_reruns/riccati.json",
+        "explains": (
+            "Creates a fresh fitted surrogate diagnostic because the imported Riccati evidence "
+            f"status is {source_status}; it does not validate the operational model itself."
+        ),
+    }
+
+
+def _peoc_soft_hard_action(*, source_status: str) -> JsonDict:
+    return {
+        "concept": "soft-to-hard projection gap",
+        "required_inputs": ["inputs/soft_prompt.npz", "inputs/vocab_embeddings.npz"],
+        "command": (
+            "pcl soft-hard --soft inputs/soft_prompt.npz "
+            "--vocab inputs/vocab_embeddings.npz --out peoc_reruns"
+        ),
+        "artifact": "peoc_reruns/soft_hard.json",
+        "explains": (
+            "Creates a fresh deployment-gap diagnostic because the imported soft-to-hard "
+            f"evidence status is {source_status}."
+        ),
+    }
+
+
 def write_research_gap_status(*, run_dir: Path, out_path: Path | None = None) -> JsonDict:
     """Check whether actions in ``research_gap_plan.json`` have been completed."""
 
@@ -653,12 +857,18 @@ def write_research_bundle_index(run_dir: Path) -> JsonDict:
     payload = build_research_bundle_index(run_dir)
     out_path = run_dir / "research_bundle.html"
     out_path.write_text(render_research_bundle_index_html(payload), encoding="utf-8")
+    markdown_path = run_dir / "research_bundle.md"
+    markdown_path.write_text(
+        render_research_bundle_index_markdown(payload),
+        encoding="utf-8",
+    )
     zh_path = run_dir / "research_bundle.zh.html"
     zh_path.write_text(
         render_research_bundle_index_html(payload, language="zh"),
         encoding="utf-8",
     )
     payload["html_path"] = str(out_path)
+    payload["markdown_path"] = str(markdown_path)
     payload["html_zh_path"] = str(zh_path)
     write_json(run_dir / "research_bundle.json", payload)
     return payload
@@ -756,6 +966,9 @@ def build_research_bundle_index(run_dir: Path) -> JsonDict:
     claim = _read_optional_research_json(run_dir / "claim_check.json")
     gap_status = _read_optional_research_json(run_dir / "research_gap_status.json")
     gap_plan = _read_optional_research_json(run_dir / "research_gap_plan.json")
+    peoc_evidence = _read_optional_research_json(run_dir / "peoc_evidence.json")
+    peoc_case_study = _read_optional_research_json(run_dir / "research_case_study.json")
+    manifest = _read_optional_research_json(run_dir / "manifest.json")
     diagnostics_payload = diagnostics.get("diagnostics")
     diagnostics_dict = diagnostics_payload if isinstance(diagnostics_payload, dict) else {}
     status = _bundle_status(
@@ -765,6 +978,11 @@ def build_research_bundle_index(run_dir: Path) -> JsonDict:
         gap_plan=gap_plan,
     )
     evidence_tier = evidence.get("evidence_tier") or claim.get("evidence_tier")
+    peoc_origin = _peoc_evidence_origin(
+        evidence=peoc_evidence,
+        case_study=peoc_case_study,
+        manifest=manifest,
+    )
     claim_status = claim.get("status")
     gap_status_value = gap_status.get("status") or ("planned" if gap_plan else "not_planned")
     expected = [
@@ -780,6 +998,7 @@ def build_research_bundle_index(run_dir: Path) -> JsonDict:
         "run_dir": str(run_dir),
         "status": status,
         "recommendation": evidence.get("recommendation") or claim.get("status") or "review",
+        **({"evidence_origin": peoc_origin} if peoc_origin else {}),
         "evidence_tier": evidence_tier,
         "evidence_tier_label": _readable_bundle_evidence_tier(str(evidence_tier or "")),
         "evidence_tier_label_zh": _readable_bundle_evidence_tier(
@@ -876,10 +1095,7 @@ def _research_bundle_plain_summary(
     gap = _readable_bundle_status(gap_status, language="en")
     bundle = _readable_bundle_status(status, language="en")
     return [
-        (
-            "Start with research_diagnostics.html to see the paper-derived checks in "
-            "plain language."
-        ),
+        ("Start with research_diagnostics.html to see the paper-derived checks in plain language."),
         f"This bundle currently has {tier} with claim check status {claim}.",
         f"Included diagnostics: {diagnostics_text}.",
         f"Gap status is {gap} and bundle status is {bundle}.",
@@ -942,6 +1158,27 @@ def _read_optional_research_json(path: Path) -> JsonDict:
     return read_json(path)
 
 
+def _peoc_evidence_origin(
+    *,
+    evidence: JsonDict,
+    case_study: JsonDict,
+    manifest: JsonDict,
+) -> str | None:
+    case_origin = case_study.get("evidence_origin")
+    if isinstance(case_origin, str) and case_origin:
+        return case_origin
+    manifest_origin = manifest.get("evidence_origin")
+    if manifest.get("adapter") == "peoc" and isinstance(manifest_origin, str) and manifest_origin:
+        return manifest_origin
+    sections_value = evidence.get("sections")
+    if isinstance(sections_value, dict) and any(
+        isinstance(section, dict) and section.get("origin") == "real"
+        for section in sections_value.values()
+    ):
+        return "real"
+    return None
+
+
 def _bundle_status(
     *,
     evidence: JsonDict,
@@ -979,24 +1216,36 @@ def _bundle_review_order(run_dir: Path) -> list[JsonDict]:
             "research_diagnostics.html",
             "Paper-derived diagnostic coverage and missing evidence.",
         ),
-        ("Evidence card", "evidence_card.html", "Compact prompt optimization evidence card."),
-        (
-            "Claim check",
-            "claim_check.html",
-            "Strongest claim currently supported by the artifact bundle.",
-        ),
-        (
-            "Gap plan",
-            "research_gap_plan.html",
-            "Commands and inputs needed to close missing paper diagnostics.",
-        ),
-        (
-            "Gap status",
-            "research_gap_status.html",
-            "Whether expected gap-closing artifacts currently exist.",
-        ),
-        ("Full report", "report.html", "Full run comparison report when available."),
     ]
+    if (run_dir / "peoc_evidence.json").exists() or (run_dir / "research_case_study.html").exists():
+        candidates.append(
+            (
+                "Real PEOC case study",
+                "research_case_study.html",
+                "Imported real replication results, limitations, and claim boundary.",
+            )
+        )
+    candidates.extend(
+        [
+            ("Evidence card", "evidence_card.html", "Compact prompt optimization evidence card."),
+            (
+                "Claim check",
+                "claim_check.html",
+                "Strongest claim currently supported by the artifact bundle.",
+            ),
+            (
+                "Gap plan",
+                "research_gap_plan.html",
+                "Commands and inputs needed to close missing paper diagnostics.",
+            ),
+            (
+                "Gap status",
+                "research_gap_status.html",
+                "Whether expected gap-closing artifacts currently exist.",
+            ),
+            ("Full report", "report.html", "Full run comparison report when available."),
+        ]
+    )
     return [
         {
             "label": label,
@@ -1011,9 +1260,15 @@ def _bundle_review_order(run_dir: Path) -> list[JsonDict]:
 def _bundle_artifacts(run_dir: Path) -> list[JsonDict]:
     names = [
         "research_bundle.html",
+        "research_bundle.md",
         "research_bundle.zh.html",
         "research_bundle.json",
         "research_overview.svg",
+        "source_manifest.json",
+        "peoc_evidence.json",
+        "research_case_study.html",
+        "research_case_study.md",
+        "research_case_study.json",
         "evidence_audit_result.html",
         "evidence_audit_result.md",
         "evidence_audit_result.json",
@@ -1075,6 +1330,7 @@ def _bundle_artifact_row(*, run_dir: Path, name: str) -> JsonDict:
     path = run_dir / name
     self_generated = name in {
         "research_bundle.html",
+        "research_bundle.md",
         "research_bundle.zh.html",
         "research_bundle.json",
     }
@@ -1235,6 +1491,68 @@ def render_research_bundle_index_html(payload: JsonDict, *, language: str = "en"
                 ),
             ),
         ],
+    )
+
+
+def render_research_bundle_index_markdown(payload: JsonDict) -> str:
+    """Render the research bundle navigation index as portable Markdown."""
+
+    lines = [
+        "# Research Evidence Bundle",
+        "",
+        f"- Status: `{_bundle_markdown_text(payload.get('status'))}`",
+        f"- Evidence tier: `{_bundle_markdown_text(payload.get('evidence_tier'))}`",
+        f"- Claim check: `{_bundle_markdown_text(payload.get('claim_check_status'))}`",
+        f"- Gap status: `{_bundle_markdown_text(payload.get('gap_status'))}`",
+        "",
+        "## Review order",
+        "",
+        "| Step | Status | Artifact | What it explains |",
+        "|---:|---|---|---|",
+    ]
+    review_order = payload.get("review_order")
+    if isinstance(review_order, list):
+        for step, item in enumerate(review_order, start=1):
+            if not isinstance(item, dict):
+                continue
+            path = _bundle_markdown_text(item.get("path"))
+            exists = bool(item.get("exists"))
+            artifact = f"[{path}]({path})" if exists else path
+            lines.append(
+                "| "
+                + " | ".join(
+                    [
+                        str(step),
+                        "present" if exists else "missing",
+                        artifact,
+                        _bundle_markdown_text(item.get("explains")),
+                    ]
+                )
+                + " |"
+            )
+    lines.extend(
+        [
+            "",
+            "## Safe claim language",
+            "",
+            _bundle_markdown_text(payload.get("claim_language")),
+            "",
+            "## Boundary",
+            "",
+            _bundle_markdown_text(payload.get("boundary")),
+            "",
+        ]
+    )
+    return "\n".join(lines)
+
+
+def _bundle_markdown_text(value: object) -> str:
+    return (
+        html.escape(str(value or ""), quote=False)
+        .replace("\r", " ")
+        .replace("\n", " ")
+        .replace("|", r"\|")
+        .replace("`", "&#96;")
     )
 
 
@@ -1616,17 +1934,11 @@ def _summarize_ecosystem_bundle(*, run_dir: Path, payload: JsonDict) -> JsonDict
         "tool_count": len(rows),
         "runs": rows,
         "missing_research_diagnostics": sorted(
-            {
-                str(missing)
-                for row in rows
-                for missing in row.get("missing_paper_diagnostics", [])
-            }
+            {str(missing) for row in rows for missing in row.get("missing_paper_diagnostics", [])}
         ),
         "paper_gap_remediation": remediation,
         "review_first": [
-            str(row.get("bridge_summary_path"))
-            for row in rows
-            if row.get("bridge_summary_path")
+            str(row.get("bridge_summary_path")) for row in rows if row.get("bridge_summary_path")
         ],
     }
 
@@ -2007,8 +2319,7 @@ def render_research_diagnostics_html(payload: JsonDict) -> str:
         ),
         _section(
             "Visual Overview",
-            '<img class="overview" src="research_overview.svg" '
-            'alt="Research diagnostic overview">',
+            '<img class="overview" src="research_overview.svg" alt="Research diagnostic overview">',
         ),
         _section(
             "Plain-language Interpretation",
@@ -2094,8 +2405,7 @@ def render_research_diagnostics_html(payload: JsonDict) -> str:
                         (
                             "Missing diagnostics",
                             ", ".join(
-                                str(item)
-                                for item in external.get("missing_paper_diagnostics", [])
+                                str(item) for item in external.get("missing_paper_diagnostics", [])
                             ),
                         ),
                     ]
@@ -2226,7 +2536,7 @@ def render_research_overview_svg(payload: JsonDict) -> str:
   <text x="54" y="74" class="title">Paper-derived prompt-control evidence</text>
   <text x="54" y="103" class="sub">From clean protocol to deployability,
   hidden-state dynamics, surrogate stability, and reviewer artifacts.</text>
-{''.join(cards)}
+{"".join(cards)}
 </svg>
 """
 
@@ -2368,12 +2678,9 @@ def _render_remediation_html(value: object) -> str:
                 row.get("explains", ""),
             ]
         )
-    return (
-        '<h3 class="subhead">How to close these gaps</h3>'
-        + _table(
-            ["Missing diagnostic", "Required inputs", "Command", "Artifact", "What it explains"],
-            table_rows,
-        )
+    return '<h3 class="subhead">How to close these gaps</h3>' + _table(
+        ["Missing diagnostic", "Required inputs", "Command", "Artifact", "What it explains"],
+        table_rows,
     )
 
 
@@ -2483,7 +2790,7 @@ def _html_page(*, title: str, subtitle: str, body: list[str]) -> str:
     <h1>{_html_text(title)}</h1>
     <div class="subtitle">{_html_text(subtitle)}</div>
   </div>
-  {''.join(body)}
+  {"".join(body)}
 </main>
 </body>
 </html>
@@ -2871,14 +3178,10 @@ def _plain_diagnostic_result(key: str, payload: JsonDict) -> str:
         return "not measured"
     if key == "soft_hard":
         return (
-            f"risk={payload.get('risk')}; "
-            f"mean distance={payload.get('mean_projection_distance')}"
+            f"risk={payload.get('risk')}; mean distance={payload.get('mean_projection_distance')}"
         )
     if key == "hidden_states":
-        return (
-            f"source={payload.get('source')}; "
-            f"shape={payload.get('states_shape')}"
-        )
+        return f"source={payload.get('source')}; shape={payload.get('states_shape')}"
     if key == "trajectory":
         return (
             f"turnpike={payload.get('turnpike_like_signal')}; "
