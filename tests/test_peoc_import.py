@@ -329,18 +329,83 @@ def test_build_peoc_evidence_normalizes_non_finite_source_metadata(
     )
 
 
-def test_build_peoc_evidence_rejects_changed_required_hard_source(
+def test_build_peoc_evidence_requires_bundle_manifest_source_row(
+    tmp_path: Path,
+) -> None:
+    bundle_root = tmp_path / "bundle"
+    _write_minimal_bundle(bundle_root)
+    manifest = discover_peoc_sources(bundle_root, PeocSourceOverrides())
+    manifest["sources"] = [
+        source for source in manifest["sources"] if source["role"] != "bundle_manifest"
+    ]
+
+    with pytest.raises(ValueError, match=r"bundle manifest source"):
+        build_peoc_evidence(bundle_root, manifest)
+
+
+def test_build_peoc_evidence_rejects_missing_bundle_manifest_file(
+    tmp_path: Path,
+) -> None:
+    bundle_root = tmp_path / "bundle"
+    _write_minimal_bundle(bundle_root)
+    manifest = discover_peoc_sources(bundle_root, PeocSourceOverrides())
+    (bundle_root / "README_MANIFEST.md").unlink()
+
+    with pytest.raises(
+        ValueError,
+        match=r"bundle manifest source changed after discovery",
+    ):
+        build_peoc_evidence(bundle_root, manifest)
+
+
+def test_build_peoc_evidence_rejects_same_length_bundle_manifest_tamper(
+    tmp_path: Path,
+) -> None:
+    bundle_root = tmp_path / "bundle"
+    _write_minimal_bundle(bundle_root)
+    manifest = discover_peoc_sources(bundle_root, PeocSourceOverrides())
+    manifest_path = bundle_root / "README_MANIFEST.md"
+    original = manifest_path.read_bytes()
+    tampered = original.replace(b"PEOC", b"XEOC", 1)
+    assert tampered != original
+    assert len(tampered) == len(original)
+    manifest_path.write_bytes(tampered)
+
+    with pytest.raises(
+        ValueError,
+        match=r"bundle manifest source changed after discovery.*sha256",
+    ):
+        build_peoc_evidence(bundle_root, manifest)
+
+
+def test_build_peoc_evidence_rejects_stale_bundle_level_manifest_hash(
+    tmp_path: Path,
+) -> None:
+    bundle_root = tmp_path / "bundle"
+    _write_minimal_bundle(bundle_root)
+    manifest = discover_peoc_sources(bundle_root, PeocSourceOverrides())
+    manifest["bundle"]["manifest_sha256"] = "sha256:" + ("0" * 64)
+
+    with pytest.raises(ValueError, match=r"bundle manifest hash changed after discovery"):
+        build_peoc_evidence(bundle_root, manifest)
+
+
+def test_build_peoc_evidence_rejects_same_length_required_hard_tamper(
     tmp_path: Path,
 ) -> None:
     bundle_root = tmp_path / "bundle"
     _write_minimal_bundle(bundle_root)
     manifest = discover_peoc_sources(bundle_root, PeocSourceOverrides())
     hard_path = bundle_root / HARD_SUMMARY
-    hard_path.write_text(hard_path.read_text(encoding="utf-8") + "\n", encoding="utf-8")
+    original = hard_path.read_bytes()
+    tampered = original.replace(b'"mean": 0.6', b'"mean": 0.7', 1)
+    assert tampered != original
+    assert len(tampered) == len(original)
+    hard_path.write_bytes(tampered)
 
     with pytest.raises(
         ValueError,
-        match=r"hard-test summary source changed after discovery",
+        match=r"hard-test summary source changed after discovery.*sha256",
     ):
         build_peoc_evidence(bundle_root, manifest)
 
@@ -493,7 +558,7 @@ def test_build_peoc_evidence_marks_mixed_valid_and_invalid_trajectory_partial(
     )
 
 
-def test_build_peoc_evidence_excludes_changed_trajectory_binary_reference(
+def test_build_peoc_evidence_excludes_same_length_tampered_binary_reference(
     tmp_path: Path,
 ) -> None:
     bundle_root = tmp_path / "bundle"
@@ -506,7 +571,11 @@ def test_build_peoc_evidence_excludes_changed_trajectory_binary_reference(
         / "results_a800"
         / "stationary_arith_Qwen2.5-7B-Instruct_s0.npz"
     )
-    binary_path.write_bytes(b"changed-after-discovery")
+    original = binary_path.read_bytes()
+    tampered = bytes([original[0] ^ 1, *original[1:]])
+    assert tampered != original
+    assert len(tampered) == len(original)
+    binary_path.write_bytes(tampered)
 
     evidence = build_peoc_evidence(bundle_root, manifest)
 

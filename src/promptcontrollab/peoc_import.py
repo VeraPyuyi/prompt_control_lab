@@ -188,6 +188,7 @@ def build_peoc_evidence(bundle_root: Path, source_manifest: JsonDict) -> JsonDic
         ),
     )
     sources = _manifest_sources(finite_manifest)
+    _verify_bundle_manifest(root, sources, finite_manifest)
     hard = _build_hard_section(root, sources, warnings)
     soft = _build_soft_section(root, sources, warnings)
     trajectory = _build_trajectory_section(root, sources, warnings)
@@ -650,6 +651,55 @@ def _manifest_sources(source_manifest: JsonDict) -> list[JsonDict]:
 
 def _first_source(sources: list[JsonDict], role: str) -> JsonDict | None:
     return next((source for source in sources if source.get("role") == role), None)
+
+
+def _verify_bundle_manifest(
+    root: Path,
+    sources: list[JsonDict],
+    source_manifest: JsonDict,
+) -> None:
+    source = _first_source(sources, "bundle_manifest")
+    if source is None:
+        raise ValueError("Missing required bundle manifest source row")
+    relative_path = _relative_path(source)
+    if relative_path != _MANIFEST.as_posix():
+        msg = (
+            "Bundle manifest source must reference README_MANIFEST.md, "
+            f"not {relative_path or '<missing>'}"
+        )
+        raise ValueError(msg)
+    path = _source_path(root, source, label="bundle manifest")
+    try:
+        observed_size, observed_sha256 = _file_integrity(path)
+    except OSError as exc:
+        msg = f"bundle manifest source changed after discovery: {path}: {exc}"
+        raise ValueError(msg) from exc
+    integrity_error = _source_integrity_error(
+        source,
+        observed_size,
+        observed_sha256,
+    )
+    if integrity_error is not None:
+        msg = f"bundle manifest source changed after discovery: {path}: {integrity_error}"
+        raise ValueError(msg)
+
+    bundle = source_manifest.get("bundle")
+    if not isinstance(bundle, dict):
+        raise ValueError("PEOC source manifest must contain bundle metadata")
+    manifest_relative_path = bundle.get("manifest_relative_path")
+    if manifest_relative_path != _MANIFEST.as_posix():
+        msg = (
+            "Bundle metadata must reference README_MANIFEST.md, "
+            f"not {manifest_relative_path or '<missing>'}"
+        )
+        raise ValueError(msg)
+    declared_sha256 = bundle.get("manifest_sha256")
+    if declared_sha256 != observed_sha256:
+        msg = (
+            "bundle manifest hash changed after discovery: "
+            f"expected {declared_sha256}, observed {observed_sha256}"
+        )
+        raise ValueError(msg)
 
 
 def _read_required_json(root: Path, source: JsonDict, *, label: str) -> object:
