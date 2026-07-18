@@ -1018,6 +1018,132 @@ def test_portable_overwrite_replaces_registered_copies_and_preserves_unrelated(
     assert unrelated.read_text(encoding="utf-8") == "keep me"
 
 
+def test_portable_overwrite_rejects_modified_registered_copy(
+    tmp_path: Path,
+) -> None:
+    bundle_root = tmp_path / "bundle"
+    out_dir = tmp_path / "run"
+    _write_minimal_bundle(bundle_root)
+    import_peoc_bundle(
+        PeocImportOptions(
+            bundle_root=bundle_root,
+            out_dir=out_dir,
+            portable=True,
+        )
+    )
+    copied_hard = out_dir / "source" / HARD_SUMMARY
+    copied_hard.write_text("user-modified registered copy", encoding="utf-8")
+    unrelated = out_dir / "source" / "user-notes.txt"
+    unrelated.write_text("keep me", encoding="utf-8")
+    original_manifest = (out_dir / "manifest.json").read_bytes()
+
+    with pytest.raises(ValueError, match=r"modified|does not match"):
+        import_peoc_bundle(
+            PeocImportOptions(
+                bundle_root=bundle_root,
+                out_dir=out_dir,
+                portable=True,
+                overwrite=True,
+            )
+        )
+
+    assert copied_hard.read_text(encoding="utf-8") == "user-modified registered copy"
+    assert unrelated.read_text(encoding="utf-8") == "keep me"
+    assert (out_dir / "manifest.json").read_bytes() == original_manifest
+
+
+def test_registered_replacement_rejects_destination_created_after_backup(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    bundle_root = tmp_path / "bundle"
+    out_dir = tmp_path / "run"
+    _write_minimal_bundle(bundle_root)
+    import_peoc_bundle(
+        PeocImportOptions(
+            bundle_root=bundle_root,
+            out_dir=out_dir,
+            portable=True,
+        )
+    )
+    copied_hard = out_dir / "source" / HARD_SUMMARY
+    unrelated = out_dir / "source" / "user-notes.txt"
+    unrelated.write_text("keep me", encoding="utf-8")
+    original_manifest = (out_dir / "manifest.json").read_bytes()
+    original_replace = os.replace
+    injected = False
+
+    def create_racer_after_backup(source: Path, destination: Path) -> None:
+        nonlocal injected
+        original_replace(source, destination)
+        if not injected and Path(source) == copied_hard:
+            copied_hard.write_text("racing writer content", encoding="utf-8")
+            injected = True
+
+    monkeypatch.setattr(os, "replace", create_racer_after_backup)
+
+    with pytest.raises(ValueError, match=r"appeared during commit|refusing to overwrite"):
+        import_peoc_bundle(
+            PeocImportOptions(
+                bundle_root=bundle_root,
+                out_dir=out_dir,
+                portable=True,
+                overwrite=True,
+            )
+        )
+
+    assert injected is True
+    assert copied_hard.read_text(encoding="utf-8") == "racing writer content"
+    assert unrelated.read_text(encoding="utf-8") == "keep me"
+    assert (out_dir / "manifest.json").read_bytes() == original_manifest
+
+
+def test_obsolete_cleanup_rejects_file_changed_after_identity_check(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    bundle_root = tmp_path / "bundle"
+    out_dir = tmp_path / "run"
+    _write_minimal_bundle(bundle_root)
+    import_peoc_bundle(
+        PeocImportOptions(
+            bundle_root=bundle_root,
+            out_dir=out_dir,
+            portable=True,
+        )
+    )
+    copied_hard = out_dir / "source" / HARD_SUMMARY
+    unrelated = out_dir / "source" / "user-notes.txt"
+    unrelated.write_text("keep me", encoding="utf-8")
+    original_manifest = (out_dir / "manifest.json").read_bytes()
+    original_replace = os.replace
+    injected = False
+
+    def replace_registered_file_during_move(source: Path, destination: Path) -> None:
+        nonlocal injected
+        if not injected and Path(source) == copied_hard:
+            copied_hard.write_text("obsolete cleanup racer", encoding="utf-8")
+            injected = True
+        original_replace(source, destination)
+
+    monkeypatch.setattr(os, "replace", replace_registered_file_during_move)
+
+    with pytest.raises(ValueError, match=r"changed during commit|does not match"):
+        import_peoc_bundle(
+            PeocImportOptions(
+                bundle_root=bundle_root,
+                out_dir=out_dir,
+                portable=False,
+                overwrite=True,
+            )
+        )
+
+    assert injected is True
+    assert copied_hard.read_text(encoding="utf-8") == "obsolete cleanup racer"
+    assert unrelated.read_text(encoding="utf-8") == "keep me"
+    assert (out_dir / "manifest.json").read_bytes() == original_manifest
+
+
 def test_portable_commit_rejects_unregistered_destination_created_after_preflight(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
@@ -1244,6 +1370,66 @@ def test_overwrite_commit_failure_restores_registered_portable_copies(
         for path in out_dir.rglob("*")
         if path.is_file()
     } == original_files
+
+
+def test_rollback_does_not_overwrite_racing_generated_artifact(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    bundle_root = tmp_path / "bundle"
+    out_dir = tmp_path / "run"
+    _write_minimal_bundle(bundle_root)
+    import_peoc_bundle(PeocImportOptions(bundle_root=bundle_root, out_dir=out_dir))
+    original_validate = peoc_import_module._validate_published_artifact
+    original_replace = os.replace
+    injected = False
+    failed = False
+
+    def validate_then_create_racer(
+        output_dir: Path,
+        destination: Path,
+        guard: Any,
+        placed: Any,
+    ) -> None:
+        nonlocal injected
+        original_validate(output_dir, destination, guard, placed)
+        if not injected and destination == out_dir / "manifest.json":
+            destination.unlink()
+            destination.write_text("racing generated artifact", encoding="utf-8")
+            injected = True
+
+    def fail_later_generated_publication(source: Path, destination: Path) -> None:
+        nonlocal failed
+        if (
+            not failed
+            and Path(destination) == out_dir / "peoc_evidence.json"
+            and Path(source).parent.name == "payload"
+        ):
+            failed = True
+            raise OSError("simulated later generated commit failure")
+        original_replace(source, destination)
+
+    monkeypatch.setattr(
+        peoc_import_module,
+        "_validate_published_artifact",
+        validate_then_create_racer,
+    )
+    monkeypatch.setattr(os, "replace", fail_later_generated_publication)
+
+    with pytest.raises(OSError, match="simulated later generated commit failure"):
+        import_peoc_bundle(
+            PeocImportOptions(
+                bundle_root=bundle_root,
+                out_dir=out_dir,
+                overwrite=True,
+            )
+        )
+
+    assert injected is True
+    assert (out_dir / "manifest.json").read_text(
+        encoding="utf-8"
+    ) == "racing generated artifact"
+    assert (out_dir / "peoc_evidence.json").is_file()
 
 
 def test_portable_import_records_deterministic_file_and_total_limit_warnings(

@@ -94,6 +94,20 @@ class _PlacedArtifact:
 
 
 @dataclass(frozen=True)
+class _RegisteredPortableTarget:
+    path: Path
+    size: int
+    sha256: str
+
+
+@dataclass(frozen=True)
+class _BackupArtifact:
+    backup: Path
+    destination: Path
+    identity: _FileIdentity
+
+
+@dataclass(frozen=True)
 class _DirectoryGuard:
     root_resolved: Path
     root_device: int
@@ -463,7 +477,7 @@ def _commit_staged_import(
     out_dir: Path,
     *,
     overwrite: bool,
-    previous_portable_targets: list[Path],
+    previous_portable_targets: list[_RegisteredPortableTarget],
 ) -> None:
     staged_files = sorted(
         (path for path in staging_dir.rglob("*") if path.is_file()),
@@ -473,55 +487,69 @@ def _commit_staged_import(
         (source, out_dir / source.relative_to(staging_dir))
         for source in staged_files
     ]
-    registered_portable_targets = set(previous_portable_targets)
+    registered_portable_targets = {
+        registered.path: registered
+        for registered in previous_portable_targets
+    }
     _preflight_staged_targets(
         out_dir,
         targets,
         overwrite=overwrite,
-        registered_portable_targets=registered_portable_targets,
+        registered_portable_targets=set(registered_portable_targets),
     )
     staged_destinations = {destination.resolve() for _, destination in targets}
     obsolete_targets = [
-        target
-        for target in previous_portable_targets
-        if target.is_file() and target.resolve() not in staged_destinations
+        registered
+        for registered in previous_portable_targets
+        if (
+            registered.path.is_file()
+            and registered.path.resolve() not in staged_destinations
+        )
     ]
 
     backup_root = staging_dir.parent / "backup"
     placed: list[_PlacedArtifact] = []
-    backups: list[tuple[Path, Path]] = []
+    backups: list[_BackupArtifact] = []
     created_directories: list[Path] = []
     try:
         _mkdir_with_tracking(out_dir, created_directories)
-        for destination in obsolete_targets:
+        for obsolete_registered in obsolete_targets:
+            destination = obsolete_registered.path
             relative = destination.relative_to(out_dir)
-            backup = backup_root / relative
-            backup.parent.mkdir(parents=True, exist_ok=True)
-            os.replace(destination, backup)
-            backups.append((backup, destination))
+            backup_path = backup_root / relative
+            backups.append(
+                _move_to_backup(
+                    out_dir,
+                    destination,
+                    backup_path,
+                    registered=obsolete_registered,
+                )
+            )
         for source, destination in targets:
             _mkdir_with_tracking(destination.parent, created_directories)
             _validate_staged_target_path(out_dir, destination)
             directory_guard = _capture_directory_guard(out_dir, destination)
             portable_target = _is_portable_target(out_dir, destination)
+            registered_target = registered_portable_targets.get(destination)
             if destination.exists():
-                if (
-                    portable_target
-                    and destination not in registered_portable_targets
-                ):
+                if portable_target and registered_target is None:
                     raise ValueError(
                         "Portable destination exists but is not registered by the "
                         f"previous source_manifest.json: {destination}"
                     )
                 relative = destination.relative_to(out_dir)
-                backup = backup_root / relative
-                backup.parent.mkdir(parents=True, exist_ok=True)
-                os.replace(destination, backup)
-                backups.append((backup, destination))
-                _validate_directory_guard(out_dir, destination, directory_guard)
+                backup_path = backup_root / relative
+                backups.append(
+                    _move_to_backup(
+                        out_dir,
+                        destination,
+                        backup_path,
+                        registered=registered_target if portable_target else None,
+                    )
+                )
                 directory_guard = _capture_directory_guard(out_dir, destination)
             source_identity = _capture_file_identity(source)
-            if portable_target and destination not in registered_portable_targets:
+            if portable_target:
                 artifact = _publish_new_portable(
                     source,
                     destination,
@@ -548,17 +576,14 @@ def _commit_staged_import(
     except Exception:
         for artifact in reversed(placed):
             _unlink_if_owned(artifact)
-        for backup, destination in reversed(backups):
-            if os.path.lexists(destination):
-                continue
-            destination.parent.mkdir(parents=True, exist_ok=True)
-            os.replace(backup, destination)
+        for backup_artifact in reversed(backups):
+            _restore_backup_no_clobber(out_dir, backup_artifact)
         for directory in reversed(created_directories):
             with suppress(OSError):
                 directory.rmdir()
         raise
     _prune_empty_output_directories(
-        [target.parent for target in obsolete_targets],
+        [registered.path.parent for registered in obsolete_targets],
         out_dir,
     )
 
@@ -592,7 +617,9 @@ def _prune_empty_output_directories(
             current = current.parent
 
 
-def _registered_portable_targets(out_dir: Path) -> list[Path]:
+def _registered_portable_targets(
+    out_dir: Path,
+) -> list[_RegisteredPortableTarget]:
     source_path = out_dir / "source"
     if not source_path.exists():
         return []
@@ -625,7 +652,7 @@ def _registered_portable_targets(out_dir: Path) -> list[Path]:
             "source_manifest.json has no sources list"
         )
 
-    targets: set[Path] = set()
+    targets: dict[Path, _RegisteredPortableTarget] = {}
     for row in payload["sources"]:
         if not isinstance(row, dict):
             continue
@@ -661,8 +688,35 @@ def _registered_portable_targets(out_dir: Path) -> list[Path]:
                 "Existing portable copied_path points to a directory: "
                 f"{copied_path}"
             )
-        targets.add(target)
-    return sorted(targets, key=lambda path: path.relative_to(out_dir).as_posix())
+        declared_size = row.get("bytes")
+        declared_sha256 = row.get("sha256")
+        if (
+            not isinstance(declared_size, int)
+            or isinstance(declared_size, bool)
+            or declared_size < 0
+            or not isinstance(declared_sha256, str)
+            or not re.fullmatch(r"sha256:[0-9a-f]{64}", declared_sha256)
+        ):
+            raise ValueError(
+                "Existing source_manifest.json contains incomplete integrity "
+                f"metadata for copied_path: {copied_path}"
+            )
+        registered = _RegisteredPortableTarget(
+            path=target,
+            size=declared_size,
+            sha256=declared_sha256,
+        )
+        previous = targets.get(target)
+        if previous is not None and previous != registered:
+            raise ValueError(
+                "Existing source_manifest.json contains conflicting integrity "
+                f"metadata for copied_path: {copied_path}"
+            )
+        targets[target] = registered
+    return sorted(
+        targets.values(),
+        key=lambda registered: registered.path.relative_to(out_dir).as_posix(),
+    )
 
 
 def _preflight_staged_targets(
@@ -790,6 +844,78 @@ def _capture_file_identity(path: Path) -> _FileIdentity:
     )
 
 
+def _move_to_backup(
+    out_dir: Path,
+    destination: Path,
+    backup: Path,
+    *,
+    registered: _RegisteredPortableTarget | None,
+) -> _BackupArtifact:
+    directory_guard = _capture_directory_guard(out_dir, destination)
+    identity = _capture_file_identity(destination)
+    if registered is not None and (
+        identity.size != registered.size
+        or identity.sha256 != registered.sha256
+    ):
+        raise ValueError(
+            "Registered portable target was modified and does not match the "
+            f"previous source_manifest.json: {destination}"
+        )
+
+    backup.parent.mkdir(parents=True, exist_ok=True)
+    os.replace(destination, backup)
+    artifact = _BackupArtifact(
+        backup=backup,
+        destination=destination,
+        identity=identity,
+    )
+    try:
+        if not _path_matches_file_identity(backup, identity):
+            label = (
+                "Registered portable target"
+                if registered is not None
+                else "Generated PEOC artifact"
+            )
+            raise ValueError(
+                f"{label} changed during commit while moving to backup: "
+                f"{destination}"
+            )
+        _validate_directory_guard(out_dir, destination, directory_guard)
+    except Exception:
+        _restore_backup_no_clobber(out_dir, artifact)
+        raise
+    return artifact
+
+
+def _restore_backup_no_clobber(
+    out_dir: Path,
+    artifact: _BackupArtifact,
+) -> bool:
+    if os.path.lexists(artifact.destination) or not artifact.backup.is_file():
+        return False
+    try:
+        _validate_staged_target_path(out_dir, artifact.destination)
+        directory_guard = _capture_directory_guard(out_dir, artifact.destination)
+        restored = _publish_new_portable(
+            artifact.backup,
+            artifact.destination,
+            artifact.identity,
+        )
+        _validate_published_artifact(
+            out_dir,
+            artifact.destination,
+            directory_guard,
+            restored,
+        )
+    except (OSError, ValueError):
+        return False
+    if not _path_matches_file_identity(restored.path, restored.identity):
+        return False
+    with suppress(OSError):
+        artifact.backup.unlink()
+    return True
+
+
 def _publish_new_portable(
     source: Path,
     destination: Path,
@@ -837,8 +963,8 @@ def _publish_new_portable(
 
 def _portable_destination_collision(destination: Path) -> ValueError:
     return ValueError(
-        "Portable destination appeared during commit but is not registered by "
-        f"the previous source_manifest.json: {destination}"
+        "Portable destination appeared during commit; refusing to overwrite "
+        f"the racing file: {destination}"
     )
 
 
