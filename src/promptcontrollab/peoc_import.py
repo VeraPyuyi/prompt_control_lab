@@ -5,12 +5,21 @@ from __future__ import annotations
 import hashlib
 import json
 import math
+import os
 import re
+import shutil
+import tempfile
+from contextlib import suppress
 from dataclasses import dataclass
 from pathlib import Path
 from typing import TypeGuard, cast
 
 from promptcontrollab.files import JsonDict
+from promptcontrollab.peoc_reporting import (
+    render_peoc_case_study_html,
+    render_peoc_case_study_markdown,
+)
+from promptcontrollab.version import __version__
 
 HARD_SUMMARY = Path(
     "experiments/redesign_v2/results_server_pull_20260524/"
@@ -23,9 +32,22 @@ SOFT_SUMMARY = Path(
 HETEROGENEITY_SUMMARY = Path("experiments/redesign_v2/stage_heterogeneity/shi_r27_summary.json")
 TRAJECTORY_ROOT = Path("experiments/turnpike_trace/results_a800")
 
+MAX_PORTABLE_FILE_BYTES = 10 * 1024 * 1024
+MAX_PORTABLE_TOTAL_BYTES = 50 * 1024 * 1024
+
 _MANIFEST = Path("README_MANIFEST.md")
 _CHUNK_SIZE = 1024 * 1024
 _SEED_PATTERN = re.compile(r"_s(-?\d+)\.json$")
+_GENERATED_ARTIFACTS = (
+    "manifest.json",
+    "source_manifest.json",
+    "peoc_evidence.json",
+    "research_case_study.json",
+    "research_case_study.md",
+    "research_case_study.html",
+)
+_PORTABLE_EXTENSIONS = {".csv", ".json"}
+_REQUIRED_SOURCE_ROLES = {"bundle_manifest", "hard_test_summary"}
 
 
 @dataclass(frozen=True)
@@ -35,6 +57,18 @@ class PeocSourceOverrides:
     hard_summary: Path | None = None
     trajectory_files: tuple[Path, ...] = ()
     heterogeneity_summary: Path | None = None
+
+
+@dataclass(frozen=True)
+class PeocImportOptions:
+    """Options for importing a real PEOC evidence bundle."""
+
+    bundle_root: Path
+    out_dir: Path
+    overrides: PeocSourceOverrides = PeocSourceOverrides()
+    portable: bool = False
+    language: str = "en"
+    overwrite: bool = False
 
 
 @dataclass(frozen=True)
@@ -169,6 +203,98 @@ def discover_peoc_sources(
     }
 
 
+def import_peoc_bundle(options: PeocImportOptions) -> JsonDict:
+    """Import real PEOC evidence and generate reviewer-facing artifacts."""
+
+    if options.language not in {"en", "zh"}:
+        raise ValueError("PEOC import language must be 'en' or 'zh'")
+
+    root = options.bundle_root.resolve()
+    out_dir = options.out_dir.resolve()
+    source_manifest = discover_peoc_sources(root, options.overrides)
+    _validate_import_output(root, out_dir, source_manifest)
+    _check_generated_artifacts(out_dir, overwrite=options.overwrite)
+    previous_portable_targets = (
+        _registered_portable_targets(out_dir)
+        if options.overwrite
+        else []
+    )
+
+    out_dir.parent.mkdir(parents=True, exist_ok=True)
+    with tempfile.TemporaryDirectory(
+        dir=out_dir.parent,
+        prefix=f".{out_dir.name}.peoc-import-",
+    ) as temporary:
+        staging_dir = Path(temporary) / "payload"
+        staging_dir.mkdir()
+        if options.portable:
+            _copy_portable_sources(
+                root,
+                staging_dir,
+                source_manifest,
+                overwrite=True,
+            )
+
+        evidence = build_peoc_evidence(root, source_manifest)
+        case_study = _build_case_study(source_manifest, evidence)
+        manifest: JsonDict = {
+            "schema": "prompt_control_lab.research_import_manifest.v1",
+            "tool": "prompt_control_lab",
+            "tool_version": __version__,
+            "mode": "research_import",
+            "adapter": "peoc",
+            "source_manifest": "source_manifest.json",
+            "evidence": "peoc_evidence.json",
+            "case_study": "research_case_study.json",
+            "case_study_markdown": "research_case_study.md",
+            "case_study_html": "research_case_study.html",
+            "evidence_origin": "real",
+            "portable": options.portable,
+            "language": options.language,
+        }
+        markdown = render_peoc_case_study_markdown(
+            case_study,
+            language=options.language,
+        )
+        rendered_html = render_peoc_case_study_html(
+            case_study,
+            language=options.language,
+        )
+
+        _write_strict_json(staging_dir / "manifest.json", manifest)
+        _write_strict_json(staging_dir / "source_manifest.json", source_manifest)
+        _write_strict_json(staging_dir / "peoc_evidence.json", evidence)
+        _write_strict_json(staging_dir / "research_case_study.json", case_study)
+        (staging_dir / "research_case_study.md").write_text(
+            markdown,
+            encoding="utf-8",
+        )
+        (staging_dir / "research_case_study.html").write_text(
+            rendered_html,
+            encoding="utf-8",
+        )
+        _commit_staged_import(
+            staging_dir,
+            out_dir,
+            overwrite=options.overwrite,
+            previous_portable_targets=previous_portable_targets,
+        )
+
+    artifact_paths = {
+        name: str(out_dir / name)
+        for name in _GENERATED_ARTIFACTS
+    }
+    return {
+        "kind": "peoc_research_import",
+        "output_dir": str(out_dir),
+        "artifacts": artifact_paths,
+        "source_count": len(_manifest_sources(source_manifest)),
+        "status_counts": case_study["status_counts"],
+        "claim_boundary": case_study["claim_boundary"],
+        "warning_count": len(case_study["warnings"]),
+    }
+
+
 def build_peoc_evidence(bundle_root: Path, source_manifest: JsonDict) -> JsonDict:
     """Normalize discovered PEOC sources into fail-closed research evidence."""
 
@@ -231,6 +357,738 @@ def build_peoc_evidence(bundle_root: Path, source_manifest: JsonDict) -> JsonDic
             ),
         },
     }
+
+
+def _write_strict_json(path: Path, payload: JsonDict) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(_strict_json_text(payload), encoding="utf-8")
+
+
+def _strict_json_text(payload: JsonDict) -> str:
+    return (
+        json.dumps(
+            payload,
+            indent=2,
+            sort_keys=True,
+            ensure_ascii=False,
+            allow_nan=False,
+        )
+        + "\n"
+    )
+
+
+def _validate_import_output(
+    root: Path,
+    out_dir: Path,
+    source_manifest: JsonDict,
+) -> None:
+    if out_dir == root:
+        raise ValueError("PEOC import output directory must not be the bundle root")
+    if _is_relative_to(out_dir, root):
+        raise ValueError(
+            "PEOC import output directory must not be inside the source bundle"
+        )
+    if out_dir.exists() and not out_dir.is_dir():
+        raise ValueError(f"PEOC import output path is not a directory: {out_dir}")
+
+    for source in _manifest_sources(source_manifest):
+        source_path = _source_path(
+            root,
+            source,
+            label=str(source.get("role", "selected source")),
+        )
+        if (
+            source_path == out_dir
+            or _is_relative_to(source_path, out_dir)
+            or _is_relative_to(out_dir, source_path)
+        ):
+            msg = (
+                "PEOC import output directory collides with selected source "
+                f"{_relative_path(source)}: {out_dir}"
+            )
+            raise ValueError(msg)
+
+
+def _check_generated_artifacts(out_dir: Path, *, overwrite: bool) -> None:
+    directory_collisions = [
+        str(out_dir / name)
+        for name in _GENERATED_ARTIFACTS
+        if (out_dir / name).is_dir()
+    ]
+    if directory_collisions:
+        joined = ", ".join(directory_collisions)
+        raise ValueError(
+            "Generated PEOC artifact paths collide with directories and cannot "
+            f"be replaced: {joined}"
+        )
+    existing = [
+        str(out_dir / name)
+        for name in _GENERATED_ARTIFACTS
+        if (out_dir / name).exists()
+    ]
+    if existing and not overwrite:
+        joined = ", ".join(existing)
+        raise ValueError(
+            "Generated PEOC artifacts already exist; pass --overwrite to replace "
+            f"only those artifacts: {joined}"
+        )
+
+
+def _commit_staged_import(
+    staging_dir: Path,
+    out_dir: Path,
+    *,
+    overwrite: bool,
+    previous_portable_targets: list[Path],
+) -> None:
+    staged_files = sorted(
+        (path for path in staging_dir.rglob("*") if path.is_file()),
+        key=lambda path: path.relative_to(staging_dir).as_posix(),
+    )
+    targets = [
+        (source, out_dir / source.relative_to(staging_dir))
+        for source in staged_files
+    ]
+    _preflight_staged_targets(out_dir, targets, overwrite=overwrite)
+    staged_destinations = {destination.resolve() for _, destination in targets}
+    obsolete_targets = [
+        target
+        for target in previous_portable_targets
+        if target.is_file() and target.resolve() not in staged_destinations
+    ]
+
+    backup_root = staging_dir.parent / "backup"
+    placed: list[Path] = []
+    backups: list[tuple[Path, Path]] = []
+    created_directories: list[Path] = []
+    try:
+        _mkdir_with_tracking(out_dir, created_directories)
+        for destination in obsolete_targets:
+            relative = destination.relative_to(out_dir)
+            backup = backup_root / relative
+            backup.parent.mkdir(parents=True, exist_ok=True)
+            os.replace(destination, backup)
+            backups.append((backup, destination))
+        for source, destination in targets:
+            _mkdir_with_tracking(destination.parent, created_directories)
+            if destination.exists():
+                relative = destination.relative_to(out_dir)
+                backup = backup_root / relative
+                backup.parent.mkdir(parents=True, exist_ok=True)
+                os.replace(destination, backup)
+                backups.append((backup, destination))
+            os.replace(source, destination)
+            placed.append(destination)
+    except Exception:
+        for destination in reversed(placed):
+            if destination.is_file():
+                destination.unlink()
+        for backup, destination in reversed(backups):
+            destination.parent.mkdir(parents=True, exist_ok=True)
+            os.replace(backup, destination)
+        for directory in reversed(created_directories):
+            with suppress(OSError):
+                directory.rmdir()
+        raise
+    _prune_empty_output_directories(
+        [target.parent for target in obsolete_targets],
+        out_dir,
+    )
+
+
+def _mkdir_with_tracking(path: Path, created_directories: list[Path]) -> None:
+    missing: list[Path] = []
+    current = path
+    while not current.exists():
+        missing.append(current)
+        current = current.parent
+    path.mkdir(parents=True, exist_ok=True)
+    created_directories.extend(reversed(missing))
+
+
+def _prune_empty_output_directories(
+    directories: list[Path],
+    out_dir: Path,
+) -> None:
+    ordered = sorted(
+        set(directories),
+        key=lambda path: len(path.parts),
+        reverse=True,
+    )
+    for directory in ordered:
+        current = directory
+        while current != out_dir:
+            try:
+                current.rmdir()
+            except OSError:
+                break
+            current = current.parent
+
+
+def _registered_portable_targets(out_dir: Path) -> list[Path]:
+    source_path = out_dir / "source"
+    if not source_path.exists():
+        return []
+    source_root = source_path.resolve()
+    if source_path.is_symlink() or not _is_relative_to(source_root, out_dir):
+        raise ValueError(
+            f"Existing portable source path resolves outside output: {source_path}"
+        )
+    if not source_root.is_dir():
+        raise ValueError(
+            f"Existing portable source path is not a directory: {source_root}"
+        )
+
+    manifest_path = out_dir / "source_manifest.json"
+    if not manifest_path.is_file():
+        raise ValueError(
+            "Cannot safely replace existing portable sources without "
+            f"source_manifest.json: {source_root}"
+        )
+    try:
+        payload = json.loads(manifest_path.read_text(encoding="utf-8-sig"))
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError) as exc:
+        raise ValueError(
+            "Cannot safely replace existing portable sources because "
+            f"source_manifest.json is unreadable: {exc}"
+        ) from exc
+    if not isinstance(payload, dict) or not isinstance(payload.get("sources"), list):
+        raise ValueError(
+            "Cannot safely replace existing portable sources because "
+            "source_manifest.json has no sources list"
+        )
+
+    targets: set[Path] = set()
+    for row in payload["sources"]:
+        if not isinstance(row, dict):
+            continue
+        copied_path = row.get("copied_path")
+        if copied_path is None:
+            continue
+        if (
+            not isinstance(copied_path, str)
+            or not copied_path
+            or "\\" in copied_path
+        ):
+            raise ValueError(
+                "Existing source_manifest.json contains an unsafe copied_path"
+            )
+        relative = Path(copied_path)
+        target = out_dir / relative
+        resolved_target = target.resolve()
+        if (
+            relative.is_absolute()
+            or relative.as_posix() != copied_path
+            or any(part in {".", ".."} for part in relative.parts)
+            or not copied_path.startswith("source/")
+            or not _is_relative_to(resolved_target, source_root)
+            or resolved_target == source_root
+            or target.is_symlink()
+        ):
+            raise ValueError(
+                "Existing source_manifest.json contains an unsafe copied_path: "
+                f"{copied_path}"
+            )
+        if target.is_dir():
+            raise ValueError(
+                "Existing portable copied_path points to a directory: "
+                f"{copied_path}"
+            )
+        targets.add(target)
+    return sorted(targets, key=lambda path: path.relative_to(out_dir).as_posix())
+
+
+def _preflight_staged_targets(
+    out_dir: Path,
+    targets: list[tuple[Path, Path]],
+    *,
+    overwrite: bool,
+) -> None:
+    for _, destination in targets:
+        resolved = destination.resolve()
+        if not _is_relative_to(resolved, out_dir):
+            raise ValueError(
+                f"Staged PEOC artifact escapes output directory: {destination}"
+            )
+        if destination.is_dir():
+            raise ValueError(
+                f"PEOC artifact path collides with a directory: {destination}"
+            )
+        if destination.exists() and not overwrite:
+            raise ValueError(
+                "PEOC artifact already exists; pass --overwrite to replace it: "
+                f"{destination}"
+            )
+        parent = destination.parent
+        while parent != out_dir:
+            if parent.exists() and not parent.is_dir():
+                raise ValueError(
+                    f"PEOC artifact parent path is not a directory: {parent}"
+                )
+            parent = parent.parent
+
+
+def _copy_portable_sources(
+    root: Path,
+    out_dir: Path,
+    source_manifest: JsonDict,
+    *,
+    overwrite: bool,
+) -> None:
+    sources = _manifest_sources(source_manifest)
+    warnings = source_manifest.get("warnings")
+    if not isinstance(warnings, list):
+        warnings = []
+        source_manifest["warnings"] = warnings
+    total_bytes = 0
+
+    for source in sources:
+        source["copied_path"] = None
+        relative_path = _relative_path(source)
+        suffix = Path(relative_path).suffix.lower()
+        if suffix == ".npz":
+            continue
+        if suffix not in _PORTABLE_EXTENSIONS:
+            warnings.append(
+                _portable_warning(
+                    source,
+                    code="portable_unsupported_extension",
+                    message=(
+                        "Portable mode references this source without copying it "
+                        f"because {suffix or '<no extension>'} is unsupported."
+                    ),
+                )
+            )
+            continue
+
+        declared_size = source.get("bytes")
+        if (
+            not isinstance(declared_size, int)
+            or isinstance(declared_size, bool)
+            or declared_size < 0
+        ):
+            warnings.append(
+                _portable_warning(
+                    source,
+                    code="portable_invalid_size",
+                    message="Portable mode skipped a source with invalid byte metadata.",
+                )
+            )
+            continue
+        if declared_size > MAX_PORTABLE_FILE_BYTES:
+            warnings.append(
+                _portable_warning(
+                    source,
+                    code="portable_file_too_large",
+                    message=(
+                        f"Portable mode skipped {declared_size} bytes; per-file limit "
+                        f"is {MAX_PORTABLE_FILE_BYTES} bytes."
+                    ),
+                )
+            )
+            continue
+        if total_bytes + declared_size > MAX_PORTABLE_TOTAL_BYTES:
+            warnings.append(
+                _portable_warning(
+                    source,
+                    code="portable_total_limit_exceeded",
+                    message=(
+                        f"Portable mode skipped {declared_size} bytes; total limit "
+                        f"is {MAX_PORTABLE_TOTAL_BYTES} bytes."
+                    ),
+                )
+            )
+            continue
+
+        source_path = _source_path(
+            root,
+            source,
+            label=str(source.get("role", "portable source")),
+        )
+        observed_size, observed_sha256 = _file_integrity(source_path)
+        integrity_error = _source_integrity_error(
+            source,
+            observed_size,
+            observed_sha256,
+        )
+        if integrity_error is not None:
+            role = str(source.get("role", "portable source"))
+            if role in _REQUIRED_SOURCE_ROLES:
+                raise ValueError(
+                    f"{role} source changed before portable copy: {integrity_error}"
+                )
+            warnings.append(
+                _portable_warning(
+                    source,
+                    code="portable_source_integrity_mismatch",
+                    message=(
+                        "Portable mode skipped an optional source whose content "
+                        f"changed after discovery: {integrity_error}"
+                    ),
+                )
+            )
+            continue
+
+        copied_relative = Path("source") / Path(relative_path)
+        destination = (out_dir / copied_relative).resolve()
+        source_root = (out_dir / "source").resolve()
+        if not _is_relative_to(destination, source_root):
+            raise ValueError(
+                f"Portable source destination escapes output directory: {relative_path}"
+            )
+        if destination.exists() and not overwrite:
+            raise ValueError(
+                "Portable source artifact already exists; pass --overwrite to replace it: "
+                f"{destination}"
+            )
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(source_path, destination)
+        copied_size, copied_sha256 = _file_integrity(destination)
+        if copied_size != observed_size or copied_sha256 != observed_sha256:
+            raise ValueError(
+                f"Portable copy verification failed for {relative_path}"
+            )
+        source["copied_path"] = copied_relative.as_posix()
+        total_bytes += observed_size
+
+    warnings.sort(key=_warning_sort_key)
+
+
+def _portable_warning(
+    source: JsonDict,
+    *,
+    code: str,
+    message: str,
+) -> JsonDict:
+    return {
+        "code": code,
+        "source_role": str(source.get("role", "portable_source")),
+        "relative_path": _relative_path(source),
+        "message": message,
+    }
+
+
+def _build_case_study(
+    source_manifest: JsonDict,
+    evidence: JsonDict,
+) -> JsonDict:
+    sections = evidence.get("sections")
+    section_rows = sections if isinstance(sections, dict) else {}
+    status_counts = _status_counts(section_rows)
+    hard = _section_dict(section_rows, "hard_evaluation")
+    hard_observations = _dict_value(hard.get("observations"))
+    trajectory = _section_dict(section_rows, "trajectory")
+    trajectory_observations = _dict_value(trajectory.get("observations"))
+    stage = _section_dict(section_rows, "stage_heterogeneity")
+    stage_observations = _dict_value(stage.get("observations"))
+    bundle = _dict_value(source_manifest.get("bundle"))
+    source_inventory = [
+        {
+            "role": str(source.get("role", "")),
+            "relative_path": _relative_path(source),
+            "sha256": source.get("sha256"),
+            "bytes": source.get("bytes"),
+        }
+        for source in sorted(
+            _manifest_sources(source_manifest),
+            key=lambda row: (_relative_path(row), str(row.get("role", ""))),
+        )
+    ]
+    limited_sections = _limited_sections(section_rows)
+    claim_boundary = _public_json(evidence.get("claim_boundary"))
+    if not isinstance(claim_boundary, dict):
+        claim_boundary = {}
+    warnings = [
+        item
+        for item in [
+            *_warning_rows(source_manifest.get("warnings")),
+            *_warning_rows(evidence.get("warnings")),
+        ]
+    ]
+    warnings.sort(key=_warning_sort_key)
+    hard_rows = [
+        cast(JsonDict, _public_json(row))
+        for row in _dict_rows(hard_observations.get("rows"))
+    ]
+    selected_pair = _trajectory_case_pair(
+        _dict_value(trajectory_observations.get("headline_pair"))
+    )
+    limitations = _case_limitations(section_rows)
+
+    return {
+        "schema": "prompt_control_lab.peoc_case_study.v1",
+        "evidence_source": "REAL PEOC BUNDLE",
+        "evidence_origin": "real",
+        "manifest_hash": bundle.get("manifest_sha256"),
+        "source_manifest_sha256": _sha256_bytes(
+            _strict_json_text(source_manifest).encode("utf-8")
+        ),
+        "status_counts": status_counts,
+        "hard_summary": {
+            "status": hard.get("status"),
+            "metric": hard_observations.get("metric"),
+            "row_count": hard_observations.get("row_count"),
+            "valid_row_count": hard_observations.get("valid_row_count"),
+            "excluded_row_count": hard_observations.get("excluded_row_count"),
+            "models": hard_observations.get("models", []),
+            "tasks": hard_observations.get("tasks", []),
+            "methods": hard_observations.get("methods", []),
+        },
+        "hard_method_rows": hard_rows,
+        "selected_trajectory_pair": selected_pair,
+        "stage_validation": {
+            "status": stage.get("status"),
+            "display_status": stage.get("display_status"),
+            "verdict": stage_observations.get("verdict"),
+            "held_spearman_rho": stage_observations.get("held_spearman_rho"),
+            "held_bootstrap_ci": stage_observations.get("held_bootstrap_ci"),
+            "source": _case_source(
+                _dict_value(stage_observations.get("source"))
+            ),
+        },
+        "limited_sections": limited_sections,
+        "source_inventory": source_inventory,
+        "safe_claim": _safe_claim(section_rows, selected_pair),
+        "safe_claim_zh": _safe_claim_zh(section_rows, selected_pair),
+        "limitations": limitations,
+        "limitations_zh": _case_limitations_zh(section_rows),
+        "warnings": [_public_json(warning) for warning in warnings],
+        "claim_boundary": claim_boundary,
+    }
+
+
+def _status_counts(sections: JsonDict) -> JsonDict:
+    counts: JsonDict = {
+        "available": 0,
+        "failed_validation": 0,
+        "missing": 0,
+        "partial": 0,
+        "unusable": 0,
+    }
+    for section in sections.values():
+        if not isinstance(section, dict):
+            continue
+        status = str(section.get("status", "unusable"))
+        counts[status] = int(counts.get(status, 0)) + 1
+    return counts
+
+
+def _limited_sections(sections: JsonDict) -> list[JsonDict]:
+    rows: list[JsonDict] = []
+    for name, value in sorted(sections.items()):
+        if not isinstance(value, dict) or value.get("status") == "available":
+            continue
+        limitations = value.get("limitations")
+        limitation_values = limitations if isinstance(limitations, list) else []
+        status = str(value.get("status", "unusable"))
+        rows.append(
+            {
+                "section": name,
+                "origin": value.get("origin"),
+                "status": status,
+                "display_status": value.get("display_status"),
+                "limitation": (
+                    str(limitation_values[0])
+                    if limitation_values
+                    else "This evidence section is not available for a positive claim."
+                ),
+                "limitation_zh": _status_limitation_zh(status),
+            }
+        )
+    return rows
+
+
+def _trajectory_case_pair(pair: JsonDict) -> JsonDict:
+    if not pair:
+        return {}
+    return {
+        "model": pair.get("model"),
+        "normalized_model": pair.get("normalized_model"),
+        "seed": pair.get("seed"),
+        "stationary": _trajectory_case_arm(
+            _dict_value(pair.get("stationary"))
+        ),
+        "heterogeneous": _trajectory_case_arm(
+            _dict_value(pair.get("heterogeneous"))
+        ),
+    }
+
+
+def _trajectory_case_arm(entry: JsonDict) -> JsonDict:
+    if not entry:
+        return {}
+    summary = _dict_value(entry.get("summary"))
+    source = _case_source(_dict_value(entry.get("source")))
+    return {
+        "status": entry.get("status"),
+        "relative_path": source.get("relative_path"),
+        "sha256": source.get("sha256"),
+        "bytes": source.get("bytes"),
+        "hidden_dim": summary.get("hidden_dim"),
+        "alpha_emp_mean": summary.get("alpha_emp_mean"),
+        "alpha_emp_std": summary.get("alpha_emp_std"),
+        "R2_mean": summary.get("R2_mean"),
+        "R2_std": summary.get("R2_std"),
+        "n_streams": summary.get("n_streams"),
+        "n_prompts": summary.get("n_prompts"),
+        "binary_references": [
+            _case_source(reference)
+            for reference in _dict_rows(entry.get("binary_references"))
+        ],
+    }
+
+
+def _case_source(source: JsonDict) -> JsonDict:
+    return {
+        "role": source.get("role"),
+        "relative_path": source.get("relative_path"),
+        "sha256": source.get("sha256"),
+        "bytes": source.get("bytes"),
+    }
+
+
+def _safe_claim(sections: JsonDict, pair: JsonDict) -> str:
+    statements = [
+        (
+            "This bounded case study reports the imported PEOC measurements and "
+            "their recorded limitations; it is not a universal benchmark."
+        )
+    ]
+    hard = _section_dict(sections, "hard_evaluation")
+    if hard.get("status") == "available":
+        statements.append(
+            "The hard-test summary contains task-, model-, and method-specific results."
+        )
+    stationary = _dict_value(pair.get("stationary"))
+    heterogeneous = _dict_value(pair.get("heterogeneous"))
+    stationary_alpha = stationary.get("alpha_emp_mean")
+    heterogeneous_alpha = heterogeneous.get("alpha_emp_mean")
+    if (
+        _is_number(stationary_alpha)
+        and _is_number(heterogeneous_alpha)
+        and stationary_alpha > heterogeneous_alpha
+    ):
+        statements.append(
+            "For the selected paired summaries, stationary arithmetic traces report "
+            "a stronger fitted decay signature than heterogeneous GSM8K traces."
+        )
+    stage = _section_dict(sections, "stage_heterogeneity")
+    if stage.get("status") == "failed_validation":
+        statements.append("The stage-heterogeneity validation reported FAIL.")
+    soft = _section_dict(sections, "soft_evaluation")
+    if soft.get("status") == "unusable":
+        statements.append("The segmented soft summary is unusable for a positive claim.")
+    return " ".join(statements)
+
+
+def _safe_claim_zh(sections: JsonDict, pair: JsonDict) -> str:
+    statements = [
+        "本案例只报告导入的 PEOC 测量结果及其限制, 不代表通用基准结论。"
+    ]
+    if _section_dict(sections, "hard_evaluation").get("status") == "available":
+        statements.append("Hard-test 汇总提供了任务、模型和方法层面的具体结果。")
+    stationary = _dict_value(pair.get("stationary"))
+    heterogeneous = _dict_value(pair.get("heterogeneous"))
+    stationary_alpha = stationary.get("alpha_emp_mean")
+    heterogeneous_alpha = heterogeneous.get("alpha_emp_mean")
+    if (
+        _is_number(stationary_alpha)
+        and _is_number(heterogeneous_alpha)
+        and stationary_alpha > heterogeneous_alpha
+    ):
+        statements.append(
+            "在选中的配对汇总中, 平稳算术轨迹的拟合衰减信号强于异质 GSM8K 轨迹。"
+        )
+    if _section_dict(sections, "stage_heterogeneity").get("status") == (
+        "failed_validation"
+    ):
+        statements.append("阶段异质性验证的记录结果为 FAIL。")
+    if _section_dict(sections, "soft_evaluation").get("status") == "unusable":
+        statements.append("分段 soft 汇总不能用于支持正向结论。")
+    return "".join(statements)
+
+
+def _case_limitations(sections: JsonDict) -> list[str]:
+    values = [
+        "The import packages existing evidence; it introduces no new scientific result.",
+        (
+            "Diagnostics are bounded to the imported tasks, models, seeds, "
+            "and recorded protocol."
+        ),
+        (
+            "Trajectory decay is diagnostic evidence, not proof of universal "
+            "turnpike behavior or operational stability."
+        ),
+    ]
+    for section in sections.values():
+        if not isinstance(section, dict):
+            continue
+        limitations = section.get("limitations")
+        if not isinstance(limitations, list):
+            continue
+        values.extend(str(value) for value in limitations)
+    return list(dict.fromkeys(values))
+
+
+def _case_limitations_zh(sections: JsonDict) -> list[str]:
+    values = [
+        "该导入流程只整理已有证据, 不产生新的科学结果。",
+        "诊断结论只适用于导入记录中的任务、模型、随机种子和实验协议。",
+        "轨迹衰减属于诊断信号, 不等于普遍 turnpike 规律或运行稳定性的证明。",
+    ]
+    values.extend(
+        _status_limitation_zh(str(section.get("status", "unusable")))
+        for section in sections.values()
+        if isinstance(section, dict) and section.get("status") != "available"
+    )
+    return list(dict.fromkeys(values))
+
+
+def _status_limitation_zh(status: str) -> str:
+    return {
+        "failed_validation": "该部分的真实验证结果未通过, 不能作为正向证据。",
+        "missing": "导入的 PEOC bundle 中没有发现该部分的证据。",
+        "partial": "该部分只有部分证据可用, 仍需人工检查缺失或损坏来源。",
+        "unusable": "该部分虽然有真实来源, 但当前数据不可用于支持正向结论。",
+    }.get(status, "该证据部分当前不能用于支持正向结论。")
+
+
+def _section_dict(sections: JsonDict, name: str) -> JsonDict:
+    return _dict_value(sections.get(name))
+
+
+def _dict_value(value: object) -> JsonDict:
+    return value if isinstance(value, dict) else {}
+
+
+def _dict_rows(value: object) -> list[JsonDict]:
+    if not isinstance(value, list):
+        return []
+    return [cast(JsonDict, row) for row in value if isinstance(row, dict)]
+
+
+def _warning_rows(value: object) -> list[JsonDict]:
+    return _dict_rows(value)
+
+
+def _public_json(value: object) -> object:
+    if isinstance(value, dict):
+        return {
+            str(key): _public_json(item)
+            for key, item in sorted(value.items(), key=lambda pair: str(pair[0]))
+            if str(key) != "resolved_path"
+        }
+    if isinstance(value, list):
+        return [_public_json(item) for item in value]
+    return value
+
+
+def _is_relative_to(path: Path, parent: Path) -> bool:
+    try:
+        path.relative_to(parent)
+    except ValueError:
+        return False
+    return True
 
 
 def _build_hard_section(

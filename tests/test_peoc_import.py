@@ -2,16 +2,25 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 from pathlib import Path
+from typing import NoReturn
 
 import pytest
 
-from promptcontrollab.files import JsonDict
+import promptcontrollab.peoc_import as peoc_import_module
+from promptcontrollab.files import JsonDict, read_json
 from promptcontrollab.peoc_import import (
     HARD_SUMMARY,
+    PeocImportOptions,
     PeocSourceOverrides,
     build_peoc_evidence,
     discover_peoc_sources,
+    import_peoc_bundle,
+)
+from promptcontrollab.peoc_reporting import (
+    render_peoc_case_study_html,
+    render_peoc_case_study_markdown,
 )
 
 
@@ -252,6 +261,10 @@ def _contains_non_finite(value: object) -> bool:
     if isinstance(value, list):
         return any(_contains_non_finite(item) for item in value)
     return False
+
+
+def _reject_non_standard_json_constant(value: str) -> NoReturn:
+    raise AssertionError(f"Strict JSON artifact contains non-standard constant {value}")
 
 
 def test_build_peoc_evidence_preserves_real_negative_and_unavailable_results(
@@ -667,3 +680,542 @@ def test_build_peoc_evidence_rejects_malformed_required_hard_summary(
 
     with pytest.raises(ValueError, match=r"hard-test summary.*summary"):
         build_peoc_evidence(bundle_root, manifest)
+
+
+def test_import_peoc_bundle_writes_strict_self_contained_case_study(
+    tmp_path: Path,
+) -> None:
+    bundle_root = tmp_path / "bundle"
+    out_dir = tmp_path / "run"
+    _write_minimal_bundle(bundle_root)
+
+    result = import_peoc_bundle(
+        PeocImportOptions(
+            bundle_root=bundle_root,
+            out_dir=out_dir,
+            language="en",
+        )
+    )
+
+    artifact_names = [
+        "manifest.json",
+        "source_manifest.json",
+        "peoc_evidence.json",
+        "research_case_study.json",
+        "research_case_study.md",
+        "research_case_study.html",
+    ]
+    assert result["kind"] == "peoc_research_import"
+    assert result["status_counts"] == {
+        "available": 2,
+        "failed_validation": 1,
+        "missing": 2,
+        "partial": 0,
+        "unusable": 1,
+    }
+    assert result["claim_boundary"]["full_research_support"] is False
+    assert sorted(result["artifacts"]) == sorted(artifact_names)
+    assert all((out_dir / name).is_file() for name in artifact_names)
+
+    for name in artifact_names[:4]:
+        text = (out_dir / name).read_text(encoding="utf-8")
+        assert text.endswith("\n")
+        json.loads(
+            text,
+            parse_constant=_reject_non_standard_json_constant,
+        )
+
+    manifest = read_json(out_dir / "manifest.json")
+    assert manifest["tool"] == "prompt_control_lab"
+    assert manifest["mode"] == "research_import"
+    assert manifest["adapter"] == "peoc"
+    assert manifest["language"] == "en"
+    case_study = read_json(out_dir / "research_case_study.json")
+    assert case_study["evidence_source"] == "REAL PEOC BUNDLE"
+    assert case_study["stage_validation"]["verdict"] == "FAIL"
+    assert case_study["claim_boundary"]["full_research_support"] is False
+    assert all(
+        set(source) == {"bytes", "relative_path", "role", "sha256"}
+        for source in case_study["source_inventory"]
+    )
+
+    bundle_path = str(bundle_root.resolve())
+    case_json = (out_dir / "research_case_study.json").read_text(encoding="utf-8")
+    case_markdown = (out_dir / "research_case_study.md").read_text(encoding="utf-8")
+    case_html = (out_dir / "research_case_study.html").read_text(encoding="utf-8")
+    assert bundle_path not in case_json
+    assert bundle_path not in case_markdown
+    assert bundle_path not in case_html
+    assert "FAILED_VALIDATION" in case_html
+    assert "UNUSABLE" in case_html
+
+
+def test_import_requires_overwrite_and_preserves_unrelated_files(tmp_path: Path) -> None:
+    bundle_root = tmp_path / "bundle"
+    out_dir = tmp_path / "run"
+    _write_minimal_bundle(bundle_root)
+    import_peoc_bundle(PeocImportOptions(bundle_root=bundle_root, out_dir=out_dir))
+    unrelated = out_dir / "notes.txt"
+    unrelated.write_text("keep me", encoding="utf-8")
+
+    with pytest.raises(ValueError, match="--overwrite"):
+        import_peoc_bundle(PeocImportOptions(bundle_root=bundle_root, out_dir=out_dir))
+
+    result = import_peoc_bundle(
+        PeocImportOptions(
+            bundle_root=bundle_root,
+            out_dir=out_dir,
+            overwrite=True,
+        )
+    )
+
+    assert result["kind"] == "peoc_research_import"
+    assert unrelated.read_text(encoding="utf-8") == "keep me"
+
+
+def test_import_failure_does_not_replace_existing_artifacts_or_copy_sources(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    bundle_root = tmp_path / "bundle"
+    out_dir = tmp_path / "run"
+    _write_minimal_bundle(bundle_root)
+    import_peoc_bundle(PeocImportOptions(bundle_root=bundle_root, out_dir=out_dir))
+    original_artifacts = {
+        path.name: path.read_bytes()
+        for path in out_dir.iterdir()
+        if path.is_file()
+    }
+
+    hard_path = bundle_root / HARD_SUMMARY
+    hard_payload = read_json(hard_path)
+    hard_payload["summary"][0]["mean"] = 0.11
+    _write_json(hard_path, hard_payload)
+    original_writer = peoc_import_module._write_strict_json
+
+    def fail_during_staged_write(path: Path, payload: JsonDict) -> None:
+        if path.name == "peoc_evidence.json":
+            raise OSError("simulated write failure")
+        original_writer(path, payload)
+
+    monkeypatch.setattr(
+        peoc_import_module,
+        "_write_strict_json",
+        fail_during_staged_write,
+    )
+
+    with pytest.raises(OSError, match="simulated write failure"):
+        import_peoc_bundle(
+            PeocImportOptions(
+                bundle_root=bundle_root,
+                out_dir=out_dir,
+                portable=True,
+                overwrite=True,
+            )
+        )
+
+    assert {
+        path.name: path.read_bytes()
+        for path in out_dir.iterdir()
+        if path.is_file()
+    } == original_artifacts
+    assert not (out_dir / "source").exists()
+
+
+def test_import_commit_failure_removes_new_output_directories(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    bundle_root = tmp_path / "bundle"
+    out_dir = tmp_path / "run"
+    _write_minimal_bundle(bundle_root)
+    original_replace = os.replace
+
+    def fail_on_portable_destination(source: Path, destination: Path) -> None:
+        target = Path(destination)
+        if out_dir in target.parents and "source" in target.relative_to(out_dir).parts:
+            raise OSError("simulated commit failure")
+        original_replace(source, destination)
+
+    monkeypatch.setattr(
+        os,
+        "replace",
+        fail_on_portable_destination,
+    )
+
+    with pytest.raises(OSError, match="simulated commit failure"):
+        import_peoc_bundle(
+            PeocImportOptions(
+                bundle_root=bundle_root,
+                out_dir=out_dir,
+                portable=True,
+            )
+        )
+
+    assert not out_dir.exists()
+
+
+def test_portable_import_copies_small_json_and_csv_but_never_npz(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    bundle_root = tmp_path / "bundle"
+    out_dir = tmp_path / "portable"
+    _write_minimal_bundle(bundle_root)
+    csv_path = bundle_root / "tables" / "paired_results.csv"
+    csv_path.parent.mkdir(parents=True, exist_ok=True)
+    csv_path.write_text("method,score\npez,0.6\n", encoding="utf-8")
+    original_discover = discover_peoc_sources
+
+    def discover_with_csv(
+        root: Path,
+        overrides: PeocSourceOverrides,
+    ) -> JsonDict:
+        manifest = original_discover(root, overrides)
+        payload = csv_path.read_bytes()
+        manifest["sources"].append(
+            {
+                "role": "supporting_csv",
+                "relative_path": "tables/paired_results.csv",
+                "resolved_path": str(csv_path.resolve()),
+                "bytes": len(payload),
+                "sha256": f"sha256:{hashlib.sha256(payload).hexdigest()}",
+                "media_type": "text/csv",
+                "selection": "test",
+                "copied_path": None,
+            }
+        )
+        return manifest
+
+    monkeypatch.setattr(
+        peoc_import_module,
+        "discover_peoc_sources",
+        discover_with_csv,
+    )
+
+    import_peoc_bundle(
+        PeocImportOptions(
+            bundle_root=bundle_root,
+            out_dir=out_dir,
+            portable=True,
+        )
+    )
+
+    manifest = read_json(out_dir / "source_manifest.json")
+    source_root = out_dir / "source"
+    assert any(source_root.rglob("*.json"))
+    assert any(source_root.rglob("*.csv"))
+    assert not any(source_root.rglob("*.npz"))
+    binary_rows = [
+        row for row in manifest["sources"] if row["role"] == "trajectory_binary"
+    ]
+    assert len(binary_rows) == 2
+    assert all(row["copied_path"] is None for row in binary_rows)
+    assert all(
+        row.get("copied_path") is None
+        or (
+            str(row["copied_path"]).startswith("source/")
+            and "\\" not in str(row["copied_path"])
+        )
+        for row in manifest["sources"]
+    )
+    assert any(
+        row["role"] == "supporting_csv"
+        and row["copied_path"] == "source/tables/paired_results.csv"
+        for row in manifest["sources"]
+    )
+    assert any(
+        row["role"] == "trajectory_binary"
+        and row["sha256"].startswith("sha256:")
+        for row in manifest["sources"]
+    )
+
+
+def test_overwrite_removes_only_previously_registered_portable_copies(
+    tmp_path: Path,
+) -> None:
+    bundle_root = tmp_path / "bundle"
+    out_dir = tmp_path / "run"
+    _write_minimal_bundle(bundle_root)
+    import_peoc_bundle(
+        PeocImportOptions(
+            bundle_root=bundle_root,
+            out_dir=out_dir,
+            portable=True,
+        )
+    )
+    portable_manifest = read_json(out_dir / "source_manifest.json")
+    copied_paths = [
+        out_dir / str(row["copied_path"])
+        for row in portable_manifest["sources"]
+        if row.get("copied_path")
+    ]
+    assert copied_paths
+    assert all(path.is_file() for path in copied_paths)
+    unrelated = out_dir / "source" / "user-notes.txt"
+    unrelated.write_text("keep me", encoding="utf-8")
+
+    import_peoc_bundle(
+        PeocImportOptions(
+            bundle_root=bundle_root,
+            out_dir=out_dir,
+            portable=False,
+            overwrite=True,
+        )
+    )
+
+    assert all(not path.exists() for path in copied_paths)
+    assert unrelated.read_text(encoding="utf-8") == "keep me"
+    manifest = read_json(out_dir / "source_manifest.json")
+    assert all(row.get("copied_path") is None for row in manifest["sources"])
+
+
+def test_overwrite_commit_failure_restores_registered_portable_copies(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    bundle_root = tmp_path / "bundle"
+    out_dir = tmp_path / "run"
+    _write_minimal_bundle(bundle_root)
+    import_peoc_bundle(
+        PeocImportOptions(
+            bundle_root=bundle_root,
+            out_dir=out_dir,
+            portable=True,
+        )
+    )
+    original_files = {
+        path.relative_to(out_dir).as_posix(): path.read_bytes()
+        for path in out_dir.rglob("*")
+        if path.is_file()
+    }
+    hard_path = bundle_root / HARD_SUMMARY
+    hard_payload = read_json(hard_path)
+    hard_payload["summary"][0]["mean"] = 0.12
+    _write_json(hard_path, hard_payload)
+    original_replace = os.replace
+    failed = False
+
+    def fail_once_during_commit(source: Path, destination: Path) -> None:
+        nonlocal failed
+        target = Path(destination)
+        if (
+            not failed
+            and target.parent == out_dir
+            and target.name == "peoc_evidence.json"
+        ):
+            failed = True
+            raise OSError("simulated overwrite commit failure")
+        original_replace(source, destination)
+
+    monkeypatch.setattr(os, "replace", fail_once_during_commit)
+
+    with pytest.raises(OSError, match="simulated overwrite commit failure"):
+        import_peoc_bundle(
+            PeocImportOptions(
+                bundle_root=bundle_root,
+                out_dir=out_dir,
+                portable=False,
+                overwrite=True,
+            )
+        )
+
+    assert {
+        path.relative_to(out_dir).as_posix(): path.read_bytes()
+        for path in out_dir.rglob("*")
+        if path.is_file()
+    } == original_files
+
+
+def test_portable_import_records_deterministic_file_and_total_limit_warnings(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    bundle_root = tmp_path / "bundle"
+    _write_minimal_bundle(bundle_root)
+
+    monkeypatch.setattr(peoc_import_module, "MAX_PORTABLE_FILE_BYTES", 64)
+    file_limited_out = tmp_path / "file-limited"
+    import_peoc_bundle(
+        PeocImportOptions(
+            bundle_root=bundle_root,
+            out_dir=file_limited_out,
+            portable=True,
+        )
+    )
+    file_manifest = read_json(file_limited_out / "source_manifest.json")
+    file_warnings = [
+        warning
+        for warning in file_manifest["warnings"]
+        if warning["code"] == "portable_file_too_large"
+    ]
+    assert file_warnings
+    assert file_warnings == sorted(
+        file_warnings,
+        key=lambda warning: (
+            warning["code"],
+            warning["source_role"],
+            warning["relative_path"],
+        ),
+    )
+
+    monkeypatch.setattr(peoc_import_module, "MAX_PORTABLE_FILE_BYTES", 10**9)
+    hard_size = (bundle_root / HARD_SUMMARY).stat().st_size
+    monkeypatch.setattr(peoc_import_module, "MAX_PORTABLE_TOTAL_BYTES", hard_size)
+    total_limited_out = tmp_path / "total-limited"
+    import_peoc_bundle(
+        PeocImportOptions(
+            bundle_root=bundle_root,
+            out_dir=total_limited_out,
+            portable=True,
+        )
+    )
+    total_manifest = read_json(total_limited_out / "source_manifest.json")
+    total_warnings = [
+        warning
+        for warning in total_manifest["warnings"]
+        if warning["code"] == "portable_total_limit_exceeded"
+    ]
+    assert total_warnings
+    assert next(
+        row
+        for row in total_manifest["sources"]
+        if row["role"] == "hard_test_summary"
+    )["copied_path"] == f"source/{HARD_SUMMARY.as_posix()}"
+
+
+def test_import_rejects_invalid_language_and_unsafe_output_paths(tmp_path: Path) -> None:
+    bundle_root = tmp_path / "bundle"
+    _write_minimal_bundle(bundle_root)
+
+    with pytest.raises(ValueError, match=r"language.*en.*zh"):
+        import_peoc_bundle(
+            PeocImportOptions(
+                bundle_root=bundle_root,
+                out_dir=tmp_path / "bad-language",
+                language="fr",
+            )
+        )
+
+    with pytest.raises(ValueError, match="output"):
+        import_peoc_bundle(
+            PeocImportOptions(bundle_root=bundle_root, out_dir=bundle_root)
+        )
+
+    with pytest.raises(ValueError, match=r"inside.*bundle"):
+        import_peoc_bundle(
+            PeocImportOptions(
+                bundle_root=bundle_root,
+                out_dir=bundle_root / "generated-report",
+            )
+        )
+
+    with pytest.raises(ValueError, match="source"):
+        import_peoc_bundle(
+            PeocImportOptions(
+                bundle_root=bundle_root,
+                out_dir=(bundle_root / HARD_SUMMARY).parent,
+            )
+        )
+
+
+def test_case_study_renderers_escape_source_values_and_support_both_languages() -> None:
+    payload: JsonDict = {
+        "evidence_source": "REAL PEOC BUNDLE",
+        "manifest_hash": "sha256:manifest",
+        "status_counts": {
+            "available": 1,
+            "failed_validation": 1,
+            "missing": 1,
+            "partial": 0,
+            "unusable": 1,
+        },
+        "hard_method_rows": [
+            {
+                "model": "<script>alert(1)</script>",
+                "task": "a|b",
+                "method": "tv_pmp",
+                "mean": 0.6,
+                "sd": 0.1,
+                "n": 10,
+            }
+        ],
+        "hard_summary": {
+            "metric": "acc_hard_test",
+            "valid_row_count": 1,
+            "excluded_row_count": 0,
+        },
+        "selected_trajectory_pair": {
+            "model": "Qwen/<unsafe>",
+            "seed": 0,
+            "stationary": {"alpha_emp_mean": 0.02, "R2_mean": 0.6},
+            "heterogeneous": {"alpha_emp_mean": 0.001, "R2_mean": 0.08},
+        },
+        "stage_validation": {
+            "status": "failed_validation",
+            "verdict": "FAIL",
+            "held_spearman_rho": -0.5,
+            "held_bootstrap_ci": [-1.0, 0.6],
+        },
+        "limited_sections": [
+            {
+                "section": "soft_evaluation",
+                "origin": "real",
+                "status": "unusable",
+                "limitation": "<img src=x onerror=alert(1)>",
+            }
+        ],
+        "source_inventory": [
+            {
+                "role": "hard_test_summary",
+                "relative_path": "![remote](https://example.invalid/a.png)`break`.json",
+                "sha256": "sha256:<hash>",
+                "bytes": 12,
+            }
+        ],
+        "safe_claim": "[unsafe link](https://example.invalid)<b>bounded claim</b>",
+        "limitations": ["<svg onload=alert(1)>"],
+        "claim_boundary": {"full_research_support": False},
+    }
+
+    english = render_peoc_case_study_html(payload, language="en")
+    chinese = render_peoc_case_study_html(payload, language="zh")
+    markdown_en = render_peoc_case_study_markdown(payload, language="en")
+    markdown_zh = render_peoc_case_study_markdown(payload, language="zh")
+
+    assert "Real PEOC Evidence Case Study" in english
+    assert "真实 PEOC 证据案例" in chinese
+    assert "Real PEOC Evidence Case Study" in markdown_en
+    assert "真实 PEOC 证据案例" in markdown_zh
+    assert "<script>alert(1)</script>" not in english
+    assert "&lt;script&gt;alert(1)&lt;/script&gt;" in english
+    assert "<img src=x onerror=alert(1)>" not in english
+    assert "<svg onload=alert(1)>" not in english
+    assert "repeat(auto-fit, minmax(210px, 1fr))" in english
+    assert "![remote](https://example.invalid/a.png)" not in markdown_en
+    assert "[unsafe link](https://example.invalid)" not in markdown_en
+    assert "`break`" not in markdown_en
+
+    with pytest.raises(ValueError, match="language"):
+        render_peoc_case_study_html(payload, language="fr")
+    with pytest.raises(ValueError, match="language"):
+        render_peoc_case_study_markdown(payload, language="fr")
+
+
+def test_import_outputs_are_deterministic_across_equivalent_runs(tmp_path: Path) -> None:
+    bundle_root = tmp_path / "bundle"
+    first_out = tmp_path / "first"
+    second_out = tmp_path / "second"
+    _write_minimal_bundle(bundle_root)
+
+    first = import_peoc_bundle(
+        PeocImportOptions(bundle_root=bundle_root, out_dir=first_out)
+    )
+    second = import_peoc_bundle(
+        PeocImportOptions(bundle_root=bundle_root, out_dir=second_out)
+    )
+
+    for name in first["artifacts"]:
+        assert (first_out / name).read_bytes() == (second_out / name).read_bytes()
+    assert first["status_counts"] == second["status_counts"]
+    assert first["claim_boundary"] == second["claim_boundary"]
