@@ -108,32 +108,6 @@ class _BackupArtifact:
     source_guard: _DirectoryGuard
 
 
-@dataclass(frozen=True)
-class _RollbackIssue:
-    destination: Path
-    temporary_backup: Path
-    identity: _FileIdentity
-    recovery_paths: tuple[Path, ...]
-    errors: tuple[str, ...]
-
-
-@dataclass(frozen=True)
-class _TransactionBackupEntry:
-    path: Path
-    relative_path: str
-    identity: _FileIdentity | None
-    error: str | None
-
-
-@dataclass(frozen=True)
-class _TransactionBackupInventory:
-    transaction_exists: bool
-    backup_root_exists: bool
-    guard_trusted: bool
-    entries: tuple[_TransactionBackupEntry, ...]
-    errors: tuple[str, ...]
-
-
 class _BackupMoveError(Exception):
     def __init__(
         self,
@@ -391,16 +365,12 @@ def import_peoc_bundle(options: PeocImportOptions) -> JsonDict:
             backups=backups,
         )
     except Exception as exc:
-        inventory = _inspect_transaction_backups(
-            transaction_dir,
-            transaction_guard,
-            backups,
-        )
-        if backups or _transaction_requires_retention(inventory):
-            raise _error_with_transaction_details(
+        if backups:
+            raise _manual_recovery_error(
                 exc,
                 transaction_dir,
-                inventory,
+                transaction_guard,
+                backups,
             ) from exc
         with suppress(OSError):
             shutil.rmtree(transaction_dir)
@@ -409,30 +379,16 @@ def import_peoc_bundle(options: PeocImportOptions) -> JsonDict:
         try:
             _validate_transaction_guard(transaction_guard)
             shutil.rmtree(transaction_dir)
-        except OSError as exc:
-            inventory = _inspect_transaction_backups(
-                transaction_dir,
-                transaction_guard,
-                backups,
-            )
-            if _transaction_requires_retention(inventory):
-                raise _error_with_transaction_details(
+        except (OSError, ValueError) as exc:
+            if backups:
+                raise _manual_recovery_error(
                     exc,
                     transaction_dir,
-                    inventory,
+                    transaction_guard,
+                    backups,
+                    commit_completed=True,
                 ) from exc
             raise
-        except ValueError as exc:
-            inventory = _inspect_transaction_backups(
-                transaction_dir,
-                transaction_guard,
-                backups,
-            )
-            raise _error_with_transaction_details(
-                exc,
-                transaction_dir,
-                inventory,
-            ) from exc
 
     artifact_paths = {
         name: str(out_dir / name)
@@ -610,6 +566,7 @@ def _commit_staged_import(
         registered.path: registered
         for registered in previous_portable_targets
     }
+    _validate_registered_portable_targets(previous_portable_targets)
     _preflight_staged_targets(
         out_dir,
         targets,
@@ -694,43 +651,48 @@ def _commit_staged_import(
                     directory_guard,
                     artifact,
                 )
+        _validate_new_artifacts_for_commit(out_dir, placed)
         _validate_backups_for_cleanup(
             backup_root,
             transaction_guard,
             backups,
         )
     except Exception as exc:
-        for artifact in reversed(placed):
-            _unlink_if_owned(artifact)
-        rollback_backups = list(backups)
         original_failure = exc
         if isinstance(exc, _BackupMoveError):
             if exc.artifact not in backups:
                 backups.append(exc.artifact)
-            if exc.artifact not in rollback_backups:
-                rollback_backups.append(exc.artifact)
             original_failure = exc.original
-        rollback_issues = _rollback_backups(
-            out_dir,
-            backup_root,
-            transaction_guard,
-            rollback_backups,
-        )
+        for artifact in reversed(placed):
+            with suppress(OSError):
+                _unlink_if_owned(artifact)
         for directory in reversed(created_directories):
             with suppress(OSError):
                 directory.rmdir()
-        if rollback_issues:
-            raise _error_with_rollback_details(
-                original_failure,
-                rollback_issues,
-            ) from exc
-        if isinstance(exc, _BackupMoveError):
-            raise original_failure from exc
-        raise
+        if original_failure is exc:
+            raise
+        raise original_failure from exc
     _prune_empty_output_directories(
         [registered.path.parent for registered in obsolete_targets],
         out_dir,
     )
+
+
+def _validate_registered_portable_targets(
+    targets: list[_RegisteredPortableTarget],
+) -> None:
+    for registered in targets:
+        if not registered.path.exists():
+            continue
+        identity = _capture_file_identity(registered.path)
+        if (
+            identity.size != registered.size
+            or identity.sha256 != registered.sha256
+        ):
+            raise ValueError(
+                "Registered portable target was modified and does not match the "
+                f"previous source_manifest.json: {registered.path}"
+            )
 
 
 def _mkdir_with_tracking(path: Path, created_directories: list[Path]) -> None:
@@ -1149,10 +1111,7 @@ def _move_to_backup(
         identity=identity,
         source_guard=source_guard,
     )
-    try:
-        os.replace(destination, backup)
-    except Exception as exc:
-        raise _BackupMoveError(exc, artifact) from exc
+    os.replace(destination, backup)
     try:
         _validate_backup_source(backup_root, transaction_guard, artifact)
         backup_matches = _path_matches_file_identity(backup, identity)
@@ -1173,113 +1132,6 @@ def _move_to_backup(
     return artifact
 
 
-def _restore_backup_no_clobber(
-    out_dir: Path,
-    backup_root: Path,
-    transaction_guard: _TransactionGuard,
-    artifact: _BackupArtifact,
-) -> str | None:
-    try:
-        _validate_backup_source(backup_root, transaction_guard, artifact)
-        actual_identity = _capture_file_identity(artifact.backup)
-        _validate_backup_source(backup_root, transaction_guard, artifact)
-    except (OSError, ValueError) as exc:
-        return f"transaction backup could not be trusted or read: {exc}"
-    if os.path.lexists(artifact.destination):
-        return (
-            "destination is occupied; no-clobber rollback did not replace it: "
-            f"{artifact.destination}"
-        )
-    restored: _PlacedArtifact | None = None
-    try:
-        _validate_staged_target_path(out_dir, artifact.destination)
-        directory_guard = _capture_directory_guard(out_dir, artifact.destination)
-        _validate_backup_source(backup_root, transaction_guard, artifact)
-        restored = _publish_new_portable(
-            artifact.backup,
-            artifact.destination,
-            actual_identity,
-        )
-        try:
-            _validate_backup_source(backup_root, transaction_guard, artifact)
-        except (OSError, ValueError) as exc:
-            _unlink_if_owned(restored)
-            return (
-                "transaction backup root became compromised after rollback "
-                f"publication: {exc}"
-            )
-        _validate_published_artifact(
-            out_dir,
-            artifact.destination,
-            directory_guard,
-            restored,
-        )
-    except (OSError, ValueError) as exc:
-        if restored is not None:
-            _unlink_if_owned(restored)
-        return f"backup could not be restored without clobbering data: {exc}"
-    if not _path_has_same_content(restored.path, actual_identity):
-        return (
-            "restored destination changed before rollback verification; "
-            "the authoritative backup was retained"
-        )
-    return None
-
-
-def _rollback_backups(
-    out_dir: Path,
-    backup_root: Path,
-    transaction_guard: _TransactionGuard,
-    backups: list[_BackupArtifact],
-) -> list[_RollbackIssue]:
-    if not backups:
-        return []
-    issues: list[_RollbackIssue] = []
-    seen: set[Path] = set()
-    for artifact in reversed(backups):
-        if artifact.backup in seen:
-            continue
-        seen.add(artifact.backup)
-        errors: list[str] = []
-        try:
-            artifact.backup.relative_to(backup_root)
-        except ValueError:
-            errors.append(
-                "backup path is outside the retained transaction backup root"
-            )
-        else:
-            try:
-                restore_error = _restore_backup_no_clobber(
-                    out_dir,
-                    backup_root,
-                    transaction_guard,
-                    artifact,
-                )
-            except Exception as exc:
-                restore_error = f"rollback restore raised unexpectedly: {exc}"
-            if restore_error is None:
-                errors.append(
-                    "destination was restored from a retained authoritative "
-                    "backup; the backup source was not consumed"
-                )
-            else:
-                errors.append(restore_error)
-            errors.append(
-                "authoritative backup is retained in the failed transaction "
-                "directory"
-            )
-        issues.append(
-            _RollbackIssue(
-                destination=artifact.destination,
-                temporary_backup=artifact.backup,
-                identity=artifact.identity,
-                recovery_paths=(artifact.backup,),
-                errors=tuple(errors),
-            )
-        )
-    return sorted(issues, key=lambda issue: issue.destination.as_posix())
-
-
 def _validate_backups_for_cleanup(
     backup_root: Path,
     transaction_guard: _TransactionGuard,
@@ -1287,9 +1139,12 @@ def _validate_backups_for_cleanup(
 ) -> None:
     for artifact in backups:
         _validate_backup_source(backup_root, transaction_guard, artifact)
-        actual_identity = _capture_file_identity(artifact.backup)
+        backup_matches = _path_matches_file_identity(
+            artifact.backup,
+            artifact.identity,
+        )
         _validate_backup_source(backup_root, transaction_guard, artifact)
-        if _same_file_content(actual_identity, artifact.identity):
+        if backup_matches:
             continue
         raise ValueError(
             "PEOC backup changed during commit; racing content remains in the "
@@ -1297,121 +1152,20 @@ def _validate_backups_for_cleanup(
         )
 
 
-def _error_with_rollback_details(
-    original: Exception,
-    issues: list[_RollbackIssue],
-) -> Exception:
-    details = " | ".join(
-        (
-            f"destination={issue.destination}; "
-            f"temp_backup={issue.temporary_backup}; "
-            f"identity=(device={issue.identity.device},inode={issue.identity.inode},"
-            f"bytes={issue.identity.size},{issue.identity.sha256}); "
-            "recovery_paths="
-            + (
-                ",".join(str(path) for path in issue.recovery_paths)
-                if issue.recovery_paths
-                else "<none>"
+def _validate_new_artifacts_for_commit(
+    out_dir: Path,
+    placed: list[_PlacedArtifact],
+) -> None:
+    for artifact in placed:
+        _validate_staged_target_path(out_dir, artifact.path)
+        if not _path_matches_file_identity(artifact.path, artifact.identity):
+            raise ValueError(
+                "Published PEOC artifact changed before transaction cleanup: "
+                f"{artifact.path}"
             )
-            + "; errors="
-            + ("; ".join(issue.errors) if issue.errors else "<none>")
-        )
-        for issue in issues
-    )
-    message = f"{original} Rollback/recovery details: {details}"
-    if isinstance(original, OSError):
-        return OSError(message)
-    if isinstance(original, ValueError):
-        return ValueError(message)
-    return RuntimeError(message)
 
 
-def _inspect_transaction_backups(
-    transaction_dir: Path,
-    transaction_guard: _TransactionGuard,
-    backups: list[_BackupArtifact],
-) -> _TransactionBackupInventory:
-    transaction_exists = os.path.lexists(transaction_dir)
-    try:
-        _validate_transaction_guard(transaction_guard)
-    except (OSError, ValueError) as exc:
-        compromised_entries = tuple(
-            _TransactionBackupEntry(
-                path=artifact.backup,
-                relative_path=_backup_relative_label(
-                    transaction_guard.backup_root.path,
-                    artifact.backup,
-                ),
-                identity=None,
-                error=(
-                    "transaction backup root is compromised; entry was not "
-                    "traversed"
-                ),
-            )
-            for artifact in _unique_backups(backups)
-        )
-        return _TransactionBackupInventory(
-            transaction_exists=transaction_exists,
-            backup_root_exists=False,
-            guard_trusted=False,
-            entries=compromised_entries,
-            errors=(
-                "transaction or backup directory guard is compromised; no "
-                f"backup paths were followed: {exc}",
-            ),
-        )
-
-    entries: list[_TransactionBackupEntry] = []
-    errors: list[str] = []
-    backup_root = transaction_guard.backup_root.path
-    for artifact in _unique_backups(backups):
-        relative_path = _backup_relative_label(
-            backup_root,
-            artifact.backup,
-        )
-        try:
-            _validate_backup_source(
-                backup_root,
-                transaction_guard,
-                artifact,
-            )
-            identity = _capture_file_identity(artifact.backup)
-            _validate_backup_source(
-                backup_root,
-                transaction_guard,
-                artifact,
-            )
-        except (OSError, ValueError) as exc:
-            entries.append(
-                _TransactionBackupEntry(
-                    path=artifact.backup,
-                    relative_path=relative_path,
-                    identity=None,
-                    error=(
-                        "backup entry could not be trusted or inventoried: "
-                        f"{exc}"
-                    ),
-                )
-            )
-        else:
-            entries.append(
-                _TransactionBackupEntry(
-                    path=artifact.backup,
-                    relative_path=relative_path,
-                    identity=identity,
-                    error=None,
-                )
-            )
-    return _TransactionBackupInventory(
-        transaction_exists=True,
-        backup_root_exists=True,
-        guard_trusted=True,
-        entries=tuple(entries),
-        errors=tuple(errors),
-    )
-
-
-def _unique_backups(
+def _recorded_backups(
     backups: list[_BackupArtifact],
 ) -> tuple[_BackupArtifact, ...]:
     unique: dict[Path, _BackupArtifact] = {}
@@ -1423,84 +1177,50 @@ def _unique_backups(
     )
 
 
-def _backup_relative_label(backup_root: Path, path: Path) -> str:
+def _transaction_guard_status(guard: _TransactionGuard) -> str:
     try:
-        return path.relative_to(backup_root).as_posix()
-    except ValueError:
-        return "<outside-backup-root>"
+        _validate_transaction_guard(guard)
+    except (OSError, ValueError) as exc:
+        return f"compromised ({exc})"
+    return "trusted"
 
 
-def _transaction_requires_retention(
-    inventory: _TransactionBackupInventory,
-) -> bool:
-    return bool(
-        not inventory.guard_trusted
-        or inventory.entries
-        or inventory.errors
-    )
-
-
-def _error_with_transaction_details(
+def _manual_recovery_error(
     original: Exception,
     transaction_dir: Path,
-    inventory: _TransactionBackupInventory,
-) -> Exception:
-    entries = " | ".join(
+    transaction_guard: _TransactionGuard,
+    backups: list[_BackupArtifact],
+    *,
+    commit_completed: bool = False,
+) -> ValueError:
+    recorded = _recorded_backups(backups)
+    details = " | ".join(
         (
-            f"path={entry.path}; relative_path={entry.relative_path}; "
-            + (
-                "identity=("
-                f"device={entry.identity.device},inode={entry.identity.inode},"
-                f"bytes={entry.identity.size},"
-                f"{entry.identity.sha256})"
-                if entry.identity is not None
-                else "identity=<unavailable>"
-            )
-            + f"; error={entry.error or '<none>'}"
+            f"destination={artifact.destination}; "
+            f"backup={artifact.backup}; "
+            f"bytes={artifact.identity.size}; "
+            f"sha256={artifact.identity.sha256}"
         )
-        for entry in inventory.entries
+        for artifact in recorded
     )
-    if not inventory.transaction_exists:
-        transaction_status = (
-            "Last-resort PEOC transaction could not be confirmed because its "
-            f"directory is unavailable: {transaction_dir}"
-        )
-    elif not inventory.guard_trusted:
-        transaction_status = (
-            "Last-resort PEOC transaction path was retained but its directory "
-            "guard is compromised; backup paths were not followed: "
-            f"{transaction_dir}"
+    guard_status = _transaction_guard_status(transaction_guard)
+    if commit_completed:
+        outcome = (
+            "PEOC import committed new artifacts but transaction cleanup failed."
         )
     else:
-        transaction_status = (
-            f"Last-resort PEOC transaction retained at {transaction_dir}"
+        outcome = (
+            f"PEOC import failed safely: {original}. Removal was attempted only for "
+            "newly placed artifacts whose destination identity still matched this "
+            "transaction."
         )
-    message = (
-        f"{original} {transaction_status}; "
-        f"transaction_exists={inventory.transaction_exists}; "
-        f"backup_root_exists={inventory.backup_root_exists}; "
-        f"guard_trusted={inventory.guard_trusted}; "
-        f"backup_inventory={entries or '<none>'}; "
-        "inventory_errors="
-        + ("; ".join(inventory.errors) if inventory.errors else "<none>")
+    return ValueError(
+        f"{outcome} No automatic backup restore was attempted; manual recovery is "
+        f"required. transaction_dir={transaction_dir}; "
+        f"backup_root={transaction_guard.backup_root.path}; "
+        f"transaction_guard={guard_status}; "
+        f"recorded_backups={details or '<none>'}"
     )
-    if isinstance(original, OSError):
-        return OSError(message)
-    if isinstance(original, ValueError):
-        return ValueError(message)
-    return RuntimeError(message)
-
-
-def _same_file_content(left: _FileIdentity, right: _FileIdentity) -> bool:
-    return left.size == right.size and left.sha256 == right.sha256
-
-
-def _path_has_same_content(path: Path, expected: _FileIdentity) -> bool:
-    try:
-        observed = _capture_file_identity(path)
-    except (OSError, ValueError):
-        return False
-    return _same_file_content(observed, expected)
 
 
 def _publish_new_portable(
