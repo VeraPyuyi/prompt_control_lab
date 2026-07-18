@@ -1668,6 +1668,145 @@ def test_rollback_does_not_overwrite_racing_generated_artifact(
     assert (out_dir / "peoc_evidence.json").is_file()
 
 
+def test_rollback_processes_later_backups_after_recovery_storage_failure(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    bundle_root = tmp_path / "bundle"
+    out_dir = tmp_path / "run"
+    _write_minimal_bundle(bundle_root)
+    import_peoc_bundle(PeocImportOptions(bundle_root=bundle_root, out_dir=out_dir))
+    tracked_names = (
+        "manifest.json",
+        "peoc_evidence.json",
+        "research_case_study.json",
+    )
+    old_payloads = {
+        name: (out_dir / name).read_bytes()
+        for name in tracked_names
+    }
+    old_hashes = {
+        name: hashlib.sha256(payload).hexdigest()
+        for name, payload in old_payloads.items()
+    }
+    original_validate = peoc_import_module._validate_published_artifact
+    original_replace = os.replace
+    original_recovery_publish = peoc_import_module._publish_recovery_snapshot
+    destination_racer = "racing peoc evidence destination"
+    injected_racer = False
+    failed_publish = False
+    failed_recovery = False
+
+    def validate_then_race_peoc_evidence(
+        output_dir: Path,
+        destination: Path,
+        guard: Any,
+        placed: Any,
+    ) -> None:
+        nonlocal injected_racer
+        original_validate(output_dir, destination, guard, placed)
+        if not injected_racer and destination == out_dir / "peoc_evidence.json":
+            destination.unlink()
+            destination.write_text(destination_racer, encoding="utf-8")
+            injected_racer = True
+
+    def fail_later_generated_publication(source: Path, destination: Path) -> None:
+        nonlocal failed_publish
+        if (
+            not failed_publish
+            and Path(destination) == out_dir / "research_case_study.json"
+            and Path(source).parent.name == "payload"
+        ):
+            failed_publish = True
+            raise OSError("simulated generated publish failure")
+        original_replace(source, destination)
+
+    def fail_one_standard_recovery(
+        output_dir: Path,
+        artifact: Any,
+        identity: Any,
+    ) -> Path:
+        nonlocal failed_recovery
+        if (
+            not failed_recovery
+            and artifact.destination == out_dir / "peoc_evidence.json"
+        ):
+            failed_recovery = True
+            raise OSError("simulated standard recovery storage failure")
+        return original_recovery_publish(output_dir, artifact, identity)
+
+    monkeypatch.setattr(
+        peoc_import_module,
+        "_validate_published_artifact",
+        validate_then_race_peoc_evidence,
+    )
+    monkeypatch.setattr(os, "replace", fail_later_generated_publication)
+    monkeypatch.setattr(
+        peoc_import_module,
+        "_publish_recovery_snapshot",
+        fail_one_standard_recovery,
+    )
+
+    with pytest.raises(OSError) as error:
+        import_peoc_bundle(
+            PeocImportOptions(
+                bundle_root=bundle_root,
+                out_dir=out_dir,
+                overwrite=True,
+            )
+        )
+
+    assert injected_racer is True
+    assert failed_publish is True
+    assert failed_recovery is True
+    assert (out_dir / "peoc_evidence.json").read_text(
+        encoding="utf-8"
+    ) == destination_racer
+    assert (out_dir / "manifest.json").read_bytes() == old_payloads["manifest.json"]
+    assert (out_dir / "research_case_study.json").read_bytes() == old_payloads[
+        "research_case_study.json"
+    ]
+    output_hashes = {
+        hashlib.sha256(path.read_bytes()).hexdigest()
+        for path in out_dir.rglob("*")
+        if path.is_file()
+    }
+    assert set(old_hashes.values()).issubset(output_hashes)
+    message = str(error.value)
+    assert "simulated generated publish failure" in message
+    assert "peoc_evidence.json" in message
+    assert "backup" in message
+    assert "recovery" in message
+
+
+def test_durable_backup_fallback_avoids_existing_directory_collision(
+    tmp_path: Path,
+) -> None:
+    out_dir = tmp_path / "run"
+    out_dir.mkdir()
+    backup_root = tmp_path / "transaction" / "backup"
+    backup_file = backup_root / "manifest.json"
+    backup_file.parent.mkdir(parents=True)
+    backup_file.write_text("old generated artifact", encoding="utf-8")
+    occupied = out_dir / ".peoc-recovery-fallback-transaction"
+    occupied.mkdir()
+    marker = occupied / "user.txt"
+    marker.write_text("do not overwrite", encoding="utf-8")
+
+    durable_root = peoc_import_module._move_backup_tree_to_durable_fallback(
+        out_dir,
+        backup_root,
+    )
+
+    assert durable_root.name == "backup"
+    assert durable_root.parent.name == ".peoc-recovery-fallback-transaction.1"
+    assert (durable_root / "manifest.json").read_text(
+        encoding="utf-8"
+    ) == "old generated artifact"
+    assert marker.read_text(encoding="utf-8") == "do not overwrite"
+    assert not backup_root.exists()
+
+
 def test_portable_import_records_deterministic_file_and_total_limit_warnings(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,

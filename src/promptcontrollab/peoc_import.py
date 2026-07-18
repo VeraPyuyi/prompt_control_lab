@@ -110,6 +110,26 @@ class _BackupArtifact:
 
 
 @dataclass(frozen=True)
+class _RollbackIssue:
+    destination: Path
+    temporary_backup: Path
+    identity: _FileIdentity
+    recovery_paths: tuple[Path, ...]
+    errors: tuple[str, ...]
+
+
+class _BackupMoveError(Exception):
+    def __init__(
+        self,
+        original: Exception,
+        artifact: _BackupArtifact,
+    ) -> None:
+        super().__init__(str(original))
+        self.original = original
+        self.artifact = artifact
+
+
+@dataclass(frozen=True)
 class _DirectoryGuard:
     root_resolved: Path
     root_device: int
@@ -579,19 +599,26 @@ def _commit_staged_import(
     except Exception as exc:
         for artifact in reversed(placed):
             _unlink_if_owned(artifact)
-        recovery_paths: list[Path] = []
-        for backup_artifact in reversed(backups):
-            recovery_path = _restore_backup_no_clobber(
-                out_dir,
-                backup_artifact,
-            )
-            if recovery_path is not None:
-                recovery_paths.append(recovery_path)
+        rollback_backups = list(backups)
+        original_failure = exc
+        if isinstance(exc, _BackupMoveError):
+            rollback_backups.append(exc.artifact)
+            original_failure = exc.original
+        rollback_issues = _rollback_backups(
+            out_dir,
+            backup_root,
+            rollback_backups,
+        )
         for directory in reversed(created_directories):
             with suppress(OSError):
                 directory.rmdir()
-        if recovery_paths:
-            raise _error_with_recovery_paths(exc, recovery_paths) from exc
+        if rollback_issues:
+            raise _error_with_rollback_details(
+                original_failure,
+                rollback_issues,
+            ) from exc
+        if isinstance(exc, _BackupMoveError):
+            raise original_failure from exc
         raise
     _prune_empty_output_directories(
         [registered.path.parent for registered in obsolete_targets],
@@ -893,10 +920,7 @@ def _move_to_backup(
             )
         _validate_directory_guard(out_dir, destination, directory_guard)
     except Exception as exc:
-        recovery_path = _restore_backup_no_clobber(out_dir, artifact)
-        if recovery_path is not None:
-            raise _error_with_recovery_paths(exc, [recovery_path]) from exc
-        raise
+        raise _BackupMoveError(exc, artifact) from exc
     return artifact
 
 
@@ -950,6 +974,161 @@ def _restore_backup_no_clobber(
     )
 
 
+def _rollback_backups(
+    out_dir: Path,
+    backup_root: Path,
+    backups: list[_BackupArtifact],
+) -> list[_RollbackIssue]:
+    if not backups:
+        return []
+    durable_root = _move_backup_tree_to_durable_fallback(
+        out_dir,
+        backup_root,
+    )
+    mapped = [
+        (
+            artifact,
+            _BackupArtifact(
+                backup=durable_root / artifact.backup.relative_to(backup_root),
+                destination=artifact.destination,
+                identity=artifact.identity,
+            ),
+        )
+        for artifact in backups
+    ]
+    recovery_paths: dict[Path, list[Path]] = {
+        original.backup: []
+        for original, _ in mapped
+    }
+    errors: dict[Path, list[str]] = {
+        original.backup: []
+        for original, _ in mapped
+    }
+
+    for original, durable in reversed(mapped):
+        try:
+            recovery_path = _restore_backup_no_clobber(out_dir, durable)
+        except Exception as exc:
+            errors[original.backup].append(str(exc))
+            continue
+        if recovery_path is not None:
+            recovery_paths[original.backup].append(recovery_path)
+            errors[original.backup].append(
+                "backup could not be restored to its original destination"
+            )
+
+    for original, durable in mapped:
+        if os.path.lexists(durable.backup):
+            recovery_paths[original.backup].append(durable.backup)
+            errors[original.backup].append(
+                "backup remains in the durable transaction fallback"
+            )
+
+    _remove_empty_fallback_tree(durable_root)
+    issues = [
+        _RollbackIssue(
+            destination=original.destination,
+            temporary_backup=original.backup,
+            identity=original.identity,
+            recovery_paths=tuple(
+                sorted(
+                    set(recovery_paths[original.backup]),
+                    key=lambda path: path.as_posix(),
+                )
+            ),
+            errors=tuple(errors[original.backup]),
+        )
+        for original, _ in mapped
+        if recovery_paths[original.backup] or errors[original.backup]
+    ]
+    return sorted(issues, key=lambda issue: issue.destination.as_posix())
+
+
+def _move_backup_tree_to_durable_fallback(
+    out_dir: Path,
+    backup_root: Path,
+) -> Path:
+    if not backup_root.is_dir():
+        raise ValueError(f"PEOC backup tree is unavailable: {backup_root}")
+    transaction_name = re.sub(
+        r"[^A-Za-z0-9._-]+",
+        "-",
+        backup_root.parent.name,
+    ).strip(".-")
+    if not transaction_name:
+        transaction_name = "transaction"
+    base_name = f".peoc-recovery-fallback-{transaction_name}"
+
+    for collision_index in range(1000):
+        suffix = "" if collision_index == 0 else f".{collision_index}"
+        fallback_parent = out_dir / f"{base_name}{suffix}"
+        durable_root = fallback_parent / "backup"
+        _validate_staged_target_path(out_dir, durable_root)
+        try:
+            fallback_parent.mkdir()
+        except FileExistsError:
+            continue
+        try:
+            os.rename(backup_root, durable_root)
+        except OSError:
+            try:
+                shutil.copytree(backup_root, durable_root)
+                _verify_backup_tree_copy(backup_root, durable_root)
+            except Exception:
+                with suppress(OSError):
+                    shutil.rmtree(fallback_parent)
+                raise
+            with suppress(OSError):
+                shutil.rmtree(backup_root)
+        return durable_root
+    raise ValueError(
+        "Could not allocate an exclusive durable fallback for PEOC backup tree: "
+        f"{backup_root}"
+    )
+
+
+def _verify_backup_tree_copy(source_root: Path, destination_root: Path) -> None:
+    source_files = sorted(
+        (path for path in source_root.rglob("*") if path.is_file()),
+        key=lambda path: path.relative_to(source_root).as_posix(),
+    )
+    destination_files = sorted(
+        (path for path in destination_root.rglob("*") if path.is_file()),
+        key=lambda path: path.relative_to(destination_root).as_posix(),
+    )
+    source_relative = [
+        path.relative_to(source_root).as_posix()
+        for path in source_files
+    ]
+    destination_relative = [
+        path.relative_to(destination_root).as_posix()
+        for path in destination_files
+    ]
+    if source_relative != destination_relative:
+        raise ValueError("Durable PEOC backup fallback file inventory mismatch")
+    for source in source_files:
+        relative = source.relative_to(source_root)
+        source_identity = _capture_file_identity(source)
+        if not _path_has_same_content(
+            destination_root / relative,
+            source_identity,
+        ):
+            raise ValueError(
+                "Durable PEOC backup fallback verification failed for "
+                f"{relative.as_posix()}"
+            )
+
+
+def _remove_empty_fallback_tree(durable_root: Path) -> None:
+    fallback_parent = durable_root.parent
+    if fallback_parent.is_dir() and not any(
+        path.is_file() or path.is_symlink()
+        for path in fallback_parent.rglob("*")
+    ):
+        with suppress(OSError):
+            shutil.rmtree(fallback_parent)
+
+
 def _validate_backups_for_cleanup(
     out_dir: Path,
     backups: list[_BackupArtifact],
@@ -998,6 +1177,11 @@ def _preserve_unresolved_backup(
             identity,
         )
         if _path_matches_file_identity(artifact.backup, identity):
+            _release_backup_after_recovery(
+                artifact.backup,
+                last_preserved,
+                identity,
+            )
             return last_preserved
         identity = _capture_file_identity(artifact.backup)
     raise ValueError(
@@ -1091,6 +1275,13 @@ def _preserve_backup_without_identity(
             if created_token is not None:
                 _unlink_if_file_token(candidate, created_token)
             raise
+        try:
+            backup_identity = _capture_file_identity(artifact.backup)
+            recovery_identity = _capture_file_identity(candidate)
+        except (OSError, ValueError):
+            return candidate
+        if _same_file_content(backup_identity, recovery_identity):
+            _unlink_if_owned(_PlacedArtifact(artifact.backup, backup_identity))
         return candidate
     raise ValueError(
         "Could not allocate an exclusive unverified recovery path for PEOC "
@@ -1098,20 +1289,45 @@ def _preserve_backup_without_identity(
     )
 
 
-def _error_with_recovery_paths(
+def _error_with_rollback_details(
     original: Exception,
-    recovery_paths: list[Path],
+    issues: list[_RollbackIssue],
 ) -> Exception:
-    paths = ", ".join(
-        str(path)
-        for path in sorted(set(recovery_paths), key=lambda item: item.as_posix())
+    details = " | ".join(
+        (
+            f"destination={issue.destination}; "
+            f"temp_backup={issue.temporary_backup}; "
+            f"identity=(device={issue.identity.device},inode={issue.identity.inode},"
+            f"bytes={issue.identity.size},sha256={issue.identity.sha256}); "
+            "recovery_paths="
+            + (
+                ",".join(str(path) for path in issue.recovery_paths)
+                if issue.recovery_paths
+                else "<none>"
+            )
+            + "; errors="
+            + ("; ".join(issue.errors) if issue.errors else "<none>")
+        )
+        for issue in issues
     )
-    message = f"{original} Recovery backup path(s): {paths}"
+    message = f"{original} Rollback/recovery details: {details}"
     if isinstance(original, OSError):
         return OSError(message)
     if isinstance(original, ValueError):
         return ValueError(message)
     return RuntimeError(message)
+
+
+def _release_backup_after_recovery(
+    backup: Path,
+    recovery: Path,
+    expected: _FileIdentity,
+) -> None:
+    if not _path_matches_file_identity(backup, expected):
+        return
+    if not _path_has_same_content(recovery, expected):
+        return
+    _unlink_if_owned(_PlacedArtifact(backup, expected))
 
 
 def _same_file_content(left: _FileIdentity, right: _FileIdentity) -> bool:
