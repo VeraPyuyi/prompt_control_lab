@@ -134,14 +134,18 @@ def _write_minimal_bundle(root: Path) -> Path:
     _write_json(strong / "summary_soft_segmented.json", {"summary": [{"n": 0}]})
     _write_json(
         root / "experiments" / "redesign_v2" / "stage_heterogeneity" / "shi_r27_summary.json",
-        {"verdict": "FAIL", "held_spearman": 0.1, "cells": []},
+        {
+            "verdict": "FAIL",
+            "held_spearman_rho": 0.1,
+            "held_bootstrap_ci": [-0.2, 0.3],
+            "cells": [],
+        },
     )
     trajectory_root = root / "experiments" / "turnpike_trace" / "results_a800"
     _write_json(
         trajectory_root / "stationary_arith_Qwen__Qwen2.5-7B-Instruct_s0.json",
         {
             "model": "Qwen/Qwen2.5-7B-Instruct",
-            "seed": 0,
             "n_streams": 16,
             "hidden_dim": 3584,
             "alpha_emp_mean": 0.024,
@@ -155,7 +159,6 @@ def _write_minimal_bundle(root: Path) -> Path:
         trajectory_root / "turnpike_gsm8k_Qwen__Qwen2.5-7B-Instruct_s0.json",
         {
             "model": "Qwen/Qwen2.5-7B-Instruct",
-            "seed": 0,
             "n_prompts": 32,
             "hidden_dim": 3584,
             "alpha_emp_mean": 0.002,
@@ -367,7 +370,7 @@ def test_non_finite_source_values_become_null_with_warning(tmp_path: Path) -> No
         / "stage_heterogeneity"
         / "shi_r27_summary.json"
     )
-    path.write_text('{"verdict":"FAIL","held_spearman":NaN}', encoding="utf-8")
+    path.write_text('{"verdict":"FAIL","held_spearman_rho":NaN}', encoding="utf-8")
     manifest = discover_peoc_sources(bundle, PeocSourceOverrides())
 
     evidence = build_peoc_evidence(bundle, manifest)
@@ -375,7 +378,7 @@ def test_non_finite_source_values_become_null_with_warning(tmp_path: Path) -> No
     heterogeneity = _section(evidence, "stage_heterogeneity")
     observations = heterogeneity["observations"]
     assert isinstance(observations, dict)
-    assert observations["held_spearman"] is None
+    assert observations["held_spearman_rho"] is None
     assert any(
         warning["code"] == "non_finite_value" for warning in evidence["warnings"]
     )
@@ -503,7 +506,8 @@ def _evidence_section(
 - retain rejected rows in `observations.excluded_rows` with a reason;
 - classify the soft summary as unusable when every row has `n <= 0`;
 - normalize every valid trajectory file and pair stationary/heterogeneous rows
-  by model and seed;
+  by model and seed; when `seed` is absent in JSON, parse `_s<integer>` from the
+  source filename and record `seed_source: filename`;
 - select Qwen2.5-7B seed 0 as the headline pair when present;
 - preserve the exact stage-heterogeneity verdict and map `FAIL` to
   `failed_validation`;

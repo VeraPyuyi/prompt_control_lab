@@ -180,7 +180,9 @@ Paths are resolved relative to the bundle root:
 1. An explicit CLI override has highest priority.
 2. Otherwise, the exact default path is used when one is defined.
 3. Globbed trajectory files are sorted by normalized relative path.
-4. Trajectories are paired by normalized model identifier and seed.
+4. Trajectories are paired by normalized model identifier and seed. When a
+   summary omits its seed field, the importer parses `_s<integer>` from the
+   source filename and records that provenance.
 5. The case-study headline pair prefers Qwen2.5-7B seed 0 when present.
 6. If that pair is absent, the first complete shared model/seed pair in sorted
    order is used.
