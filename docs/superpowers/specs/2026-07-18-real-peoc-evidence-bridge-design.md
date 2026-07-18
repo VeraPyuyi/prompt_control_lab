@@ -171,6 +171,9 @@ Paths are resolved relative to the bundle root:
    `experiments/turnpike_trace/results_a800/stationary_arith_*.json`
 5. Heterogeneous trajectories:
    `experiments/turnpike_trace/results_a800/turnpike_gsm8k_*.json`
+6. Supporting trajectory arrays:
+   the `.npz` sibling of each selected stationary or heterogeneous trajectory
+   JSON, when present.
 
 ### Precedence and ambiguity
 
@@ -183,7 +186,9 @@ Paths are resolved relative to the bundle root:
    order is used.
 7. Every additional valid trajectory summary remains in
    `peoc_evidence.json`; it is not silently discarded.
-8. Multiple exact candidates or malformed explicit overrides are errors, not
+8. Supporting NPZ siblings are hashed as `trajectory_binary` sources but are
+   never parsed or copied by default.
+9. Multiple exact candidates or malformed explicit overrides are errors, not
    arbitrary selections.
 
 The selected path and the selection reason are recorded for every evidence
