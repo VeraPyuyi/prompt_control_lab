@@ -8,6 +8,7 @@ import math
 import os
 import re
 import shutil
+import stat
 import tempfile
 from contextlib import suppress
 from dataclasses import dataclass
@@ -115,6 +116,22 @@ class _RollbackIssue:
     temporary_backup: Path
     identity: _FileIdentity
     recovery_paths: tuple[Path, ...]
+    errors: tuple[str, ...]
+
+
+@dataclass(frozen=True)
+class _TransactionBackupEntry:
+    path: Path
+    relative_path: str
+    identity: _FileIdentity | None
+    error: str | None
+
+
+@dataclass(frozen=True)
+class _TransactionBackupInventory:
+    transaction_exists: bool
+    backup_root_exists: bool
+    entries: tuple[_TransactionBackupEntry, ...]
     errors: tuple[str, ...]
 
 
@@ -281,11 +298,14 @@ def import_peoc_bundle(options: PeocImportOptions) -> JsonDict:
     )
 
     out_dir.parent.mkdir(parents=True, exist_ok=True)
-    with tempfile.TemporaryDirectory(
-        dir=out_dir.parent,
-        prefix=f".{out_dir.name}.peoc-import-",
-    ) as temporary:
-        staging_dir = Path(temporary) / "payload"
+    transaction_dir = Path(
+        tempfile.mkdtemp(
+            dir=out_dir.parent,
+            prefix=f".{out_dir.name}.peoc-import-",
+        )
+    )
+    try:
+        staging_dir = transaction_dir / "payload"
         staging_dir.mkdir()
         if options.portable:
             _copy_portable_sources(
@@ -339,6 +359,29 @@ def import_peoc_bundle(options: PeocImportOptions) -> JsonDict:
             overwrite=options.overwrite,
             previous_portable_targets=previous_portable_targets,
         )
+    except Exception as exc:
+        inventory = _inspect_transaction_backups(transaction_dir)
+        if _transaction_requires_retention(inventory):
+            raise _error_with_transaction_details(
+                exc,
+                transaction_dir,
+                inventory,
+            ) from exc
+        with suppress(OSError):
+            shutil.rmtree(transaction_dir)
+        raise
+    else:
+        try:
+            shutil.rmtree(transaction_dir)
+        except OSError as exc:
+            inventory = _inspect_transaction_backups(transaction_dir)
+            if _transaction_requires_retention(inventory):
+                raise _error_with_transaction_details(
+                    exc,
+                    transaction_dir,
+                    inventory,
+                ) from exc
+            raise
 
     artifact_paths = {
         name: str(out_dir / name)
@@ -981,10 +1024,15 @@ def _rollback_backups(
 ) -> list[_RollbackIssue]:
     if not backups:
         return []
-    durable_root = _move_backup_tree_to_durable_fallback(
-        out_dir,
-        backup_root,
-    )
+    fallback_error: Exception | None = None
+    try:
+        durable_root = _move_backup_tree_to_durable_fallback(
+            out_dir,
+            backup_root,
+        )
+    except Exception as exc:
+        fallback_error = exc
+        durable_root = backup_root
     mapped = [
         (
             artifact,
@@ -1006,6 +1054,16 @@ def _rollback_backups(
     }
 
     for original, durable in reversed(mapped):
+        if not os.path.lexists(durable.backup):
+            errors[original.backup].append(
+                "backup became unavailable before rollback could restore or "
+                "preserve it"
+            )
+            if fallback_error is not None:
+                errors[original.backup].append(
+                    f"durable fallback initialization failed: {fallback_error}"
+                )
+            continue
         try:
             recovery_path = _restore_backup_no_clobber(out_dir, durable)
         except Exception as exc:
@@ -1016,15 +1074,36 @@ def _rollback_backups(
             errors[original.backup].append(
                 "backup could not be restored to its original destination"
             )
+            if fallback_error is not None:
+                errors[original.backup].append(
+                    f"durable fallback initialization failed: {fallback_error}"
+                )
+        elif (
+            not os.path.lexists(durable.backup)
+            and not _path_has_same_content(durable.destination, durable.identity)
+        ):
+            errors[original.backup].append(
+                "backup disappeared during rollback and the original registered "
+                "content identity could not be confirmed at its destination"
+            )
 
     for original, durable in mapped:
         if os.path.lexists(durable.backup):
             recovery_paths[original.backup].append(durable.backup)
-            errors[original.backup].append(
-                "backup remains in the durable transaction fallback"
-            )
+            if fallback_error is None:
+                errors[original.backup].append(
+                    "backup remains in the durable transaction fallback"
+                )
+            else:
+                errors[original.backup].extend(
+                    (
+                        "backup remains in the retained transaction directory",
+                        f"durable fallback initialization failed: {fallback_error}",
+                    )
+                )
 
-    _remove_empty_fallback_tree(durable_root)
+    if fallback_error is None:
+        _remove_empty_fallback_tree(durable_root)
     issues = [
         _RollbackIssue(
             destination=original.destination,
@@ -1070,14 +1149,17 @@ def _move_backup_tree_to_durable_fallback(
             continue
         try:
             os.rename(backup_root, durable_root)
-        except OSError:
+        except OSError as rename_error:
             try:
                 shutil.copytree(backup_root, durable_root)
                 _verify_backup_tree_copy(backup_root, durable_root)
-            except Exception:
+            except Exception as copy_error:
                 with suppress(OSError):
                     shutil.rmtree(fallback_parent)
-                raise
+                raise OSError(
+                    "Durable PEOC backup fallback initialization failed; "
+                    f"rename_error={rename_error}; copy_error={copy_error}"
+                ) from copy_error
             with suppress(OSError):
                 shutil.rmtree(backup_root)
         return durable_root
@@ -1311,6 +1393,172 @@ def _error_with_rollback_details(
         for issue in issues
     )
     message = f"{original} Rollback/recovery details: {details}"
+    if isinstance(original, OSError):
+        return OSError(message)
+    if isinstance(original, ValueError):
+        return ValueError(message)
+    return RuntimeError(message)
+
+
+def _inspect_transaction_backups(
+    transaction_dir: Path,
+) -> _TransactionBackupInventory:
+    if not os.path.lexists(transaction_dir):
+        return _TransactionBackupInventory(
+            transaction_exists=False,
+            backup_root_exists=False,
+            entries=(),
+            errors=(
+                "transaction directory is unavailable; backup persistence "
+                "cannot be confirmed",
+            ),
+        )
+    if transaction_dir.is_symlink() or not transaction_dir.is_dir():
+        return _TransactionBackupInventory(
+            transaction_exists=True,
+            backup_root_exists=False,
+            entries=(),
+            errors=("transaction path is not a regular directory",),
+        )
+
+    backup_root = transaction_dir / "backup"
+    if not os.path.lexists(backup_root):
+        return _TransactionBackupInventory(
+            transaction_exists=True,
+            backup_root_exists=False,
+            entries=(),
+            errors=(),
+        )
+    if backup_root.is_symlink() or not backup_root.is_dir():
+        return _TransactionBackupInventory(
+            transaction_exists=True,
+            backup_root_exists=True,
+            entries=(),
+            errors=("transaction backup path is not a regular directory",),
+        )
+
+    try:
+        paths = sorted(
+            backup_root.rglob("*"),
+            key=lambda path: path.relative_to(backup_root).as_posix(),
+        )
+    except OSError as exc:
+        return _TransactionBackupInventory(
+            transaction_exists=True,
+            backup_root_exists=True,
+            entries=(),
+            errors=(f"could not inventory transaction backups: {exc}",),
+        )
+
+    entries: list[_TransactionBackupEntry] = []
+    errors: list[str] = []
+    for path in paths:
+        relative_path = path.relative_to(backup_root).as_posix()
+        try:
+            mode = path.lstat().st_mode
+        except OSError as exc:
+            entries.append(
+                _TransactionBackupEntry(
+                    path=path,
+                    relative_path=relative_path,
+                    identity=None,
+                    error=f"could not inspect backup entry: {exc}",
+                )
+            )
+            continue
+        if stat.S_ISLNK(mode):
+            entries.append(
+                _TransactionBackupEntry(
+                    path=path,
+                    relative_path=relative_path,
+                    identity=None,
+                    error="backup entry is a symbolic link",
+                )
+            )
+            continue
+        if stat.S_ISDIR(mode):
+            continue
+        if not stat.S_ISREG(mode):
+            entries.append(
+                _TransactionBackupEntry(
+                    path=path,
+                    relative_path=relative_path,
+                    identity=None,
+                    error="backup entry is not a regular file",
+                )
+            )
+            continue
+        try:
+            identity = _capture_file_identity(path)
+        except (OSError, ValueError) as exc:
+            entries.append(
+                _TransactionBackupEntry(
+                    path=path,
+                    relative_path=relative_path,
+                    identity=None,
+                    error=str(exc),
+                )
+            )
+        else:
+            entries.append(
+                _TransactionBackupEntry(
+                    path=path,
+                    relative_path=relative_path,
+                    identity=identity,
+                    error=None,
+                )
+            )
+    return _TransactionBackupInventory(
+        transaction_exists=True,
+        backup_root_exists=True,
+        entries=tuple(entries),
+        errors=tuple(errors),
+    )
+
+
+def _transaction_requires_retention(
+    inventory: _TransactionBackupInventory,
+) -> bool:
+    return bool(inventory.entries or inventory.errors)
+
+
+def _error_with_transaction_details(
+    original: Exception,
+    transaction_dir: Path,
+    inventory: _TransactionBackupInventory,
+) -> Exception:
+    entries = " | ".join(
+        (
+            f"path={entry.path}; relative_path={entry.relative_path}; "
+            + (
+                "identity=("
+                f"device={entry.identity.device},inode={entry.identity.inode},"
+                f"bytes={entry.identity.size},"
+                f"sha256:{entry.identity.sha256})"
+                if entry.identity is not None
+                else "identity=<unavailable>"
+            )
+            + f"; error={entry.error or '<none>'}"
+        )
+        for entry in inventory.entries
+    )
+    if inventory.transaction_exists:
+        transaction_status = (
+            f"Last-resort PEOC transaction retained at {transaction_dir}"
+        )
+    else:
+        transaction_status = (
+            "Last-resort PEOC transaction could not be retained because its "
+            f"directory is unavailable: {transaction_dir}"
+        )
+    message = (
+        f"{original} {transaction_status}; "
+        f"transaction_exists={inventory.transaction_exists}; "
+        f"backup_root_exists={inventory.backup_root_exists}; "
+        f"backup_inventory={entries or '<none>'}; "
+        "inventory_errors="
+        + ("; ".join(inventory.errors) if inventory.errors else "<none>")
+    )
     if isinstance(original, OSError):
         return OSError(message)
     if isinstance(original, ValueError):

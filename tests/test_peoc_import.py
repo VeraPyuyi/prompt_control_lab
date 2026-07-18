@@ -3,6 +3,7 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import shutil
 from pathlib import Path
 from typing import Any, NoReturn
 
@@ -1039,6 +1040,7 @@ def test_portable_overwrite_replaces_registered_copies_and_preserves_unrelated(
     assert copied_hard.read_bytes() != previous_copy
     assert unrelated.read_text(encoding="utf-8") == "keep me"
     assert not (out_dir / ".peoc-recovery").exists()
+    assert not list(out_dir.parent.glob(f".{out_dir.name}.peoc-import-*"))
 
 
 def test_portable_overwrite_rejects_modified_registered_copy(
@@ -1805,6 +1807,134 @@ def test_durable_backup_fallback_avoids_existing_directory_collision(
     ) == "old generated artifact"
     assert marker.read_text(encoding="utf-8") == "do not overwrite"
     assert not backup_root.exists()
+
+
+def test_transaction_is_retained_when_all_durable_fallback_initialization_fails(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    bundle_root = tmp_path / "bundle"
+    out_dir = tmp_path / "run"
+    _write_minimal_bundle(bundle_root)
+    import_peoc_bundle(PeocImportOptions(bundle_root=bundle_root, out_dir=out_dir))
+    retained_names = ("manifest.json", "peoc_evidence.json")
+    old_hashes = {
+        name: hashlib.sha256((out_dir / name).read_bytes()).hexdigest()
+        for name in retained_names
+    }
+    original_validate = peoc_import_module._validate_published_artifact
+    original_replace = os.replace
+    original_rename = os.rename
+    original_recovery_publish = peoc_import_module._publish_recovery_snapshot
+    destination_racers = {
+        name: f"retained transaction destination racer for {name}"
+        for name in retained_names
+    }
+    injected_racers: set[str] = set()
+    failed_publish = False
+    failed_recoveries: set[str] = set()
+    failed_rename = False
+    failed_copy = False
+
+    def validate_then_race_peoc_evidence(
+        output_dir: Path,
+        destination: Path,
+        guard: Any,
+        placed: Any,
+    ) -> None:
+        original_validate(output_dir, destination, guard, placed)
+        name = destination.name
+        if name in destination_racers and name not in injected_racers:
+            destination.unlink()
+            destination.write_text(destination_racers[name], encoding="utf-8")
+            injected_racers.add(name)
+
+    def fail_later_generated_publication(source: Path, destination: Path) -> None:
+        nonlocal failed_publish
+        if (
+            not failed_publish
+            and Path(destination) == out_dir / "research_case_study.json"
+            and Path(source).parent.name == "payload"
+        ):
+            failed_publish = True
+            raise OSError("simulated generated publish failure")
+        original_replace(source, destination)
+
+    def fail_standard_recovery(
+        output_dir: Path,
+        artifact: Any,
+        identity: Any,
+    ) -> Path:
+        name = artifact.destination.name
+        if name in retained_names:
+            failed_recoveries.add(name)
+            raise OSError("simulated standard recovery failure")
+        return original_recovery_publish(output_dir, artifact, identity)
+
+    def fail_durable_fallback_rename(source: Path, destination: Path) -> None:
+        nonlocal failed_rename
+        if (
+            Path(source).name == "backup"
+            and ".peoc-import-" in Path(source).parent.name
+        ):
+            failed_rename = True
+            raise OSError("simulated durable fallback rename failure")
+        original_rename(source, destination)
+
+    def fail_durable_fallback_copy(source: Path, destination: Path) -> None:
+        nonlocal failed_copy
+        failed_copy = True
+        raise OSError("simulated durable fallback copy failure")
+
+    monkeypatch.setattr(
+        peoc_import_module,
+        "_validate_published_artifact",
+        validate_then_race_peoc_evidence,
+    )
+    monkeypatch.setattr(os, "replace", fail_later_generated_publication)
+    monkeypatch.setattr(os, "rename", fail_durable_fallback_rename)
+    monkeypatch.setattr(shutil, "copytree", fail_durable_fallback_copy)
+    monkeypatch.setattr(
+        peoc_import_module,
+        "_publish_recovery_snapshot",
+        fail_standard_recovery,
+    )
+
+    with pytest.raises(OSError) as error:
+        import_peoc_bundle(
+            PeocImportOptions(
+                bundle_root=bundle_root,
+                out_dir=out_dir,
+                overwrite=True,
+            )
+        )
+
+    assert injected_racers == set(retained_names)
+    assert failed_publish is True
+    assert failed_recoveries == set(retained_names)
+    assert failed_rename is True
+    assert failed_copy is True
+    for name, content in destination_racers.items():
+        assert (out_dir / name).read_text(encoding="utf-8") == content
+    retained_transactions = list(
+        out_dir.parent.glob(f".{out_dir.name}.peoc-import-*")
+    )
+    assert len(retained_transactions) == 1
+    retained = retained_transactions[0]
+    retained_hashes = {
+        hashlib.sha256(path.read_bytes()).hexdigest()
+        for path in retained.rglob("*")
+        if path.is_file()
+    }
+    assert set(old_hashes.values()).issubset(retained_hashes)
+    message = str(error.value)
+    assert str(retained) in message
+    assert "manifest.json" in message
+    assert "peoc_evidence.json" in message
+    assert "bytes=" in message
+    assert "sha256:" in message
+    assert "simulated durable fallback rename failure" in message
+    assert "simulated durable fallback copy failure" in message
 
 
 def test_portable_import_records_deterministic_file_and_total_limit_warnings(
