@@ -159,14 +159,17 @@ def build_peoc_evidence(bundle_root: Path, source_manifest: JsonDict) -> JsonDic
         msg = f"PEOC bundle root is not a directory: {root}"
         raise ValueError(msg)
 
-    sources = _manifest_sources(source_manifest)
     warnings: list[JsonDict] = []
-    finite_manifest = _finite_json(
-        source_manifest,
-        warnings,
-        source_role="source_manifest",
-        relative_path=None,
+    finite_manifest = cast(
+        JsonDict,
+        _finite_json(
+            source_manifest,
+            warnings,
+            source_role="source_manifest",
+            relative_path=None,
+        ),
     )
+    sources = _manifest_sources(finite_manifest)
     hard = _build_hard_section(root, sources, warnings)
     soft = _build_soft_section(root, sources, warnings)
     trajectory = _build_trajectory_section(root, sources, warnings)
@@ -194,7 +197,7 @@ def build_peoc_evidence(bundle_root: Path, source_manifest: JsonDict) -> JsonDic
 
     return {
         "schema": "prompt_control_lab.peoc_evidence.v1",
-        "bundle": cast(JsonDict, finite_manifest).get("bundle", {}),
+        "bundle": finite_manifest.get("bundle", {}),
         "source_manifest": finite_manifest,
         "warnings": warnings,
         "sections": sections,

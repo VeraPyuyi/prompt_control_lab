@@ -306,6 +306,29 @@ def test_build_peoc_evidence_normalizes_non_finite_values_and_warns(
     assert heterogeneous["alpha_theory_upper_bound"] is None
 
 
+def test_build_peoc_evidence_normalizes_non_finite_source_metadata(
+    tmp_path: Path,
+) -> None:
+    bundle_root = tmp_path / "bundle"
+    _write_minimal_bundle(bundle_root)
+    manifest = discover_peoc_sources(bundle_root, PeocSourceOverrides())
+    hard_source = next(
+        source for source in manifest["sources"] if source["role"] == "hard_test_summary"
+    )
+    hard_source["bytes"] = float("inf")
+
+    evidence = build_peoc_evidence(bundle_root, manifest)
+
+    json.dumps(evidence, allow_nan=False)
+    hard_reference = evidence["sections"]["hard_evaluation"]["observations"]["source"]
+    assert hard_reference["bytes"] is None
+    assert any(
+        warning["code"] == "non_finite_value"
+        and warning["json_path"].endswith(".bytes")
+        for warning in evidence["warnings"]
+    )
+
+
 def test_build_peoc_evidence_retains_malformed_optional_source_as_unusable(
     tmp_path: Path,
 ) -> None:
@@ -333,6 +356,66 @@ def test_build_peoc_evidence_retains_malformed_optional_source_as_unusable(
     assert any(
         warning["code"] == "invalid_optional_source"
         and warning["source_role"] == "soft_segmented_summary"
+        for warning in evidence["warnings"]
+    )
+
+
+def test_build_peoc_evidence_retains_malformed_stage_source_as_unusable(
+    tmp_path: Path,
+) -> None:
+    bundle_root = tmp_path / "bundle"
+    _write_minimal_bundle(bundle_root)
+    stage_path = (
+        bundle_root
+        / "experiments"
+        / "redesign_v2"
+        / "stage_heterogeneity"
+        / "shi_r27_summary.json"
+    )
+    stage_path.write_text("{not-json", encoding="utf-8")
+
+    evidence = _build_fixture_evidence(bundle_root)
+
+    stage = evidence["sections"]["stage_heterogeneity"]
+    assert stage["origin"] == "real"
+    assert stage["status"] == "unusable"
+    assert stage["source_roles"] == ["stage_heterogeneity"]
+    assert any(
+        warning["code"] == "invalid_optional_source"
+        and warning["source_role"] == "stage_heterogeneity"
+        for warning in evidence["warnings"]
+    )
+
+
+def test_build_peoc_evidence_retains_malformed_trajectory_source_as_unusable(
+    tmp_path: Path,
+) -> None:
+    bundle_root = tmp_path / "bundle"
+    _write_minimal_bundle(bundle_root)
+    stationary_path = (
+        bundle_root
+        / "experiments"
+        / "turnpike_trace"
+        / "results_a800"
+        / "stationary_arith_Qwen2.5-7B-Instruct_s0.json"
+    )
+    stationary_path.write_text("{not-json", encoding="utf-8")
+
+    evidence = _build_fixture_evidence(bundle_root)
+
+    trajectory = evidence["sections"]["trajectory"]
+    assert trajectory["origin"] == "real"
+    assert trajectory["status"] == "unusable"
+    invalid_entries = [
+        entry
+        for entry in trajectory["observations"]["entries"]
+        if entry["status"] == "unusable"
+    ]
+    assert len(invalid_entries) == 1
+    assert invalid_entries[0]["role"] == "trajectory_stationary"
+    assert any(
+        warning["code"] == "invalid_optional_source"
+        and warning["source_role"] == "trajectory_stationary"
         for warning in evidence["warnings"]
     )
 
