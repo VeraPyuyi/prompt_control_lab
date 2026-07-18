@@ -1805,6 +1805,193 @@ def test_rollback_path_escape_keeps_backup_in_transaction(
     assert not list(out_dir.glob(".peoc-recovery-fallback-*"))
 
 
+def test_compromised_transaction_backup_guard_is_not_followed(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    bundle_root = tmp_path / "bundle"
+    out_dir = tmp_path / "run"
+    sentinel = tmp_path / "outside" / "sentinel.txt"
+    sentinel.parent.mkdir()
+    sentinel.write_text("external junction sentinel", encoding="utf-8")
+    _write_minimal_bundle(bundle_root)
+    import_peoc_bundle(PeocImportOptions(bundle_root=bundle_root, out_dir=out_dir))
+    original_replace = os.replace
+    original_validate_guard = peoc_import_module._validate_directory_guard
+    rollback_started = False
+    rejected_backup_guard = False
+
+    def fail_peoc_publication(source: Path, destination: Path) -> None:
+        nonlocal rollback_started
+        if (
+            Path(destination) == out_dir / "peoc_evidence.json"
+            and Path(source).parent.name == "payload"
+        ):
+            rollback_started = True
+            raise OSError("simulated failure before compromised backup rollback")
+        original_replace(source, destination)
+
+    def reject_replaced_backup_parent(
+        root: Path,
+        destination: Path,
+        guard: Any,
+    ) -> None:
+        nonlocal rejected_backup_guard
+        if rollback_started and Path(root).name == "backup":
+            rejected_backup_guard = True
+            raise ValueError(
+                f"transaction backup parent resolved outside root: {sentinel.parent}"
+            )
+        original_validate_guard(root, destination, guard)
+
+    monkeypatch.setattr(os, "replace", fail_peoc_publication)
+    monkeypatch.setattr(
+        peoc_import_module,
+        "_validate_directory_guard",
+        reject_replaced_backup_parent,
+    )
+
+    with pytest.raises(OSError) as error:
+        import_peoc_bundle(
+            PeocImportOptions(
+                bundle_root=bundle_root,
+                out_dir=out_dir,
+                overwrite=True,
+            )
+        )
+
+    assert rollback_started is True
+    assert rejected_backup_guard is True
+    assert sentinel.read_text(encoding="utf-8") == "external junction sentinel"
+    assert all(
+        b"external junction sentinel" not in path.read_bytes()
+        for path in out_dir.rglob("*")
+        if path.is_file()
+    )
+    retained = _retained_transaction_directories(out_dir)
+    assert len(retained) == 1
+    message = str(error.value)
+    assert "compromised" in message
+    assert str(retained[0]) in message
+
+
+def test_destination_replacement_after_restore_check_keeps_old_backup(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    bundle_root = tmp_path / "bundle"
+    out_dir = tmp_path / "run"
+    _write_minimal_bundle(bundle_root)
+    import_peoc_bundle(PeocImportOptions(bundle_root=bundle_root, out_dir=out_dir))
+    old_manifest_hash = hashlib.sha256(
+        (out_dir / "manifest.json").read_bytes()
+    ).hexdigest()
+    original_replace = os.replace
+    original_same_content = peoc_import_module._path_has_same_content
+    rollback_started = False
+    destination_replaced = False
+    destination_racer = "destination replaced after restore validation"
+
+    def fail_peoc_publication(source: Path, destination: Path) -> None:
+        nonlocal rollback_started
+        if (
+            Path(destination) == out_dir / "peoc_evidence.json"
+            and Path(source).parent.name == "payload"
+        ):
+            rollback_started = True
+            raise OSError("simulated failure before destination replacement")
+        original_replace(source, destination)
+
+    def replace_after_content_check(path: Path, expected: Any) -> bool:
+        nonlocal destination_replaced
+        matches = original_same_content(path, expected)
+        if (
+            rollback_started
+            and not destination_replaced
+            and path == out_dir / "manifest.json"
+            and matches
+        ):
+            path.unlink()
+            path.write_text(destination_racer, encoding="utf-8")
+            destination_replaced = True
+        return matches
+
+    monkeypatch.setattr(os, "replace", fail_peoc_publication)
+    monkeypatch.setattr(
+        peoc_import_module,
+        "_path_has_same_content",
+        replace_after_content_check,
+    )
+
+    with pytest.raises(OSError) as error:
+        import_peoc_bundle(
+            PeocImportOptions(
+                bundle_root=bundle_root,
+                out_dir=out_dir,
+                overwrite=True,
+            )
+        )
+
+    assert rollback_started is True
+    assert destination_replaced is True
+    assert (out_dir / "manifest.json").read_text(
+        encoding="utf-8"
+    ) == destination_racer
+    retained = _retained_files_with_sha256(out_dir, old_manifest_hash)
+    assert retained
+    assert any(str(path) in str(error.value) for path in retained)
+
+
+def test_normal_failed_import_restores_destination_and_retains_backup(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    bundle_root = tmp_path / "bundle"
+    out_dir = tmp_path / "run"
+    _write_minimal_bundle(bundle_root)
+    import_peoc_bundle(PeocImportOptions(bundle_root=bundle_root, out_dir=out_dir))
+    old_payloads = {
+        name: (out_dir / name).read_bytes()
+        for name in ("manifest.json", "peoc_evidence.json")
+    }
+    old_hashes = {
+        name: hashlib.sha256(payload).hexdigest()
+        for name, payload in old_payloads.items()
+    }
+    original_replace = os.replace
+    failed = False
+
+    def fail_peoc_publication(source: Path, destination: Path) -> None:
+        nonlocal failed
+        if (
+            not failed
+            and Path(destination) == out_dir / "peoc_evidence.json"
+            and Path(source).parent.name == "payload"
+        ):
+            failed = True
+            raise OSError("simulated normal failed import")
+        original_replace(source, destination)
+
+    monkeypatch.setattr(os, "replace", fail_peoc_publication)
+
+    with pytest.raises(OSError) as error:
+        import_peoc_bundle(
+            PeocImportOptions(
+                bundle_root=bundle_root,
+                out_dir=out_dir,
+                overwrite=True,
+            )
+        )
+
+    assert failed is True
+    for name, payload in old_payloads.items():
+        assert (out_dir / name).read_bytes() == payload
+        assert _retained_files_with_sha256(out_dir, old_hashes[name])
+    retained = _retained_transaction_directories(out_dir)
+    assert len(retained) == 1
+    assert str(retained[0]) in str(error.value)
+
+
 def test_direct_rollback_retains_multiple_unresolved_backups(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
@@ -1892,7 +2079,7 @@ def test_direct_rollback_retains_multiple_unresolved_backups(
     assert "sha256:sha256:" not in message
     assert "sha256=sha256:" not in message
     assert "sha256:sha256:" not in inventory_text
-    assert inventory_text.count("sha256:") == len(retained_names)
+    assert inventory_text.count("sha256:") == inventory_text.count("identity=(")
     for digest in old_hashes.values():
         assert f"sha256:{digest}" in inventory_text
     assert not (out_dir / ".peoc-recovery").exists()
