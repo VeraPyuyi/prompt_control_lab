@@ -49,8 +49,6 @@ _GENERATED_ARTIFACTS = (
 )
 _PORTABLE_EXTENSIONS = {".csv", ".json"}
 _REQUIRED_SOURCE_ROLES = {"bundle_manifest", "hard_test_summary"}
-_RECOVERY_DIRECTORY = ".peoc-recovery"
-_MAX_RECOVERY_SNAPSHOTS = 8
 
 
 @dataclass(frozen=True)
@@ -638,7 +636,7 @@ def _commit_staged_import(
                     directory_guard,
                     artifact,
                 )
-        _validate_backups_for_cleanup(out_dir, backups)
+        _validate_backups_for_cleanup(backups)
     except Exception as exc:
         for artifact in reversed(placed):
             _unlink_if_owned(artifact)
@@ -976,13 +974,10 @@ def _restore_backup_no_clobber(
     try:
         actual_identity = _capture_file_identity(artifact.backup)
     except (OSError, ValueError):
-        return _preserve_backup_without_identity(out_dir, artifact)
+        return artifact.backup
     if os.path.lexists(artifact.destination):
-        return _preserve_unresolved_backup(
-            out_dir,
-            artifact,
-            actual_identity,
-        )
+        return artifact.backup
+    restored: _PlacedArtifact | None = None
     try:
         _validate_staged_target_path(out_dir, artifact.destination)
         directory_guard = _capture_directory_guard(out_dir, artifact.destination)
@@ -998,23 +993,21 @@ def _restore_backup_no_clobber(
             restored,
         )
     except (OSError, ValueError):
-        return _preserve_current_backup(out_dir, artifact)
+        if restored is not None:
+            _unlink_if_owned(restored)
+        return artifact.backup
     if not _path_has_same_content(restored.path, actual_identity):
-        return _preserve_current_backup(out_dir, artifact)
+        return artifact.backup
     _unlink_if_owned(_PlacedArtifact(artifact.backup, actual_identity))
     if not artifact.backup.is_file():
         return None
     try:
         remaining_identity = _capture_file_identity(artifact.backup)
     except (OSError, ValueError):
-        return _preserve_backup_without_identity(out_dir, artifact)
+        return artifact.backup
     if _same_file_content(remaining_identity, actual_identity):
         return None
-    return _preserve_unresolved_backup(
-        out_dir,
-        artifact,
-        remaining_identity,
-    )
+    return artifact.backup
 
 
 def _rollback_backups(
@@ -1024,195 +1017,78 @@ def _rollback_backups(
 ) -> list[_RollbackIssue]:
     if not backups:
         return []
-    fallback_error: Exception | None = None
-    try:
-        durable_root = _move_backup_tree_to_durable_fallback(
-            out_dir,
-            backup_root,
-        )
-    except Exception as exc:
-        fallback_error = exc
-        durable_root = backup_root
-    mapped = [
-        (
-            artifact,
-            _BackupArtifact(
-                backup=durable_root / artifact.backup.relative_to(backup_root),
-                destination=artifact.destination,
-                identity=artifact.identity,
-            ),
-        )
-        for artifact in backups
-    ]
     recovery_paths: dict[Path, list[Path]] = {
-        original.backup: []
-        for original, _ in mapped
+        artifact.backup: []
+        for artifact in backups
     }
     errors: dict[Path, list[str]] = {
-        original.backup: []
-        for original, _ in mapped
+        artifact.backup: []
+        for artifact in backups
     }
 
-    for original, durable in reversed(mapped):
-        if not os.path.lexists(durable.backup):
-            errors[original.backup].append(
+    for artifact in reversed(backups):
+        try:
+            artifact.backup.relative_to(backup_root)
+        except ValueError:
+            errors[artifact.backup].append(
+                "backup path is outside the retained transaction backup root"
+            )
+            continue
+        if not os.path.lexists(artifact.backup):
+            errors[artifact.backup].append(
                 "backup became unavailable before rollback could restore or "
                 "preserve it"
             )
-            if fallback_error is not None:
-                errors[original.backup].append(
-                    f"durable fallback initialization failed: {fallback_error}"
-                )
             continue
         try:
-            recovery_path = _restore_backup_no_clobber(out_dir, durable)
+            unresolved_path = _restore_backup_no_clobber(out_dir, artifact)
         except Exception as exc:
-            errors[original.backup].append(str(exc))
+            errors[artifact.backup].append(str(exc))
             continue
-        if recovery_path is not None:
-            recovery_paths[original.backup].append(recovery_path)
-            errors[original.backup].append(
-                "backup could not be restored to its original destination"
+        if unresolved_path is not None:
+            recovery_paths[artifact.backup].append(unresolved_path)
+            errors[artifact.backup].append(
+                "backup remains in the retained transaction directory because "
+                "it could not be restored without ambiguity"
             )
-            if fallback_error is not None:
-                errors[original.backup].append(
-                    f"durable fallback initialization failed: {fallback_error}"
-                )
         elif (
-            not os.path.lexists(durable.backup)
-            and not _path_has_same_content(durable.destination, durable.identity)
+            not os.path.lexists(artifact.backup)
+            and not _path_has_same_content(artifact.destination, artifact.identity)
         ):
-            errors[original.backup].append(
+            errors[artifact.backup].append(
                 "backup disappeared during rollback and the original registered "
                 "content identity could not be confirmed at its destination"
             )
 
-    for original, durable in mapped:
-        if os.path.lexists(durable.backup):
-            recovery_paths[original.backup].append(durable.backup)
-            if fallback_error is None:
-                errors[original.backup].append(
-                    "backup remains in the durable transaction fallback"
-                )
-            else:
-                errors[original.backup].extend(
-                    (
-                        "backup remains in the retained transaction directory",
-                        f"durable fallback initialization failed: {fallback_error}",
-                    )
-                )
-
-    if fallback_error is None:
-        _remove_empty_fallback_tree(durable_root)
+    for artifact in backups:
+        if (
+            os.path.lexists(artifact.backup)
+            and artifact.backup not in recovery_paths[artifact.backup]
+        ):
+            recovery_paths[artifact.backup].append(artifact.backup)
+            errors[artifact.backup].append(
+                "backup remains in the retained transaction directory"
+            )
     issues = [
         _RollbackIssue(
-            destination=original.destination,
-            temporary_backup=original.backup,
-            identity=original.identity,
+            destination=artifact.destination,
+            temporary_backup=artifact.backup,
+            identity=artifact.identity,
             recovery_paths=tuple(
                 sorted(
-                    set(recovery_paths[original.backup]),
+                    set(recovery_paths[artifact.backup]),
                     key=lambda path: path.as_posix(),
                 )
             ),
-            errors=tuple(errors[original.backup]),
+            errors=tuple(errors[artifact.backup]),
         )
-        for original, _ in mapped
-        if recovery_paths[original.backup] or errors[original.backup]
+        for artifact in backups
+        if recovery_paths[artifact.backup] or errors[artifact.backup]
     ]
     return sorted(issues, key=lambda issue: issue.destination.as_posix())
 
 
-def _move_backup_tree_to_durable_fallback(
-    out_dir: Path,
-    backup_root: Path,
-) -> Path:
-    if not backup_root.is_dir():
-        raise ValueError(f"PEOC backup tree is unavailable: {backup_root}")
-    transaction_name = re.sub(
-        r"[^A-Za-z0-9._-]+",
-        "-",
-        backup_root.parent.name,
-    ).strip(".-")
-    if not transaction_name:
-        transaction_name = "transaction"
-    base_name = f".peoc-recovery-fallback-{transaction_name}"
-
-    for collision_index in range(1000):
-        suffix = "" if collision_index == 0 else f".{collision_index}"
-        fallback_parent = out_dir / f"{base_name}{suffix}"
-        durable_root = fallback_parent / "backup"
-        _validate_staged_target_path(out_dir, durable_root)
-        try:
-            fallback_parent.mkdir()
-        except FileExistsError:
-            continue
-        try:
-            os.rename(backup_root, durable_root)
-        except OSError as rename_error:
-            try:
-                shutil.copytree(backup_root, durable_root)
-                _verify_backup_tree_copy(backup_root, durable_root)
-            except Exception as copy_error:
-                with suppress(OSError):
-                    shutil.rmtree(fallback_parent)
-                raise OSError(
-                    "Durable PEOC backup fallback initialization failed; "
-                    f"rename_error={rename_error}; copy_error={copy_error}"
-                ) from copy_error
-            with suppress(OSError):
-                shutil.rmtree(backup_root)
-        return durable_root
-    raise ValueError(
-        "Could not allocate an exclusive durable fallback for PEOC backup tree: "
-        f"{backup_root}"
-    )
-
-
-def _verify_backup_tree_copy(source_root: Path, destination_root: Path) -> None:
-    source_files = sorted(
-        (path for path in source_root.rglob("*") if path.is_file()),
-        key=lambda path: path.relative_to(source_root).as_posix(),
-    )
-    destination_files = sorted(
-        (path for path in destination_root.rglob("*") if path.is_file()),
-        key=lambda path: path.relative_to(destination_root).as_posix(),
-    )
-    source_relative = [
-        path.relative_to(source_root).as_posix()
-        for path in source_files
-    ]
-    destination_relative = [
-        path.relative_to(destination_root).as_posix()
-        for path in destination_files
-    ]
-    if source_relative != destination_relative:
-        raise ValueError("Durable PEOC backup fallback file inventory mismatch")
-    for source in source_files:
-        relative = source.relative_to(source_root)
-        source_identity = _capture_file_identity(source)
-        if not _path_has_same_content(
-            destination_root / relative,
-            source_identity,
-        ):
-            raise ValueError(
-                "Durable PEOC backup fallback verification failed for "
-                f"{relative.as_posix()}"
-            )
-
-
-def _remove_empty_fallback_tree(durable_root: Path) -> None:
-    fallback_parent = durable_root.parent
-    if fallback_parent.is_dir() and not any(
-        path.is_file() or path.is_symlink()
-        for path in fallback_parent.rglob("*")
-    ):
-        with suppress(OSError):
-            shutil.rmtree(fallback_parent)
-
-
 def _validate_backups_for_cleanup(
-    out_dir: Path,
     backups: list[_BackupArtifact],
 ) -> None:
     for artifact in backups:
@@ -1221,154 +1097,10 @@ def _validate_backups_for_cleanup(
         actual_identity = _capture_file_identity(artifact.backup)
         if _same_file_content(actual_identity, artifact.identity):
             continue
-        preserved = _preserve_unresolved_backup(
-            out_dir,
-            artifact,
-            actual_identity,
-        )
         raise ValueError(
-            "PEOC backup changed during commit; racing content was preserved at "
-            f"{preserved}"
+            "PEOC backup changed during commit; racing content remains in the "
+            f"transaction at {artifact.backup}"
         )
-
-
-def _preserve_current_backup(
-    out_dir: Path,
-    artifact: _BackupArtifact,
-) -> Path:
-    if not artifact.backup.is_file():
-        raise ValueError(f"PEOC backup became unavailable: {artifact.backup}")
-    try:
-        actual_identity = _capture_file_identity(artifact.backup)
-    except (OSError, ValueError):
-        return _preserve_backup_without_identity(out_dir, artifact)
-    return _preserve_unresolved_backup(out_dir, artifact, actual_identity)
-
-
-def _preserve_unresolved_backup(
-    out_dir: Path,
-    artifact: _BackupArtifact,
-    initial_identity: _FileIdentity,
-) -> Path:
-    identity = initial_identity
-    last_preserved: Path | None = None
-    for _ in range(_MAX_RECOVERY_SNAPSHOTS):
-        last_preserved = _publish_recovery_snapshot(
-            out_dir,
-            artifact,
-            identity,
-        )
-        if _path_matches_file_identity(artifact.backup, identity):
-            _release_backup_after_recovery(
-                artifact.backup,
-                last_preserved,
-                identity,
-            )
-            return last_preserved
-        identity = _capture_file_identity(artifact.backup)
-    raise ValueError(
-        "PEOC backup kept changing while preserving racing content; "
-        f"latest stable snapshot: {last_preserved}"
-    )
-
-
-def _publish_recovery_snapshot(
-    out_dir: Path,
-    artifact: _BackupArtifact,
-    identity: _FileIdentity,
-) -> Path:
-    relative = artifact.destination.relative_to(out_dir)
-    digest = identity.sha256.removeprefix("sha256:")[:16]
-    recovery_parent = out_dir / _RECOVERY_DIRECTORY / relative.parent
-    base_name = f"{relative.name}.{digest}.recovered"
-
-    for collision_index in range(1000):
-        suffix = "" if collision_index == 0 else f".{collision_index}"
-        candidate = recovery_parent / f"{base_name}{suffix}"
-        _validate_staged_target_path(out_dir, candidate)
-        recovery_parent.mkdir(parents=True, exist_ok=True)
-        directory_guard = _capture_directory_guard(out_dir, candidate)
-        if os.path.lexists(candidate):
-            if _path_has_same_content(candidate, identity):
-                return candidate
-            continue
-        try:
-            preserved = _publish_new_portable(
-                artifact.backup,
-                candidate,
-                identity,
-            )
-        except ValueError:
-            if os.path.lexists(candidate):
-                continue
-            raise
-        _validate_published_artifact(
-            out_dir,
-            candidate,
-            directory_guard,
-            preserved,
-        )
-        return candidate
-    raise ValueError(
-        "Could not allocate an exclusive recovery path for PEOC backup: "
-        f"{artifact.destination}"
-    )
-
-
-def _preserve_backup_without_identity(
-    out_dir: Path,
-    artifact: _BackupArtifact,
-) -> Path:
-    relative = artifact.destination.relative_to(out_dir)
-    recovery_parent = out_dir / _RECOVERY_DIRECTORY / relative.parent
-    base_name = f"{relative.name}.unverified.recovered"
-
-    for collision_index in range(1000):
-        suffix = "" if collision_index == 0 else f".{collision_index}"
-        candidate = recovery_parent / f"{base_name}{suffix}"
-        _validate_staged_target_path(out_dir, candidate)
-        recovery_parent.mkdir(parents=True, exist_ok=True)
-        directory_guard = _capture_directory_guard(out_dir, candidate)
-        if os.path.lexists(candidate):
-            continue
-        created_token: tuple[int, int] | None = None
-        try:
-            try:
-                os.link(artifact.backup, candidate)
-            except FileExistsError:
-                continue
-            except OSError:
-                with (
-                    artifact.backup.open("rb") as input_stream,
-                    candidate.open("xb") as output_stream,
-                ):
-                    created_stat = os.fstat(output_stream.fileno())
-                    created_token = (created_stat.st_dev, created_stat.st_ino)
-                    shutil.copyfileobj(input_stream, output_stream, _CHUNK_SIZE)
-                    output_stream.flush()
-            _validate_directory_guard(out_dir, candidate, directory_guard)
-            if candidate.is_symlink() or not candidate.is_file():
-                raise ValueError(
-                    f"Unverified PEOC recovery is not a regular file: {candidate}"
-                )
-        except FileExistsError:
-            continue
-        except Exception:
-            if created_token is not None:
-                _unlink_if_file_token(candidate, created_token)
-            raise
-        try:
-            backup_identity = _capture_file_identity(artifact.backup)
-            recovery_identity = _capture_file_identity(candidate)
-        except (OSError, ValueError):
-            return candidate
-        if _same_file_content(backup_identity, recovery_identity):
-            _unlink_if_owned(_PlacedArtifact(artifact.backup, backup_identity))
-        return candidate
-    raise ValueError(
-        "Could not allocate an exclusive unverified recovery path for PEOC "
-        f"backup: {artifact.destination}"
-    )
 
 
 def _error_with_rollback_details(
@@ -1380,7 +1112,7 @@ def _error_with_rollback_details(
             f"destination={issue.destination}; "
             f"temp_backup={issue.temporary_backup}; "
             f"identity=(device={issue.identity.device},inode={issue.identity.inode},"
-            f"bytes={issue.identity.size},sha256={issue.identity.sha256}); "
+            f"bytes={issue.identity.size},{issue.identity.sha256}); "
             "recovery_paths="
             + (
                 ",".join(str(path) for path in issue.recovery_paths)
@@ -1534,7 +1266,7 @@ def _error_with_transaction_details(
                 "identity=("
                 f"device={entry.identity.device},inode={entry.identity.inode},"
                 f"bytes={entry.identity.size},"
-                f"sha256:{entry.identity.sha256})"
+                f"{entry.identity.sha256})"
                 if entry.identity is not None
                 else "identity=<unavailable>"
             )
@@ -1564,18 +1296,6 @@ def _error_with_transaction_details(
     if isinstance(original, ValueError):
         return ValueError(message)
     return RuntimeError(message)
-
-
-def _release_backup_after_recovery(
-    backup: Path,
-    recovery: Path,
-    expected: _FileIdentity,
-) -> None:
-    if not _path_matches_file_identity(backup, expected):
-        return
-    if not _path_has_same_content(recovery, expected):
-        return
-    _unlink_if_owned(_PlacedArtifact(backup, expected))
 
 
 def _same_file_content(left: _FileIdentity, right: _FileIdentity) -> bool:

@@ -3,7 +3,6 @@ from __future__ import annotations
 import hashlib
 import json
 import os
-import shutil
 from pathlib import Path
 from typing import Any, NoReturn
 
@@ -30,25 +29,21 @@ def _write_json(path: Path, value: object) -> None:
     path.write_text(json.dumps(value), encoding="utf-8")
 
 
-def _recovery_files_with_content(out_dir: Path, content: str) -> list[Path]:
-    recovery_root = out_dir / ".peoc-recovery"
-    if not recovery_root.is_dir():
-        return []
+def _retained_transaction_directories(out_dir: Path) -> list[Path]:
     return [
         path
-        for path in recovery_root.rglob("*")
-        if path.is_file() and path.read_text(encoding="utf-8") == content
+        for path in out_dir.parent.glob(f".{out_dir.name}.peoc-import-*")
+        if path.is_dir()
     ]
 
 
-def _recovery_files_with_sha256(out_dir: Path, digest: str) -> list[Path]:
-    recovery_root = out_dir / ".peoc-recovery"
-    if not recovery_root.is_dir():
-        return []
+def _retained_files_with_sha256(out_dir: Path, digest: str) -> list[Path]:
     return [
         path
-        for path in recovery_root.rglob("*")
-        if path.is_file() and hashlib.sha256(path.read_bytes()).hexdigest() == digest
+        for transaction in _retained_transaction_directories(out_dir)
+        for path in transaction.rglob("*")
+        if path.is_file()
+        and hashlib.sha256(path.read_bytes()).hexdigest() == digest
     ]
 
 
@@ -1123,7 +1118,7 @@ def test_registered_replacement_rejects_destination_created_after_backup(
     assert (out_dir / "manifest.json").read_bytes() == original_manifest
 
 
-def test_rollback_preserves_unchanged_backup_when_destination_reappears(
+def test_rollback_retains_unchanged_backup_when_destination_reappears(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -1141,14 +1136,6 @@ def test_rollback_preserves_unchanged_backup_when_destination_reappears(
 
     copied_hard = out_dir / "source" / HARD_SUMMARY
     old_digest = hashlib.sha256(copied_hard.read_bytes()).hexdigest()
-    occupied_recovery = (
-        out_dir
-        / ".peoc-recovery"
-        / HARD_SUMMARY.parent
-        / f"{HARD_SUMMARY.name}.{old_digest[:16]}.recovered"
-    )
-    occupied_recovery.parent.mkdir(parents=True)
-    occupied_recovery.write_text("pre-existing recovery item", encoding="utf-8")
     destination_racer = "destination reappeared during rollback"
     original_replace = os.replace
     injected = False
@@ -1178,13 +1165,10 @@ def test_rollback_preserves_unchanged_backup_when_destination_reappears(
 
     assert injected is True
     assert copied_hard.read_text(encoding="utf-8") == destination_racer
-    assert occupied_recovery.read_text(
-        encoding="utf-8"
-    ) == "pre-existing recovery item"
-    recovered = _recovery_files_with_sha256(out_dir, old_digest)
-    assert recovered
-    assert ".peoc-recovery" in str(error.value)
-    assert any(str(path) in str(error.value) for path in recovered)
+    retained = _retained_files_with_sha256(out_dir, old_digest)
+    assert retained
+    assert not (out_dir / ".peoc-recovery").exists()
+    assert any(str(path) in str(error.value) for path in retained)
 
 
 def test_obsolete_cleanup_rejects_file_changed_after_identity_check(
@@ -1379,7 +1363,14 @@ def test_rollback_preserves_backup_racer_when_destination_reappears(
 
     assert injected is True
     assert copied_hard.read_text(encoding="utf-8") == destination_racer
-    assert _recovery_files_with_content(out_dir, backup_racer)
+    retained = [
+        path
+        for transaction in _retained_transaction_directories(out_dir)
+        for path in transaction.rglob("*")
+        if path.is_file() and path.read_text(encoding="utf-8") == backup_racer
+    ]
+    assert retained
+    assert not (out_dir / ".peoc-recovery").exists()
 
 
 def test_portable_commit_rejects_unregistered_destination_created_after_preflight(
@@ -1670,7 +1661,7 @@ def test_rollback_does_not_overwrite_racing_generated_artifact(
     assert (out_dir / "peoc_evidence.json").is_file()
 
 
-def test_rollback_processes_later_backups_after_recovery_storage_failure(
+def test_rollback_processes_later_backups_when_one_destination_is_occupied(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -1693,11 +1684,9 @@ def test_rollback_processes_later_backups_after_recovery_storage_failure(
     }
     original_validate = peoc_import_module._validate_published_artifact
     original_replace = os.replace
-    original_recovery_publish = peoc_import_module._publish_recovery_snapshot
     destination_racer = "racing peoc evidence destination"
     injected_racer = False
     failed_publish = False
-    failed_recovery = False
 
     def validate_then_race_peoc_evidence(
         output_dir: Path,
@@ -1723,31 +1712,12 @@ def test_rollback_processes_later_backups_after_recovery_storage_failure(
             raise OSError("simulated generated publish failure")
         original_replace(source, destination)
 
-    def fail_one_standard_recovery(
-        output_dir: Path,
-        artifact: Any,
-        identity: Any,
-    ) -> Path:
-        nonlocal failed_recovery
-        if (
-            not failed_recovery
-            and artifact.destination == out_dir / "peoc_evidence.json"
-        ):
-            failed_recovery = True
-            raise OSError("simulated standard recovery storage failure")
-        return original_recovery_publish(output_dir, artifact, identity)
-
     monkeypatch.setattr(
         peoc_import_module,
         "_validate_published_artifact",
         validate_then_race_peoc_evidence,
     )
     monkeypatch.setattr(os, "replace", fail_later_generated_publication)
-    monkeypatch.setattr(
-        peoc_import_module,
-        "_publish_recovery_snapshot",
-        fail_one_standard_recovery,
-    )
 
     with pytest.raises(OSError) as error:
         import_peoc_bundle(
@@ -1760,7 +1730,6 @@ def test_rollback_processes_later_backups_after_recovery_storage_failure(
 
     assert injected_racer is True
     assert failed_publish is True
-    assert failed_recovery is True
     assert (out_dir / "peoc_evidence.json").read_text(
         encoding="utf-8"
     ) == destination_racer
@@ -1768,48 +1737,75 @@ def test_rollback_processes_later_backups_after_recovery_storage_failure(
     assert (out_dir / "research_case_study.json").read_bytes() == old_payloads[
         "research_case_study.json"
     ]
-    output_hashes = {
-        hashlib.sha256(path.read_bytes()).hexdigest()
-        for path in out_dir.rglob("*")
-        if path.is_file()
-    }
-    assert set(old_hashes.values()).issubset(output_hashes)
+    assert _retained_files_with_sha256(
+        out_dir,
+        old_hashes["peoc_evidence.json"],
+    )
     message = str(error.value)
     assert "simulated generated publish failure" in message
     assert "peoc_evidence.json" in message
     assert "backup" in message
-    assert "recovery" in message
+    assert "transaction" in message
 
 
-def test_durable_backup_fallback_avoids_existing_directory_collision(
+def test_rollback_path_escape_keeps_backup_in_transaction(
     tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    bundle_root = tmp_path / "bundle"
     out_dir = tmp_path / "run"
-    out_dir.mkdir()
-    backup_root = tmp_path / "transaction" / "backup"
-    backup_file = backup_root / "manifest.json"
-    backup_file.parent.mkdir(parents=True)
-    backup_file.write_text("old generated artifact", encoding="utf-8")
-    occupied = out_dir / ".peoc-recovery-fallback-transaction"
-    occupied.mkdir()
-    marker = occupied / "user.txt"
-    marker.write_text("do not overwrite", encoding="utf-8")
+    escaped = tmp_path / "outside" / "peoc_evidence.json"
+    _write_minimal_bundle(bundle_root)
+    import_peoc_bundle(PeocImportOptions(bundle_root=bundle_root, out_dir=out_dir))
+    old_digest = hashlib.sha256(
+        (out_dir / "peoc_evidence.json").read_bytes()
+    ).hexdigest()
+    original_replace = os.replace
+    original_validate_path = peoc_import_module._validate_staged_target_path
+    rollback_started = False
 
-    durable_root = peoc_import_module._move_backup_tree_to_durable_fallback(
-        out_dir,
-        backup_root,
+    def fail_peoc_publication(source: Path, destination: Path) -> None:
+        nonlocal rollback_started
+        if (
+            Path(destination) == out_dir / "peoc_evidence.json"
+            and Path(source).parent.name == "payload"
+        ):
+            rollback_started = True
+            raise OSError("simulated commit failure before escaped rollback")
+        original_replace(source, destination)
+
+    def reject_escaped_rollback(output_dir: Path, destination: Path) -> None:
+        if rollback_started and destination == out_dir / "peoc_evidence.json":
+            raise ValueError(
+                f"resolved PEOC rollback destination escapes output: {escaped}"
+            )
+        original_validate_path(output_dir, destination)
+
+    monkeypatch.setattr(os, "replace", fail_peoc_publication)
+    monkeypatch.setattr(
+        peoc_import_module,
+        "_validate_staged_target_path",
+        reject_escaped_rollback,
     )
 
-    assert durable_root.name == "backup"
-    assert durable_root.parent.name == ".peoc-recovery-fallback-transaction.1"
-    assert (durable_root / "manifest.json").read_text(
-        encoding="utf-8"
-    ) == "old generated artifact"
-    assert marker.read_text(encoding="utf-8") == "do not overwrite"
-    assert not backup_root.exists()
+    with pytest.raises(OSError) as error:
+        import_peoc_bundle(
+            PeocImportOptions(
+                bundle_root=bundle_root,
+                out_dir=out_dir,
+                overwrite=True,
+            )
+        )
+
+    assert rollback_started is True
+    assert not escaped.exists()
+    retained = _retained_files_with_sha256(out_dir, old_digest)
+    assert retained
+    assert any(str(path) in str(error.value) for path in retained)
+    assert not list(out_dir.glob(".peoc-recovery-fallback-*"))
 
 
-def test_transaction_is_retained_when_all_durable_fallback_initialization_fails(
+def test_direct_rollback_retains_multiple_unresolved_backups(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -1824,17 +1820,12 @@ def test_transaction_is_retained_when_all_durable_fallback_initialization_fails(
     }
     original_validate = peoc_import_module._validate_published_artifact
     original_replace = os.replace
-    original_rename = os.rename
-    original_recovery_publish = peoc_import_module._publish_recovery_snapshot
     destination_racers = {
         name: f"retained transaction destination racer for {name}"
         for name in retained_names
     }
     injected_racers: set[str] = set()
     failed_publish = False
-    failed_recoveries: set[str] = set()
-    failed_rename = False
-    failed_copy = False
 
     def validate_then_race_peoc_evidence(
         output_dir: Path,
@@ -1860,45 +1851,12 @@ def test_transaction_is_retained_when_all_durable_fallback_initialization_fails(
             raise OSError("simulated generated publish failure")
         original_replace(source, destination)
 
-    def fail_standard_recovery(
-        output_dir: Path,
-        artifact: Any,
-        identity: Any,
-    ) -> Path:
-        name = artifact.destination.name
-        if name in retained_names:
-            failed_recoveries.add(name)
-            raise OSError("simulated standard recovery failure")
-        return original_recovery_publish(output_dir, artifact, identity)
-
-    def fail_durable_fallback_rename(source: Path, destination: Path) -> None:
-        nonlocal failed_rename
-        if (
-            Path(source).name == "backup"
-            and ".peoc-import-" in Path(source).parent.name
-        ):
-            failed_rename = True
-            raise OSError("simulated durable fallback rename failure")
-        original_rename(source, destination)
-
-    def fail_durable_fallback_copy(source: Path, destination: Path) -> None:
-        nonlocal failed_copy
-        failed_copy = True
-        raise OSError("simulated durable fallback copy failure")
-
     monkeypatch.setattr(
         peoc_import_module,
         "_validate_published_artifact",
         validate_then_race_peoc_evidence,
     )
     monkeypatch.setattr(os, "replace", fail_later_generated_publication)
-    monkeypatch.setattr(os, "rename", fail_durable_fallback_rename)
-    monkeypatch.setattr(shutil, "copytree", fail_durable_fallback_copy)
-    monkeypatch.setattr(
-        peoc_import_module,
-        "_publish_recovery_snapshot",
-        fail_standard_recovery,
-    )
 
     with pytest.raises(OSError) as error:
         import_peoc_bundle(
@@ -1911,14 +1869,9 @@ def test_transaction_is_retained_when_all_durable_fallback_initialization_fails(
 
     assert injected_racers == set(retained_names)
     assert failed_publish is True
-    assert failed_recoveries == set(retained_names)
-    assert failed_rename is True
-    assert failed_copy is True
     for name, content in destination_racers.items():
         assert (out_dir / name).read_text(encoding="utf-8") == content
-    retained_transactions = list(
-        out_dir.parent.glob(f".{out_dir.name}.peoc-import-*")
-    )
+    retained_transactions = _retained_transaction_directories(out_dir)
     assert len(retained_transactions) == 1
     retained = retained_transactions[0]
     retained_hashes = {
@@ -1932,9 +1885,18 @@ def test_transaction_is_retained_when_all_durable_fallback_initialization_fails(
     assert "manifest.json" in message
     assert "peoc_evidence.json" in message
     assert "bytes=" in message
-    assert "sha256:" in message
-    assert "simulated durable fallback rename failure" in message
-    assert "simulated durable fallback copy failure" in message
+    inventory_text = message.split("backup_inventory=", maxsplit=1)[1].split(
+        "; inventory_errors=",
+        maxsplit=1,
+    )[0]
+    assert "sha256:sha256:" not in message
+    assert "sha256=sha256:" not in message
+    assert "sha256:sha256:" not in inventory_text
+    assert inventory_text.count("sha256:") == len(retained_names)
+    for digest in old_hashes.values():
+        assert f"sha256:{digest}" in inventory_text
+    assert not (out_dir / ".peoc-recovery").exists()
+    assert not list(out_dir.glob(".peoc-recovery-fallback-*"))
 
 
 def test_portable_import_records_deterministic_file_and_total_limit_warnings(
