@@ -10,6 +10,9 @@ import pytest
 ROOT = Path(__file__).resolve().parents[1]
 PLUGIN = ROOT / "plugins" / "deepseek-harness"
 TEMPLATE = ROOT / "src" / "promptcontrollab" / "template_data" / "deepseek_harness"
+NODE_CONTRACT_DEPENDENCY = (
+    PLUGIN / "node_modules" / "@deepseek-ai" / "dsh-llm" / "package.json"
+)
 
 
 INSTALLABLE_FILES = {
@@ -202,7 +205,20 @@ def test_package_metadata_is_native_plugin_package() -> None:
     assert lock["packages"]["node_modules/typescript"]["version"] == "5.9.3"
 
 
+def test_ci_installs_and_checks_harness_contract_dependencies() -> None:
+    workflow = (ROOT / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8")
+
+    assert "cache-dependency-path: plugins/deepseek-harness/package-lock.json" in workflow
+    assert "working-directory: plugins/deepseek-harness" in workflow
+    assert "run: npm ci" in workflow
+    assert "run: npm run check" in workflow
+
+
 @pytest.mark.skipif(shutil.which("node") is None, reason="Node.js is not installed")
+@pytest.mark.skipif(
+    not NODE_CONTRACT_DEPENDENCY.is_file(),
+    reason="Run npm ci in plugins/deepseek-harness to install contract dependencies",
+)
 def test_node_contract_suite() -> None:
     tests = [str(path) for path in sorted((PLUGIN / "tests").glob("*.test.mjs"))]
     completed = subprocess.run(
