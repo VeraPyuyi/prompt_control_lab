@@ -213,38 +213,45 @@ def peoc_status_summary(detail: JsonDict, language: str = "en") -> JsonDict:
     promoted to positive evidence.
     """
 
-    case = _mapping(detail.get("peoc_case_study"))
     evidence = _mapping(detail.get("peoc_evidence"))
-    raw_counts = case.get("status_counts")
+    case = _mapping(detail.get("peoc_case_study"))
     counts = {status: 0 for status in PEOC_STATUSES}
-    if isinstance(raw_counts, dict):
-        for status in PEOC_STATUSES:
-            counts[status] = _nonnegative_int(raw_counts.get(status))
+    sections = evidence.get("sections")
+    if evidence and isinstance(sections, dict):
+        for payload in sections.values():
+            section = _mapping(payload)
+            status = str(section.get("status") or "missing")
+            if status in counts:
+                counts[status] += 1
+            else:
+                counts["missing"] += 1
     else:
-        sections = evidence.get("sections")
-        if isinstance(sections, dict):
-            for payload in sections.values():
-                section = _mapping(payload)
-                status = str(section.get("status") or "missing")
-                if status in counts:
-                    counts[status] += 1
-                else:
-                    counts["missing"] += 1
+        raw_counts = case.get("status_counts")
+        if isinstance(raw_counts, dict):
+            for status in PEOC_STATUSES:
+                counts[status] = _nonnegative_int(raw_counts.get(status))
 
     claim_boundary = _mapping(evidence.get("claim_boundary"))
     full_support = claim_boundary.get("full_research_support") is True
     claim_status = str(claim_boundary.get("status") or "unknown")
     statement = str(claim_boundary.get("statement") or "")
-    if language == "zh":
+    if evidence:
+        if language == "zh":
+            statement = (
+                "导入证据支持完整研究能力集合。"
+                if full_support
+                else "导入证据不支持完整研究能力集合。"
+            )
+    elif language == "zh":
         statement = str(case.get("safe_claim_zh") or statement)
     else:
         statement = str(case.get("safe_claim") or statement)
 
     manifest_hash = str(
-        case.get("source_manifest_sha256")
-        or case.get("manifest_hash")
-        or _mapping(evidence.get("bundle")).get("manifest_sha256")
+        _mapping(evidence.get("bundle")).get("manifest_sha256")
         or _mapping(detail.get("source_manifest")).get("manifest_sha256")
+        or case.get("source_manifest_sha256")
+        or case.get("manifest_hash")
         or ""
     )
     return {
@@ -261,17 +268,18 @@ def peoc_status_summary(detail: JsonDict, language: str = "en") -> JsonDict:
 def peoc_method_rows(detail: JsonDict) -> list[JsonDict]:
     """Return public-safe hard-evaluation method rows from a PEOC import."""
 
-    case = _mapping(detail.get("peoc_case_study"))
-    rows = case.get("hard_method_rows")
-    if isinstance(rows, list):
-        hard_summary = _mapping(case.get("hard_summary"))
-        if hard_summary.get("status") != "available":
-            return []
-    else:
+    evidence = _mapping(detail.get("peoc_evidence"))
+    if evidence:
         hard = _peoc_section(detail, "hard_evaluation")
         if hard.get("status") != "available":
             return []
         rows = _mapping(hard.get("observations")).get("rows")
+    else:
+        case = _mapping(detail.get("peoc_case_study"))
+        rows = case.get("hard_method_rows")
+        hard_summary = _mapping(case.get("hard_summary"))
+        if not isinstance(rows, list) or hard_summary.get("status") != "available":
+            return []
     if not isinstance(rows, list):
         return []
 
@@ -286,13 +294,17 @@ def peoc_method_rows(detail: JsonDict) -> list[JsonDict]:
 def peoc_trajectory_rows(detail: JsonDict) -> list[JsonDict]:
     """Return the selected stationary/heterogeneous trajectory comparison."""
 
-    case = _mapping(detail.get("peoc_case_study"))
-    pair = _mapping(case.get("selected_trajectory_pair"))
-    if not pair:
+    evidence = _mapping(detail.get("peoc_evidence"))
+    if evidence:
         trajectory = _peoc_section(detail, "trajectory")
         if trajectory.get("status") != "available":
             return []
         pair = _mapping(_mapping(trajectory.get("observations")).get("headline_pair"))
+    else:
+        case = _mapping(detail.get("peoc_case_study"))
+        if case.get("trajectory_status") != "available":
+            return []
+        pair = _mapping(case.get("selected_trajectory_pair"))
     model = str(pair.get("model") or "")
     seed = pair.get("seed")
     rows: list[JsonDict] = []
@@ -320,9 +332,13 @@ def peoc_trajectory_rows(detail: JsonDict) -> list[JsonDict]:
 def peoc_limitation_rows(detail: JsonDict, language: str = "en") -> list[JsonDict]:
     """Return non-positive PEOC sections with localized limitations."""
 
-    case = _mapping(detail.get("peoc_case_study"))
-    limited = case.get("limited_sections")
+    evidence = _mapping(detail.get("peoc_evidence"))
     rows: list[JsonDict] = []
+    if not evidence:
+        case = _mapping(detail.get("peoc_case_study"))
+        limited = case.get("limited_sections")
+    else:
+        limited = None
     if isinstance(limited, list):
         for item in limited:
             payload = _mapping(item)
@@ -340,7 +356,6 @@ def peoc_limitation_rows(detail: JsonDict, language: str = "en") -> list[JsonDic
             )
         return rows
 
-    evidence = _mapping(detail.get("peoc_evidence"))
     sections = evidence.get("sections")
     if not isinstance(sections, dict):
         return []

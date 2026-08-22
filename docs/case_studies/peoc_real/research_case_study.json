@@ -1180,7 +1180,7 @@
       "sha256": "sha256:d64f9fd8f8037ec125b2546896a20f47edc333d033bb040e20b79eaff3955f1e"
     }
   ],
-  "source_manifest_sha256": "sha256:cbedb26eb5722da4cdd1fb11644162167cb4a5c46f0db21cae45dba9bc7a8769",
+  "source_manifest_sha256": "sha256:7a39e2a7d5e404ad8f186d7a19006f763b7599e972bf0ddc601f97af5016793e",
   "stage_validation": {
     "display_status": "REAL / FAILED VALIDATION",
     "held_bootstrap_ci": [
@@ -1204,6 +1204,7 @@
     "partial": 0,
     "unusable": 1
   },
+  "trajectory_status": "available",
   "warnings": [
     {
       "code": "non_finite_value",
@@ -2219,12 +2220,6 @@
       "message": "Non-finite numeric value was normalized to null.",
       "relative_path": "experiments/turnpike_trace/results_a800/turnpike_gsm8k_Qwen__Qwen2.5-7B-Instruct_s0.json",
       "source_role": "trajectory_heterogeneous"
-    },
-    {
-      "code": "portable_unsupported_extension",
-      "message": "Portable mode references this source without copying it because .md is unsupported.",
-      "relative_path": "README_MANIFEST.md",
-      "source_role": "bundle_manifest"
     }
   ]
 }

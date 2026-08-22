@@ -1035,6 +1035,28 @@ def test_peoc_method_rows_fail_closed_when_section_is_not_available() -> None:
     assert peoc_method_rows({"peoc_evidence": evidence}) == []
 
 
+def test_peoc_trajectory_rows_fail_closed_when_evidence_is_partial() -> None:
+    evidence = _peoc_fixture()
+    sections = evidence["sections"]
+    assert isinstance(sections, dict)
+    trajectory = sections["trajectory"]
+    assert isinstance(trajectory, dict)
+    trajectory["status"] = "partial"
+    stale_case = {
+        "status_counts": {"available": 6},
+        "selected_trajectory_pair": trajectory["observations"]["headline_pair"],
+        "safe_claim": "Stationary traces are stronger.",
+    }
+
+    detail = {"peoc_evidence": evidence, "peoc_case_study": stale_case}
+
+    assert peoc_trajectory_rows(detail) == []
+    summary = peoc_status_summary(detail, "en")
+    assert summary["partial"] == 2
+    assert summary["available"] == 1
+    assert summary["statement"] != stale_case["safe_claim"]
+
+
 def test_metric_cards_use_responsive_escaped_grid() -> None:
     calls: list[tuple[str, bool]] = []
 
@@ -1094,6 +1116,8 @@ def test_peoc_research_section_renders_imported_evidence_and_failures(
 
     assert "真实 PEOC 复现包" in markdown[0]
     assert any("既有 PEOC 复现实验摘要" in item for item in captions)
+    assert any("共 1 条有效汇总记录" in item for item in captions)
+    assert not any("72 条" in item for item in captions)
     assert any("不能用来支持正向" in item for item in warnings)
     assert any("完整研究能力" in item or "complete research" in item.lower() for item in warnings)
     assert any(isinstance(frame, list) and len(frame) == 1 for frame in frames)

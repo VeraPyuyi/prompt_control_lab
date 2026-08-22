@@ -132,7 +132,8 @@ TEXT = {
         "peoc_no": "no",
         "peoc_hard_methods": "Withheld hard-prompt method results",
         "peoc_hard_methods_note": (
-            "72 valid aggregate rows across three models, four tasks, and six methods. "
+            "{row_count} valid aggregate rows across {model_count} models, "
+            "{task_count} tasks, and {method_count} methods. "
             "They show task-dependent outcomes, not universal optimizer superiority."
         ),
         "peoc_trajectory": "Trajectory evidence",
@@ -439,7 +440,8 @@ TEXT = {
         "peoc_no": "否",
         "peoc_hard_methods": "Withheld hard prompt 方法结果",
         "peoc_hard_methods_note": (
-            "共 72 条有效汇总记录，覆盖 3 个模型、4 个任务和 6 种方法。"
+            "共 {row_count} 条有效汇总记录，覆盖 {model_count} 个模型、"
+            "{task_count} 个任务和 {method_count} 种方法。"
             "结果随任务变化，不能说明某一种优化器普遍更好。"
         ),
         "peoc_trajectory": "轨迹证据",
@@ -1757,7 +1759,7 @@ def _render_peoc_evidence_section(
             f'<div class="pcl-section-title">{html.escape(text["peoc_hard_methods"])}</div>',
             unsafe_allow_html=True,
         )
-        st.caption(text["peoc_hard_methods_note"])
+        st.caption(_peoc_hard_methods_note(text["peoc_hard_methods_note"], method_rows))
         _peoc_table_clearance(st)
         st.dataframe(
             _peoc_table_rows(method_rows, "methods", language),
@@ -1818,16 +1820,18 @@ def _render_peoc_evidence_section(
 
 
 def _peoc_stage_validation(detail: JsonDict) -> JsonDict:
-    case = detail.get("peoc_case_study")
-    case_dict = case if isinstance(case, dict) else {}
-    stage = case_dict.get("stage_validation")
-    stage_dict = stage if isinstance(stage, dict) else {}
-    if not stage_dict:
-        evidence = detail.get("peoc_evidence")
-        evidence_dict = evidence if isinstance(evidence, dict) else {}
+    evidence = detail.get("peoc_evidence")
+    evidence_dict = evidence if isinstance(evidence, dict) else {}
+    stage_dict: JsonDict = {}
+    if evidence_dict:
         sections = evidence_dict.get("sections")
         sections_dict = sections if isinstance(sections, dict) else {}
         stage = sections_dict.get("stage_heterogeneity")
+        stage_dict = stage if isinstance(stage, dict) else {}
+    else:
+        case = detail.get("peoc_case_study")
+        case_dict = case if isinstance(case, dict) else {}
+        stage = case_dict.get("stage_validation")
         stage_dict = stage if isinstance(stage, dict) else {}
     if not stage_dict:
         return {}
@@ -1865,6 +1869,15 @@ def _peoc_stage_validation(detail: JsonDict) -> JsonDict:
         ),
     }
     return {key: value for key, value in result.items() if value is not None}
+
+
+def _peoc_hard_methods_note(template: str, rows: list[JsonDict]) -> str:
+    return template.format(
+        row_count=len(rows),
+        model_count=len({str(row.get("model")) for row in rows if row.get("model")}),
+        task_count=len({str(row.get("task")) for row in rows if row.get("task")}),
+        method_count=len({str(row.get("method")) for row in rows if row.get("method")}),
+    )
 
 
 def _first_not_none(*values: object) -> object:

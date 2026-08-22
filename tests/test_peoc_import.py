@@ -137,10 +137,19 @@ def _write_minimal_bundle(root: Path) -> None:
         {
             "round": 27,
             "variant": "shi_model_normalized",
+            "n_calib": 1,
+            "n_held": 1,
             "held_spearman_rho": -0.54,
             "held_bootstrap_ci": [-1.0, 0.64],
             "verdict": "FAIL",
             "cells": [
+                {
+                    "key": "Qwen/Qwen2.5-7B-Instruct__bbh3",
+                    "model": "Qwen/Qwen2.5-7B-Instruct",
+                    "task": "bbh3",
+                    "split": "calib",
+                    "delta_tv_static_mean": 0.02,
+                },
                 {
                     "key": "Qwen/Qwen2.5-7B-Instruct__gsm8k",
                     "model": "Qwen/Qwen2.5-7B-Instruct",
@@ -576,6 +585,29 @@ def test_build_peoc_evidence_marks_mixed_valid_and_invalid_trajectory_partial(
     )
 
 
+def test_case_study_does_not_make_positive_claim_from_partial_trajectory(
+    tmp_path: Path,
+) -> None:
+    bundle_root = tmp_path / "bundle"
+    out_dir = tmp_path / "run"
+    _write_minimal_bundle(bundle_root)
+    malformed = (
+        bundle_root
+        / "experiments"
+        / "turnpike_trace"
+        / "results_a800"
+        / "stationary_arith_Mistral-7B-Instruct_s1.json"
+    )
+    malformed.write_text("{not-json", encoding="utf-8")
+
+    import_peoc_bundle(PeocImportOptions(bundle_root=bundle_root, out_dir=out_dir))
+
+    case = read_json(out_dir / "research_case_study.json")
+    assert case["status_counts"]["partial"] == 1
+    assert "stronger fitted decay signature" not in case["safe_claim"]
+    assert "拟合衰减信号强于" not in case["safe_claim_zh"]
+
+
 def test_build_peoc_evidence_excludes_same_length_tampered_binary_reference(
     tmp_path: Path,
 ) -> None:
@@ -645,6 +677,88 @@ def test_build_peoc_evidence_retains_zero_count_hard_row_as_excluded(
     assert hard["excluded_row_count"] == 1
     assert hard["excluded_rows"][0]["reason"] == "non_positive_n"
     assert hard["excluded_rows"][0]["row"]["n"] == 0
+
+
+def test_build_peoc_evidence_rejects_out_of_range_accuracy_and_missing_identity(
+    tmp_path: Path,
+) -> None:
+    bundle_root = tmp_path / "bundle"
+    _write_minimal_bundle(bundle_root)
+    hard_path = bundle_root / HARD_SUMMARY
+    payload = read_json(hard_path)
+    payload["summary"][0]["mean"] = 999
+    payload["summary"][1].pop("model")
+    _write_json(hard_path, payload)
+
+    evidence = _build_fixture_evidence(bundle_root)
+
+    hard = evidence["sections"]["hard_evaluation"]
+    assert hard["status"] == "unusable"
+    observations = hard["observations"]
+    assert observations["valid_row_count"] == 0
+    assert {row["reason"] for row in observations["excluded_rows"]} == {
+        "mean_out_of_range",
+        "missing_model",
+        "non_positive_n",
+    }
+
+
+def test_build_peoc_evidence_rejects_trajectory_without_required_metrics(
+    tmp_path: Path,
+) -> None:
+    bundle_root = tmp_path / "bundle"
+    _write_minimal_bundle(bundle_root)
+    stationary = (
+        bundle_root
+        / "experiments"
+        / "turnpike_trace"
+        / "results_a800"
+        / "stationary_arith_Qwen2.5-7B-Instruct_s0.json"
+    )
+    payload = read_json(stationary)
+    payload.pop("alpha_emp_mean")
+    _write_json(stationary, payload)
+
+    evidence = _build_fixture_evidence(bundle_root)
+
+    trajectory = evidence["sections"]["trajectory"]
+    assert trajectory["status"] == "unusable"
+    invalid = [
+        row
+        for row in trajectory["observations"]["entries"]
+        if row["status"] == "unusable"
+    ]
+    assert len(invalid) == 1
+    assert "alpha_emp_mean" in invalid[0]["error"]
+
+
+def test_build_peoc_evidence_rejects_stage_pass_without_validation_design(
+    tmp_path: Path,
+) -> None:
+    bundle_root = tmp_path / "bundle"
+    _write_minimal_bundle(bundle_root)
+    stage_path = (
+        bundle_root
+        / "experiments"
+        / "redesign_v2"
+        / "stage_heterogeneity"
+        / "shi_r27_summary.json"
+    )
+    _write_json(
+        stage_path,
+        {"round": 27, "variant": "shi_model_normalized", "verdict": "PASS"},
+    )
+
+    evidence = _build_fixture_evidence(bundle_root)
+
+    stage = evidence["sections"]["stage_heterogeneity"]
+    assert stage["status"] == "unusable"
+    assert "held_spearman_rho" in stage["observations"]["error"]
+    assert any(
+        warning["source_role"] == "stage_heterogeneity"
+        and warning["code"] == "invalid_scientific_payload"
+        for warning in evidence["warnings"]
+    )
 
 
 def test_build_peoc_evidence_accepts_very_large_positive_sample_count(
@@ -1056,6 +1170,67 @@ def test_research_import_peoc_keeps_primary_artifacts_when_downstream_fails(
         "research_case_study.html",
     ]:
         assert (out_dir / artifact).is_file()
+
+
+def test_research_import_peoc_overwrite_restores_previous_downstream_chain_on_failure(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    bundle_root = tmp_path / "bundle"
+    out_dir = tmp_path / "run"
+    _write_minimal_bundle(bundle_root)
+    args = [
+        "research-import",
+        "peoc",
+        "--bundle",
+        str(bundle_root),
+        "--out",
+        str(out_dir),
+    ]
+    assert main(args) == 0
+    capsys.readouterr()
+    verification = out_dir / "research_bundle_verification.json"
+    verification.write_text('{"preserve": true}\n', encoding="utf-8")
+    downstream = {
+        path.name: path.read_bytes()
+        for path in out_dir.iterdir()
+        if path.is_file()
+        and path.name
+        in {
+            "evidence_card.json",
+            "evidence_card.md",
+            "evidence_card.html",
+            "claim_check.json",
+            "claim_check.md",
+            "claim_check.html",
+            "research_gap_plan.json",
+            "research_gap_plan.md",
+            "research_gap_plan.html",
+            "research_gap_commands.ps1",
+            "research_gap_commands.sh",
+            "research_gap_status.json",
+            "research_gap_status.md",
+            "research_gap_status.html",
+            "research_bundle.json",
+            "research_bundle.md",
+            "research_bundle.html",
+            "research_bundle.zh.html",
+            "research_bundle_verification.json",
+        }
+    }
+
+    def fail_claim_check(*_args: object, **_kwargs: object) -> NoReturn:
+        raise RuntimeError("forced downstream replacement failure")
+
+    monkeypatch.setattr("promptcontrollab.cli.run_claim_check", fail_claim_check)
+
+    assert main([*args, "--overwrite"]) == 2
+    captured = capsys.readouterr()
+    assert "forced downstream replacement failure" in captured.err
+    assert {
+        name: (out_dir / name).read_bytes() for name in downstream
+    } == downstream
 
 
 def test_research_import_peoc_cli_reports_invalid_bundle_without_traceback(

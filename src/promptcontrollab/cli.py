@@ -6,8 +6,10 @@ import argparse
 import importlib.util
 import json
 import os
+import shutil
 import subprocess
 import sys
+import tempfile
 import webbrowser
 from collections.abc import Sequence
 from pathlib import Path
@@ -2772,9 +2774,10 @@ def _cmd_research_import_peoc(args: argparse.Namespace) -> None:
         )
     )
     output_dir = Path(str(result["output_dir"]))
+    transaction_dir: Path | None = None
+    backups: list[tuple[Path, Path]] = []
     try:
-        if args.overwrite:
-            _clear_peoc_downstream_artifacts(output_dir)
+        transaction_dir, backups = _begin_peoc_downstream_transaction(output_dir)
         evidence_card = write_evidence_card(output_dir)
         claim_check = run_claim_check(
             output_dir,
@@ -2786,11 +2789,26 @@ def _cmd_research_import_peoc(args: argparse.Namespace) -> None:
         research_bundle = write_research_bundle_index(output_dir)
         case_study = read_json(output_dir / "research_case_study.json")
     except Exception as exc:
+        recovery_error = _rollback_peoc_downstream_transaction(
+            output_dir,
+            transaction_dir=transaction_dir,
+            backups=backups,
+        )
+        recovery_note = (
+            " Previous downstream artifacts were restored."
+            if recovery_error is None
+            else (
+                " Automatic downstream rollback was incomplete: "
+                f"{recovery_error}. Recovery files remain at {transaction_dir}."
+            )
+        )
         msg = (
             f"{exc}; primary import artifacts remain at {output_dir}, but downstream "
-            "evidence chain was not completed."
+            f"evidence chain was not completed.{recovery_note}"
         )
         raise PromptControlLabError(msg) from exc
+    else:
+        _commit_peoc_downstream_transaction(transaction_dir)
     result["downstream"] = {
         "evidence_card": {
             "path": str(output_dir / "evidence_card.html"),
@@ -2823,11 +2841,97 @@ def _cmd_research_import_peoc(args: argparse.Namespace) -> None:
     )
 
 
-def _clear_peoc_downstream_artifacts(output_dir: Path) -> None:
-    for name in _PEOC_DOWNSTREAM_ARTIFACTS:
-        path = output_dir / name
-        if path.is_symlink() or path.is_file():
-            path.unlink()
+def _begin_peoc_downstream_transaction(
+    output_dir: Path,
+) -> tuple[Path, list[tuple[Path, Path]]]:
+    """Move the previous downstream chain aside until its replacement succeeds."""
+
+    transaction_dir = Path(
+        tempfile.mkdtemp(
+            dir=output_dir.parent,
+            prefix=f".{output_dir.name}.peoc-downstream-",
+        )
+    )
+    backup_dir = transaction_dir / "backup"
+    backup_dir.mkdir()
+    backups: list[tuple[Path, Path]] = []
+    try:
+        for name in _PEOC_DOWNSTREAM_ARTIFACTS:
+            source = output_dir / name
+            if not source.exists() and not source.is_symlink():
+                continue
+            if source.is_dir() and not source.is_symlink():
+                raise ValueError(
+                    "Generated PEOC downstream artifact path became a directory: "
+                    f"{source}"
+                )
+            backup = backup_dir / name
+            os.replace(source, backup)
+            backups.append((source, backup))
+    except Exception as exc:
+        recovery_error = _rollback_peoc_downstream_transaction(
+            output_dir,
+            transaction_dir=transaction_dir,
+            backups=backups,
+            remove_generated=False,
+        )
+        if recovery_error is not None:
+            raise PromptControlLabError(
+                "Could not begin the PEOC downstream transaction and automatic "
+                f"recovery was incomplete: {recovery_error}. Recovery files remain "
+                f"at {transaction_dir}."
+            ) from exc
+        raise
+    return transaction_dir, backups
+
+
+def _rollback_peoc_downstream_transaction(
+    output_dir: Path,
+    *,
+    transaction_dir: Path | None,
+    backups: list[tuple[Path, Path]],
+    remove_generated: bool = True,
+) -> str | None:
+    if transaction_dir is None:
+        return None
+    errors: list[str] = []
+    if remove_generated:
+        for name in _PEOC_DOWNSTREAM_ARTIFACTS:
+            path = output_dir / name
+            try:
+                if path.is_symlink() or path.is_file():
+                    path.unlink()
+                elif path.exists():
+                    errors.append(f"cannot remove directory collision {path}")
+            except OSError as exc:
+                errors.append(f"cannot remove generated artifact {path}: {exc}")
+    for destination, backup in reversed(backups):
+        try:
+            if destination.exists() or destination.is_symlink():
+                errors.append(f"cannot restore over existing path {destination}")
+                continue
+            os.replace(backup, destination)
+        except OSError as exc:
+            errors.append(f"cannot restore {destination}: {exc}")
+    if errors:
+        return "; ".join(errors)
+    try:
+        shutil.rmtree(transaction_dir)
+    except OSError as exc:
+        return f"cannot remove completed rollback directory: {exc}"
+    return None
+
+
+def _commit_peoc_downstream_transaction(transaction_dir: Path | None) -> None:
+    if transaction_dir is None:
+        return
+    try:
+        shutil.rmtree(transaction_dir)
+    except OSError as exc:
+        raise PromptControlLabError(
+            "PEOC downstream artifacts were generated, but the transaction backup "
+            f"could not be removed: {transaction_dir}: {exc}"
+        ) from exc
 
 
 def _preflight_peoc_downstream_artifacts(output_dir: Path, *, overwrite: bool) -> None:

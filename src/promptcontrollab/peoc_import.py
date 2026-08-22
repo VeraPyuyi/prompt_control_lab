@@ -1565,6 +1565,7 @@ def _build_case_study(
             "methods": hard_observations.get("methods", []),
         },
         "hard_method_rows": hard_rows,
+        "trajectory_status": trajectory.get("status"),
         "selected_trajectory_pair": selected_pair,
         "stage_validation": {
             "status": stage.get("status"),
@@ -1689,19 +1690,21 @@ def _safe_claim(sections: JsonDict, pair: JsonDict) -> str:
         statements.append(
             "The hard-test summary contains task-, model-, and method-specific results."
         )
-    stationary = _dict_value(pair.get("stationary"))
-    heterogeneous = _dict_value(pair.get("heterogeneous"))
-    stationary_alpha = stationary.get("alpha_emp_mean")
-    heterogeneous_alpha = heterogeneous.get("alpha_emp_mean")
-    if (
-        _is_number(stationary_alpha)
-        and _is_number(heterogeneous_alpha)
-        and stationary_alpha > heterogeneous_alpha
-    ):
-        statements.append(
-            "For the selected paired summaries, stationary arithmetic traces report "
-            "a stronger fitted decay signature than heterogeneous GSM8K traces."
-        )
+    trajectory = _section_dict(sections, "trajectory")
+    if trajectory.get("status") == "available":
+        stationary = _dict_value(pair.get("stationary"))
+        heterogeneous = _dict_value(pair.get("heterogeneous"))
+        stationary_alpha = stationary.get("alpha_emp_mean")
+        heterogeneous_alpha = heterogeneous.get("alpha_emp_mean")
+        if (
+            _is_number(stationary_alpha)
+            and _is_number(heterogeneous_alpha)
+            and stationary_alpha > heterogeneous_alpha
+        ):
+            statements.append(
+                "For the selected paired summaries, stationary arithmetic traces report "
+                "a stronger fitted decay signature than heterogeneous GSM8K traces."
+            )
     stage = _section_dict(sections, "stage_heterogeneity")
     if stage.get("status") == "failed_validation":
         statements.append("The stage-heterogeneity validation reported FAIL.")
@@ -1717,18 +1720,20 @@ def _safe_claim_zh(sections: JsonDict, pair: JsonDict) -> str:
     ]
     if _section_dict(sections, "hard_evaluation").get("status") == "available":
         statements.append("Hard-test 汇总提供了任务、模型和方法层面的具体结果。")
-    stationary = _dict_value(pair.get("stationary"))
-    heterogeneous = _dict_value(pair.get("heterogeneous"))
-    stationary_alpha = stationary.get("alpha_emp_mean")
-    heterogeneous_alpha = heterogeneous.get("alpha_emp_mean")
-    if (
-        _is_number(stationary_alpha)
-        and _is_number(heterogeneous_alpha)
-        and stationary_alpha > heterogeneous_alpha
-    ):
-        statements.append(
-            "在选中的配对汇总中, 平稳算术轨迹的拟合衰减信号强于异质 GSM8K 轨迹。"
-        )
+    trajectory = _section_dict(sections, "trajectory")
+    if trajectory.get("status") == "available":
+        stationary = _dict_value(pair.get("stationary"))
+        heterogeneous = _dict_value(pair.get("heterogeneous"))
+        stationary_alpha = stationary.get("alpha_emp_mean")
+        heterogeneous_alpha = heterogeneous.get("alpha_emp_mean")
+        if (
+            _is_number(stationary_alpha)
+            and _is_number(heterogeneous_alpha)
+            and stationary_alpha > heterogeneous_alpha
+        ):
+            statements.append(
+                "在选中的配对汇总中, 平稳算术轨迹的拟合衰减信号强于异质 GSM8K 轨迹。"
+            )
     if _section_dict(sections, "stage_heterogeneity").get("status") == (
         "failed_validation"
     ):
@@ -1849,7 +1854,11 @@ def _build_hard_section(
     for index, row in enumerate(summary):
         normalized_row = row if isinstance(row, dict) else {"value": row}
         raw_row = raw["summary"][index]
-        reason = _summary_row_exclusion_reason(raw_row, normalized_row)
+        reason = _summary_row_exclusion_reason(
+            raw_row,
+            normalized_row,
+            default_metric=payload.get("metric"),
+        )
         if reason is None:
             valid_rows.append(cast(JsonDict, normalized_row))
         else:
@@ -1868,7 +1877,10 @@ def _build_hard_section(
         "Aggregate hard-test results do not establish universal prompt superiority."
     ]
     if excluded_rows:
-        limitations.append("Rows without a finite mean and positive sample count were excluded.")
+        limitations.append(
+            "Rows missing required identity/statistical fields, containing invalid values, "
+            "or using out-of-range bounded metrics were excluded."
+        )
     return _section(
         origin="real",
         status=status,
@@ -1923,7 +1935,11 @@ def _build_soft_section(
     for index, row in enumerate(summary):
         normalized_row = row if isinstance(row, dict) else {"value": row}
         raw_row = raw["summary"][index]
-        reason = _summary_row_exclusion_reason(raw_row, normalized_row)
+        reason = _summary_row_exclusion_reason(
+            raw_row,
+            normalized_row,
+            default_metric=payload.get("metric"),
+        )
         if reason is None:
             valid_rows.append(cast(JsonDict, normalized_row))
         else:
@@ -2009,6 +2025,19 @@ def _build_trajectory_section(
                     warnings,
                     "trajectory summary requires a model and integer seed or _s<seed> filename",
                     warning_code="invalid_optional_source",
+                    binary_references=binary_references,
+                    invalid_binary_references=invalid_binary_references,
+                )
+            )
+            continue
+        scientific_error = _trajectory_summary_error(payload, role)
+        if scientific_error is not None:
+            entries.append(
+                _invalid_trajectory_entry(
+                    source,
+                    warnings,
+                    scientific_error,
+                    warning_code="invalid_scientific_payload",
                     binary_references=binary_references,
                     invalid_binary_references=invalid_binary_references,
                 )
@@ -2111,6 +2140,30 @@ def _build_stage_section(
     payload = cast(JsonDict, normalized)
     verdict = payload.get("verdict")
     normalized_verdict = verdict.upper() if isinstance(verdict, str) else ""
+    validation_error = _stage_validation_error(payload)
+    if validation_error is not None:
+        _append_optional_warning(
+            warnings,
+            source,
+            validation_error,
+            code="invalid_scientific_payload",
+        )
+        return _section(
+            origin="real",
+            status="unusable",
+            source_roles=["stage_heterogeneity"],
+            observations={
+                "source": _source_reference(source),
+                "verdict": verdict,
+                "error": validation_error,
+                "observed_keys": sorted(payload),
+                "data": payload,
+            },
+            limitations=[
+                "The stage-heterogeneity source lacks a complete, valid validation design.",
+                "No positive evidence was inferred from the incomplete scientific payload.",
+            ],
+        )
     if normalized_verdict == "FAIL":
         status = "failed_validation"
     elif normalized_verdict == "PASS":
@@ -2432,9 +2485,21 @@ def _finite_json(
     return value
 
 
-def _summary_row_exclusion_reason(raw_row: object, normalized_row: object) -> str | None:
+def _summary_row_exclusion_reason(
+    raw_row: object,
+    normalized_row: object,
+    *,
+    default_metric: object,
+) -> str | None:
     if not isinstance(raw_row, dict) or not isinstance(normalized_row, dict):
         return "row_not_object"
+    for field in ("model", "task", "method"):
+        value = normalized_row.get(field)
+        if not isinstance(value, str) or not value.strip():
+            return f"missing_{field}"
+    metric = normalized_row.get("metric", default_metric)
+    if not isinstance(metric, str) or not metric.strip():
+        return "missing_metric"
     raw_n = raw_row.get("n")
     n = normalized_row.get("n")
     if isinstance(raw_n, float) and not math.isfinite(raw_n):
@@ -2449,7 +2514,126 @@ def _summary_row_exclusion_reason(raw_row: object, normalized_row: object) -> st
         return "non_finite_mean"
     if not _is_number(mean):
         return "invalid_mean"
+    if _is_bounded_score_metric(metric) and not 0 <= mean <= 1:
+        return "mean_out_of_range"
+    raw_sd = raw_row.get("sd")
+    sd = normalized_row.get("sd")
+    if isinstance(raw_sd, float) and not math.isfinite(raw_sd):
+        return "non_finite_sd"
+    if not _is_number(sd):
+        return "invalid_sd"
+    if sd < 0:
+        return "negative_sd"
     return None
+
+
+def _is_bounded_score_metric(metric: str) -> bool:
+    normalized = metric.strip().lower().replace("-", "_")
+    return any(
+        token in normalized
+        for token in ("accuracy", "acc_", "_acc", "exact_match", "success_rate")
+    )
+
+
+def _trajectory_summary_error(payload: JsonDict, role: str) -> str | None:
+    numeric_fields = ("alpha_emp_mean", "alpha_emp_std", "R2_mean", "R2_std")
+    for field in numeric_fields:
+        value = payload.get(field)
+        if not _is_number(value):
+            return f"trajectory summary requires finite numeric {field}"
+    if cast(float, payload["alpha_emp_std"]) < 0:
+        return "trajectory summary requires non-negative alpha_emp_std"
+    if cast(float, payload["R2_std"]) < 0:
+        return "trajectory summary requires non-negative R2_std"
+    if cast(float, payload["R2_mean"]) > 1:
+        return "trajectory summary requires R2_mean <= 1"
+    hidden_dim = payload.get("hidden_dim")
+    if not _is_positive_integer(hidden_dim):
+        return "trajectory summary requires a positive integer hidden_dim"
+
+    if role == "trajectory_stationary":
+        count_field = "n_streams"
+        alpha_field = "per_stream_alphas"
+        r2_field = "per_stream_R2"
+    else:
+        task = payload.get("task")
+        if not isinstance(task, str) or not task.strip():
+            return "heterogeneous trajectory summary requires a task"
+        count_field = "n_prompts"
+        alpha_field = "per_prompt_alphas"
+        r2_field = "per_prompt_R2"
+    if not _is_positive_integer(payload.get(count_field)):
+        return f"trajectory summary requires a positive integer {count_field}"
+    alpha_values = payload.get(alpha_field)
+    r2_values = payload.get(r2_field)
+    if not _finite_numeric_list(alpha_values):
+        return f"trajectory summary requires a non-empty finite {alpha_field} array"
+    if not _finite_numeric_list(r2_values):
+        return f"trajectory summary requires a non-empty finite {r2_field} array"
+    if len(cast(list[object], alpha_values)) != len(cast(list[object], r2_values)):
+        return "trajectory per-sample alpha and R2 arrays must have equal lengths"
+    if any(cast(float, value) > 1 for value in cast(list[object], r2_values)):
+        return f"trajectory {r2_field} values must be <= 1"
+    return None
+
+
+def _stage_validation_error(payload: JsonDict) -> str | None:
+    verdict = payload.get("verdict")
+    if not isinstance(verdict, str) or verdict.upper() not in {"PASS", "FAIL"}:
+        return "stage validation requires verdict PASS or FAIL"
+    round_value = payload.get("round")
+    if not _is_nonnegative_integer(round_value):
+        return "stage validation requires a non-negative integer round"
+    variant = payload.get("variant")
+    if not isinstance(variant, str) or not variant.strip():
+        return "stage validation requires a non-empty variant"
+    rho = payload.get("held_spearman_rho")
+    if not _is_number(rho) or not -1 <= rho <= 1:
+        return "stage validation requires held_spearman_rho in [-1, 1]"
+    interval = payload.get("held_bootstrap_ci")
+    if not isinstance(interval, list) or len(interval) != 2:
+        return "stage validation requires a two-value held_bootstrap_ci"
+    if not all(_is_number(value) and -1 <= value <= 1 for value in interval):
+        return "stage validation held_bootstrap_ci must contain finite values in [-1, 1]"
+    lower, upper = cast(list[int | float], interval)
+    if lower > upper:
+        return "stage validation held_bootstrap_ci must be ordered"
+    n_calib = payload.get("n_calib")
+    n_held = payload.get("n_held")
+    if not _is_positive_integer(n_calib) or not _is_positive_integer(n_held):
+        return "stage validation requires positive integer n_calib and n_held"
+    cells = payload.get("cells")
+    if not isinstance(cells, list) or not cells:
+        return "stage validation requires non-empty validation cells"
+    split_counts = {"calib": 0, "held": 0}
+    for index, cell in enumerate(cells):
+        if not isinstance(cell, dict):
+            return f"stage validation cell {index} must be an object"
+        for field in ("model", "task", "split"):
+            value = cell.get(field)
+            if not isinstance(value, str) or not value.strip():
+                return f"stage validation cell {index} requires {field}"
+        split = str(cell["split"])
+        if split not in split_counts:
+            return f"stage validation cell {index} has unsupported split {split!r}"
+        split_counts[split] += 1
+        if not _is_number(cell.get("delta_tv_static_mean")):
+            return f"stage validation cell {index} requires finite delta_tv_static_mean"
+    if split_counts["calib"] != n_calib or split_counts["held"] != n_held:
+        return "stage validation cell split counts do not match n_calib and n_held"
+    return None
+
+
+def _finite_numeric_list(value: object) -> bool:
+    return isinstance(value, list) and bool(value) and all(_is_number(item) for item in value)
+
+
+def _is_positive_integer(value: object) -> bool:
+    return _is_nonnegative_integer(value) and cast(int, value) > 0
+
+
+def _is_nonnegative_integer(value: object) -> bool:
+    return isinstance(value, int) and not isinstance(value, bool) and value >= 0
 
 
 def _is_number(value: object) -> TypeGuard[int | float]:
