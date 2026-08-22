@@ -52,6 +52,7 @@ def test_top_level_help_stays_beginner_friendly() -> None:
     usage_line = help_text.splitlines()[0]
 
     assert "usage: pcl [-h] command ..." in usage_line
+    assert "local control, attribution, and stability diagnostics" in help_text
     assert "{start,quickstart,choose" not in usage_line
     assert "pcl start --guide" in help_text
     assert "pcl quickstart --out demo --open-report" in help_text

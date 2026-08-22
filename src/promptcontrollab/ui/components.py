@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import difflib
 import html
+import re
 from typing import Any
 
 
@@ -206,6 +207,53 @@ def dashboard_css() -> str:
   margin-top: 8px;
   overflow-wrap: anywhere;
 }
+.pcl-primary-nav [role="radiogroup"] {
+  gap: 4px;
+}
+.pcl-recommendation {
+  border: 1px solid var(--pcl-border);
+  border-left: 5px solid var(--pcl-accent);
+  border-radius: 8px;
+  background: var(--pcl-surface);
+  padding: 16px 18px;
+  margin: 10px 0 18px 0;
+}
+.pcl-recommendation.allow, .pcl-recommendation.ready-for-agent {
+  border-left-color: var(--pcl-good);
+}
+.pcl-recommendation.needs-review, .pcl-recommendation.review-required,
+.pcl-recommendation.suggest, .pcl-recommendation.inspect-only {
+  border-left-color: var(--pcl-warn);
+}
+.pcl-recommendation.block, .pcl-recommendation.blocked {
+  border-left-color: var(--pcl-risk);
+}
+.pcl-recommendation-label {
+  color: var(--pcl-muted);
+  font-size: .78rem;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+}
+.pcl-recommendation h2 {
+  color: var(--pcl-ink);
+  font-size: 1.25rem;
+  letter-spacing: 0;
+  margin: 5px 0 8px 0;
+}
+.pcl-recommendation p, .pcl-recommendation li {
+  color: var(--pcl-muted);
+  line-height: 1.45;
+}
+.pcl-recommendation ul {
+  margin: 8px 0;
+  padding-left: 20px;
+}
+.pcl-recommendation-boundary {
+  border-top: 1px solid var(--pcl-border);
+  font-size: .82rem;
+  margin-top: 12px;
+  padding-top: 10px;
+}
 </style>
 """
 
@@ -347,6 +395,30 @@ def metric_cards(st: Any, cards: list[tuple[str, object]]) -> None:
             "</style>"
         ),
         unsafe_allow_html=True,
+    )
+
+
+def recommendation_card_html(
+    *,
+    decision: str,
+    next_action: str,
+    reasons: list[str],
+    boundary: str,
+    label: str = "Current recommendation",
+) -> str:
+    """Return an escaped recommendation card with an explicit evidence boundary."""
+
+    tone = re.sub(r"[^a-z0-9]+", "-", decision.lower()).strip("-") or "unknown"
+    reason_items = "".join(f"<li>{html.escape(reason)}</li>" for reason in reasons)
+    reasons_html = f"<ul>{reason_items}</ul>" if reason_items else ""
+    return (
+        f'<section class="pcl-recommendation {html.escape(tone)}">'
+        f'<div class="pcl-recommendation-label">{html.escape(label)}</div>'
+        f"<h2>{html.escape(decision)}</h2>"
+        f"<p>{html.escape(next_action)}</p>"
+        f"{reasons_html}"
+        f'<p class="pcl-recommendation-boundary">{html.escape(boundary)}</p>'
+        "</section>"
     )
 
 

@@ -1,0 +1,14 @@
+- insert:
+    - id: prompt-control-lab
+      name: '@prompt-control-lab/deepseek-harness'
+      config:
+        mode: suggest
+        policyPath: .promptcontrol/guard.policy.yaml
+        capture: redacted
+        feedback: summary
+        autoRecover: false
+        bridgeFailure: warn
+        runsRoot: .promptcontrol/runs
+        feedbackMaxChars: 600
+        observationQueueSize: 256
+        exposeStatusTool: false

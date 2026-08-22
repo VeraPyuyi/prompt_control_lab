@@ -2,6 +2,25 @@
 
 本教程采用“怎么操作 -> 得到什么结果 -> 能说明什么问题”的格式。
 
+## 2 分钟控制闭环
+
+怎么操作：
+
+```bash
+pcl control --prompt "检查这个请求，并提出边界清楚的计划。" --authorization inspect --out runs/first-control --json
+pcl ui --runs runs --language zh
+```
+
+会得到什么：`runs/first-control` 下的 `control_run.json`、`events.jsonl`、
+`preflight.json`、`attribution.json`、`stability.json`、`decision.json`、
+`report.md` 和 `report.html`。
+
+这说明什么问题：`inspect` 会记录完整的本地控制运行，但不会调用模型或启动 Agent。
+在扩大授权前，你可以先查看风险、授权边界、证据、稳定状态和下一步建议。
+
+下一步：需要直接调用模型时，使用 `--authorization model` 并显式指定 Provider 与模型；
+需要控制 Agent 生命周期时，安装 DeepSeek Harness adapter。
+
 ## 新手模式：选择场景
 
 操作：

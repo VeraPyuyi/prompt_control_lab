@@ -1,0 +1,6 @@
+{"sequence":1,"event_type":"agent/request","payload":{"usage":{"total_tokens":100,"context_tokens":80}}}
+{"sequence":2,"event_type":"tools/pre-execute","payload":{"tool":"read","arguments":{"path":"workspace/redacted.txt"}}}
+{"sequence":3,"event_type":"tools/post-execute","payload":{"tool":"read","status":"succeeded"}}
+{"sequence":4,"event_type":"step/completed","payload":{"status":"completed"}}
+{"sequence":5,"event_type":"tests/result","payload":{"passed":true}}
+{"sequence":6,"event_type":"session/finalized","payload":{"status":"completed"}}

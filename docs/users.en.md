@@ -1,50 +1,25 @@
 # Users
 
-## Non-Specialist Reviewers
+## Prompt and Agent Operators
 
-Use Quick Mode when you want a clear report without tuning every command. `pcl analyze` turns
-task data and two prediction files into split hygiene, metrics, statistics, explanation, and
-Markdown/HTML reports.
+Inspect a prompt before it leaves the machine, choose how much execution authority to grant, and review the decision with its event evidence. Start with `inspect`; move to `model`, `agent-scoped`, or `agent-full` only when the task requires that boundary.
 
-## Prompt Researchers
+## Agent Integrators
 
-Use PromptControlLab to enforce train/validation/withheld separation, save split hashes, keep
-per-example outputs, and produce reproducible statistical reports.
+Connect a native lifecycle plugin or a guard adapter to the versioned event protocol. DeepSeek Harness is the flagship native Cordis integration; Codex, Cursor, Claude Code, and GitHub Action use guard-oriented surfaces. Integration does not silently grant agent authority.
 
-## LLM Engineering Teams
+## Model and Provider Operators
 
-Treat a prompt change as a local regression test. Import outputs from the old and new prompts,
-compare aggregate and slice-level scores, and inspect whether the change is reliable.
+Select an explicit provider and model, inspect the adapter configuration, and keep public-model provenance claims limited to what the endpoint and artifacts actually record. Credential presence is configuration, not authorization.
 
-## Soft Prompt Researchers
+## Reviewers and Maintainers
 
-Check how far learned soft vectors are from real token embeddings. This helps explain whether a
-soft prompt can be safely projected into a hard prompt.
+Use `control_run.json`, `events.jsonl`, and the decision artifacts to reconstruct what happened. Reports, the local UI, and the rebuildable SQLite index make review easier without replacing the source JSON.
 
-## Model Migration and Evaluation Teams
+## Evaluation Teams
 
-Save artifacts for different models or prompt versions, then compare migration regressions,
-slice-level changes, and reports.
+Replay recorded events and run the synthetic control benchmark to detect protocol or analyzer regressions. Benchmark accuracy covers the bundled labels only; it does not measure real-agent performance, causal impact, or safety.
 
-## Trajectory and Control Researchers
+## Advanced Diagnostic Users
 
-Import hidden-state trajectories and inspect drift, log-decay slope, turnpike-like signals, and
-Riccati surrogate stability. These are diagnostics, not proofs about a full language model.
-
-## Expert Users
-
-Use Expert Mode when you need fine control over each step. The individual commands let you choose
-split settings, metrics, sampling counts, diagnostics, and policy gates separately.
-
-## Expert Decision Guide
-
-- If the bootstrap confidence interval crosses zero, treat the observed change as uncertain even
-  when the average score improved.
-- If the adjusted p-value is high, the run may still pass a gate when the policy only requires
-  "no large regression". That means "acceptable under this policy", not "statistically proven".
-- If `p-value = 1.0` and the gate passes, inspect the gate policy. It usually means the policy is
-  permissive or focused on minimum score/regression thresholds.
-- If slice-level scores regress while the average improves, inspect those slices before keeping
-  the prompt.
-- Riccati, trajectory, and soft-hard diagnostics are fitted probes and deployment-risk signals;
-  they are not proofs about the full language model.
+Use the optional evaluation and research commands for paired statistics, soft/hard projection, trajectories, Riccati surrogates, time-varying controls, or PEOC imports. Treat these as bounded diagnostics, not proof about a full language model and not a requirement for ordinary control runs.

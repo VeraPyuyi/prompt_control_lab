@@ -1,0 +1,53 @@
+{
+  "schema": "prompt_control_lab.control_benchmark_manifest.v1",
+  "benchmark_id": "open-control-events-v1",
+  "description": "A deterministic open benchmark for observable control-event classification contracts.",
+  "claim_boundary": "This benchmark scores classification contract behavior on synthetic observable events only; it does not measure agent quality, establish causation, or prove universal safety.",
+  "cases": [
+    {
+      "case_id": "converging",
+      "fixture": "fixtures/converging.jsonl",
+      "expected_label": "converging",
+      "evidence_boundary": "Synthetic completion and passing-test markers support only the observable converging label.",
+      "baseline_run": {
+        "run_id": "synthetic-baseline"
+      }
+    },
+    {
+      "case_id": "stalled",
+      "fixture": "fixtures/stalled.jsonl",
+      "expected_label": "stalled",
+      "evidence_boundary": "Repeated synthetic tool signatures and a guard marker support only the observable stalled label.",
+      "baseline_run": {
+        "run_id": "synthetic-baseline"
+      }
+    },
+    {
+      "case_id": "oscillating",
+      "fixture": "fixtures/oscillating.jsonl",
+      "expected_label": "oscillating",
+      "evidence_boundary": "Alternating synthetic test outcomes support only the observable oscillating label.",
+      "baseline_run": {
+        "run_id": "synthetic-baseline"
+      }
+    },
+    {
+      "case_id": "diverging",
+      "fixture": "fixtures/diverging.jsonl",
+      "expected_label": "diverging",
+      "evidence_boundary": "Synthetic retry, error, and resource-growth events support only the observable diverging label.",
+      "baseline_run": {
+        "run_id": "synthetic-baseline"
+      }
+    },
+    {
+      "case_id": "insufficient_evidence",
+      "fixture": "fixtures/insufficient_evidence.jsonl",
+      "expected_label": "insufficient_evidence",
+      "evidence_boundary": "One synthetic request is below the evidence threshold, so no stronger label is supported.",
+      "baseline_run": {
+        "run_id": "synthetic-baseline"
+      }
+    }
+  ]
+}

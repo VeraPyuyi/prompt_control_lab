@@ -1,55 +1,31 @@
 # 创新点和贡献
 
-PromptControlLab 的目标不是再做一个只输出平均分的 prompt 评测脚本。它的贡献在于把 prompt 评测扩展成一个更完整的诊断流程。
+PromptControlLab 在本地 Prompt 与 Agent 控制闭环中，把授权、观测和证据变成显式契约。
 
-## 1. 从单一分数走向可复现协议
+## 1. 分级授权
 
-工具把 train/validation/withheld 切分、split hash、leakage check 和 run manifest 固化下来。这样别人不仅能看到分数，还能知道分数是否来自干净的协议。
+`inspect`、`model`、`agent-scoped` 和 `agent-full` 把检查、模型访问与 Agent 执行分开。工作流只增加任务所需权限，凭据也不会静默选择更高授权级别。
 
-推动作用：减少 validation overfitting 和 test leakage，让 prompt optimization 的实验报告更可信。
+## 2. 版本化开放事件协议
 
-## 2. 从平均分走向统计可靠性
+归一化的 `prompt_control_lab.control_event.v1` 让原生插件、guard adapter、重放、报告和基准共享同一个可检查契约。Schema 版本随产物保存，而不是从 UI 状态推断。
 
-工具内置 paired bootstrap、paired permutation 和 Holm correction。它不只报告 candidate 比 baseline 高多少，还报告这个差异是否可靠。
+## 3. 本地证据权威
 
-推动作用：让 prompt 改动更接近软件工程里的 regression testing，而不是只凭一次小样本分数判断。
+JSON 与 JSONL 是事实源。报告和本地 UI 是派生视图，SQLite 是可重建索引。因此，即使显示层或索引不可用，运行仍然可复核。
 
-## 3. 系统化 soft-to-hard 风险
+## 4. 有界 Agent 反馈
 
-很多 soft prompt 研究最终需要面对 hard prompt 部署。PromptControlLab 把 nearest-token projection gap 做成标准诊断结果。
+Agent 集成显式声明 suggest 或 gate 行为，默认对持久化数据脱敏，限制反馈与队列，并保留已有 Agent guard 的职责边界。
 
-推动作用：帮助 soft prompt 研究更诚实地报告部署风险，也帮助研究者理解 embedding 几何和 hard prompt 可用性之间的关系。
+## 5. 确定性重放与基准
 
-## 4. 把 hidden-state trajectory 变成可复用诊断对象
+已记录事件可以通过同一分析器重放。开放合成基准检查已知轨迹类型的分类契约，不把夹具 accuracy 表述为真实 Agent 性能。
 
-工具支持导入 hidden-state trajectory，输出 drift、decay slope 和 turnpike-like signal。用户可以比较不同 prompt、不同任务、不同模型下的内部轨迹变化。
+## 6. 证据关联解释
 
-推动作用：把 prompt evaluation 从“只看输出”推进到“同时看内部动态”。
+归因、稳定性与决策记录都指向归一化事件。缺乏支持的结论可以保持 `insufficient_evidence`，而不会被报告或 UI 自动补齐。
 
-## 5. 提供 Riccati surrogate 诊断
+## 高级诊断
 
-工具可以对有限维 surrogate 做 Riccati/DARE 稳定性检查，并明确说明这只是 surrogate diagnostic，不是对完整语言模型的证明。
-
-推动作用：为 LLM control、prompt control 和 trajectory diagnostics 提供一个可复用的实验接口。
-
-## 6. 提供 time-varying soft-control lane
-
-工具把 static、time-varying、shuffled 和 random 方法放在同一个比较框架中，帮助判断收益来自时序结构还是参数容量。
-
-推动作用：让 time-varying prompt 的机制分析更系统，减少只报告最好结果的倾向。
-
-## 总体贡献
-
-PromptControlLab 可以帮助相关领域向这些方向发展：
-
-- prompt optimization 更可复现；
-- prompt regression testing 更工程化；
-- soft prompt 部署风险更可量化；
-- hidden-state trajectory 成为常规诊断对象；
-- prompt engineering 向 prompt control engineering 发展。
-
-## 可解释性层
-
-`explanation.json` 会把原始指标、统计检验、slice 变化、样本变化和可选诊断结果转换成直白解释或技术解释。
-
-推动作用：同一套工具既能服务只想看结论的非专业评审者，也能服务需要审计细节的专业用户。
+已有统计评测、soft/hard、hidden-state trajectory、Riccati surrogate、time-varying control 和 PEOC 证据工具继续作为可选高级诊断。它们是在明确假设下进行的有边界分析，不构成通用理论主张。

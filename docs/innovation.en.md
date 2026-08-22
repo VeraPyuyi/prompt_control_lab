@@ -1,66 +1,31 @@
 # Innovation and Contribution
 
-PromptControlLab is not another script that only prints an average score. Its contribution is to
-turn prompt evaluation into a fuller diagnostic workflow.
+PromptControlLab makes authorization, observation, and evidence explicit in a local prompt and agent control loop.
 
-## 1. From Single Scores to Reproducible Protocols
+## 1. Graduated authorization
 
-The toolkit records train/validation/withheld splits, split hashes, leakage checks, and run
-manifests.
+The `inspect`, `model`, `agent-scoped`, and `agent-full` levels separate review from model access and agent execution. A workflow can add only the authority it needs, and credentials do not silently select a higher level.
 
-Contribution: cleaner prompt optimization reports with less validation overfitting and test
-leakage.
+## 2. Versioned open event protocol
 
-## 2. From Average Scores to Statistical Reliability
+Normalized `prompt_control_lab.control_event.v1` events let native plugins, guard adapters, replays, reports, and benchmarks share one inspectable contract. Schema versions are stored with the artifacts instead of being inferred from UI state.
 
-The toolkit includes paired bootstrap, paired permutation tests, and Holm correction.
+## 3. Local evidence authority
 
-Contribution: prompt changes can be treated more like regression tests instead of one-off score
-comparisons.
+JSON and JSONL are the source of truth. Reports and the local UI are derived views, and SQLite is a rebuildable index. This keeps a run reviewable even when a display layer or index is unavailable.
 
-## 3. Systematic Soft-to-Hard Risk
+## 4. Bounded agent feedback
 
-Soft prompt research often needs to explain whether learned vectors can be projected to hard
-tokens. PromptControlLab reports nearest-token projection gaps as a standard diagnostic.
+Agent integrations declare suggest or gate behavior, redact persistent data by default, bound feedback and queues, and preserve existing agent guards instead of claiming ownership of them.
 
-Contribution: clearer deployment risk reporting for soft prompts and better study of embedding
-geometry.
+## 5. Deterministic replay and benchmark
 
-## 4. Hidden-State Trajectories as Diagnostic Objects
+Recorded events can be replayed through the same analyzer. The open synthetic benchmark checks the classification contract across known trace types without presenting fixture accuracy as real-agent performance.
 
-The toolkit imports hidden-state trajectories and reports drift, decay slope, and turnpike-like
-signals.
+## 6. Evidence-linked explanation
 
-Contribution: prompt evaluation can inspect internal dynamics in addition to output scores.
+Attribution, stability, and decision records point back to normalized events. Unsupported conclusions can remain `insufficient_evidence` rather than being filled in by a report or UI.
 
-## 5. Riccati Surrogate Diagnostics
+## Advanced diagnostics
 
-The toolkit checks stability on finite-dimensional Riccati/DARE surrogates and states the boundary
-clearly: this is a surrogate diagnostic, not a proof about a full language model.
-
-Contribution: reusable interfaces for LLM control, prompt control, and trajectory diagnostics.
-
-## 6. Time-Varying Soft-Control Lane
-
-The toolkit compares static, time-varying, shuffled, and random method groups in one artifact
-format.
-
-Contribution: more systematic mechanism checks for time-varying prompts.
-
-## Overall Contribution
-
-PromptControlLab helps move the field toward:
-
-- more reproducible prompt optimization;
-- more engineering-oriented prompt regression testing;
-- more measurable soft prompt deployment risk;
-- routine hidden-state trajectory diagnostics;
-- prompt engineering that can grow into prompt control engineering.
-
-## Explainability Layer
-
-The `explanation.json` artifact translates raw metrics, statistical tests, slice changes, example
-changes, and optional diagnostics into plain or technical explanations.
-
-Contribution: the same tool can support non-specialist reviewers who need a direct conclusion and
-expert users who need audit details.
+The existing statistical evaluation, soft/hard, hidden-state trajectory, Riccati surrogate, time-varying control, and PEOC evidence tools remain available as optional Advanced Diagnostics. Their contribution is bounded analysis under stated assumptions, not a universal theory claim.

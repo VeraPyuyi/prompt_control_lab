@@ -1,42 +1,28 @@
 from pathlib import Path
 
 
-def test_readmes_lead_with_paper_research_core() -> None:
+def test_readmes_lead_with_control_loop_and_keep_research_advanced() -> None:
     readme = Path("README.md").read_text(encoding="utf-8")
     readme_zh = Path("README.zh.md").read_text(encoding="utf-8")
 
-    assert (
-        "Control-theoretic diagnostics and reproducible evidence for prompt optimization."
-        in readme
-    )
-    assert "What It Adds" in readme
-    assert "Applied Agent Layer" in readme
-    assert "pcl research-import peoc" in readme
-    assert "pcl research-quickstart" in readme
-    assert "pcl research-demo" in readme
-    assert "pcl diagnose" in readme
-    assert readme.find("What It Adds") < readme.find("Applied Agent Layer")
-    assert readme.find("pcl research-import peoc") < readme.find("pcl research-quickstart")
-    assert len(readme.splitlines()) <= 40
+    assert "The local control loop for prompts and AI agents." in readme
+    assert "pcl control" in readme
+    assert "Flagship Integration: DeepSeek Harness" in readme
+    assert "Advanced Diagnostics" in readme
+    assert readme.find("pcl control") < readme.find("Advanced Diagnostics")
+    assert readme.find("DeepSeek Harness") < readme.find("PEOC")
+    assert len(readme.splitlines()) <= 70
     assert "docs/research_import_peoc.en.md" in readme
     assert "docs/research_from_paper.en.md" in readme
-    assert (
-        "Preflight, provenance, and reproducible evaluation for AI coding agents."
-        not in readme[:600]
-    )
+    assert "Control-theoretic diagnostics and reproducible evidence" not in readme[:600]
 
-    assert "面向 prompt 优化的控制论诊断与可复现证据工具。" in readme_zh
-    assert "它补上了什么" in readme_zh
-    assert "Applied Agent Layer" in readme_zh
-    assert "pcl research-import peoc" in readme_zh
-    assert "pcl research-quickstart" in readme_zh
-    assert "pcl research-demo" in readme_zh
-    assert "pcl diagnose" in readme_zh
-    assert readme_zh.find("它补上了什么") < readme_zh.find("Applied Agent Layer")
-    assert readme_zh.find("pcl research-import peoc") < readme_zh.find(
-        "pcl research-quickstart"
-    )
-    assert len(readme_zh.splitlines()) <= 40
+    assert "Prompt 与 AI Agent 的本地控制闭环。" in readme_zh
+    assert "pcl control" in readme_zh
+    assert "旗舰集成" in readme_zh and "DeepSeek Harness" in readme_zh
+    assert "高级诊断" in readme_zh
+    assert readme_zh.find("pcl control") < readme_zh.find("高级诊断")
+    assert readme_zh.find("DeepSeek Harness") < readme_zh.find("PEOC")
+    assert len(readme_zh.splitlines()) <= 70
     assert "docs/research_import_peoc.zh.md" in readme_zh
     assert "docs/research_from_paper.zh.md" in readme_zh
 

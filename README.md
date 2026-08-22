@@ -1,38 +1,44 @@
-# prompt_control_lab
+# PromptControlLab 2.0
 
-**Control-theoretic diagnostics and reproducible evidence for prompt optimization.** Package: `promptcontrollab`. Chinese: [README.zh.md](README.zh.md).
+**The local control loop for prompts and AI agents.**
 
-Import a real PEOC replication bundle, see exactly which evidence is available, failed, unusable, or missing, and prevent a small result from becoming an oversized claim.
+PromptControlLab is an open-source, local-first framework for preflight checks, explicit execution authorization, redacted event capture, run diagnosis, and reviewable decisions. It controls real prompt and agent workflows; research diagnostics are optional. Chinese: [README.zh.md](README.zh.md).
+
+## 2-Minute Control Demo
 
 ```bash
-pip install -e ".[research,ui]"
-pcl research-import peoc --bundle <path-to-nmi_replication_bundle> --out runs/peoc-real --portable
+python -m pip install -e ".[ui]"
+pcl control --prompt "Inspect the request and propose a bounded plan." --authorization inspect --out runs/first-control --json
 pcl ui --runs runs --language en
 ```
 
-## What It Adds
+`inspect` runs the local preflight and writes a complete control run without calling a model or launching an agent.
 
-- **Real evidence first:** source hashes, normalized PEOC evidence, bounded case study, claim check, gap plan, and verified research bundle.
-- **Fresh research diagnostics:** `pcl research-quickstart`, `pcl research-demo`, `pcl diagnose`, plus `soft-hard`, `trajectory`, `riccati`, and `tv-soft`.
-- **Reproducible evaluation:** tri-split withheld protocol, paired statistics, prompt-only validity, evidence cards, and fail-closed claim tiers.
-- **Applied Agent Layer:** `guard`, model provenance, `audit-diff`, local UI, IDE/CLI adapters, and GitHub review artifacts reuse the same evidence discipline.
+## Flagship Integration: DeepSeek Harness
 
-## Start Here
+The [native Cordis integration](docs/deepseek_harness.en.md) gates model requests and tools, streams redacted lifecycle evidence through one persistent local bridge, and is contract-locked to Harness `0.1.1-rc.2` at `b150a551...`.
 
-- New to the CLI: `pcl start --guide`
-- General local demo: `pcl quickstart --out demo --open-report` (guided alias: `pcl start --choice demo --out demo`)
-- Real PEOC import, step by step: [tutorial](docs/research_import_peoc.en.md)
-- Paper concept -> command -> interpretation: [research mapping](docs/research_from_paper.en.md)
-- No real bundle yet: `pcl research-quickstart --out runs/research-demo --open-report`
-- External eval results: `pcl import promptfoo --input results.json --out runs/from-promptfoo --prompt-id candidate` (`pcl ingest` remains the backward-compatible alias)
-- Choose the shortest path: `pcl choose --need "<your goal>"` and [choice guide](docs/choice_guide.en.md)
+## Supported Surfaces
 
-Real bounded evidence: [PEOC case study](docs/case_studies/peoc_real/README.md). Demo: [4K walkthrough](docs/assets/demo/prompt_control_lab_demo.en.mp4). Install: [release guide](docs/release_install.en.md).
+| Surface | Current adapters |
+|---|---|
+| Providers | OpenAI, Anthropic, Gemini, DeepSeek, Qwen / DashScope, Kimi / Moonshot, OpenAI-compatible endpoints |
+| Agents | DeepSeek Harness native control; Codex, Cursor, Claude Code, and GitHub Action prompt-guard adapters |
+| Open contract | Versioned `prompt_control_lab.control_event.v1` JSONL protocol and deterministic [control benchmark](docs/control_benchmark.en.md) |
+| Local UI | Before / Run / Why / After / Decision / History / Advanced |
 
-Engineering evidence: [production protocol](docs/production_pilot.en.md), [preflight pilot](docs/case_studies/agent_guard_pilot.en.md), and [paired Codex pilot](docs/case_studies/agent_guard_paired_pilot.en.md).
+## Documentation
 
-Positioning visuals: [ecosystem scorecard](docs/assets/ecosystem_scorecard.svg) and [evidence matrix](docs/assets/ecosystem_evidence_matrix.svg).
+[Control loop and authorization](docs/control_loop.en.md) | [DeepSeek Harness](docs/deepseek_harness.en.md) | [Providers and provenance](docs/providers.en.md) | [Benchmark interpretation](docs/control_benchmark.en.md) | [Local UI](docs/control_ui.en.md)
 
-Boundaries: imported results are not fresh reruns; task-specific hard scores and small pilots are not universal benchmarks; trajectory/Riccati results are diagnostics or fitted-surrogate checks; public model IDs and hashes do not prove hidden weights; guard/audit are heuristics, not safety proofs.
+Install and existing workflows: [release guide](docs/release_install.en.md), `pcl start --guide`, `pcl quickstart --out demo --open-report`, `pcl start --choice demo --out demo`, and `pcl choose --need "<your goal>"`.
+
+External evidence remains available through `pcl import promptfoo --input results.json --out runs/from-promptfoo --prompt-id candidate` (`pcl ingest` remains the backward-compatible alias); see the [choice guide](docs/choice_guide.en.md).
+
+Engineering references: [production protocol](docs/production_pilot.en.md), [preflight pilot](docs/case_studies/agent_guard_pilot.en.md), [paired Codex pilot](docs/case_studies/agent_guard_paired_pilot.en.md), [ecosystem scorecard](docs/assets/ecosystem_scorecard.svg), and [evidence matrix](docs/assets/ecosystem_evidence_matrix.svg). These small pilots are not universal benchmarks.
+
+## Advanced Diagnostics
+
+PEOC import plus `soft-hard`, `trajectory`, `riccati`, and `tv-soft` are bounded research diagnostics, not the default control path. Start with the [advanced mapping](docs/research_from_paper.en.md) or [PEOC import guide](docs/research_import_peoc.en.md).
 
 Apache-2.0. See [LICENSE](LICENSE).

@@ -2,6 +2,13 @@
 
 PromptControlLab keeps inspectable files for each run instead of only reporting a final score.
 
+## Control-run source of truth
+
+The default control path starts with `control_run.json`, `events.jsonl`, and `preflight.json`,
+then derives `attribution.json`, `stability.json`, `decision.json`, `report.md`, and
+`report.html`. JSON and JSONL are authoritative; reports and the optional SQLite index are
+rebuildable views.
+
 ## `manifest.json`
 
 Records tool version, run mode, method name, metric, data path, prediction path, optional

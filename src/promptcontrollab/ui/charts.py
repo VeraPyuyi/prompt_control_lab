@@ -9,6 +9,41 @@ from promptcontrollab.files import JsonDict
 from promptcontrollab.ui.data import first_comparison
 
 
+def control_event_timeline(
+    rows: list[JsonDict],
+    *,
+    title: str = "Control run timeline",
+) -> Any:
+    """Build an ordered event timeline without exposing event payloads."""
+
+    px = _plotly_express()
+    chart_rows = sorted(rows, key=lambda row: int(row.get("sequence") or 0))
+    if not chart_rows:
+        chart_rows = [{"sequence": 0, "phase": "session", "event": "no events"}]
+    return px.scatter(
+        chart_rows,
+        x="sequence",
+        y="phase",
+        color="event",
+        hover_name="event",
+        title=title,
+    )
+
+
+def control_signal_bar(
+    rows: list[JsonDict],
+    *,
+    title: str = "Observable stability signals",
+) -> Any:
+    """Build a compact bar chart from bounded observable signal counts."""
+
+    px = _plotly_express()
+    chart_rows = sorted(rows, key=lambda row: str(row.get("signal") or ""))
+    if not chart_rows:
+        chart_rows = [{"signal": "no signals", "value": 0}]
+    return px.bar(chart_rows, x="signal", y="value", title=title)
+
+
 def risk_category_bar(
     counts: dict[str, int],
     *,

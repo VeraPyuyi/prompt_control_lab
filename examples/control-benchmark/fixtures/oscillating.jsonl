@@ -1,0 +1,6 @@
+{"sequence":1,"event_type":"tools/post-execute","payload":{"tool":"edit","path":"workspace/redacted.py"}}
+{"sequence":2,"event_type":"tests/result","payload":{"passed":true}}
+{"sequence":3,"event_type":"tools/post-execute","payload":{"tool":"edit","path":"workspace/redacted.py"}}
+{"sequence":4,"event_type":"tests/result","payload":{"passed":false}}
+{"sequence":5,"event_type":"tools/post-execute","payload":{"tool":"edit","path":"workspace/redacted.py"}}
+{"sequence":6,"event_type":"tests/result","payload":{"passed":true}}

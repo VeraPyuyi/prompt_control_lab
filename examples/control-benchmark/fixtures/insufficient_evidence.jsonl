@@ -1,0 +1,1 @@
+{"sequence":1,"event_type":"agent/request","payload":{"usage":{"total_tokens":100,"context_tokens":80}}}

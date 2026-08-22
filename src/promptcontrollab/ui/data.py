@@ -3,13 +3,32 @@
 from __future__ import annotations
 
 import json
+import re
+from collections import Counter
+from collections.abc import Mapping
 from pathlib import Path
+from typing import Any, cast
 
 from promptcontrollab.claim_check import CLAIM_LABELS, CLAIM_REQUIREMENTS, TIER_ORDER
+from promptcontrollab.control_protocol import REDACTED, redact_sensitive
 from promptcontrollab.files import JsonDict, read_json
 from promptcontrollab.report_model import ReportModel
 
+CONTROL_ARTIFACTS = (
+    "control_run.json",
+    "events.jsonl",
+    "preflight.json",
+    "attribution.json",
+    "stability.json",
+    "decision.json",
+    "provider_result.json",
+    "audit_result.json",
+    "report.md",
+    "report.html",
+)
+
 RUN_ARTIFACTS = [
+    *CONTROL_ARTIFACTS,
     "manifest.json",
     "source_manifest.json",
     "peoc_evidence.json",
@@ -57,6 +76,7 @@ RUN_ARTIFACTS = [
 ]
 
 RUN_LEVEL_ARTIFACTS = [
+    *CONTROL_ARTIFACTS,
     "manifest.json",
     "source_manifest.json",
     "peoc_evidence.json",
@@ -127,11 +147,30 @@ def load_run_detail(run_dir: Path) -> JsonDict:
     """Load all known artifacts for one run directory."""
 
     model = ReportModel.from_run(run_dir)
+    control_run = _read_control_json(run_dir / "control_run.json")
+    events = load_jsonl_safe(run_dir / "events.jsonl")
+    preflight = _read_control_json(run_dir / "preflight.json")
+    attribution = _read_control_json(run_dir / "attribution.json")
+    stability = _read_control_json(run_dir / "stability.json")
+    decision = _read_control_json(run_dir / "decision.json")
+    provider_result = _read_control_json(run_dir / "provider_result.json")
+    audit = cast(JsonDict, redact_for_display(model.audit))
+    control_artifacts = [name for name in CONTROL_ARTIFACTS if (run_dir / name).exists()]
+    artifacts = [*model.artifacts]
+    artifacts.extend(name for name in control_artifacts if name not in artifacts)
     return {
         "name": run_dir.name,
         "path": str(run_dir),
-        "has_artifacts": model.has_artifacts,
-        "artifacts": model.artifacts,
+        "has_artifacts": model.has_artifacts or bool(control_artifacts),
+        "artifacts": artifacts,
+        "control_run": control_run,
+        "events": events,
+        "preflight": preflight,
+        "attribution": attribution,
+        "stability": stability,
+        "decision": decision,
+        "provider_result": provider_result,
+        "audit_result": audit,
         "manifest": model.manifest,
         "source_manifest": model.source_manifest,
         "peoc_evidence": model.peoc_evidence,
@@ -142,7 +181,7 @@ def load_run_detail(run_dir: Path) -> JsonDict:
         "comparison_validity": model.comparison_validity,
         "explanation": model.explanation,
         "model_drift": model.model_drift,
-        "audit": model.audit,
+        "audit": audit,
         "history_index": model.history_index,
         "history_compare": model.history_compare,
         "agent_run": model.agent_run,
@@ -263,6 +302,583 @@ def peoc_status_summary(detail: JsonDict, language: str = "en") -> JsonDict:
         "claim_status": claim_status,
         "statement": statement,
     }
+
+
+_HIDDEN_DISPLAY_KEYS = {
+    "analysis",
+    "chain_of_thought",
+    "chainofthought",
+    "cot",
+    "hidden_reasoning",
+    "reasoning",
+    "reasoning_content",
+    "thinking",
+    "thoughts",
+}
+_SAFE_AUTHORIZATION_VALUES = {
+    "agent",
+    "agent-full",
+    "agent-scoped",
+    "inspect",
+    "inspect-only",
+    "model",
+    "model-scoped",
+}
+
+
+def redact_for_display(value: Any) -> Any:
+    """Return a recursively redacted value suitable for local UI rendering."""
+
+    if isinstance(value, Mapping):
+        result: JsonDict = {}
+        for raw_key, item in value.items():
+            key = str(raw_key)
+            normalized = re.sub(r"[^a-z0-9]+", "_", key.lower()).strip("_")
+            if normalized in _HIDDEN_DISPLAY_KEYS:
+                result[key] = REDACTED
+                continue
+            if (
+                normalized == "authorization"
+                and isinstance(item, str)
+                and item.lower() in _SAFE_AUTHORIZATION_VALUES
+            ):
+                result[key] = item
+                continue
+            key_probe = redact_sensitive({key: "display-safe-probe"})
+            result[key] = (
+                REDACTED
+                if key_probe.get(key) == REDACTED
+                else redact_for_display(item)
+            )
+        return result
+    if isinstance(value, list | tuple):
+        return [redact_for_display(item) for item in value]
+    return redact_sensitive(value)
+
+
+def safe_display_text(value: object) -> str:
+    """Serialize a value after applying the UI's display redaction policy."""
+
+    safe = redact_for_display(value)
+    if isinstance(safe, str):
+        return safe
+    return json.dumps(safe, ensure_ascii=False, sort_keys=True, default=str)
+
+
+def load_jsonl_safe(path: Path) -> list[JsonDict]:
+    """Load object records from JSONL, skipping malformed lines and sorting by sequence."""
+
+    if not path.exists():
+        return []
+    records: list[tuple[int, JsonDict]] = []
+    try:
+        lines = path.read_text(encoding="utf-8-sig").splitlines()
+    except (OSError, UnicodeError):
+        return []
+    for line_number, line in enumerate(lines):
+        if not line.strip():
+            continue
+        try:
+            value = json.loads(line)
+        except (json.JSONDecodeError, ValueError):
+            continue
+        if isinstance(value, dict):
+            records.append((line_number, cast(JsonDict, redact_for_display(value))))
+    records.sort(key=lambda item: (_event_sequence(item[1]), item[0]))
+    return [record for _, record in records]
+
+
+def deepseek_harness_view(detail: JsonDict) -> JsonDict:
+    """Derive a bounded, display-safe DeepSeek Harness view from control artifacts."""
+
+    safe = cast(JsonDict, redact_for_display(detail))
+    control_run = _mapping(safe.get("control_run"))
+    metadata = _mapping(control_run.get("metadata"))
+    events = sorted(_mapping_rows(safe.get("events")), key=_event_sequence)
+    preflight = _mapping(safe.get("preflight"))
+    provider_result = _mapping(safe.get("provider_result"))
+    stability = _mapping(safe.get("stability"))
+    attribution = _mapping(safe.get("attribution"))
+    decision = _mapping(safe.get("decision"))
+    audit = _mapping(safe.get("audit") or safe.get("audit_result"))
+    return {
+        "identity": {
+            "run_id": _text(control_run.get("run_id")),
+            "session_id": _text(metadata.get("harness_session_id") or metadata.get("session_id")),
+            "status": _text(control_run.get("status")) or "unknown",
+            "authorization": _text(control_run.get("authorization")) or "unknown",
+            "agent": _text(control_run.get("agent")) or "unknown",
+        },
+        "timeline": _timeline_rows(events),
+        "gates": _gate_rows(preflight, events),
+        "provider": _provider_view(control_run, provider_result, events),
+        "usage": _usage_view(provider_result, events),
+        "repeated_tool_calls": _repeated_tool_rows(events, stability),
+        "stability": _stability_view(stability),
+        "attribution": {
+            "status": _text(attribution.get("status")) or "insufficient_evidence",
+            "summary": safe_display_text(attribution.get("summary") or ""),
+            "factors": _mapping_rows(attribution.get("factors")),
+        },
+        "changes": _change_rows(events, audit),
+        "guard_signals": _guard_signal_rows(events, stability),
+        "recommendation": _recommendation_view(decision, preflight),
+        "report_links": _report_link_rows(safe),
+    }
+
+
+def _read_control_json(path: Path) -> JsonDict:
+    if not path.exists():
+        return {}
+    try:
+        value = json.loads(path.read_text(encoding="utf-8-sig"))
+    except (OSError, UnicodeError, json.JSONDecodeError, ValueError):
+        return {}
+    if not isinstance(value, dict):
+        return {}
+    return cast(JsonDict, redact_for_display(value))
+
+
+def _event_sequence(event: JsonDict) -> int:
+    value = event.get("sequence")
+    if isinstance(value, int) and not isinstance(value, bool) and value >= 0:
+        return value
+    return 2**63 - 1
+
+
+def _mapping_rows(value: object) -> list[JsonDict]:
+    if not isinstance(value, list):
+        return []
+    return [_mapping(item) for item in value if isinstance(item, Mapping)]
+
+
+def _text(value: object) -> str:
+    if value is None:
+        return ""
+    return safe_display_text(value) if isinstance(value, str) else str(value)
+
+
+def _number(value: object) -> int | float | None:
+    if isinstance(value, int | float) and not isinstance(value, bool):
+        return value
+    return None
+
+
+def _timeline_rows(events: list[JsonDict]) -> list[JsonDict]:
+    rows: list[JsonDict] = []
+    for event in events:
+        payload = _mapping(event.get("payload"))
+        event_type = _text(event.get("event_type")) or "unknown"
+        lowered = event_type.lower()
+        phase = "event"
+        if "session" in lowered:
+            phase = "session"
+        elif "turn" in lowered:
+            phase = "turn"
+        elif "preflight" in lowered:
+            phase = "prompt gate"
+        elif "tool" in lowered:
+            phase = "tool"
+        elif "test" in lowered:
+            phase = "test"
+        elif "guard" in lowered:
+            phase = "guard"
+        elif "agent" in lowered or "provider" in lowered:
+            phase = "provider"
+        turn = payload.get("turn", payload.get("turn_index", payload.get("turn_id")))
+        rows.append(
+            {
+                "sequence": _event_sequence(event),
+                "timestamp": _text(event.get("timestamp")),
+                "phase": phase,
+                "event": event_type,
+                "turn": turn,
+                "subject": _tool_name(payload)
+                or _text(payload.get("model") or payload.get("agent")),
+                "status": _text(
+                    payload.get("decision")
+                    or payload.get("status")
+                    or payload.get("outcome")
+                    or payload.get("risk_level")
+                ),
+            }
+        )
+    return rows
+
+
+def _gate_rows(preflight: JsonDict, events: list[JsonDict]) -> list[JsonDict]:
+    rows: list[JsonDict] = []
+    preflight_event = next(
+        (
+            event
+            for event in events
+            if "preflight" in _text(event.get("event_type")).lower()
+        ),
+        {},
+    )
+    if preflight:
+        rows.append(
+            {
+                "sequence": _event_sequence(preflight_event) if preflight_event else None,
+                "scope": "prompt",
+                "subject": "prompt hash",
+                "decision": _text(preflight.get("decision")) or "unknown",
+                "risk": _text(preflight.get("risk_level")) or "unknown",
+                "review_required": preflight.get("required_review"),
+            }
+        )
+    elif preflight_event:
+        payload = _mapping(preflight_event.get("payload"))
+        rows.append(
+            {
+                "sequence": _event_sequence(preflight_event),
+                "scope": "prompt",
+                "subject": "prompt hash",
+                "decision": _text(payload.get("decision")) or "unknown",
+                "risk": _text(payload.get("risk_level")) or "unknown",
+                "review_required": payload.get("required_review"),
+            }
+        )
+    for event in events:
+        event_type = _text(event.get("event_type")).lower()
+        if "tools/pre-execute" not in event_type and not event_type.endswith("tool/request"):
+            continue
+        payload = _mapping(event.get("payload"))
+        rows.append(
+            {
+                "sequence": _event_sequence(event),
+                "scope": "tool",
+                "subject": _tool_name(payload) or "unknown tool",
+                "decision": _text(payload.get("decision") or payload.get("action")) or "recorded",
+                "risk": _text(payload.get("risk_level")) or "unknown",
+                "review_required": payload.get("required_review"),
+            }
+        )
+    return rows
+
+
+def _provider_view(
+    control_run: JsonDict,
+    provider_result: JsonDict,
+    events: list[JsonDict],
+) -> JsonDict:
+    response_payload: JsonDict = {}
+    for event in events:
+        if _text(event.get("event_type")).lower().endswith("agent/response"):
+            response_payload = _mapping(event.get("payload"))
+    provenance = []
+    for item in _mapping_rows(provider_result.get("provenance_evidence")):
+        provenance.append(
+            {
+                key: item.get(key)
+                for key in ("type", "source", "confidence", "model_id")
+                if item.get(key) is not None
+            }
+        )
+    return {
+        "provider": _text(
+            provider_result.get("provider")
+            or response_payload.get("provider")
+            or control_run.get("provider")
+        ),
+        "requested_model": _text(
+            provider_result.get("requested_model") or control_run.get("model")
+        ),
+        "observed_model": _text(
+            provider_result.get("model_id")
+            or response_payload.get("model")
+            or control_run.get("model")
+        ),
+        "request_id": _text(
+            provider_result.get("request_id") or response_payload.get("request_id")
+        ),
+        "provenance": provenance,
+        "warnings": [safe_display_text(item) for item in provider_result.get("warnings", [])]
+        if isinstance(provider_result.get("warnings"), list)
+        else [],
+    }
+
+
+def _usage_view(provider_result: JsonDict, events: list[JsonDict]) -> JsonDict:
+    usage = _mapping(provider_result.get("usage"))
+    response_payload: JsonDict = {}
+    for event in events:
+        if _text(event.get("event_type")).lower().endswith("agent/response"):
+            response_payload = _mapping(event.get("payload"))
+    event_usage = _mapping(response_payload.get("usage"))
+    return {
+        "input_tokens": _number(usage.get("input_tokens"))
+        or _number(event_usage.get("input_tokens")),
+        "output_tokens": _number(usage.get("output_tokens"))
+        or _number(event_usage.get("output_tokens")),
+        "total_tokens": _number(usage.get("total_tokens"))
+        or _number(event_usage.get("total_tokens"))
+        or _find_numeric(response_payload, ("total_tokens", "token_count")),
+        "cached_tokens": _number(usage.get("cached_tokens"))
+        or _number(event_usage.get("cached_tokens")),
+        "reasoning_tokens": _number(usage.get("reasoning_tokens"))
+        or _number(event_usage.get("reasoning_tokens")),
+        "cost": _find_numeric(provider_result, ("cost", "cost_usd", "estimated_cost"))
+        or _find_numeric(response_payload, ("cost", "cost_usd", "estimated_cost")),
+        "latency_ms": _number(provider_result.get("latency_ms"))
+        or _find_numeric(response_payload, ("latency_ms", "duration_ms", "elapsed_ms")),
+    }
+
+
+def _find_numeric(value: Mapping[str, object], keys: tuple[str, ...]) -> int | float | None:
+    for key in keys:
+        number = _number(value.get(key))
+        if number is not None:
+            return number
+    for nested_key in ("usage", "metrics", "result", "metadata", "raw_metadata"):
+        nested = value.get(nested_key)
+        if isinstance(nested, Mapping):
+            found = _find_numeric({str(key): item for key, item in nested.items()}, keys)
+            if found is not None:
+                return found
+    return None
+
+
+def _tool_name(payload: JsonDict) -> str:
+    for key in ("tool", "tool_name", "name"):
+        value = payload.get(key)
+        if isinstance(value, str):
+            return safe_display_text(value)
+        if isinstance(value, Mapping) and isinstance(value.get("name"), str):
+            return safe_display_text(value["name"])
+    return ""
+
+
+def _repeated_tool_rows(events: list[JsonDict], stability: JsonDict) -> list[JsonDict]:
+    observations: list[tuple[str, str, int]] = []
+    for event in events:
+        event_type = _text(event.get("event_type")).lower()
+        if not (
+            "tools/pre-execute" in event_type
+            or event_type.endswith("tool/call")
+            or event_type.endswith("tool/request")
+        ):
+            continue
+        payload = _mapping(event.get("payload"))
+        tool = _tool_name(payload)
+        if not tool:
+            continue
+        arguments = payload.get("arguments", payload.get("input", payload.get("args", {})))
+        signature = safe_display_text(arguments)
+        observations.append((tool, signature, _event_sequence(event)))
+    rows: list[JsonDict] = []
+    index = 0
+    while index < len(observations):
+        tool, signature, start_sequence = observations[index]
+        end = index + 1
+        while end < len(observations) and observations[end][:2] == (tool, signature):
+            end += 1
+        count = end - index
+        if count >= 2:
+            rows.append(
+                {
+                    "tool": tool,
+                    "count": count,
+                    "start_sequence": start_sequence,
+                    "end_sequence": observations[end - 1][2],
+                    "same_arguments": True,
+                }
+            )
+        index = end
+    if rows:
+        return rows
+    signals = _mapping(stability.get("signals"))
+    repeated = _mapping(signals.get("repeated_tool_calls"))
+    max_repetitions = repeated.get("max_repetitions")
+    if (
+        isinstance(max_repetitions, int)
+        and not isinstance(max_repetitions, bool)
+        and max_repetitions >= 2
+    ):
+        return [
+            {
+                "tool": _text(repeated.get("tool")) or "unknown tool",
+                "count": max_repetitions,
+                "start_sequence": None,
+                "end_sequence": None,
+                "same_arguments": True,
+            }
+        ]
+    return []
+
+
+def _stability_view(stability: JsonDict) -> JsonDict:
+    signals = _mapping(stability.get("signals"))
+    repeated = _mapping(signals.get("repeated_tool_calls"))
+    failures = _mapping(signals.get("request_failures"))
+    churn = _mapping(signals.get("file_churn"))
+    tests = _mapping(signals.get("test_trend"))
+    progress = _mapping(signals.get("progress"))
+    return {
+        "state": _text(stability.get("state")) or "insufficient_evidence",
+        "summary": safe_display_text(stability.get("summary") or ""),
+        "confidence": _text(signals.get("confidence")) or "unknown",
+        "observed_events": signals.get("observed_events", 0),
+        "signal_counts": [
+            {"signal": "repeated calls", "value": repeated.get("max_repetitions", 0)},
+            {"signal": "request errors", "value": failures.get("errors", 0)},
+            {"signal": "request retries", "value": failures.get("retries", 0)},
+            {"signal": "file edits", "value": churn.get("max_edits_per_file", 0)},
+            {"signal": "test transitions", "value": tests.get("transitions", 0)},
+            {"signal": "completed markers", "value": progress.get("completed_markers", 0)},
+        ],
+    }
+
+
+def _change_rows(events: list[JsonDict], audit: JsonDict) -> list[JsonDict]:
+    file_counts: Counter[str] = Counter()
+    tests: list[JsonDict] = []
+    for event in events:
+        event_type = _text(event.get("event_type")).lower()
+        payload = _mapping(event.get("payload"))
+        tool = _tool_name(payload).lower()
+        if any(marker in event_type or marker in tool for marker in ("edit", "write", "patch")):
+            file_counts.update(_paths(payload))
+        if "test" in event_type or any(marker in tool for marker in ("pytest", "test")):
+            passed = payload.get("passed", payload.get("tests_passed"))
+            status = "pass" if passed is True else "fail" if passed is False else _text(
+                payload.get("status") or payload.get("outcome")
+            ) or "recorded"
+            tests.append(
+                {
+                    "kind": "test",
+                    "item": _tool_name(payload) or "recorded test",
+                    "status": status,
+                    "count": 1,
+                    "sequence": _event_sequence(event),
+                }
+            )
+    for key in ("changed_files", "touched_files"):
+        value = audit.get(key)
+        if isinstance(value, list):
+            file_counts.update(safe_display_text(item) for item in value if isinstance(item, str))
+    audit_tests = audit.get("tests_run")
+    if isinstance(audit_tests, list):
+        audit_status = audit.get("tests_passed")
+        for name in audit_tests:
+            if isinstance(name, str):
+                tests.append(
+                    {
+                        "kind": "test",
+                        "item": safe_display_text(name),
+                        "status": "pass" if audit_status is True else "fail"
+                        if audit_status is False
+                        else "recorded",
+                        "count": 1,
+                        "sequence": None,
+                    }
+                )
+    files = [
+        {"kind": "file", "item": path, "status": "changed", "count": count, "sequence": None}
+        for path, count in sorted(file_counts.items())
+    ]
+    return [*files, *tests]
+
+
+def _paths(payload: JsonDict) -> list[str]:
+    paths: set[str] = set()
+    containers = [payload]
+    for key in ("arguments", "input", "result"):
+        nested = payload.get(key)
+        if isinstance(nested, Mapping):
+            containers.append(_mapping(nested))
+    for container in containers:
+        for key in ("path", "file", "file_path", "files", "changed_files", "touched_files"):
+            value = container.get(key)
+            if isinstance(value, str):
+                paths.add(safe_display_text(value))
+            elif isinstance(value, list):
+                paths.update(safe_display_text(item) for item in value if isinstance(item, str))
+    return sorted(paths)
+
+
+def _guard_signal_rows(events: list[JsonDict], stability: JsonDict) -> list[JsonDict]:
+    rows: list[JsonDict] = []
+    signals = _mapping(stability.get("signals"))
+    for item in _mapping_rows(signals.get("harness_guard_signals")):
+        rows.append(
+            {
+                "kind": _text(item.get("kind")) or "guard",
+                "source": _text(item.get("source")) or "harness",
+                "sequence": item.get("sequence"),
+            }
+        )
+    for event in events:
+        payload = _mapping(event.get("payload"))
+        source = _text(payload.get("guard") or payload.get("source"))
+        combined = " ".join((_text(event.get("event_type")), source)).lower()
+        kind = "repeat_tool" if "repeat-tool" in combined or "repeat_tool" in combined else (
+            "timeout" if "timeout" in combined else ""
+        )
+        if kind:
+            rows.append(
+                {"kind": kind, "source": source or "harness", "sequence": _event_sequence(event)}
+            )
+    unique: dict[tuple[object, object, object], JsonDict] = {}
+    for row in rows:
+        unique[(row.get("kind"), row.get("source"), row.get("sequence"))] = row
+    return sorted(unique.values(), key=lambda row: int(row.get("sequence") or 0))
+
+
+def _recommendation_view(decision: JsonDict, preflight: JsonDict) -> JsonDict:
+    if decision:
+        reasons = decision.get("reasons")
+        return {
+            "decision": _text(decision.get("decision")) or "insufficient_evidence",
+            "next_action": safe_display_text(decision.get("next_action") or ""),
+            "reasons": [safe_display_text(item) for item in reasons]
+            if isinstance(reasons, list)
+            else [],
+            "boundary": (
+                "Recommendation based on recorded observable evidence; it does not prove "
+                "causality or safety."
+            ),
+        }
+    return {
+        "decision": _text(preflight.get("decision")) or "insufficient_evidence",
+        "next_action": "Complete the run before relying on a final recommendation.",
+        "reasons": [safe_display_text(preflight.get("summary"))]
+        if preflight.get("summary")
+        else [],
+        "boundary": (
+            "Recommendation based on recorded observable evidence; it does not prove "
+            "causality or safety."
+        ),
+    }
+
+
+def _report_link_rows(detail: JsonDict) -> list[JsonDict]:
+    raw_path = detail.get("path")
+    if not isinstance(raw_path, str) or not raw_path:
+        return []
+    run_dir = Path(raw_path)
+    names = (
+        "report.html",
+        "report.md",
+        "audit_result.json",
+        "evidence_card.html",
+        "claim_check.html",
+        "research_case_study.html",
+        "research_bundle.html",
+    )
+    rows: list[JsonDict] = []
+    for name in names:
+        path = run_dir / name
+        if path.is_file():
+            resolved = path.resolve()
+            rows.append(
+                {
+                    "name": name,
+                    "path": str(resolved),
+                    "href": resolved.as_uri(),
+                }
+            )
+    return rows
 
 
 def peoc_method_rows(detail: JsonDict) -> list[JsonDict]:

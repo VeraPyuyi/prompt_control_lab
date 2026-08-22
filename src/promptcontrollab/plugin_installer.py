@@ -9,7 +9,14 @@ from typing import Any
 
 from promptcontrollab.files import JsonDict
 
-PLUGIN_CHOICES = {"codex", "cursor", "claude-code", "github-action", "all"}
+PLUGIN_CHOICES = {
+    "codex",
+    "cursor",
+    "claude-code",
+    "github-action",
+    "deepseek-harness",
+    "all",
+}
 
 
 def install_plugin(
@@ -28,7 +35,13 @@ def install_plugin(
         targets = _all_targets(target)
         installed = [
             install_plugin(name, target=targets[name], force=force, dry_run=dry_run)
-            for name in ["codex", "cursor", "claude-code", "github-action"]
+            for name in [
+                "codex",
+                "cursor",
+                "claude-code",
+                "github-action",
+                "deepseek-harness",
+            ]
         ]
         return {"plugin": "all", "dry_run": dry_run, "installed": installed}
     destination = target or _default_target(plugin)
@@ -42,6 +55,8 @@ def install_plugin(
         _copy_resource_dir("claude_code", destination, force=force)
     elif plugin == "github-action":
         _copy_resource_file("github_action/prompt-control-lab-gate.yml", destination, force=force)
+    elif plugin == "deepseek-harness":
+        _copy_resource_dir("deepseek_harness", destination, force=force)
     return {"plugin": plugin, "target": str(destination)}
 
 
@@ -54,6 +69,8 @@ def _preview_install(plugin: str, destination: Path) -> JsonDict:
         would_write = _preview_resource_dir("claude_code", destination)
     elif plugin == "github-action":
         would_write = [str(destination)]
+    elif plugin == "deepseek-harness":
+        would_write = _preview_resource_dir("deepseek_harness", destination)
     else:
         msg = f"Unknown plugin `{plugin}`"
         raise ValueError(msg)
@@ -76,6 +93,8 @@ def _default_target(plugin: str) -> Path:
         return home / ".prompt_control_lab" / "claude-code"
     if plugin == "github-action":
         return Path.cwd() / ".github" / "workflows" / "prompt-control-lab-gate.yml"
+    if plugin == "deepseek-harness":
+        return home / ".prompt_control_lab" / "deepseek-harness"
     msg = f"Unknown plugin `{plugin}`"
     raise ValueError(msg)
 
@@ -87,12 +106,14 @@ def _all_targets(target: Path | None) -> dict[str, Path | None]:
             "cursor": None,
             "claude-code": None,
             "github-action": None,
+            "deepseek-harness": None,
         }
     return {
         "codex": target / "codex",
         "cursor": target / "cursor" / "prompt_control_lab.mdc",
         "claude-code": target / "claude-code",
         "github-action": target / "github-action" / "prompt-control-lab-gate.yml",
+        "deepseek-harness": target / "deepseek-harness",
     }
 
 

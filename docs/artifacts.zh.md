@@ -3,6 +3,12 @@
 `prompt_control_lab` 的核心输出不是单个分数，而是一组可以复查的 artifact。
 这份文档说明每个文件是什么、怎么得到、能说明什么问题。
 
+## Control run 事实源
+
+默认控制主线先写出 `control_run.json`、`events.jsonl` 和 `preflight.json`，再派生
+`attribution.json`、`stability.json`、`decision.json`、`report.md` 与 `report.html`。
+JSON / JSONL 是事实源；报告和可选 SQLite 索引都是可以重建的视图。
+
 ## 快速阅读顺序
 
 如果你只想快速判断一次 prompt 实验是否可靠，建议按这个顺序打开：

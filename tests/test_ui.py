@@ -1584,10 +1584,15 @@ def test_ui_has_history_view_order_and_text() -> None:
     assert "comparison_validity" in app.TEXT["zh"]
     assert "prompt_only" in app.TEXT["en"]
     assert "prompt_only" in app.TEXT["zh"]
-    assert app._ordered_views("research")[0] == "research"
-    assert app._ordered_views("workflows")[0] == "workflows"
-    assert app._ordered_views("history")[0] == "history"
-    assert app._ordered_views("tutorial")[0] == "tutorial"
+    expected = list(app.PRIMARY_VIEW_ORDER)
+    assert app._ordered_views("research") == expected
+    assert app._ordered_views("workflows") == expected
+    assert app._ordered_views("history") == expected
+    assert app._ordered_views("tutorial") == expected
+    assert app._resolve_primary_view("research") == "advanced"
+    assert app._resolve_primary_view("workflows") == "run"
+    assert app._resolve_primary_view("history") == "history"
+    assert app._resolve_primary_view("tutorial") == "before"
 
 
 def test_ui_choice_labels_are_localized_but_keep_internal_values() -> None:

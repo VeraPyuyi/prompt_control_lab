@@ -1,0 +1,6 @@
+{"sequence":1,"event_type":"agent/request","payload":{"usage":{"total_tokens":100,"context_tokens":100},"latency_ms":100}}
+{"sequence":2,"event_type":"agent/request-error","payload":{"retry":true,"error_code":"synthetic_error"}}
+{"sequence":3,"event_type":"agent/request","payload":{"usage":{"total_tokens":250,"context_tokens":250},"latency_ms":220}}
+{"sequence":4,"event_type":"agent/request-error","payload":{"retry":true,"error_code":"synthetic_error"}}
+{"sequence":5,"event_type":"agent/request","payload":{"usage":{"total_tokens":500,"context_tokens":600},"latency_ms":500}}
+{"sequence":6,"event_type":"agent/request-error","payload":{"retry":true,"error_code":"synthetic_error"}}

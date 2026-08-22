@@ -1,24 +1,24 @@
 # 使用背景
 
-Prompt 工程常见的问题是：我们看到一个 prompt 的分数更高，但不知道这个提升是否可靠。
+PromptControlLab 是面向 Prompt 与 AI Agent 的开源本地控制闭环。它让“意图到执行”的路径可检查：先复核请求，再选择授权边界，记录归一化事件，解释决策，并保留版本化产物供后续审查。
 
-常见风险包括：
+## 为什么需要控制闭环
 
-- 在 validation 上反复调 prompt，最后得到的结果可能只是 validation artifact。
-- train、validation、withheld 数据混在一起，导致评测看起来过好。
-- 只看平均分，忽略某些任务 slice 已经退化。
-- soft prompt 训练有效，但部署时只能使用 hard prompt，效果可能丢失。
-- prompt 改动后，输出分数变化不大，但 hidden-state trajectory 可能更漂移、更不稳定。
+Prompt 与 Agent 运行经常跨越单一分数无法描述的边界：请求可能调用模型、让 Agent 操作项目、向模型提供商传输敏感文本，或在证据变弱后继续执行。PromptControlLab 把这些选择变成显式的本地步骤：
 
-PromptControlLab 的目标是把这些问题变成可检查的工程步骤。它不只回答“分数是多少”，还回答：
+1. **执行前：**检查意图、范围、模型提供商或 Agent、脱敏与授权。
+2. **运行中：**观察有界、归一化事件，不静默扩大权限。
+3. **原因：**为诊断与门控附上理由和事件引用。
+4. **执行后：**对照已记录结果与原始目标。
+5. **决策：**保存允许、建议、门控或证据不足结果。
+6. **历史：**重新打开 JSON 产物；需要时重建可选 SQLite 索引。
 
-- 数据是否切干净？
-- prompt 改动是否统计上可靠？
-- 哪些 slice 变好或变差？
-- soft-to-hard 转换风险是否高？
-- trajectory 是否更稳定或更漂移？
-- time-varying prompt 的收益是否真的来自时序结构？
+控制闭环可以停在检查阶段，也可以调用指定模型，或在声明范围内监督 Agent。它不依赖托管服务，也不会因为环境中存在凭据就推断用户已经授权。
 
-因此，它适合用在 prompt 优化研究、论文复现、本地 prompt regression testing、soft prompt 部署分析和 open-model hidden-state 诊断中。
+## 证据边界
 
-工具支持两种模式。Quick Mode 给非专业人员一个命令生成可读报告。Expert Mode 保留每个独立命令，方便专业用户深入控制和审计。
+版本化 JSON 与 JSONL 是事实源。报告和本地 UI 只是这些证据的视图。已记录的决策不是因果结论或安全证明，缺失事件仍然是缺失证据。
+
+## 高级诊断
+
+Prompt 评测、三段切分统计、soft/hard 投影、hidden-state trajectory、Riccati surrogate、time-varying soft control 和 PEOC 证据导入仅属于可选高级诊断。它们可以加深有证据支持的调查，但不是默认本地控制路径的前置条件。

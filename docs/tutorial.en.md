@@ -2,6 +2,26 @@
 
 This tutorial uses the format "operation -> result -> what it explains".
 
+## 2-Minute Control Loop
+
+Operation:
+
+```bash
+pcl control --prompt "Inspect this request and propose a bounded plan." --authorization inspect --out runs/first-control --json
+pcl ui --runs runs --language en
+```
+
+Result: `control_run.json`, `events.jsonl`, `preflight.json`, `attribution.json`,
+`stability.json`, `decision.json`, `report.md`, and `report.html` under
+`runs/first-control`.
+
+What it explains: `inspect` records a complete local control run without calling a model or
+launching an agent. Review the risk, authorization, evidence, stability state, and next action
+before granting broader authority.
+
+Next: use `--authorization model` with an explicit provider/model, or install the DeepSeek
+Harness adapter for agent lifecycle control.
+
 ## Beginner Mode: Choose a Scenario
 
 Operation:

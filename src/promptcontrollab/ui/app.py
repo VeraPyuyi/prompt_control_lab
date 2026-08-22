@@ -25,6 +25,8 @@ from promptcontrollab.tool_choice import (
     tool_choice_lanes,
 )
 from promptcontrollab.ui.charts import (
+    control_event_timeline,
+    control_signal_bar,
     file_breakdown_bar,
     history_category_timeline,
     history_numeric_trend,
@@ -41,6 +43,7 @@ from promptcontrollab.ui.components import (
     metric_cards,
     paper_card_html,
     prompt_diff,
+    recommendation_card_html,
     research_evidence_map_html,
     stat_card_html,
 )
@@ -49,6 +52,7 @@ from promptcontrollab.ui.data import (
     changed_line_rows,
     claim_check_summary,
     claim_evidence_ladder,
+    deepseek_harness_view,
     ecosystem_demo_rows,
     ecosystem_evidence_matrix_rows,
     ecosystem_market_map_rows,
@@ -103,10 +107,182 @@ from promptcontrollab.ui.workflows import (
     save_guard_outputs,
 )
 
+DEFAULT_PRIMARY_VIEW = "before"
+PRIMARY_VIEW_ORDER = (
+    "before",
+    "run",
+    "why",
+    "after",
+    "decision",
+    "history",
+    "advanced",
+)
+PRIMARY_VIEW_LABELS = {
+    "en": {
+        "before": "Before",
+        "run": "Run",
+        "why": "Why",
+        "after": "After",
+        "decision": "Decision",
+        "history": "History",
+        "advanced": "Advanced",
+    },
+    "zh": {
+        "before": "执行前",
+        "run": "运行中",
+        "why": "原因",
+        "after": "执行后",
+        "decision": "决策",
+        "history": "历史",
+        "advanced": "高级",
+    },
+}
+LEGACY_VIEW_GROUPS = {
+    "before": ("guard", "tutorial"),
+    "run": ("workflows",),
+    "why": (),
+    "after": ("drift", "audit"),
+    "decision": ("report",),
+    "history": ("history",),
+    "advanced": ("research",),
+}
+LEGACY_VIEW_ALIASES = {
+    "guard": "before",
+    "tutorial": "before",
+    "workflows": "run",
+    "drift": "after",
+    "audit": "after",
+    "report": "decision",
+    "research": "advanced",
+}
+
+CONTROL_TEXT = {
+    "en": {
+        "navigation": "Primary navigation",
+        "before_title": "Before execution",
+        "before_caption": "Preflight and prompt-gate evidence for the selected control run.",
+        "run_title": "Run evidence",
+        "run_caption": "Ordered public session, turn, tool, and provider metadata.",
+        "why_title": "Why this run looks this way",
+        "why_caption": "Observed factors and Harness guard signals, without causal claims.",
+        "after_title": "After execution",
+        "after_caption": "Bounded stability signals, file changes, and recorded test outcomes.",
+        "decision_title": "Decision",
+        "decision_caption": "Current recommendation and locally available reports.",
+        "advanced_title": "Advanced diagnostics",
+        "advanced_caption": (
+            "PEOC and research diagnostics are isolated here and do not constitute causal or "
+            "safety proof."
+        ),
+        "missing": "No control-run artifacts are available for the selected run.",
+        "run_id": "Run ID",
+        "session_id": "Harness session",
+        "status": "Status",
+        "authorization": "Authorization",
+        "agent": "Agent",
+        "prompt_gate": "Prompt gate",
+        "tool_gates": "Tool gates",
+        "risk": "Risk",
+        "review": "Review required",
+        "timeline": "Session and turn timeline",
+        "provider_model": "Provider and model",
+        "provider": "Provider",
+        "requested_model": "Requested model",
+        "observed_model": "Observed model",
+        "provenance": "Model provenance evidence",
+        "usage": "Usage and latency",
+        "input_tokens": "Input tokens",
+        "output_tokens": "Output tokens",
+        "total_tokens": "Total tokens",
+        "cached_tokens": "Cached tokens",
+        "cost": "Recorded cost",
+        "latency": "Latency (ms)",
+        "repeated_tools": "Repeated tool calls",
+        "attribution": "Observed attribution factors",
+        "guard_signals": "Harness guard signals",
+        "no_guard_signals": "No Harness repeat-tool or timeout signal was recorded.",
+        "stability": "Observable stability",
+        "confidence": "Confidence",
+        "observed_events": "Observed events",
+        "signals": "Observable signal counts",
+        "changes": "File and test changes",
+        "recommendation": "Current recommendation",
+        "reports": "Report links",
+        "no_reports": "No local control report is available yet.",
+        "legacy_guard": "Guard prompt",
+        "legacy_tutorial": "Tutorial",
+        "legacy_workflows": "Workflows",
+        "legacy_drift": "Model drift",
+        "legacy_audit": "Agent diff audit",
+        "legacy_report": "Evaluation report",
+        "legacy_research": "PEOC and research diagnostics",
+    },
+    "zh": {
+        "navigation": "主导航",
+        "before_title": "执行前",
+        "before_caption": "所选 control run 的预检与 prompt gate 证据。",
+        "run_title": "运行证据",
+        "run_caption": "按顺序展示公开的 session、turn、工具与 provider 元数据。",
+        "why_title": "为什么会得到当前结果",
+        "why_caption": "只展示可观察因素和 Harness guard 信号，不作因果主张。",
+        "after_title": "执行后",
+        "after_caption": "有界的稳定性信号、文件变更与已记录测试结果。",
+        "decision_title": "决策",
+        "decision_caption": "当前建议与本地可用报告。",
+        "advanced_title": "高级诊断",
+        "advanced_caption": "PEOC 与研究诊断集中在这里；它们不构成因果证明或安全证明。",
+        "missing": "所选 run 暂无 control-run artifact。",
+        "run_id": "Run ID",
+        "session_id": "Harness session",
+        "status": "状态",
+        "authorization": "授权范围",
+        "agent": "Agent",
+        "prompt_gate": "Prompt gate",
+        "tool_gates": "工具 gate",
+        "risk": "风险",
+        "review": "需要复核",
+        "timeline": "Session 与 turn 时间线",
+        "provider_model": "Provider 与模型",
+        "provider": "Provider",
+        "requested_model": "请求模型",
+        "observed_model": "观测模型",
+        "provenance": "模型来源证据",
+        "usage": "Token、成本与延迟",
+        "input_tokens": "输入 token",
+        "output_tokens": "输出 token",
+        "total_tokens": "总 token",
+        "cached_tokens": "缓存 token",
+        "cost": "记录成本",
+        "latency": "延迟（毫秒）",
+        "repeated_tools": "重复工具调用",
+        "attribution": "可观察归因因素",
+        "guard_signals": "Harness guard 信号",
+        "no_guard_signals": "未记录 Harness 重复工具或超时信号。",
+        "stability": "可观察稳定性",
+        "confidence": "置信度",
+        "observed_events": "观测事件数",
+        "signals": "可观察信号计数",
+        "changes": "文件与测试变更",
+        "recommendation": "当前建议",
+        "reports": "报告链接",
+        "no_reports": "尚无本地 control report。",
+        "legacy_guard": "Prompt 守护",
+        "legacy_tutorial": "教程",
+        "legacy_workflows": "工作流",
+        "legacy_drift": "模型漂移",
+        "legacy_audit": "Agent diff 审计",
+        "legacy_report": "评测报告",
+        "legacy_research": "PEOC 与研究诊断",
+    },
+}
+
 TEXT = {
     "en": {
-        "title": "prompt_control_lab dashboard",
-        "subtitle": "Local preflight, provenance, and audit views. No artifacts are uploaded.",
+        "title": "PromptControlLab Control Runs",
+        "subtitle": (
+            "Local preflight, observable execution evidence, and bounded recommendations. "
+            "No artifacts are uploaded."
+        ),
         "research": "Research Overview",
         "research_title": "Control diagnostics for prompt optimization",
         "research_subtitle": (
@@ -413,8 +589,8 @@ TEXT = {
         "risk_categories": "Risk categories",
     },
     "zh": {
-        "title": "prompt_control_lab 本地仪表盘",
-        "subtitle": "面向 prompt 优化的研究诊断、可复现评测和本地 agent 审计视图。不会上传 prompt、代码或 artifact。",
+        "title": "PromptControlLab Control Runs",
+        "subtitle": "本地预检、可观察执行证据和有边界的建议。不会上传 prompt、代码或 artifact。",
         "research": "研究总览",
         "research_title": "Prompt 优化的控制论诊断工作台",
         "research_subtitle": (
@@ -1453,24 +1629,35 @@ def main() -> None:
 
     runs = list_runs(runs_dir)
     detail = _select_run(st, runs, text)
-    default_view = str(query.get("view") or os.environ.get("PCL_UI_DEFAULT_VIEW", "research"))
+    requested_view = str(
+        query.get("view") or os.environ.get("PCL_UI_DEFAULT_VIEW", DEFAULT_PRIMARY_VIEW)
+    )
+    default_view = _resolve_primary_view(requested_view)
     views = _ordered_views(default_view)
-    tabs = st.tabs([text[name] for name in views])
-    for tab, name in zip(tabs, views, strict=True):
-        with tab:
-            _render_view(
-                st,
-                name,
-                text,
-                language,
-                policy_path,
-                detail,
-                query,
-                runs_dir,
-                execution_mode,
-                overwrite,
-                allow_external_outputs,
-            )
+    labels = primary_view_labels(language)
+    selected_label = str(
+        st.radio(
+            CONTROL_TEXT[language]["navigation"],
+            labels,
+            index=views.index(default_view),
+            horizontal=True,
+            label_visibility="collapsed",
+        )
+    )
+    selected_view = views[labels.index(selected_label)]
+    _render_view(
+        st,
+        selected_view,
+        text,
+        language,
+        policy_path,
+        detail,
+        query,
+        runs_dir,
+        execution_mode,
+        overwrite,
+        allow_external_outputs,
+    )
 
 
 def _render_view(
@@ -1486,9 +1673,176 @@ def _render_view(
     overwrite: bool,
     allow_external_outputs: bool,
 ) -> None:
-    if name == "research":
-        _render_research_overview_tab(st, text, detail, language)
-    elif name == "workflows":
+    primary = _resolve_primary_view(name)
+    if primary == "before":
+        _render_before_view(
+            st,
+            text,
+            language,
+            policy_path,
+            detail,
+            query,
+            runs_dir,
+            overwrite,
+        )
+    elif primary == "run":
+        _render_run_view(
+            st,
+            text,
+            language,
+            policy_path,
+            detail,
+            runs_dir,
+            execution_mode,
+            overwrite,
+            allow_external_outputs,
+        )
+    elif primary == "why":
+        _render_why_view(st, language, detail)
+    elif primary == "after":
+        _render_after_view(st, text, language, detail)
+    elif primary == "decision":
+        _render_decision_view(st, text, language, detail)
+    elif primary == "history":
+        _render_history_tab(st, text, detail)
+    elif primary == "advanced":
+        _render_advanced_view(st, text, language, detail)
+
+
+def _render_before_view(
+    st: Any,
+    text: dict[str, str],
+    language: str,
+    policy_path: Path | None,
+    detail: JsonDict,
+    query: JsonDict,
+    runs_dir: Path,
+    overwrite: bool,
+) -> None:
+    control_text = CONTROL_TEXT[language]
+    view = deepseek_harness_view(detail)
+    identity = _dict(view.get("identity"))
+    st.subheader(control_text["before_title"])
+    st.caption(control_text["before_caption"])
+    if not _dict(detail.get("control_run")):
+        st.info(control_text["missing"])
+    else:
+        metric_cards(
+            st,
+            [
+                (control_text["run_id"], identity.get("run_id")),
+                (control_text["status"], identity.get("status")),
+                (control_text["authorization"], identity.get("authorization")),
+                (control_text["agent"], identity.get("agent")),
+            ],
+        )
+        prompt_gates = [
+            cast(JsonDict, row)
+            for row in _list(view.get("gates"))
+            if isinstance(row, dict) and row.get("scope") == "prompt"
+        ]
+        if prompt_gates:
+            st.markdown(f"### {control_text['prompt_gate']}")
+            st.dataframe(prompt_gates, use_container_width=True, hide_index=True)
+    with st.expander(control_text["legacy_guard"], expanded=False):
+        _render_guard_tab(
+            st,
+            text,
+            language,
+            policy_path,
+            runs_dir,
+            _truthy(query.get("demo")),
+            overwrite,
+        )
+    with st.expander(control_text["legacy_tutorial"], expanded=False):
+        _render_tutorial_tab(st, text, language)
+
+
+def _render_run_view(
+    st: Any,
+    text: dict[str, str],
+    language: str,
+    policy_path: Path | None,
+    detail: JsonDict,
+    runs_dir: Path,
+    execution_mode: str,
+    overwrite: bool,
+    allow_external_outputs: bool,
+) -> None:
+    control_text = CONTROL_TEXT[language]
+    view = deepseek_harness_view(detail)
+    timeline = [cast(JsonDict, row) for row in _list(view.get("timeline")) if isinstance(row, dict)]
+    st.subheader(control_text["run_title"])
+    st.caption(control_text["run_caption"])
+    if not timeline and not _dict(detail.get("control_run")):
+        st.info(control_text["missing"])
+    else:
+        identity = _dict(view.get("identity"))
+        metric_cards(
+            st,
+            [
+                (control_text["run_id"], identity.get("run_id")),
+                (control_text["session_id"], identity.get("session_id")),
+                (control_text["status"], identity.get("status")),
+                (control_text["agent"], identity.get("agent")),
+            ],
+        )
+        if timeline:
+            st.markdown(f"### {control_text['timeline']}")
+            st.plotly_chart(
+                control_event_timeline(timeline, title=control_text["timeline"]),
+                use_container_width=True,
+                config={"displayModeBar": False},
+            )
+            st.dataframe(timeline, use_container_width=True, hide_index=True)
+        tool_gates = [
+            cast(JsonDict, row)
+            for row in _list(view.get("gates"))
+            if isinstance(row, dict) and row.get("scope") == "tool"
+        ]
+        if tool_gates:
+            st.markdown(f"### {control_text['tool_gates']}")
+            st.dataframe(tool_gates, use_container_width=True, hide_index=True)
+        provider = _dict(view.get("provider"))
+        st.markdown(f"### {control_text['provider_model']}")
+        metric_cards(
+            st,
+            [
+                (control_text["provider"], provider.get("provider")),
+                (control_text["requested_model"], provider.get("requested_model")),
+                (control_text["observed_model"], provider.get("observed_model")),
+            ],
+        )
+        provenance = [
+            cast(JsonDict, row)
+            for row in _list(provider.get("provenance"))
+            if isinstance(row, dict)
+        ]
+        if provenance:
+            st.markdown(f"#### {control_text['provenance']}")
+            st.dataframe(provenance, use_container_width=True, hide_index=True)
+        usage = _dict(view.get("usage"))
+        st.markdown(f"### {control_text['usage']}")
+        metric_cards(
+            st,
+            [
+                (control_text["input_tokens"], usage.get("input_tokens")),
+                (control_text["output_tokens"], usage.get("output_tokens")),
+                (control_text["total_tokens"], usage.get("total_tokens")),
+                (control_text["cached_tokens"], usage.get("cached_tokens")),
+                (control_text["cost"], usage.get("cost")),
+                (control_text["latency"], usage.get("latency_ms")),
+            ],
+        )
+        repeated = [
+            cast(JsonDict, row)
+            for row in _list(view.get("repeated_tool_calls"))
+            if isinstance(row, dict)
+        ]
+        if repeated:
+            st.markdown(f"### {control_text['repeated_tools']}")
+            st.dataframe(repeated, use_container_width=True, hide_index=True)
+    with st.expander(control_text["legacy_workflows"], expanded=False):
         _render_workflows_tab(
             st,
             text,
@@ -1500,26 +1854,149 @@ def _render_view(
             overwrite,
             allow_external_outputs,
         )
-    elif name == "tutorial":
-        _render_tutorial_tab(st, text, language)
-    elif name == "guard":
-        _render_guard_tab(
+
+
+def _render_why_view(st: Any, language: str, detail: JsonDict) -> None:
+    control_text = CONTROL_TEXT[language]
+    view = deepseek_harness_view(detail)
+    attribution = _dict(view.get("attribution"))
+    st.subheader(control_text["why_title"])
+    st.caption(control_text["why_caption"])
+    if not _dict(detail.get("control_run")):
+        st.info(control_text["missing"])
+        return
+    metric_cards(
+        st,
+        [(control_text["attribution"], attribution.get("status"))],
+    )
+    if attribution.get("summary"):
+        st.info(str(attribution["summary"]))
+    factors = [
+        cast(JsonDict, row)
+        for row in _list(attribution.get("factors"))
+        if isinstance(row, dict)
+    ]
+    if factors:
+        st.dataframe(factors, use_container_width=True, hide_index=True)
+    guard_signals = [
+        cast(JsonDict, row)
+        for row in _list(view.get("guard_signals"))
+        if isinstance(row, dict)
+    ]
+    st.markdown(f"### {control_text['guard_signals']}")
+    if guard_signals:
+        st.dataframe(guard_signals, use_container_width=True, hide_index=True)
+    else:
+        st.caption(control_text["no_guard_signals"])
+    recommendation = _dict(view.get("recommendation"))
+    st.caption(str(recommendation.get("boundary") or ""))
+
+
+def _render_after_view(
+    st: Any,
+    text: dict[str, str],
+    language: str,
+    detail: JsonDict,
+) -> None:
+    control_text = CONTROL_TEXT[language]
+    view = deepseek_harness_view(detail)
+    stability = _dict(view.get("stability"))
+    st.subheader(control_text["after_title"])
+    st.caption(control_text["after_caption"])
+    if not _dict(detail.get("control_run")):
+        st.info(control_text["missing"])
+    else:
+        metric_cards(
             st,
-            text,
-            language,
-            policy_path,
-            runs_dir,
-            _truthy(query.get("demo")),
-            overwrite,
+            [
+                (control_text["stability"], stability.get("state")),
+                (control_text["confidence"], stability.get("confidence")),
+                (control_text["observed_events"], stability.get("observed_events")),
+            ],
         )
-    elif name == "report":
-        _render_report_tab(st, text, detail)
-    elif name == "drift":
+        if stability.get("summary"):
+            st.info(str(stability["summary"]))
+        signal_rows = [
+            cast(JsonDict, row)
+            for row in _list(stability.get("signal_counts"))
+            if isinstance(row, dict)
+        ]
+        if signal_rows:
+            st.plotly_chart(
+                control_signal_bar(signal_rows, title=control_text["signals"]),
+                use_container_width=True,
+                config={"displayModeBar": False},
+            )
+        changes = [
+            cast(JsonDict, row)
+            for row in _list(view.get("changes"))
+            if isinstance(row, dict)
+        ]
+        if changes:
+            st.markdown(f"### {control_text['changes']}")
+            st.dataframe(changes, use_container_width=True, hide_index=True)
+    with st.expander(control_text["legacy_drift"], expanded=False):
         _render_model_drift_tab(st, text, detail)
-    elif name == "audit":
+    with st.expander(control_text["legacy_audit"], expanded=False):
         _render_audit_tab(st, text, detail)
-    elif name == "history":
-        _render_history_tab(st, text, detail)
+
+
+def _render_decision_view(
+    st: Any,
+    text: dict[str, str],
+    language: str,
+    detail: JsonDict,
+) -> None:
+    control_text = CONTROL_TEXT[language]
+    view = deepseek_harness_view(detail)
+    recommendation = _dict(view.get("recommendation"))
+    reasons = [str(item) for item in _list(recommendation.get("reasons"))]
+    st.subheader(control_text["decision_title"])
+    st.caption(control_text["decision_caption"])
+    st.markdown(
+        recommendation_card_html(
+            decision=str(recommendation.get("decision") or "insufficient_evidence"),
+            next_action=str(recommendation.get("next_action") or ""),
+            reasons=reasons,
+            boundary=str(recommendation.get("boundary") or ""),
+            label=control_text["recommendation"],
+        ),
+        unsafe_allow_html=True,
+    )
+    links = [
+        cast(JsonDict, row)
+        for row in _list(view.get("report_links"))
+        if isinstance(row, dict)
+    ]
+    st.markdown(f"### {control_text['reports']}")
+    if links:
+        rendered_links = " · ".join(
+            f"[{html.escape(str(row.get('name') or 'report'))}]({row.get('href')})"
+            for row in links
+        )
+        st.markdown(rendered_links)
+        st.dataframe(
+            [{"report": row.get("name"), "path": row.get("path")} for row in links],
+            use_container_width=True,
+            hide_index=True,
+        )
+    else:
+        st.caption(control_text["no_reports"])
+    with st.expander(control_text["legacy_report"], expanded=False):
+        _render_report_tab(st, text, detail)
+
+
+def _render_advanced_view(
+    st: Any,
+    text: dict[str, str],
+    language: str,
+    detail: JsonDict,
+) -> None:
+    control_text = CONTROL_TEXT[language]
+    st.subheader(control_text["advanced_title"])
+    st.caption(control_text["advanced_caption"])
+    with st.expander(control_text["legacy_research"], expanded=True):
+        _render_research_overview_tab(st, text, detail, language)
 
 
 def _hide_streamlit_chrome(st: Any) -> None:
@@ -1677,10 +2154,27 @@ def _tutorial_screenshot_path(image_key: str, language: str) -> Path:
 
 
 def _ordered_views(first: str) -> list[str]:
-    views = ["research", "workflows", "tutorial", "guard", "report", "drift", "audit", "history"]
-    if first not in views:
-        return views
-    return [first, *[view for view in views if view != first]]
+    del first
+    return list(PRIMARY_VIEW_ORDER)
+
+
+def primary_view_labels(language: str) -> list[str]:
+    """Return primary control-run navigation labels in fixed lifecycle order."""
+
+    labels = PRIMARY_VIEW_LABELS.get(language, PRIMARY_VIEW_LABELS["en"])
+    return [labels[view] for view in PRIMARY_VIEW_ORDER]
+
+
+def legacy_sections_for(view: str) -> tuple[str, ...]:
+    """Return preserved legacy renderers nested under one primary view."""
+
+    return LEGACY_VIEW_GROUPS.get(view, ())
+
+
+def _resolve_primary_view(value: str) -> str:
+    if value in PRIMARY_VIEW_ORDER:
+        return value
+    return LEGACY_VIEW_ALIASES.get(value, DEFAULT_PRIMARY_VIEW)
 
 
 def _select_run(st: Any, runs: list[JsonDict], text: dict[str, str]) -> JsonDict:

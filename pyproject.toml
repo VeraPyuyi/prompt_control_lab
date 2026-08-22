@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 [project]
 name = "promptcontrollab"
 version = "0.1.0"
-description = "Control-oriented diagnostics and reproducible regression testing for prompt changes."
+description = "Local control, attribution, and stability diagnostics for prompts and AI agents."
 readme = "README.md"
 requires-python = ">=3.10"
 license = { text = "Apache-2.0" }
@@ -14,10 +14,13 @@ authors = [
 ]
 keywords = [
   "prompt-engineering",
+  "ai-agents",
+  "agent-governance",
   "llm-evaluation",
+  "model-provenance",
   "prompt-diagnostics",
-  "soft-prompts",
-  "control-theory"
+  "control-theory",
+  "deepseek"
 ]
 classifiers = [
   "Development Status :: 3 - Alpha",

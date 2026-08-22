@@ -27,6 +27,8 @@ from promptcontrollab.config import (
     get_config_str,
     load_project_config,
 )
+from promptcontrollab.control_bridge import serve_stdio
+from promptcontrollab.control_workflow import AUTHORIZATIONS, preview_guard, run_control
 from promptcontrollab.doctor import format_doctor, run_doctor
 from promptcontrollab.ecosystem_demo import run_ecosystem_demo, write_ecosystem_scorecard
 from promptcontrollab.errors import PromptControlLabError
@@ -42,6 +44,12 @@ from promptcontrollab.external_evidence import (
 )
 from promptcontrollab.files import JsonDict, ensure_dir, read_json, write_json
 from promptcontrollab.gate import run_gate
+from promptcontrollab.harness_integration import (
+    doctor_harness,
+    initialize_harness_project,
+    replay_harness_session,
+    resolve_harness_report,
+)
 from promptcontrollab.hf_hidden import extract_hidden_states
 from promptcontrollab.history import compare_history, index_history
 from promptcontrollab.ingest import (
@@ -65,6 +73,12 @@ from promptcontrollab.prompt_context import load_prompt_context
 from promptcontrollab.prompt_diff import render_prompt_diff
 from promptcontrollab.prompt_guard import guard_prompt
 from promptcontrollab.prompt_improver import improve_prompt
+from promptcontrollab.providers import (
+    call_provider,
+    doctor_provider,
+    inspect_provider,
+    list_providers,
+)
 from promptcontrollab.reporting import generate_report
 from promptcontrollab.research_workflow import (
     run_research_diagnostics,
@@ -176,7 +190,10 @@ def build_parser() -> argparse.ArgumentParser:
 
     parser = argparse.ArgumentParser(
         prog="pcl",
-        description="PromptControlLab prompt evaluation and diagnostics toolkit.",
+        description=(
+            "PromptControlLab local control, attribution, and stability diagnostics "
+            "for prompts and AI agents."
+        ),
         epilog=(
             "Start here: `pcl start --guide`, `pcl quickstart --out demo --open-report`, "
             'or `pcl choose --need "<your goal>"`.'
@@ -542,6 +559,150 @@ def build_parser() -> argparse.ArgumentParser:
         help="Optional estimated-token budget for the rewritten prompt.",
     )
     improve_parser.set_defaults(func=_cmd_improve)
+
+    control_parser = subcommands.add_parser(
+        "control",
+        help="Run a local preflight control loop without implicit model or agent execution.",
+    )
+    control_parser.add_argument("--prompt", default=None, help="Prompt string to inspect.")
+    control_parser.add_argument("--prompt-file", type=Path, default=None, help="Prompt text file.")
+    control_parser.add_argument(
+        "--stdin",
+        action="store_true",
+        help="Read the prompt from stdin.",
+    )
+    control_parser.add_argument(
+        "--authorization",
+        choices=list(AUTHORIZATIONS),
+        default=None,
+        help="Explicit execution boundary. Required when stdin is not a TTY.",
+    )
+    control_parser.add_argument(
+        "--out",
+        type=Path,
+        default=Path("runs") / "control",
+        help="Control run directory.",
+    )
+    control_parser.add_argument("--run-id", default=None, help="Optional stable run id.")
+    control_parser.add_argument("--provider", default=None, help="Declared provider metadata.")
+    control_parser.add_argument("--model", default=None, help="Declared public model id.")
+    control_parser.add_argument("--agent", default=None, help="Declared agent adapter id.")
+    control_parser.add_argument("--policy", type=Path, default=None, help="Guard policy YAML.")
+    control_parser.add_argument(
+        "--profile",
+        choices=["general", "coding", "research"],
+        default="general",
+    )
+    control_parser.add_argument("--language", choices=["auto", "zh", "en"], default="auto")
+    control_parser.add_argument(
+        "--token-mode",
+        choices=["balanced", "aggressive"],
+        default="balanced",
+    )
+    control_parser.add_argument("--max-tokens", type=int, default=None)
+    control_parser.add_argument(
+        "--json",
+        action="store_true",
+        help="Emit the final status as JSON.",
+    )
+    control_parser.set_defaults(func=_cmd_control)
+
+    providers_parser = subcommands.add_parser(
+        "providers",
+        help="Inspect and validate configured public model providers.",
+    )
+    providers_subcommands = providers_parser.add_subparsers(
+        dest="providers_command",
+        required=True,
+    )
+    providers_list_parser = providers_subcommands.add_parser(
+        "list",
+        help="List supported provider adapters.",
+    )
+    providers_list_parser.add_argument("--json", action="store_true", help="Emit stable JSON.")
+    providers_list_parser.set_defaults(func=_cmd_providers_list)
+    providers_inspect_parser = providers_subcommands.add_parser(
+        "inspect",
+        help="Inspect local provider configuration without network access.",
+    )
+    providers_inspect_parser.add_argument("provider")
+    providers_inspect_parser.add_argument("--base-url", default=None)
+    providers_inspect_parser.add_argument("--api-key-env", default=None)
+    providers_inspect_parser.add_argument("--json", action="store_true", help="Emit stable JSON.")
+    providers_inspect_parser.set_defaults(func=_cmd_providers_inspect)
+    providers_doctor_parser = providers_subcommands.add_parser(
+        "doctor",
+        help="Check provider configuration offline unless --live is explicit.",
+    )
+    providers_doctor_parser.add_argument("provider")
+    providers_doctor_parser.add_argument("--live", action="store_true")
+    providers_doctor_parser.add_argument("--model", default=None)
+    providers_doctor_parser.add_argument("--base-url", default=None)
+    providers_doctor_parser.add_argument("--api-key-env", default=None)
+    providers_doctor_parser.add_argument("--timeout", type=float, default=10.0)
+    providers_doctor_parser.add_argument("--json", action="store_true", help="Emit stable JSON.")
+    providers_doctor_parser.set_defaults(func=_cmd_providers_doctor)
+
+    harness_parser = subcommands.add_parser(
+        "harness",
+        help="Initialize, inspect, replay, and report DeepSeek Harness sessions.",
+    )
+    harness_subcommands = harness_parser.add_subparsers(dest="harness_command", required=True)
+    harness_init_parser = harness_subcommands.add_parser(
+        "init",
+        help="Write reviewable local Harness integration files.",
+    )
+    harness_init_parser.add_argument("--project", type=Path, default=Path.cwd())
+    harness_init_parser.add_argument("--force", action="store_true")
+    harness_init_parser.add_argument("--json", action="store_true", help="Emit stable JSON.")
+    harness_init_parser.set_defaults(func=_cmd_harness_init)
+    harness_doctor_parser = harness_subcommands.add_parser(
+        "doctor",
+        help="Check the local Harness integration without network access.",
+    )
+    harness_doctor_parser.add_argument("--project", type=Path, default=Path.cwd())
+    harness_doctor_parser.add_argument("--json", action="store_true", help="Emit stable JSON.")
+    harness_doctor_parser.set_defaults(func=_cmd_harness_doctor)
+    harness_replay_parser = harness_subcommands.add_parser(
+        "replay",
+        help="Replay an existing Harness JSONL session into a control run.",
+    )
+    harness_replay_parser.add_argument("--session", type=Path, required=True)
+    harness_replay_parser.add_argument("--out", type=Path, required=True)
+    harness_replay_parser.add_argument("--policy", type=Path, default=None)
+    harness_replay_parser.add_argument(
+        "--authorization",
+        choices=["agent-scoped", "agent-full"],
+        default="agent-scoped",
+    )
+    harness_replay_parser.add_argument("--json", action="store_true", help="Emit stable JSON.")
+    harness_replay_parser.set_defaults(func=_cmd_harness_replay)
+    harness_report_parser = harness_subcommands.add_parser(
+        "report",
+        help="Resolve an existing Harness control report.",
+    )
+    harness_report_parser.add_argument("--runs", type=Path, required=True)
+    harness_report_parser.add_argument("--session", required=True)
+    harness_report_parser.add_argument("--json", action="store_true", help="Emit stable JSON.")
+    harness_report_parser.set_defaults(func=_cmd_harness_report)
+
+    bridge_parser = subcommands.add_parser(
+        "bridge",
+        help="Serve the persistent local control protocol bridge.",
+    )
+    bridge_subcommands = bridge_parser.add_subparsers(dest="bridge_command", required=True)
+    bridge_serve_parser = bridge_subcommands.add_parser(
+        "serve",
+        help="Serve line-delimited JSON-RPC requests.",
+    )
+    bridge_serve_parser.add_argument("--transport", choices=["stdio"], default="stdio")
+    bridge_serve_parser.add_argument(
+        "--runs-root",
+        type=Path,
+        default=Path("runs"),
+        help="Default parent directory for bridge-created runs.",
+    )
+    bridge_serve_parser.set_defaults(func=_cmd_bridge_serve)
 
     guard_parser = subcommands.add_parser(
         "guard",
@@ -1114,7 +1275,14 @@ def build_parser() -> argparse.ArgumentParser:
     )
     install_parser.add_argument(
         "plugin",
-        choices=["codex", "cursor", "claude-code", "github-action", "all"],
+        choices=[
+            "codex",
+            "cursor",
+            "claude-code",
+            "github-action",
+            "deepseek-harness",
+            "all",
+        ],
     )
     install_parser.add_argument("--target", type=Path, default=None, help="Override install path.")
     install_parser.add_argument("--force", action="store_true", help="Overwrite existing files.")
@@ -2567,6 +2735,150 @@ def _cmd_guard(args: argparse.Namespace) -> None:
     print(_format_guard_output(payload))
 
 
+def _cmd_control(args: argparse.Namespace) -> None:
+    authorization = args.authorization
+    if authorization is None and not _stdin_is_tty():
+        msg = "--authorization is required in non-interactive mode"
+        raise ValueError(msg)
+    prompt = _read_guard_prompt(args.prompt, args.prompt_file, args.stdin)
+    project_config, project_config_path = load_project_config()
+    policy_path = args.policy or _config_path(
+        project_config,
+        project_config_path,
+        "guard_policy",
+    )
+    if authorization is None:
+        preview = preview_guard(
+            prompt,
+            profile=args.profile,
+            policy_path=policy_path,
+            token_mode=args.token_mode,
+            max_tokens=args.max_tokens,
+            language=args.language,
+        )
+        print("Preflight preview")
+        print(f"Risk: {preview['risk_level']}")
+        token_report = preview["token_report"]
+        print(
+            "Estimated prompt tokens: "
+            f"{token_report['original_estimated_tokens']} original -> "
+            f"{token_report['improved_estimated_tokens']} guarded"
+        )
+        if args.provider and args.model:
+            print(f"Provider/model: {args.provider}/{args.model}")
+        else:
+            print("Provider/model: not selected")
+        print(f"Agent adapter: {args.agent or 'not selected'}")
+        print("Authorization scopes:")
+        print("- inspect: diagnostics only; no model, tool, or file execution")
+        print("- model: one model request; no agent tools or file execution")
+        print("- agent-scoped: adapter actions constrained by project policy")
+        print("- agent-full: full scope declared by the selected adapter")
+        print(
+            "Boundary: PromptControlLab does not sandbox agent file access; "
+            "the adapter and runtime must enforce it."
+        )
+        print(f"Suggested prompt:\n{preview['improved_prompt']}\n")
+        authorization = input(
+            "Authorization [inspect/model/agent-scoped/agent-full]: "
+        ).strip()
+        if authorization not in AUTHORIZATIONS:
+            msg = f"Authorization must be one of: {', '.join(AUTHORIZATIONS)}"
+            raise ValueError(msg)
+    if authorization == "model" and (
+        args.provider is None
+        or not args.provider.strip()
+        or args.model is None
+        or not args.model.strip()
+    ):
+        msg = "Model authorization requires both --provider and --model."
+        raise ValueError(msg)
+    result = run_control(
+        prompt=prompt,
+        authorization=authorization,
+        run_dir=args.out,
+        run_id=args.run_id,
+        provider=args.provider,
+        model=args.model,
+        agent=args.agent,
+        profile=args.profile,
+        policy_path=policy_path,
+        token_mode=args.token_mode,
+        max_tokens=args.max_tokens,
+        language=args.language,
+        model_executor=call_provider if authorization == "model" else None,
+    )
+    if args.json:
+        print(json.dumps(result, ensure_ascii=False, sort_keys=True))
+    else:
+        decision = result["decision"]
+        print("PromptControlLab Control")
+        print(f"Run: {result['run_dir']}")
+        print(f"Decision: {decision['decision']}")
+        print(f"Next action: {decision['next_action']}")
+
+
+def _cmd_providers_list(args: argparse.Namespace) -> None:
+    _print_command_payload(list_providers(), compact=args.json)
+
+
+def _cmd_providers_inspect(args: argparse.Namespace) -> None:
+    payload = inspect_provider(
+        args.provider,
+        base_url=args.base_url,
+        api_key_env=args.api_key_env,
+    )
+    _print_command_payload(payload, compact=args.json)
+
+
+def _cmd_providers_doctor(args: argparse.Namespace) -> None:
+    payload = doctor_provider(
+        args.provider,
+        live=args.live,
+        model=args.model,
+        base_url=args.base_url,
+        api_key_env=args.api_key_env,
+        timeout=args.timeout,
+    )
+    _print_command_payload(payload, compact=args.json)
+
+
+def _cmd_harness_init(args: argparse.Namespace) -> None:
+    payload = initialize_harness_project(args.project, force=args.force)
+    _print_command_payload(payload, compact=args.json)
+
+
+def _cmd_harness_doctor(args: argparse.Namespace) -> None:
+    _print_command_payload(doctor_harness(args.project), compact=args.json)
+
+
+def _cmd_harness_replay(args: argparse.Namespace) -> None:
+    payload = replay_harness_session(
+        args.session,
+        run_dir=args.out,
+        policy_path=args.policy,
+        authorization=args.authorization,
+    )
+    _print_command_payload(payload, compact=args.json)
+
+
+def _cmd_harness_report(args: argparse.Namespace) -> None:
+    payload = resolve_harness_report(args.runs, args.session)
+    _print_command_payload(payload, compact=args.json)
+
+
+def _print_command_payload(payload: object, *, compact: bool) -> None:
+    indent = None if compact else 2
+    print(json.dumps(payload, indent=indent, ensure_ascii=False, sort_keys=True))
+
+
+def _cmd_bridge_serve(args: argparse.Namespace) -> None:
+    if args.transport != "stdio":
+        msg = f"Unsupported bridge transport: {args.transport}"
+        raise ValueError(msg)
+    serve_stdio(runs_root=args.runs_root)
+
+
 def _cmd_model_detect(args: argparse.Namespace) -> None:
     sources = sum(value is not None for value in [args.response, args.predictions, args.model])
     if sources != 1:
@@ -3647,6 +3959,16 @@ def _read_guard_prompt(prompt: str | None, prompt_file: Path | None, use_stdin: 
         msg = "Provide exactly one of --prompt, --prompt-file, or --stdin"
         raise ValueError(msg)
     return prompt
+
+
+def _stdin_is_tty() -> bool:
+    isatty = getattr(sys.stdin, "isatty", None)
+    if not callable(isatty):
+        return False
+    try:
+        return bool(isatty())
+    except OSError:
+        return False
 
 
 def _optional_bool(value: str | None) -> bool | None:

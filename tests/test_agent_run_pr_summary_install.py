@@ -569,6 +569,7 @@ def test_install_plugin_all_uses_target_as_root(tmp_path: Path) -> None:
     assert (target / "cursor" / "prompt_control_lab.mdc").exists()
     assert (target / "claude-code" / "prompt_guard.py").exists()
     assert (target / "github-action" / "prompt-control-lab-gate.yml").exists()
+    assert (target / "deepseek-harness" / "src" / "index.ts").exists()
     copied_names = [path.name for path in target.rglob("*")]
     assert "__pycache__" not in copied_names
     assert not any(path.suffix == ".pyc" for path in target.rglob("*"))
@@ -585,7 +586,7 @@ def test_install_plugin_all_dry_run_uses_target_as_root_without_writing(
 
     assert payload["plugin"] == "all"
     assert payload["dry_run"] is True
-    assert len(payload["installed"]) == 4
+    assert len(payload["installed"]) == 5
     targets = {item["plugin"]: item["target"] for item in payload["installed"]}
     assert targets["codex"] == str(target / "codex")
     assert targets["cursor"] == str(target / "cursor" / "prompt_control_lab.mdc")
@@ -593,6 +594,7 @@ def test_install_plugin_all_dry_run_uses_target_as_root_without_writing(
     assert targets["github-action"] == str(
         target / "github-action" / "prompt-control-lab-gate.yml"
     )
+    assert targets["deepseek-harness"] == str(target / "deepseek-harness")
     assert not target.exists()
 
 
@@ -604,6 +606,7 @@ def test_template_data_is_available_as_package_resource() -> None:
     assert (root / "claude_code" / "prompt_guard.py").is_file()
     assert (root / "claude_code" / "settings.snippet.json").is_file()
     assert (root / "github_action" / "prompt-control-lab-gate.yml").is_file()
+    assert (root / "deepseek_harness" / "src" / "index.ts").is_file()
 
 
 class _FakeGithubClient:

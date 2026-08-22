@@ -1,0 +1,71 @@
+{
+  "schema": "prompt_control_lab.deepseek_harness.compatibility.v1",
+  "plugin_version": "0.1.0",
+  "deepseek_harness": {
+    "version": "0.1.1-rc.2",
+    "commit": "b150a551b8d465e31e418e1b2eaf5e79bbb7d28e",
+    "node": "^22.19.0 || >=24.0.0",
+    "contract_source": "docs/user/develop/framework/events.md"
+  },
+  "bridge": {
+    "protocol": "prompt_control_lab.bridge.v1",
+    "transport": "line-delimited JSON-RPC 2.0 over one persistent stdio process",
+    "command": ["pcl", "bridge", "serve", "--transport", "stdio", "--runs-root", "<runsRoot>"],
+    "methods": {
+      "harness_session_start": {
+        "kind": "synchronous lifecycle",
+        "params": ["session_id", "source", "mode", "authorization", "policy_path", "capture", "provider", "model", "runs_root", "harness_version", "harness_commit"],
+        "result": ["run_id", "status"]
+      },
+      "harness_pre_step": {
+        "kind": "synchronous model gate",
+        "params": ["run_id", "session_id", "turn", "step", "prompt", "prompt_hash", "policy_path", "feedback_max_chars"],
+        "result": ["decision", "risk_level", "summary", "feedback"],
+        "note": "prompt is transport-only and MUST NOT be persisted; prompt_hash is the durable identity"
+      },
+      "harness_tool_pre_execute": {
+        "kind": "synchronous tool gate",
+        "params": ["run_id", "session_id", "event_id", "tool", "policy_path"],
+        "result": ["decision", "reason"]
+      },
+      "harness_event": {
+        "kind": "bounded asynchronous observation",
+        "params": ["run_id", "session_id", "idempotency_key", "event_type", "sequence", "timestamp", "payload"],
+        "result": ["accepted", "duplicate"]
+      },
+      "harness_turn_end": {
+        "kind": "turn assessment",
+        "params": ["run_id", "session_id", "turn", "reason", "feedback_max_chars"],
+        "result": ["stability", "recommendation", "recover"]
+      },
+      "harness_status": {
+        "kind": "read-only query",
+        "params": ["run_id", "session_id"],
+        "result": ["run_id", "status", "risk_level", "stability", "report_path"]
+      },
+      "harness_finalize": {
+        "kind": "lifecycle finalization",
+        "params": ["run_id", "session_id"],
+        "result": ["run_id", "status", "report_path"]
+      }
+    }
+  },
+  "events": {
+    "native": ["agent/session-start", "agent/pre-step", "agent/request", "agent/request-error", "tools/pre-execute", "tools/post-execute", "tools/result", "session/event", "agent/turn-stopping"],
+    "durable_via_session_event": ["turn/end", "step/start", "step/end", "tool/call", "tool/result", "compaction/*"]
+  },
+  "privacy": {
+    "capture_default": "redacted",
+    "raw_prompt_transport_only": true,
+    "persist_hidden_reasoning": false,
+    "persist_api_keys": false,
+    "tool_arguments": "sha256 plus sorted top-level keys",
+    "tool_results": "status and counts only",
+    "assistant_content": "never copied into PromptControlLab events"
+  },
+  "failure": {
+    "suggest": "fail open with a local warning",
+    "gate": "fail closed before model or tool execution",
+    "observations": "bounded single-writer queue; overflow is counted and warned"
+  }
+}
