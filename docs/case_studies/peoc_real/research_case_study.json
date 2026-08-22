@@ -1,0 +1,2230 @@
+{
+  "claim_boundary": {
+    "blocking_sections": [
+      {
+        "section": "soft_evaluation",
+        "status": "unusable"
+      },
+      {
+        "section": "stage_heterogeneity",
+        "status": "failed_validation"
+      },
+      {
+        "section": "riccati",
+        "status": "missing"
+      },
+      {
+        "section": "soft_hard",
+        "status": "missing"
+      }
+    ],
+    "full_research_support": false,
+    "statement": "The imported bundle does not support the complete research capability set.",
+    "status": "not_supported"
+  },
+  "evidence_origin": "real",
+  "evidence_source": "REAL PEOC BUNDLE",
+  "hard_method_rows": [
+    {
+      "L0": 4,
+      "T": 8,
+      "budget": 128,
+      "extra_budgets_sig": "32,64,256",
+      "mean": 0.599609375,
+      "method": "pez",
+      "metric": "acc_hard_test",
+      "model": "Qwen/Qwen2.5-7B-Instruct",
+      "n": 10,
+      "sd": 0.047637390963350824,
+      "task": "bbh3"
+    },
+    {
+      "L0": 4,
+      "T": 8,
+      "budget": 128,
+      "extra_budgets_sig": "32,64,256",
+      "mean": 0.702734375,
+      "method": "prefix",
+      "metric": "acc_hard_test",
+      "model": "Qwen/Qwen2.5-7B-Instruct",
+      "n": 10,
+      "sd": 0.027278568143286344,
+      "task": "bbh3"
+    },
+    {
+      "L0": 4,
+      "T": 8,
+      "budget": 128,
+      "extra_budgets_sig": "32,64,256",
+      "mean": 0.65546875,
+      "method": "random_tv",
+      "metric": "acc_hard_test",
+      "model": "Qwen/Qwen2.5-7B-Instruct",
+      "n": 10,
+      "sd": 0.035506549547427005,
+      "task": "bbh3"
+    },
+    {
+      "L0": 4,
+      "T": 8,
+      "budget": 128,
+      "extra_budgets_sig": "32,64,256",
+      "mean": 0.625,
+      "method": "shuffled_tv",
+      "metric": "acc_hard_test",
+      "model": "Qwen/Qwen2.5-7B-Instruct",
+      "n": 10,
+      "sd": 0.1777617977165807,
+      "task": "bbh3"
+    },
+    {
+      "L0": 4,
+      "T": 8,
+      "budget": 128,
+      "extra_budgets_sig": "32,64,256",
+      "mean": 0.695703125,
+      "method": "static_autograd",
+      "metric": "acc_hard_test",
+      "model": "Qwen/Qwen2.5-7B-Instruct",
+      "n": 10,
+      "sd": 0.027832316793125877,
+      "task": "bbh3"
+    },
+    {
+      "L0": 4,
+      "T": 8,
+      "budget": 128,
+      "extra_budgets_sig": "32,64,256",
+      "mean": 0.6921875,
+      "method": "tv_pmp",
+      "metric": "acc_hard_test",
+      "model": "Qwen/Qwen2.5-7B-Instruct",
+      "n": 10,
+      "sd": 0.04697616398386408,
+      "task": "bbh3"
+    },
+    {
+      "L0": 4,
+      "T": 8,
+      "budget": 128,
+      "extra_budgets_sig": "32,64,256",
+      "mean": 0.360546875,
+      "method": "pez",
+      "metric": "acc_hard_test",
+      "model": "Qwen/Qwen2.5-7B-Instruct",
+      "n": 10,
+      "sd": 0.04302986499727866,
+      "task": "commonsenseqa"
+    },
+    {
+      "L0": 4,
+      "T": 8,
+      "budget": 128,
+      "extra_budgets_sig": "32,64,256",
+      "mean": 0.365625,
+      "method": "prefix",
+      "metric": "acc_hard_test",
+      "model": "Qwen/Qwen2.5-7B-Instruct",
+      "n": 10,
+      "sd": 0.04582149468317244,
+      "task": "commonsenseqa"
+    },
+    {
+      "L0": 4,
+      "T": 8,
+      "budget": 128,
+      "extra_budgets_sig": "32,64,256",
+      "mean": 0.3734375,
+      "method": "random_tv",
+      "metric": "acc_hard_test",
+      "model": "Qwen/Qwen2.5-7B-Instruct",
+      "n": 10,
+      "sd": 0.03514177942931082,
+      "task": "commonsenseqa"
+    },
+    {
+      "L0": 4,
+      "T": 8,
+      "budget": 128,
+      "extra_budgets_sig": "32,64,256",
+      "mean": 0.390625,
+      "method": "shuffled_tv",
+      "metric": "acc_hard_test",
+      "model": "Qwen/Qwen2.5-7B-Instruct",
+      "n": 10,
+      "sd": 0.07344950404255444,
+      "task": "commonsenseqa"
+    },
+    {
+      "L0": 4,
+      "T": 8,
+      "budget": 128,
+      "extra_budgets_sig": "32,64,256",
+      "mean": 0.355078125,
+      "method": "static_autograd",
+      "metric": "acc_hard_test",
+      "model": "Qwen/Qwen2.5-7B-Instruct",
+      "n": 10,
+      "sd": 0.059880262921824294,
+      "task": "commonsenseqa"
+    },
+    {
+      "L0": 4,
+      "T": 8,
+      "budget": 128,
+      "extra_budgets_sig": "32,64,256",
+      "mean": 0.35,
+      "method": "tv_pmp",
+      "metric": "acc_hard_test",
+      "model": "Qwen/Qwen2.5-7B-Instruct",
+      "n": 10,
+      "sd": 0.05208984334314981,
+      "task": "commonsenseqa"
+    },
+    {
+      "L0": 4,
+      "T": 8,
+      "budget": 128,
+      "extra_budgets_sig": "32,64,256",
+      "mean": 0.210546875,
+      "method": "pez",
+      "metric": "acc_hard_test",
+      "model": "Qwen/Qwen2.5-7B-Instruct",
+      "n": 10,
+      "sd": 0.055927472817138855,
+      "task": "gsm8k"
+    },
+    {
+      "L0": 4,
+      "T": 8,
+      "budget": 128,
+      "extra_budgets_sig": "32,64,256",
+      "mean": 0.199609375,
+      "method": "prefix",
+      "metric": "acc_hard_test",
+      "model": "Qwen/Qwen2.5-7B-Instruct",
+      "n": 10,
+      "sd": 0.11209190666754038,
+      "task": "gsm8k"
+    },
+    {
+      "L0": 4,
+      "T": 8,
+      "budget": 128,
+      "extra_budgets_sig": "32,64,256",
+      "mean": 0.187109375,
+      "method": "random_tv",
+      "metric": "acc_hard_test",
+      "model": "Qwen/Qwen2.5-7B-Instruct",
+      "n": 10,
+      "sd": 0.03735186670856737,
+      "task": "gsm8k"
+    },
+    {
+      "L0": 4,
+      "T": 8,
+      "budget": 128,
+      "extra_budgets_sig": "32,64,256",
+      "mean": 0.22578125,
+      "method": "shuffled_tv",
+      "metric": "acc_hard_test",
+      "model": "Qwen/Qwen2.5-7B-Instruct",
+      "n": 10,
+      "sd": 0.0694585489148824,
+      "task": "gsm8k"
+    },
+    {
+      "L0": 4,
+      "T": 8,
+      "budget": 128,
+      "extra_budgets_sig": "32,64,256",
+      "mean": 0.23125,
+      "method": "static_autograd",
+      "metric": "acc_hard_test",
+      "model": "Qwen/Qwen2.5-7B-Instruct",
+      "n": 10,
+      "sd": 0.07945482780459809,
+      "task": "gsm8k"
+    },
+    {
+      "L0": 4,
+      "T": 8,
+      "budget": 128,
+      "extra_budgets_sig": "32,64,256",
+      "mean": 0.226953125,
+      "method": "tv_pmp",
+      "metric": "acc_hard_test",
+      "model": "Qwen/Qwen2.5-7B-Instruct",
+      "n": 10,
+      "sd": 0.06259351727573645,
+      "task": "gsm8k"
+    },
+    {
+      "L0": 4,
+      "T": 8,
+      "budget": 128,
+      "extra_budgets_sig": "32,64,256",
+      "mean": 0.428515625,
+      "method": "pez",
+      "metric": "acc_hard_test",
+      "model": "Qwen/Qwen2.5-7B-Instruct",
+      "n": 10,
+      "sd": 0.09866750713368456,
+      "task": "svamp"
+    },
+    {
+      "L0": 4,
+      "T": 8,
+      "budget": 128,
+      "extra_budgets_sig": "32,64,256",
+      "mean": 0.55078125,
+      "method": "prefix",
+      "metric": "acc_hard_test",
+      "model": "Qwen/Qwen2.5-7B-Instruct",
+      "n": 10,
+      "sd": 0.05227828098928315,
+      "task": "svamp"
+    },
+    {
+      "L0": 4,
+      "T": 8,
+      "budget": 128,
+      "extra_budgets_sig": "32,64,256",
+      "mean": 0.43515625,
+      "method": "random_tv",
+      "metric": "acc_hard_test",
+      "model": "Qwen/Qwen2.5-7B-Instruct",
+      "n": 10,
+      "sd": 0.05838214103954317,
+      "task": "svamp"
+    },
+    {
+      "L0": 4,
+      "T": 8,
+      "budget": 128,
+      "extra_budgets_sig": "32,64,256",
+      "mean": 0.581640625,
+      "method": "shuffled_tv",
+      "metric": "acc_hard_test",
+      "model": "Qwen/Qwen2.5-7B-Instruct",
+      "n": 10,
+      "sd": 0.06191265908197365,
+      "task": "svamp"
+    },
+    {
+      "L0": 4,
+      "T": 8,
+      "budget": 128,
+      "extra_budgets_sig": "32,64,256",
+      "mean": 0.568359375,
+      "method": "static_autograd",
+      "metric": "acc_hard_test",
+      "model": "Qwen/Qwen2.5-7B-Instruct",
+      "n": 10,
+      "sd": 0.06961580961499116,
+      "task": "svamp"
+    },
+    {
+      "L0": 4,
+      "T": 8,
+      "budget": 128,
+      "extra_budgets_sig": "32,64,256",
+      "mean": 0.591015625,
+      "method": "tv_pmp",
+      "metric": "acc_hard_test",
+      "model": "Qwen/Qwen2.5-7B-Instruct",
+      "n": 10,
+      "sd": 0.07413989780553101,
+      "task": "svamp"
+    },
+    {
+      "L0": 4,
+      "T": 8,
+      "budget": 128,
+      "extra_budgets_sig": "32,64,256",
+      "mean": 0.43359375,
+      "method": "pez",
+      "metric": "acc_hard_test",
+      "model": "ibm-granite/granite-3.1-2b-instruct",
+      "n": 10,
+      "sd": 0.032991821508645644,
+      "task": "bbh3"
+    },
+    {
+      "L0": 4,
+      "T": 8,
+      "budget": 128,
+      "extra_budgets_sig": "32,64,256",
+      "mean": 0.415625,
+      "method": "prefix",
+      "metric": "acc_hard_test",
+      "model": "ibm-granite/granite-3.1-2b-instruct",
+      "n": 10,
+      "sd": 0.023451963130040474,
+      "task": "bbh3"
+    },
+    {
+      "L0": 4,
+      "T": 8,
+      "budget": 128,
+      "extra_budgets_sig": "32,64,256",
+      "mean": 0.4125,
+      "method": "random_tv",
+      "metric": "acc_hard_test",
+      "model": "ibm-granite/granite-3.1-2b-instruct",
+      "n": 10,
+      "sd": 0.0332579714494218,
+      "task": "bbh3"
+    },
+    {
+      "L0": 4,
+      "T": 8,
+      "budget": 128,
+      "extra_budgets_sig": "32,64,256",
+      "mean": 0.41015625,
+      "method": "shuffled_tv",
+      "metric": "acc_hard_test",
+      "model": "ibm-granite/granite-3.1-2b-instruct",
+      "n": 10,
+      "sd": 0.0380065612482459,
+      "task": "bbh3"
+    },
+    {
+      "L0": 4,
+      "T": 8,
+      "budget": 128,
+      "extra_budgets_sig": "32,64,256",
+      "mean": 0.407421875,
+      "method": "static_autograd",
+      "metric": "acc_hard_test",
+      "model": "ibm-granite/granite-3.1-2b-instruct",
+      "n": 10,
+      "sd": 0.035708908402846996,
+      "task": "bbh3"
+    },
+    {
+      "L0": 4,
+      "T": 8,
+      "budget": 128,
+      "extra_budgets_sig": "32,64,256",
+      "mean": 0.417578125,
+      "method": "tv_pmp",
+      "metric": "acc_hard_test",
+      "model": "ibm-granite/granite-3.1-2b-instruct",
+      "n": 10,
+      "sd": 0.040446405645009974,
+      "task": "bbh3"
+    },
+    {
+      "L0": 4,
+      "T": 8,
+      "budget": 128,
+      "extra_budgets_sig": "32,64,256",
+      "mean": 0.473828125,
+      "method": "pez",
+      "metric": "acc_hard_test",
+      "model": "ibm-granite/granite-3.1-2b-instruct",
+      "n": 10,
+      "sd": 0.026044921671574905,
+      "task": "commonsenseqa"
+    },
+    {
+      "L0": 4,
+      "T": 8,
+      "budget": 128,
+      "extra_budgets_sig": "32,64,256",
+      "mean": 0.465234375,
+      "method": "prefix",
+      "metric": "acc_hard_test",
+      "model": "ibm-granite/granite-3.1-2b-instruct",
+      "n": 10,
+      "sd": 0.05344730914275006,
+      "task": "commonsenseqa"
+    },
+    {
+      "L0": 4,
+      "T": 8,
+      "budget": 128,
+      "extra_budgets_sig": "32,64,256",
+      "mean": 0.4765625,
+      "method": "random_tv",
+      "metric": "acc_hard_test",
+      "model": "ibm-granite/granite-3.1-2b-instruct",
+      "n": 10,
+      "sd": 0.02591113117465156,
+      "task": "commonsenseqa"
+    },
+    {
+      "L0": 4,
+      "T": 8,
+      "budget": 128,
+      "extra_budgets_sig": "32,64,256",
+      "mean": 0.50625,
+      "method": "shuffled_tv",
+      "metric": "acc_hard_test",
+      "model": "ibm-granite/granite-3.1-2b-instruct",
+      "n": 10,
+      "sd": 0.03098848912634066,
+      "task": "commonsenseqa"
+    },
+    {
+      "L0": 4,
+      "T": 8,
+      "budget": 128,
+      "extra_budgets_sig": "32,64,256",
+      "mean": 0.487890625,
+      "method": "static_autograd",
+      "metric": "acc_hard_test",
+      "model": "ibm-granite/granite-3.1-2b-instruct",
+      "n": 10,
+      "sd": 0.04172562560383307,
+      "task": "commonsenseqa"
+    },
+    {
+      "L0": 4,
+      "T": 8,
+      "budget": 128,
+      "extra_budgets_sig": "32,64,256",
+      "mean": 0.475,
+      "method": "tv_pmp",
+      "metric": "acc_hard_test",
+      "model": "ibm-granite/granite-3.1-2b-instruct",
+      "n": 10,
+      "sd": 0.036327891650982935,
+      "task": "commonsenseqa"
+    },
+    {
+      "L0": 4,
+      "T": 8,
+      "budget": 128,
+      "extra_budgets_sig": "32,64,256",
+      "mean": 0.32265625,
+      "method": "pez",
+      "metric": "acc_hard_test",
+      "model": "ibm-granite/granite-3.1-2b-instruct",
+      "n": 10,
+      "sd": 0.03770200223094554,
+      "task": "gsm8k"
+    },
+    {
+      "L0": 4,
+      "T": 8,
+      "budget": 128,
+      "extra_budgets_sig": "32,64,256",
+      "mean": 0.318359375,
+      "method": "prefix",
+      "metric": "acc_hard_test",
+      "model": "ibm-granite/granite-3.1-2b-instruct",
+      "n": 10,
+      "sd": 0.05309084124446644,
+      "task": "gsm8k"
+    },
+    {
+      "L0": 4,
+      "T": 8,
+      "budget": 128,
+      "extra_budgets_sig": "32,64,256",
+      "mean": 0.3078125,
+      "method": "random_tv",
+      "metric": "acc_hard_test",
+      "model": "ibm-granite/granite-3.1-2b-instruct",
+      "n": 10,
+      "sd": 0.04075333628554573,
+      "task": "gsm8k"
+    },
+    {
+      "L0": 4,
+      "T": 8,
+      "budget": 128,
+      "extra_budgets_sig": "32,64,256",
+      "mean": 0.29609375,
+      "method": "shuffled_tv",
+      "metric": "acc_hard_test",
+      "model": "ibm-granite/granite-3.1-2b-instruct",
+      "n": 10,
+      "sd": 0.03948555632109178,
+      "task": "gsm8k"
+    },
+    {
+      "L0": 4,
+      "T": 8,
+      "budget": 128,
+      "extra_budgets_sig": "32,64,256",
+      "mean": 0.275,
+      "method": "static_autograd",
+      "metric": "acc_hard_test",
+      "model": "ibm-granite/granite-3.1-2b-instruct",
+      "n": 10,
+      "sd": 0.06088405776213781,
+      "task": "gsm8k"
+    },
+    {
+      "L0": 4,
+      "T": 8,
+      "budget": 128,
+      "extra_budgets_sig": "32,64,256",
+      "mean": 0.301953125,
+      "method": "tv_pmp",
+      "metric": "acc_hard_test",
+      "model": "ibm-granite/granite-3.1-2b-instruct",
+      "n": 10,
+      "sd": 0.023585326632855272,
+      "task": "gsm8k"
+    },
+    {
+      "L0": 4,
+      "T": 8,
+      "budget": 128,
+      "extra_budgets_sig": "32,64,256",
+      "mean": 0.52421875,
+      "method": "pez",
+      "metric": "acc_hard_test",
+      "model": "ibm-granite/granite-3.1-2b-instruct",
+      "n": 10,
+      "sd": 0.09197539157975898,
+      "task": "svamp"
+    },
+    {
+      "L0": 4,
+      "T": 8,
+      "budget": 128,
+      "extra_budgets_sig": "32,64,256",
+      "mean": 0.517578125,
+      "method": "prefix",
+      "metric": "acc_hard_test",
+      "model": "ibm-granite/granite-3.1-2b-instruct",
+      "n": 10,
+      "sd": 0.07172694783394117,
+      "task": "svamp"
+    },
+    {
+      "L0": 4,
+      "T": 8,
+      "budget": 128,
+      "extra_budgets_sig": "32,64,256",
+      "mean": 0.557421875,
+      "method": "random_tv",
+      "metric": "acc_hard_test",
+      "model": "ibm-granite/granite-3.1-2b-instruct",
+      "n": 10,
+      "sd": 0.06723214965040597,
+      "task": "svamp"
+    },
+    {
+      "L0": 4,
+      "T": 8,
+      "budget": 128,
+      "extra_budgets_sig": "32,64,256",
+      "mean": 0.512890625,
+      "method": "shuffled_tv",
+      "metric": "acc_hard_test",
+      "model": "ibm-granite/granite-3.1-2b-instruct",
+      "n": 10,
+      "sd": 0.09953999149429353,
+      "task": "svamp"
+    },
+    {
+      "L0": 4,
+      "T": 8,
+      "budget": 128,
+      "extra_budgets_sig": "32,64,256",
+      "mean": 0.535546875,
+      "method": "static_autograd",
+      "metric": "acc_hard_test",
+      "model": "ibm-granite/granite-3.1-2b-instruct",
+      "n": 10,
+      "sd": 0.08167810061592823,
+      "task": "svamp"
+    },
+    {
+      "L0": 4,
+      "T": 8,
+      "budget": 128,
+      "extra_budgets_sig": "32,64,256",
+      "mean": 0.530078125,
+      "method": "tv_pmp",
+      "metric": "acc_hard_test",
+      "model": "ibm-granite/granite-3.1-2b-instruct",
+      "n": 10,
+      "sd": 0.10142970083875621,
+      "task": "svamp"
+    },
+    {
+      "L0": 4,
+      "T": 8,
+      "budget": 128,
+      "extra_budgets_sig": "32,64,256",
+      "mean": 0.383203125,
+      "method": "pez",
+      "metric": "acc_hard_test",
+      "model": "mistralai/Mistral-7B-Instruct-v0.3",
+      "n": 10,
+      "sd": 0.17282378984746163,
+      "task": "bbh3"
+    },
+    {
+      "L0": 4,
+      "T": 8,
+      "budget": 128,
+      "extra_budgets_sig": "32,64,256",
+      "mean": 0.432421875,
+      "method": "prefix",
+      "metric": "acc_hard_test",
+      "model": "mistralai/Mistral-7B-Instruct-v0.3",
+      "n": 10,
+      "sd": 0.05330755246435146,
+      "task": "bbh3"
+    },
+    {
+      "L0": 4,
+      "T": 8,
+      "budget": 128,
+      "extra_budgets_sig": "32,64,256",
+      "mean": 0.5078125,
+      "method": "random_tv",
+      "metric": "acc_hard_test",
+      "model": "mistralai/Mistral-7B-Instruct-v0.3",
+      "n": 10,
+      "sd": 0.030536560936350453,
+      "task": "bbh3"
+    },
+    {
+      "L0": 4,
+      "T": 8,
+      "budget": 128,
+      "extra_budgets_sig": "32,64,256",
+      "mean": 0.49140625,
+      "method": "shuffled_tv",
+      "metric": "acc_hard_test",
+      "model": "mistralai/Mistral-7B-Instruct-v0.3",
+      "n": 10,
+      "sd": 0.03478293303555,
+      "task": "bbh3"
+    },
+    {
+      "L0": 4,
+      "T": 8,
+      "budget": 128,
+      "extra_budgets_sig": "32,64,256",
+      "mean": 0.4484375,
+      "method": "static_autograd",
+      "metric": "acc_hard_test",
+      "model": "mistralai/Mistral-7B-Instruct-v0.3",
+      "n": 10,
+      "sd": 0.03887978098950233,
+      "task": "bbh3"
+    },
+    {
+      "L0": 4,
+      "T": 8,
+      "budget": 128,
+      "extra_budgets_sig": "32,64,256",
+      "mean": 0.482421875,
+      "method": "tv_pmp",
+      "metric": "acc_hard_test",
+      "model": "mistralai/Mistral-7B-Instruct-v0.3",
+      "n": 10,
+      "sd": 0.050066755025339534,
+      "task": "bbh3"
+    },
+    {
+      "L0": 4,
+      "T": 8,
+      "budget": 128,
+      "extra_budgets_sig": "32,64,256",
+      "mean": 0.524609375,
+      "method": "pez",
+      "metric": "acc_hard_test",
+      "model": "mistralai/Mistral-7B-Instruct-v0.3",
+      "n": 10,
+      "sd": 0.04791418981370208,
+      "task": "commonsenseqa"
+    },
+    {
+      "L0": 4,
+      "T": 8,
+      "budget": 128,
+      "extra_budgets_sig": "32,64,256",
+      "mean": 0.49375,
+      "method": "prefix",
+      "metric": "acc_hard_test",
+      "model": "mistralai/Mistral-7B-Instruct-v0.3",
+      "n": 10,
+      "sd": 0.06315305516549545,
+      "task": "commonsenseqa"
+    },
+    {
+      "L0": 4,
+      "T": 8,
+      "budget": 128,
+      "extra_budgets_sig": "32,64,256",
+      "mean": 0.51640625,
+      "method": "random_tv",
+      "metric": "acc_hard_test",
+      "model": "mistralai/Mistral-7B-Instruct-v0.3",
+      "n": 10,
+      "sd": 0.05758094581700231,
+      "task": "commonsenseqa"
+    },
+    {
+      "L0": 4,
+      "T": 8,
+      "budget": 128,
+      "extra_budgets_sig": "32,64,256",
+      "mean": 0.558984375,
+      "method": "shuffled_tv",
+      "metric": "acc_hard_test",
+      "model": "mistralai/Mistral-7B-Instruct-v0.3",
+      "n": 10,
+      "sd": 0.06052797083916039,
+      "task": "commonsenseqa"
+    },
+    {
+      "L0": 4,
+      "T": 8,
+      "budget": 128,
+      "extra_budgets_sig": "32,64,256",
+      "mean": 0.528515625,
+      "method": "static_autograd",
+      "metric": "acc_hard_test",
+      "model": "mistralai/Mistral-7B-Instruct-v0.3",
+      "n": 10,
+      "sd": 0.050363869673502884,
+      "task": "commonsenseqa"
+    },
+    {
+      "L0": 4,
+      "T": 8,
+      "budget": 128,
+      "extra_budgets_sig": "32,64,256",
+      "mean": 0.471875,
+      "method": "tv_pmp",
+      "metric": "acc_hard_test",
+      "model": "mistralai/Mistral-7B-Instruct-v0.3",
+      "n": 10,
+      "sd": 0.09566192778259977,
+      "task": "commonsenseqa"
+    },
+    {
+      "L0": 4,
+      "T": 8,
+      "budget": 128,
+      "extra_budgets_sig": "32,64,256",
+      "mean": 0.2375,
+      "method": "pez",
+      "metric": "acc_hard_test",
+      "model": "mistralai/Mistral-7B-Instruct-v0.3",
+      "n": 10,
+      "sd": 0.0447583451638413,
+      "task": "gsm8k"
+    },
+    {
+      "L0": 4,
+      "T": 8,
+      "budget": 128,
+      "extra_budgets_sig": "32,64,256",
+      "mean": 0.2515625,
+      "method": "prefix",
+      "metric": "acc_hard_test",
+      "model": "mistralai/Mistral-7B-Instruct-v0.3",
+      "n": 10,
+      "sd": 0.04114253678777396,
+      "task": "gsm8k"
+    },
+    {
+      "L0": 4,
+      "T": 8,
+      "budget": 128,
+      "extra_budgets_sig": "32,64,256",
+      "mean": 0.28984375,
+      "method": "random_tv",
+      "metric": "acc_hard_test",
+      "model": "mistralai/Mistral-7B-Instruct-v0.3",
+      "n": 10,
+      "sd": 0.03384414915892652,
+      "task": "gsm8k"
+    },
+    {
+      "L0": 4,
+      "T": 8,
+      "budget": 128,
+      "extra_budgets_sig": "32,64,256",
+      "mean": 0.2546875,
+      "method": "shuffled_tv",
+      "metric": "acc_hard_test",
+      "model": "mistralai/Mistral-7B-Instruct-v0.3",
+      "n": 10,
+      "sd": 0.0392270838312355,
+      "task": "gsm8k"
+    },
+    {
+      "L0": 4,
+      "T": 8,
+      "budget": 128,
+      "extra_budgets_sig": "32,64,256",
+      "mean": 0.2125,
+      "method": "static_autograd",
+      "metric": "acc_hard_test",
+      "model": "mistralai/Mistral-7B-Instruct-v0.3",
+      "n": 10,
+      "sd": 0.051302744285082406,
+      "task": "gsm8k"
+    },
+    {
+      "L0": 4,
+      "T": 8,
+      "budget": 128,
+      "extra_budgets_sig": "32,64,256",
+      "mean": 0.257421875,
+      "method": "tv_pmp",
+      "metric": "acc_hard_test",
+      "model": "mistralai/Mistral-7B-Instruct-v0.3",
+      "n": 10,
+      "sd": 0.061583173435882856,
+      "task": "gsm8k"
+    },
+    {
+      "L0": 4,
+      "T": 8,
+      "budget": 128,
+      "extra_budgets_sig": "32,64,256",
+      "mean": 0.551171875,
+      "method": "pez",
+      "metric": "acc_hard_test",
+      "model": "mistralai/Mistral-7B-Instruct-v0.3",
+      "n": 10,
+      "sd": 0.0652459393858101,
+      "task": "svamp"
+    },
+    {
+      "L0": 4,
+      "T": 8,
+      "budget": 128,
+      "extra_budgets_sig": "32,64,256",
+      "mean": 0.526171875,
+      "method": "prefix",
+      "metric": "acc_hard_test",
+      "model": "mistralai/Mistral-7B-Instruct-v0.3",
+      "n": 10,
+      "sd": 0.053084453992128064,
+      "task": "svamp"
+    },
+    {
+      "L0": 4,
+      "T": 8,
+      "budget": 128,
+      "extra_budgets_sig": "32,64,256",
+      "mean": 0.534375,
+      "method": "random_tv",
+      "metric": "acc_hard_test",
+      "model": "mistralai/Mistral-7B-Instruct-v0.3",
+      "n": 10,
+      "sd": 0.05333140051836254,
+      "task": "svamp"
+    },
+    {
+      "L0": 4,
+      "T": 8,
+      "budget": 128,
+      "extra_budgets_sig": "32,64,256",
+      "mean": 0.57734375,
+      "method": "shuffled_tv",
+      "metric": "acc_hard_test",
+      "model": "mistralai/Mistral-7B-Instruct-v0.3",
+      "n": 10,
+      "sd": 0.0462853538862457,
+      "task": "svamp"
+    },
+    {
+      "L0": 4,
+      "T": 8,
+      "budget": 128,
+      "extra_budgets_sig": "32,64,256",
+      "mean": 0.562109375,
+      "method": "static_autograd",
+      "metric": "acc_hard_test",
+      "model": "mistralai/Mistral-7B-Instruct-v0.3",
+      "n": 10,
+      "sd": 0.07243727268742495,
+      "task": "svamp"
+    },
+    {
+      "L0": 4,
+      "T": 8,
+      "budget": 128,
+      "extra_budgets_sig": "32,64,256",
+      "mean": 0.587109375,
+      "method": "tv_pmp",
+      "metric": "acc_hard_test",
+      "model": "mistralai/Mistral-7B-Instruct-v0.3",
+      "n": 10,
+      "sd": 0.04592682521946823,
+      "task": "svamp"
+    }
+  ],
+  "hard_summary": {
+    "excluded_row_count": 0,
+    "methods": [
+      "pez",
+      "prefix",
+      "random_tv",
+      "shuffled_tv",
+      "static_autograd",
+      "tv_pmp"
+    ],
+    "metric": "acc_hard_test",
+    "models": [
+      "Qwen/Qwen2.5-7B-Instruct",
+      "ibm-granite/granite-3.1-2b-instruct",
+      "mistralai/Mistral-7B-Instruct-v0.3"
+    ],
+    "row_count": 72,
+    "status": "available",
+    "tasks": [
+      "bbh3",
+      "commonsenseqa",
+      "gsm8k",
+      "svamp"
+    ],
+    "valid_row_count": 72
+  },
+  "limitations": [
+    "The import packages existing evidence; it introduces no new scientific result.",
+    "Diagnostics are bounded to the imported tasks, models, seeds, and recorded protocol.",
+    "Trajectory decay is diagnostic evidence, not proof of universal turnpike behavior or operational stability.",
+    "Aggregate hard-test results do not establish universal prompt superiority.",
+    "Segmented soft evaluation is unusable when no row has a positive sample count.",
+    "Trajectory decay is a diagnostic signal, not proof of operational model stability.",
+    "Sibling NPZ files are referenced and hashed only; they are not loaded or copied.",
+    "A failed validation verdict is retained as negative evidence and does not support the diagnostic.",
+    "No Riccati/DARE diagnostic source was discovered in this PEOC bundle.",
+    "No synthetic substitute was created.",
+    "No soft-to-hard projection diagnostic source was discovered in this PEOC bundle."
+  ],
+  "limitations_zh": [
+    "该导入流程只整理已有证据, 不产生新的科学结果。",
+    "诊断结论只适用于导入记录中的任务、模型、随机种子和实验协议。",
+    "轨迹衰减属于诊断信号, 不等于普遍 turnpike 规律或运行稳定性的证明。",
+    "该部分虽然有真实来源, 但当前数据不可用于支持正向结论。",
+    "该部分的真实验证结果未通过, 不能作为正向证据。",
+    "导入的 PEOC bundle 中没有发现该部分的证据。"
+  ],
+  "limited_sections": [
+    {
+      "display_status": "MISSING",
+      "limitation": "No Riccati/DARE diagnostic source was discovered in this PEOC bundle.",
+      "limitation_zh": "导入的 PEOC bundle 中没有发现该部分的证据。",
+      "origin": "none",
+      "section": "riccati",
+      "status": "missing"
+    },
+    {
+      "display_status": "REAL / UNUSABLE",
+      "limitation": "Segmented soft evaluation is unusable when no row has a positive sample count.",
+      "limitation_zh": "该部分虽然有真实来源, 但当前数据不可用于支持正向结论。",
+      "origin": "real",
+      "section": "soft_evaluation",
+      "status": "unusable"
+    },
+    {
+      "display_status": "MISSING",
+      "limitation": "No soft-to-hard projection diagnostic source was discovered in this PEOC bundle.",
+      "limitation_zh": "导入的 PEOC bundle 中没有发现该部分的证据。",
+      "origin": "none",
+      "section": "soft_hard",
+      "status": "missing"
+    },
+    {
+      "display_status": "REAL / FAILED VALIDATION",
+      "limitation": "A failed validation verdict is retained as negative evidence and does not support the diagnostic.",
+      "limitation_zh": "该部分的真实验证结果未通过, 不能作为正向证据。",
+      "origin": "real",
+      "section": "stage_heterogeneity",
+      "status": "failed_validation"
+    }
+  ],
+  "manifest_hash": "sha256:8254ca7c122405739369d64e9629493c2fd6c66d9a367466fde1ef1d0375d72f",
+  "safe_claim": "This bounded case study reports the imported PEOC measurements and their recorded limitations; it is not a universal benchmark. The hard-test summary contains task-, model-, and method-specific results. For the selected paired summaries, stationary arithmetic traces report a stronger fitted decay signature than heterogeneous GSM8K traces. The stage-heterogeneity validation reported FAIL. The segmented soft summary is unusable for a positive claim.",
+  "safe_claim_zh": "本案例只报告导入的 PEOC 测量结果及其限制, 不代表通用基准结论。Hard-test 汇总提供了任务、模型和方法层面的具体结果。在选中的配对汇总中, 平稳算术轨迹的拟合衰减信号强于异质 GSM8K 轨迹。阶段异质性验证的记录结果为 FAIL。分段 soft 汇总不能用于支持正向结论。",
+  "schema": "prompt_control_lab.peoc_case_study.v1",
+  "selected_trajectory_pair": {
+    "heterogeneous": {
+      "R2_mean": 0.0880097677092509,
+      "R2_std": 0.12669114538322848,
+      "alpha_emp_mean": 0.001741384731717542,
+      "alpha_emp_std": 0.001895036957638236,
+      "binary_references": [
+        {
+          "bytes": 20890709,
+          "relative_path": "experiments/turnpike_trace/results_a800/turnpike_gsm8k_Qwen__Qwen2.5-7B-Instruct_s0.npz",
+          "role": "trajectory_binary",
+          "sha256": "sha256:d64f9fd8f8037ec125b2546896a20f47edc333d033bb040e20b79eaff3955f1e"
+        }
+      ],
+      "bytes": 2086,
+      "hidden_dim": 3584,
+      "n_prompts": 32,
+      "n_streams": null,
+      "relative_path": "experiments/turnpike_trace/results_a800/turnpike_gsm8k_Qwen__Qwen2.5-7B-Instruct_s0.json",
+      "sha256": "sha256:cf466e60c1f49c3e0eb5359469dcd6c3b7617cf4db1259ae349b0ef57a878679",
+      "status": "available"
+    },
+    "model": "Qwen/Qwen2.5-7B-Instruct",
+    "normalized_model": "qwen/qwen2.5-7b-instruct",
+    "seed": 0,
+    "stationary": {
+      "R2_mean": 0.6020419506814517,
+      "R2_std": 0.15452392156969258,
+      "alpha_emp_mean": 0.024712455404803102,
+      "alpha_emp_std": 0.007108212863514653,
+      "binary_references": [
+        {
+          "bytes": 5251635,
+          "relative_path": "experiments/turnpike_trace/results_a800/stationary_arith_Qwen__Qwen2.5-7B-Instruct_s0.npz",
+          "role": "trajectory_binary",
+          "sha256": "sha256:21acc2535f3784ebcfd52871a92b7fc571c7ba209876227bf6da457ce60576ad"
+        }
+      ],
+      "bytes": 20723,
+      "hidden_dim": 3584,
+      "n_prompts": null,
+      "n_streams": 16,
+      "relative_path": "experiments/turnpike_trace/results_a800/stationary_arith_Qwen__Qwen2.5-7B-Instruct_s0.json",
+      "sha256": "sha256:17fb4c818245de2c4c9f2d8dc2c36987aa34397bef894f66cc219b76875f3cc7",
+      "status": "available"
+    }
+  },
+  "source_inventory": [
+    {
+      "bytes": 3664,
+      "relative_path": "README_MANIFEST.md",
+      "role": "bundle_manifest",
+      "sha256": "sha256:8254ca7c122405739369d64e9629493c2fd6c66d9a367466fde1ef1d0375d72f"
+    },
+    {
+      "bytes": 47443,
+      "relative_path": "experiments/redesign_v2/results_server_pull_20260524/strong_main_grid/summary_acc_hard_test.json",
+      "role": "hard_test_summary",
+      "sha256": "sha256:ac263e6f24351cfd486b68182c4f355c95a69cff9c7ecf61d54f32298b812c20"
+    },
+    {
+      "bytes": 22478,
+      "relative_path": "experiments/redesign_v2/results_server_pull_20260524/strong_main_grid/summary_soft_segmented.json",
+      "role": "soft_segmented_summary",
+      "sha256": "sha256:95205231e10829fa18e04ca1642d2e4e7bc2663141166450f8674f6b7a240c64"
+    },
+    {
+      "bytes": 5020,
+      "relative_path": "experiments/redesign_v2/stage_heterogeneity/shi_r27_summary.json",
+      "role": "stage_heterogeneity",
+      "sha256": "sha256:5433f16bb5ed25c5e89dec5ca82b56490ab68bad6e9077fe95d07a461137f3fe"
+    },
+    {
+      "bytes": 20856,
+      "relative_path": "experiments/turnpike_trace/results_a800/stationary_arith_Qwen__Qwen2.5-0.5B-Instruct_s0.json",
+      "role": "trajectory_stationary",
+      "sha256": "sha256:5670abc44943f3c96ec417d1e38b25c1aa18f8e6566c919e4435c4133723492a"
+    },
+    {
+      "bytes": 1318177,
+      "relative_path": "experiments/turnpike_trace/results_a800/stationary_arith_Qwen__Qwen2.5-0.5B-Instruct_s0.npz",
+      "role": "trajectory_binary",
+      "sha256": "sha256:b0c3f98705e5686f62b9f2f5de6a94780ae4bca55b74054b70ddbeec0be66f2a"
+    },
+    {
+      "bytes": 21082,
+      "relative_path": "experiments/turnpike_trace/results_a800/stationary_arith_Qwen__Qwen2.5-1.5B-Instruct_s0.json",
+      "role": "trajectory_stationary",
+      "sha256": "sha256:093cee30d56577fad062e178a1515b137463d4a0b0fd5c947ce2d0c7bcce54b1"
+    },
+    {
+      "bytes": 2251942,
+      "relative_path": "experiments/turnpike_trace/results_a800/stationary_arith_Qwen__Qwen2.5-1.5B-Instruct_s0.npz",
+      "role": "trajectory_binary",
+      "sha256": "sha256:e2559f630f433ad8320075acc361c71eb79ba60453506db275ad0fda6ac73930"
+    },
+    {
+      "bytes": 20847,
+      "relative_path": "experiments/turnpike_trace/results_a800/stationary_arith_Qwen__Qwen2.5-14B-Instruct_s0.json",
+      "role": "trajectory_stationary",
+      "sha256": "sha256:c280c952784b499494b6515f1cb6f37a65b23e3e0c5f823c7a705a29312ba955"
+    },
+    {
+      "bytes": 7432358,
+      "relative_path": "experiments/turnpike_trace/results_a800/stationary_arith_Qwen__Qwen2.5-14B-Instruct_s0.npz",
+      "role": "trajectory_binary",
+      "sha256": "sha256:4527a24eff4a30a59511fbbad0cb84bf6c3203fa555b9fc8acee3b2120d6d12d"
+    },
+    {
+      "bytes": 20723,
+      "relative_path": "experiments/turnpike_trace/results_a800/stationary_arith_Qwen__Qwen2.5-7B-Instruct_s0.json",
+      "role": "trajectory_stationary",
+      "sha256": "sha256:17fb4c818245de2c4c9f2d8dc2c36987aa34397bef894f66cc219b76875f3cc7"
+    },
+    {
+      "bytes": 5251635,
+      "relative_path": "experiments/turnpike_trace/results_a800/stationary_arith_Qwen__Qwen2.5-7B-Instruct_s0.npz",
+      "role": "trajectory_binary",
+      "sha256": "sha256:21acc2535f3784ebcfd52871a92b7fc571c7ba209876227bf6da457ce60576ad"
+    },
+    {
+      "bytes": 2086,
+      "relative_path": "experiments/turnpike_trace/results_a800/turnpike_gsm8k_Qwen__Qwen2.5-7B-Instruct_s0.json",
+      "role": "trajectory_heterogeneous",
+      "sha256": "sha256:cf466e60c1f49c3e0eb5359469dcd6c3b7617cf4db1259ae349b0ef57a878679"
+    },
+    {
+      "bytes": 20890709,
+      "relative_path": "experiments/turnpike_trace/results_a800/turnpike_gsm8k_Qwen__Qwen2.5-7B-Instruct_s0.npz",
+      "role": "trajectory_binary",
+      "sha256": "sha256:d64f9fd8f8037ec125b2546896a20f47edc333d033bb040e20b79eaff3955f1e"
+    }
+  ],
+  "source_manifest_sha256": "sha256:cbedb26eb5722da4cdd1fb11644162167cb4a5c46f0db21cae45dba9bc7a8769",
+  "stage_validation": {
+    "display_status": "REAL / FAILED VALIDATION",
+    "held_bootstrap_ci": [
+      -1.0,
+      0.6363636363636362
+    ],
+    "held_spearman_rho": -0.5428571428571428,
+    "source": {
+      "bytes": 5020,
+      "relative_path": "experiments/redesign_v2/stage_heterogeneity/shi_r27_summary.json",
+      "role": "stage_heterogeneity",
+      "sha256": "sha256:5433f16bb5ed25c5e89dec5ca82b56490ab68bad6e9077fe95d07a461137f3fe"
+    },
+    "status": "failed_validation",
+    "verdict": "FAIL"
+  },
+  "status_counts": {
+    "available": 2,
+    "failed_validation": 1,
+    "missing": 2,
+    "partial": 0,
+    "unusable": 1
+  },
+  "warnings": [
+    {
+      "code": "non_finite_value",
+      "json_path": "$.summary[0].mean",
+      "message": "Non-finite numeric value was normalized to null.",
+      "relative_path": "experiments/redesign_v2/results_server_pull_20260524/strong_main_grid/summary_soft_segmented.json",
+      "source_role": "soft_segmented_summary"
+    },
+    {
+      "code": "non_finite_value",
+      "json_path": "$.summary[0].sd",
+      "message": "Non-finite numeric value was normalized to null.",
+      "relative_path": "experiments/redesign_v2/results_server_pull_20260524/strong_main_grid/summary_soft_segmented.json",
+      "source_role": "soft_segmented_summary"
+    },
+    {
+      "code": "non_finite_value",
+      "json_path": "$.summary[10].mean",
+      "message": "Non-finite numeric value was normalized to null.",
+      "relative_path": "experiments/redesign_v2/results_server_pull_20260524/strong_main_grid/summary_soft_segmented.json",
+      "source_role": "soft_segmented_summary"
+    },
+    {
+      "code": "non_finite_value",
+      "json_path": "$.summary[10].sd",
+      "message": "Non-finite numeric value was normalized to null.",
+      "relative_path": "experiments/redesign_v2/results_server_pull_20260524/strong_main_grid/summary_soft_segmented.json",
+      "source_role": "soft_segmented_summary"
+    },
+    {
+      "code": "non_finite_value",
+      "json_path": "$.summary[11].mean",
+      "message": "Non-finite numeric value was normalized to null.",
+      "relative_path": "experiments/redesign_v2/results_server_pull_20260524/strong_main_grid/summary_soft_segmented.json",
+      "source_role": "soft_segmented_summary"
+    },
+    {
+      "code": "non_finite_value",
+      "json_path": "$.summary[11].sd",
+      "message": "Non-finite numeric value was normalized to null.",
+      "relative_path": "experiments/redesign_v2/results_server_pull_20260524/strong_main_grid/summary_soft_segmented.json",
+      "source_role": "soft_segmented_summary"
+    },
+    {
+      "code": "non_finite_value",
+      "json_path": "$.summary[12].mean",
+      "message": "Non-finite numeric value was normalized to null.",
+      "relative_path": "experiments/redesign_v2/results_server_pull_20260524/strong_main_grid/summary_soft_segmented.json",
+      "source_role": "soft_segmented_summary"
+    },
+    {
+      "code": "non_finite_value",
+      "json_path": "$.summary[12].sd",
+      "message": "Non-finite numeric value was normalized to null.",
+      "relative_path": "experiments/redesign_v2/results_server_pull_20260524/strong_main_grid/summary_soft_segmented.json",
+      "source_role": "soft_segmented_summary"
+    },
+    {
+      "code": "non_finite_value",
+      "json_path": "$.summary[13].mean",
+      "message": "Non-finite numeric value was normalized to null.",
+      "relative_path": "experiments/redesign_v2/results_server_pull_20260524/strong_main_grid/summary_soft_segmented.json",
+      "source_role": "soft_segmented_summary"
+    },
+    {
+      "code": "non_finite_value",
+      "json_path": "$.summary[13].sd",
+      "message": "Non-finite numeric value was normalized to null.",
+      "relative_path": "experiments/redesign_v2/results_server_pull_20260524/strong_main_grid/summary_soft_segmented.json",
+      "source_role": "soft_segmented_summary"
+    },
+    {
+      "code": "non_finite_value",
+      "json_path": "$.summary[14].mean",
+      "message": "Non-finite numeric value was normalized to null.",
+      "relative_path": "experiments/redesign_v2/results_server_pull_20260524/strong_main_grid/summary_soft_segmented.json",
+      "source_role": "soft_segmented_summary"
+    },
+    {
+      "code": "non_finite_value",
+      "json_path": "$.summary[14].sd",
+      "message": "Non-finite numeric value was normalized to null.",
+      "relative_path": "experiments/redesign_v2/results_server_pull_20260524/strong_main_grid/summary_soft_segmented.json",
+      "source_role": "soft_segmented_summary"
+    },
+    {
+      "code": "non_finite_value",
+      "json_path": "$.summary[15].mean",
+      "message": "Non-finite numeric value was normalized to null.",
+      "relative_path": "experiments/redesign_v2/results_server_pull_20260524/strong_main_grid/summary_soft_segmented.json",
+      "source_role": "soft_segmented_summary"
+    },
+    {
+      "code": "non_finite_value",
+      "json_path": "$.summary[15].sd",
+      "message": "Non-finite numeric value was normalized to null.",
+      "relative_path": "experiments/redesign_v2/results_server_pull_20260524/strong_main_grid/summary_soft_segmented.json",
+      "source_role": "soft_segmented_summary"
+    },
+    {
+      "code": "non_finite_value",
+      "json_path": "$.summary[16].mean",
+      "message": "Non-finite numeric value was normalized to null.",
+      "relative_path": "experiments/redesign_v2/results_server_pull_20260524/strong_main_grid/summary_soft_segmented.json",
+      "source_role": "soft_segmented_summary"
+    },
+    {
+      "code": "non_finite_value",
+      "json_path": "$.summary[16].sd",
+      "message": "Non-finite numeric value was normalized to null.",
+      "relative_path": "experiments/redesign_v2/results_server_pull_20260524/strong_main_grid/summary_soft_segmented.json",
+      "source_role": "soft_segmented_summary"
+    },
+    {
+      "code": "non_finite_value",
+      "json_path": "$.summary[17].mean",
+      "message": "Non-finite numeric value was normalized to null.",
+      "relative_path": "experiments/redesign_v2/results_server_pull_20260524/strong_main_grid/summary_soft_segmented.json",
+      "source_role": "soft_segmented_summary"
+    },
+    {
+      "code": "non_finite_value",
+      "json_path": "$.summary[17].sd",
+      "message": "Non-finite numeric value was normalized to null.",
+      "relative_path": "experiments/redesign_v2/results_server_pull_20260524/strong_main_grid/summary_soft_segmented.json",
+      "source_role": "soft_segmented_summary"
+    },
+    {
+      "code": "non_finite_value",
+      "json_path": "$.summary[18].mean",
+      "message": "Non-finite numeric value was normalized to null.",
+      "relative_path": "experiments/redesign_v2/results_server_pull_20260524/strong_main_grid/summary_soft_segmented.json",
+      "source_role": "soft_segmented_summary"
+    },
+    {
+      "code": "non_finite_value",
+      "json_path": "$.summary[18].sd",
+      "message": "Non-finite numeric value was normalized to null.",
+      "relative_path": "experiments/redesign_v2/results_server_pull_20260524/strong_main_grid/summary_soft_segmented.json",
+      "source_role": "soft_segmented_summary"
+    },
+    {
+      "code": "non_finite_value",
+      "json_path": "$.summary[19].mean",
+      "message": "Non-finite numeric value was normalized to null.",
+      "relative_path": "experiments/redesign_v2/results_server_pull_20260524/strong_main_grid/summary_soft_segmented.json",
+      "source_role": "soft_segmented_summary"
+    },
+    {
+      "code": "non_finite_value",
+      "json_path": "$.summary[19].sd",
+      "message": "Non-finite numeric value was normalized to null.",
+      "relative_path": "experiments/redesign_v2/results_server_pull_20260524/strong_main_grid/summary_soft_segmented.json",
+      "source_role": "soft_segmented_summary"
+    },
+    {
+      "code": "non_finite_value",
+      "json_path": "$.summary[1].mean",
+      "message": "Non-finite numeric value was normalized to null.",
+      "relative_path": "experiments/redesign_v2/results_server_pull_20260524/strong_main_grid/summary_soft_segmented.json",
+      "source_role": "soft_segmented_summary"
+    },
+    {
+      "code": "non_finite_value",
+      "json_path": "$.summary[1].sd",
+      "message": "Non-finite numeric value was normalized to null.",
+      "relative_path": "experiments/redesign_v2/results_server_pull_20260524/strong_main_grid/summary_soft_segmented.json",
+      "source_role": "soft_segmented_summary"
+    },
+    {
+      "code": "non_finite_value",
+      "json_path": "$.summary[20].mean",
+      "message": "Non-finite numeric value was normalized to null.",
+      "relative_path": "experiments/redesign_v2/results_server_pull_20260524/strong_main_grid/summary_soft_segmented.json",
+      "source_role": "soft_segmented_summary"
+    },
+    {
+      "code": "non_finite_value",
+      "json_path": "$.summary[20].sd",
+      "message": "Non-finite numeric value was normalized to null.",
+      "relative_path": "experiments/redesign_v2/results_server_pull_20260524/strong_main_grid/summary_soft_segmented.json",
+      "source_role": "soft_segmented_summary"
+    },
+    {
+      "code": "non_finite_value",
+      "json_path": "$.summary[21].mean",
+      "message": "Non-finite numeric value was normalized to null.",
+      "relative_path": "experiments/redesign_v2/results_server_pull_20260524/strong_main_grid/summary_soft_segmented.json",
+      "source_role": "soft_segmented_summary"
+    },
+    {
+      "code": "non_finite_value",
+      "json_path": "$.summary[21].sd",
+      "message": "Non-finite numeric value was normalized to null.",
+      "relative_path": "experiments/redesign_v2/results_server_pull_20260524/strong_main_grid/summary_soft_segmented.json",
+      "source_role": "soft_segmented_summary"
+    },
+    {
+      "code": "non_finite_value",
+      "json_path": "$.summary[22].mean",
+      "message": "Non-finite numeric value was normalized to null.",
+      "relative_path": "experiments/redesign_v2/results_server_pull_20260524/strong_main_grid/summary_soft_segmented.json",
+      "source_role": "soft_segmented_summary"
+    },
+    {
+      "code": "non_finite_value",
+      "json_path": "$.summary[22].sd",
+      "message": "Non-finite numeric value was normalized to null.",
+      "relative_path": "experiments/redesign_v2/results_server_pull_20260524/strong_main_grid/summary_soft_segmented.json",
+      "source_role": "soft_segmented_summary"
+    },
+    {
+      "code": "non_finite_value",
+      "json_path": "$.summary[23].mean",
+      "message": "Non-finite numeric value was normalized to null.",
+      "relative_path": "experiments/redesign_v2/results_server_pull_20260524/strong_main_grid/summary_soft_segmented.json",
+      "source_role": "soft_segmented_summary"
+    },
+    {
+      "code": "non_finite_value",
+      "json_path": "$.summary[23].sd",
+      "message": "Non-finite numeric value was normalized to null.",
+      "relative_path": "experiments/redesign_v2/results_server_pull_20260524/strong_main_grid/summary_soft_segmented.json",
+      "source_role": "soft_segmented_summary"
+    },
+    {
+      "code": "non_finite_value",
+      "json_path": "$.summary[24].mean",
+      "message": "Non-finite numeric value was normalized to null.",
+      "relative_path": "experiments/redesign_v2/results_server_pull_20260524/strong_main_grid/summary_soft_segmented.json",
+      "source_role": "soft_segmented_summary"
+    },
+    {
+      "code": "non_finite_value",
+      "json_path": "$.summary[24].sd",
+      "message": "Non-finite numeric value was normalized to null.",
+      "relative_path": "experiments/redesign_v2/results_server_pull_20260524/strong_main_grid/summary_soft_segmented.json",
+      "source_role": "soft_segmented_summary"
+    },
+    {
+      "code": "non_finite_value",
+      "json_path": "$.summary[25].mean",
+      "message": "Non-finite numeric value was normalized to null.",
+      "relative_path": "experiments/redesign_v2/results_server_pull_20260524/strong_main_grid/summary_soft_segmented.json",
+      "source_role": "soft_segmented_summary"
+    },
+    {
+      "code": "non_finite_value",
+      "json_path": "$.summary[25].sd",
+      "message": "Non-finite numeric value was normalized to null.",
+      "relative_path": "experiments/redesign_v2/results_server_pull_20260524/strong_main_grid/summary_soft_segmented.json",
+      "source_role": "soft_segmented_summary"
+    },
+    {
+      "code": "non_finite_value",
+      "json_path": "$.summary[26].mean",
+      "message": "Non-finite numeric value was normalized to null.",
+      "relative_path": "experiments/redesign_v2/results_server_pull_20260524/strong_main_grid/summary_soft_segmented.json",
+      "source_role": "soft_segmented_summary"
+    },
+    {
+      "code": "non_finite_value",
+      "json_path": "$.summary[26].sd",
+      "message": "Non-finite numeric value was normalized to null.",
+      "relative_path": "experiments/redesign_v2/results_server_pull_20260524/strong_main_grid/summary_soft_segmented.json",
+      "source_role": "soft_segmented_summary"
+    },
+    {
+      "code": "non_finite_value",
+      "json_path": "$.summary[27].mean",
+      "message": "Non-finite numeric value was normalized to null.",
+      "relative_path": "experiments/redesign_v2/results_server_pull_20260524/strong_main_grid/summary_soft_segmented.json",
+      "source_role": "soft_segmented_summary"
+    },
+    {
+      "code": "non_finite_value",
+      "json_path": "$.summary[27].sd",
+      "message": "Non-finite numeric value was normalized to null.",
+      "relative_path": "experiments/redesign_v2/results_server_pull_20260524/strong_main_grid/summary_soft_segmented.json",
+      "source_role": "soft_segmented_summary"
+    },
+    {
+      "code": "non_finite_value",
+      "json_path": "$.summary[28].mean",
+      "message": "Non-finite numeric value was normalized to null.",
+      "relative_path": "experiments/redesign_v2/results_server_pull_20260524/strong_main_grid/summary_soft_segmented.json",
+      "source_role": "soft_segmented_summary"
+    },
+    {
+      "code": "non_finite_value",
+      "json_path": "$.summary[28].sd",
+      "message": "Non-finite numeric value was normalized to null.",
+      "relative_path": "experiments/redesign_v2/results_server_pull_20260524/strong_main_grid/summary_soft_segmented.json",
+      "source_role": "soft_segmented_summary"
+    },
+    {
+      "code": "non_finite_value",
+      "json_path": "$.summary[29].mean",
+      "message": "Non-finite numeric value was normalized to null.",
+      "relative_path": "experiments/redesign_v2/results_server_pull_20260524/strong_main_grid/summary_soft_segmented.json",
+      "source_role": "soft_segmented_summary"
+    },
+    {
+      "code": "non_finite_value",
+      "json_path": "$.summary[29].sd",
+      "message": "Non-finite numeric value was normalized to null.",
+      "relative_path": "experiments/redesign_v2/results_server_pull_20260524/strong_main_grid/summary_soft_segmented.json",
+      "source_role": "soft_segmented_summary"
+    },
+    {
+      "code": "non_finite_value",
+      "json_path": "$.summary[2].mean",
+      "message": "Non-finite numeric value was normalized to null.",
+      "relative_path": "experiments/redesign_v2/results_server_pull_20260524/strong_main_grid/summary_soft_segmented.json",
+      "source_role": "soft_segmented_summary"
+    },
+    {
+      "code": "non_finite_value",
+      "json_path": "$.summary[2].sd",
+      "message": "Non-finite numeric value was normalized to null.",
+      "relative_path": "experiments/redesign_v2/results_server_pull_20260524/strong_main_grid/summary_soft_segmented.json",
+      "source_role": "soft_segmented_summary"
+    },
+    {
+      "code": "non_finite_value",
+      "json_path": "$.summary[30].mean",
+      "message": "Non-finite numeric value was normalized to null.",
+      "relative_path": "experiments/redesign_v2/results_server_pull_20260524/strong_main_grid/summary_soft_segmented.json",
+      "source_role": "soft_segmented_summary"
+    },
+    {
+      "code": "non_finite_value",
+      "json_path": "$.summary[30].sd",
+      "message": "Non-finite numeric value was normalized to null.",
+      "relative_path": "experiments/redesign_v2/results_server_pull_20260524/strong_main_grid/summary_soft_segmented.json",
+      "source_role": "soft_segmented_summary"
+    },
+    {
+      "code": "non_finite_value",
+      "json_path": "$.summary[31].mean",
+      "message": "Non-finite numeric value was normalized to null.",
+      "relative_path": "experiments/redesign_v2/results_server_pull_20260524/strong_main_grid/summary_soft_segmented.json",
+      "source_role": "soft_segmented_summary"
+    },
+    {
+      "code": "non_finite_value",
+      "json_path": "$.summary[31].sd",
+      "message": "Non-finite numeric value was normalized to null.",
+      "relative_path": "experiments/redesign_v2/results_server_pull_20260524/strong_main_grid/summary_soft_segmented.json",
+      "source_role": "soft_segmented_summary"
+    },
+    {
+      "code": "non_finite_value",
+      "json_path": "$.summary[32].mean",
+      "message": "Non-finite numeric value was normalized to null.",
+      "relative_path": "experiments/redesign_v2/results_server_pull_20260524/strong_main_grid/summary_soft_segmented.json",
+      "source_role": "soft_segmented_summary"
+    },
+    {
+      "code": "non_finite_value",
+      "json_path": "$.summary[32].sd",
+      "message": "Non-finite numeric value was normalized to null.",
+      "relative_path": "experiments/redesign_v2/results_server_pull_20260524/strong_main_grid/summary_soft_segmented.json",
+      "source_role": "soft_segmented_summary"
+    },
+    {
+      "code": "non_finite_value",
+      "json_path": "$.summary[33].mean",
+      "message": "Non-finite numeric value was normalized to null.",
+      "relative_path": "experiments/redesign_v2/results_server_pull_20260524/strong_main_grid/summary_soft_segmented.json",
+      "source_role": "soft_segmented_summary"
+    },
+    {
+      "code": "non_finite_value",
+      "json_path": "$.summary[33].sd",
+      "message": "Non-finite numeric value was normalized to null.",
+      "relative_path": "experiments/redesign_v2/results_server_pull_20260524/strong_main_grid/summary_soft_segmented.json",
+      "source_role": "soft_segmented_summary"
+    },
+    {
+      "code": "non_finite_value",
+      "json_path": "$.summary[34].mean",
+      "message": "Non-finite numeric value was normalized to null.",
+      "relative_path": "experiments/redesign_v2/results_server_pull_20260524/strong_main_grid/summary_soft_segmented.json",
+      "source_role": "soft_segmented_summary"
+    },
+    {
+      "code": "non_finite_value",
+      "json_path": "$.summary[34].sd",
+      "message": "Non-finite numeric value was normalized to null.",
+      "relative_path": "experiments/redesign_v2/results_server_pull_20260524/strong_main_grid/summary_soft_segmented.json",
+      "source_role": "soft_segmented_summary"
+    },
+    {
+      "code": "non_finite_value",
+      "json_path": "$.summary[35].mean",
+      "message": "Non-finite numeric value was normalized to null.",
+      "relative_path": "experiments/redesign_v2/results_server_pull_20260524/strong_main_grid/summary_soft_segmented.json",
+      "source_role": "soft_segmented_summary"
+    },
+    {
+      "code": "non_finite_value",
+      "json_path": "$.summary[35].sd",
+      "message": "Non-finite numeric value was normalized to null.",
+      "relative_path": "experiments/redesign_v2/results_server_pull_20260524/strong_main_grid/summary_soft_segmented.json",
+      "source_role": "soft_segmented_summary"
+    },
+    {
+      "code": "non_finite_value",
+      "json_path": "$.summary[36].mean",
+      "message": "Non-finite numeric value was normalized to null.",
+      "relative_path": "experiments/redesign_v2/results_server_pull_20260524/strong_main_grid/summary_soft_segmented.json",
+      "source_role": "soft_segmented_summary"
+    },
+    {
+      "code": "non_finite_value",
+      "json_path": "$.summary[36].sd",
+      "message": "Non-finite numeric value was normalized to null.",
+      "relative_path": "experiments/redesign_v2/results_server_pull_20260524/strong_main_grid/summary_soft_segmented.json",
+      "source_role": "soft_segmented_summary"
+    },
+    {
+      "code": "non_finite_value",
+      "json_path": "$.summary[37].mean",
+      "message": "Non-finite numeric value was normalized to null.",
+      "relative_path": "experiments/redesign_v2/results_server_pull_20260524/strong_main_grid/summary_soft_segmented.json",
+      "source_role": "soft_segmented_summary"
+    },
+    {
+      "code": "non_finite_value",
+      "json_path": "$.summary[37].sd",
+      "message": "Non-finite numeric value was normalized to null.",
+      "relative_path": "experiments/redesign_v2/results_server_pull_20260524/strong_main_grid/summary_soft_segmented.json",
+      "source_role": "soft_segmented_summary"
+    },
+    {
+      "code": "non_finite_value",
+      "json_path": "$.summary[38].mean",
+      "message": "Non-finite numeric value was normalized to null.",
+      "relative_path": "experiments/redesign_v2/results_server_pull_20260524/strong_main_grid/summary_soft_segmented.json",
+      "source_role": "soft_segmented_summary"
+    },
+    {
+      "code": "non_finite_value",
+      "json_path": "$.summary[38].sd",
+      "message": "Non-finite numeric value was normalized to null.",
+      "relative_path": "experiments/redesign_v2/results_server_pull_20260524/strong_main_grid/summary_soft_segmented.json",
+      "source_role": "soft_segmented_summary"
+    },
+    {
+      "code": "non_finite_value",
+      "json_path": "$.summary[39].mean",
+      "message": "Non-finite numeric value was normalized to null.",
+      "relative_path": "experiments/redesign_v2/results_server_pull_20260524/strong_main_grid/summary_soft_segmented.json",
+      "source_role": "soft_segmented_summary"
+    },
+    {
+      "code": "non_finite_value",
+      "json_path": "$.summary[39].sd",
+      "message": "Non-finite numeric value was normalized to null.",
+      "relative_path": "experiments/redesign_v2/results_server_pull_20260524/strong_main_grid/summary_soft_segmented.json",
+      "source_role": "soft_segmented_summary"
+    },
+    {
+      "code": "non_finite_value",
+      "json_path": "$.summary[3].mean",
+      "message": "Non-finite numeric value was normalized to null.",
+      "relative_path": "experiments/redesign_v2/results_server_pull_20260524/strong_main_grid/summary_soft_segmented.json",
+      "source_role": "soft_segmented_summary"
+    },
+    {
+      "code": "non_finite_value",
+      "json_path": "$.summary[3].sd",
+      "message": "Non-finite numeric value was normalized to null.",
+      "relative_path": "experiments/redesign_v2/results_server_pull_20260524/strong_main_grid/summary_soft_segmented.json",
+      "source_role": "soft_segmented_summary"
+    },
+    {
+      "code": "non_finite_value",
+      "json_path": "$.summary[40].mean",
+      "message": "Non-finite numeric value was normalized to null.",
+      "relative_path": "experiments/redesign_v2/results_server_pull_20260524/strong_main_grid/summary_soft_segmented.json",
+      "source_role": "soft_segmented_summary"
+    },
+    {
+      "code": "non_finite_value",
+      "json_path": "$.summary[40].sd",
+      "message": "Non-finite numeric value was normalized to null.",
+      "relative_path": "experiments/redesign_v2/results_server_pull_20260524/strong_main_grid/summary_soft_segmented.json",
+      "source_role": "soft_segmented_summary"
+    },
+    {
+      "code": "non_finite_value",
+      "json_path": "$.summary[41].mean",
+      "message": "Non-finite numeric value was normalized to null.",
+      "relative_path": "experiments/redesign_v2/results_server_pull_20260524/strong_main_grid/summary_soft_segmented.json",
+      "source_role": "soft_segmented_summary"
+    },
+    {
+      "code": "non_finite_value",
+      "json_path": "$.summary[41].sd",
+      "message": "Non-finite numeric value was normalized to null.",
+      "relative_path": "experiments/redesign_v2/results_server_pull_20260524/strong_main_grid/summary_soft_segmented.json",
+      "source_role": "soft_segmented_summary"
+    },
+    {
+      "code": "non_finite_value",
+      "json_path": "$.summary[42].mean",
+      "message": "Non-finite numeric value was normalized to null.",
+      "relative_path": "experiments/redesign_v2/results_server_pull_20260524/strong_main_grid/summary_soft_segmented.json",
+      "source_role": "soft_segmented_summary"
+    },
+    {
+      "code": "non_finite_value",
+      "json_path": "$.summary[42].sd",
+      "message": "Non-finite numeric value was normalized to null.",
+      "relative_path": "experiments/redesign_v2/results_server_pull_20260524/strong_main_grid/summary_soft_segmented.json",
+      "source_role": "soft_segmented_summary"
+    },
+    {
+      "code": "non_finite_value",
+      "json_path": "$.summary[43].mean",
+      "message": "Non-finite numeric value was normalized to null.",
+      "relative_path": "experiments/redesign_v2/results_server_pull_20260524/strong_main_grid/summary_soft_segmented.json",
+      "source_role": "soft_segmented_summary"
+    },
+    {
+      "code": "non_finite_value",
+      "json_path": "$.summary[43].sd",
+      "message": "Non-finite numeric value was normalized to null.",
+      "relative_path": "experiments/redesign_v2/results_server_pull_20260524/strong_main_grid/summary_soft_segmented.json",
+      "source_role": "soft_segmented_summary"
+    },
+    {
+      "code": "non_finite_value",
+      "json_path": "$.summary[44].mean",
+      "message": "Non-finite numeric value was normalized to null.",
+      "relative_path": "experiments/redesign_v2/results_server_pull_20260524/strong_main_grid/summary_soft_segmented.json",
+      "source_role": "soft_segmented_summary"
+    },
+    {
+      "code": "non_finite_value",
+      "json_path": "$.summary[44].sd",
+      "message": "Non-finite numeric value was normalized to null.",
+      "relative_path": "experiments/redesign_v2/results_server_pull_20260524/strong_main_grid/summary_soft_segmented.json",
+      "source_role": "soft_segmented_summary"
+    },
+    {
+      "code": "non_finite_value",
+      "json_path": "$.summary[45].mean",
+      "message": "Non-finite numeric value was normalized to null.",
+      "relative_path": "experiments/redesign_v2/results_server_pull_20260524/strong_main_grid/summary_soft_segmented.json",
+      "source_role": "soft_segmented_summary"
+    },
+    {
+      "code": "non_finite_value",
+      "json_path": "$.summary[45].sd",
+      "message": "Non-finite numeric value was normalized to null.",
+      "relative_path": "experiments/redesign_v2/results_server_pull_20260524/strong_main_grid/summary_soft_segmented.json",
+      "source_role": "soft_segmented_summary"
+    },
+    {
+      "code": "non_finite_value",
+      "json_path": "$.summary[46].mean",
+      "message": "Non-finite numeric value was normalized to null.",
+      "relative_path": "experiments/redesign_v2/results_server_pull_20260524/strong_main_grid/summary_soft_segmented.json",
+      "source_role": "soft_segmented_summary"
+    },
+    {
+      "code": "non_finite_value",
+      "json_path": "$.summary[46].sd",
+      "message": "Non-finite numeric value was normalized to null.",
+      "relative_path": "experiments/redesign_v2/results_server_pull_20260524/strong_main_grid/summary_soft_segmented.json",
+      "source_role": "soft_segmented_summary"
+    },
+    {
+      "code": "non_finite_value",
+      "json_path": "$.summary[47].mean",
+      "message": "Non-finite numeric value was normalized to null.",
+      "relative_path": "experiments/redesign_v2/results_server_pull_20260524/strong_main_grid/summary_soft_segmented.json",
+      "source_role": "soft_segmented_summary"
+    },
+    {
+      "code": "non_finite_value",
+      "json_path": "$.summary[47].sd",
+      "message": "Non-finite numeric value was normalized to null.",
+      "relative_path": "experiments/redesign_v2/results_server_pull_20260524/strong_main_grid/summary_soft_segmented.json",
+      "source_role": "soft_segmented_summary"
+    },
+    {
+      "code": "non_finite_value",
+      "json_path": "$.summary[48].mean",
+      "message": "Non-finite numeric value was normalized to null.",
+      "relative_path": "experiments/redesign_v2/results_server_pull_20260524/strong_main_grid/summary_soft_segmented.json",
+      "source_role": "soft_segmented_summary"
+    },
+    {
+      "code": "non_finite_value",
+      "json_path": "$.summary[48].sd",
+      "message": "Non-finite numeric value was normalized to null.",
+      "relative_path": "experiments/redesign_v2/results_server_pull_20260524/strong_main_grid/summary_soft_segmented.json",
+      "source_role": "soft_segmented_summary"
+    },
+    {
+      "code": "non_finite_value",
+      "json_path": "$.summary[49].mean",
+      "message": "Non-finite numeric value was normalized to null.",
+      "relative_path": "experiments/redesign_v2/results_server_pull_20260524/strong_main_grid/summary_soft_segmented.json",
+      "source_role": "soft_segmented_summary"
+    },
+    {
+      "code": "non_finite_value",
+      "json_path": "$.summary[49].sd",
+      "message": "Non-finite numeric value was normalized to null.",
+      "relative_path": "experiments/redesign_v2/results_server_pull_20260524/strong_main_grid/summary_soft_segmented.json",
+      "source_role": "soft_segmented_summary"
+    },
+    {
+      "code": "non_finite_value",
+      "json_path": "$.summary[4].mean",
+      "message": "Non-finite numeric value was normalized to null.",
+      "relative_path": "experiments/redesign_v2/results_server_pull_20260524/strong_main_grid/summary_soft_segmented.json",
+      "source_role": "soft_segmented_summary"
+    },
+    {
+      "code": "non_finite_value",
+      "json_path": "$.summary[4].sd",
+      "message": "Non-finite numeric value was normalized to null.",
+      "relative_path": "experiments/redesign_v2/results_server_pull_20260524/strong_main_grid/summary_soft_segmented.json",
+      "source_role": "soft_segmented_summary"
+    },
+    {
+      "code": "non_finite_value",
+      "json_path": "$.summary[50].mean",
+      "message": "Non-finite numeric value was normalized to null.",
+      "relative_path": "experiments/redesign_v2/results_server_pull_20260524/strong_main_grid/summary_soft_segmented.json",
+      "source_role": "soft_segmented_summary"
+    },
+    {
+      "code": "non_finite_value",
+      "json_path": "$.summary[50].sd",
+      "message": "Non-finite numeric value was normalized to null.",
+      "relative_path": "experiments/redesign_v2/results_server_pull_20260524/strong_main_grid/summary_soft_segmented.json",
+      "source_role": "soft_segmented_summary"
+    },
+    {
+      "code": "non_finite_value",
+      "json_path": "$.summary[51].mean",
+      "message": "Non-finite numeric value was normalized to null.",
+      "relative_path": "experiments/redesign_v2/results_server_pull_20260524/strong_main_grid/summary_soft_segmented.json",
+      "source_role": "soft_segmented_summary"
+    },
+    {
+      "code": "non_finite_value",
+      "json_path": "$.summary[51].sd",
+      "message": "Non-finite numeric value was normalized to null.",
+      "relative_path": "experiments/redesign_v2/results_server_pull_20260524/strong_main_grid/summary_soft_segmented.json",
+      "source_role": "soft_segmented_summary"
+    },
+    {
+      "code": "non_finite_value",
+      "json_path": "$.summary[52].mean",
+      "message": "Non-finite numeric value was normalized to null.",
+      "relative_path": "experiments/redesign_v2/results_server_pull_20260524/strong_main_grid/summary_soft_segmented.json",
+      "source_role": "soft_segmented_summary"
+    },
+    {
+      "code": "non_finite_value",
+      "json_path": "$.summary[52].sd",
+      "message": "Non-finite numeric value was normalized to null.",
+      "relative_path": "experiments/redesign_v2/results_server_pull_20260524/strong_main_grid/summary_soft_segmented.json",
+      "source_role": "soft_segmented_summary"
+    },
+    {
+      "code": "non_finite_value",
+      "json_path": "$.summary[53].mean",
+      "message": "Non-finite numeric value was normalized to null.",
+      "relative_path": "experiments/redesign_v2/results_server_pull_20260524/strong_main_grid/summary_soft_segmented.json",
+      "source_role": "soft_segmented_summary"
+    },
+    {
+      "code": "non_finite_value",
+      "json_path": "$.summary[53].sd",
+      "message": "Non-finite numeric value was normalized to null.",
+      "relative_path": "experiments/redesign_v2/results_server_pull_20260524/strong_main_grid/summary_soft_segmented.json",
+      "source_role": "soft_segmented_summary"
+    },
+    {
+      "code": "non_finite_value",
+      "json_path": "$.summary[54].mean",
+      "message": "Non-finite numeric value was normalized to null.",
+      "relative_path": "experiments/redesign_v2/results_server_pull_20260524/strong_main_grid/summary_soft_segmented.json",
+      "source_role": "soft_segmented_summary"
+    },
+    {
+      "code": "non_finite_value",
+      "json_path": "$.summary[54].sd",
+      "message": "Non-finite numeric value was normalized to null.",
+      "relative_path": "experiments/redesign_v2/results_server_pull_20260524/strong_main_grid/summary_soft_segmented.json",
+      "source_role": "soft_segmented_summary"
+    },
+    {
+      "code": "non_finite_value",
+      "json_path": "$.summary[55].mean",
+      "message": "Non-finite numeric value was normalized to null.",
+      "relative_path": "experiments/redesign_v2/results_server_pull_20260524/strong_main_grid/summary_soft_segmented.json",
+      "source_role": "soft_segmented_summary"
+    },
+    {
+      "code": "non_finite_value",
+      "json_path": "$.summary[55].sd",
+      "message": "Non-finite numeric value was normalized to null.",
+      "relative_path": "experiments/redesign_v2/results_server_pull_20260524/strong_main_grid/summary_soft_segmented.json",
+      "source_role": "soft_segmented_summary"
+    },
+    {
+      "code": "non_finite_value",
+      "json_path": "$.summary[56].mean",
+      "message": "Non-finite numeric value was normalized to null.",
+      "relative_path": "experiments/redesign_v2/results_server_pull_20260524/strong_main_grid/summary_soft_segmented.json",
+      "source_role": "soft_segmented_summary"
+    },
+    {
+      "code": "non_finite_value",
+      "json_path": "$.summary[56].sd",
+      "message": "Non-finite numeric value was normalized to null.",
+      "relative_path": "experiments/redesign_v2/results_server_pull_20260524/strong_main_grid/summary_soft_segmented.json",
+      "source_role": "soft_segmented_summary"
+    },
+    {
+      "code": "non_finite_value",
+      "json_path": "$.summary[57].mean",
+      "message": "Non-finite numeric value was normalized to null.",
+      "relative_path": "experiments/redesign_v2/results_server_pull_20260524/strong_main_grid/summary_soft_segmented.json",
+      "source_role": "soft_segmented_summary"
+    },
+    {
+      "code": "non_finite_value",
+      "json_path": "$.summary[57].sd",
+      "message": "Non-finite numeric value was normalized to null.",
+      "relative_path": "experiments/redesign_v2/results_server_pull_20260524/strong_main_grid/summary_soft_segmented.json",
+      "source_role": "soft_segmented_summary"
+    },
+    {
+      "code": "non_finite_value",
+      "json_path": "$.summary[58].mean",
+      "message": "Non-finite numeric value was normalized to null.",
+      "relative_path": "experiments/redesign_v2/results_server_pull_20260524/strong_main_grid/summary_soft_segmented.json",
+      "source_role": "soft_segmented_summary"
+    },
+    {
+      "code": "non_finite_value",
+      "json_path": "$.summary[58].sd",
+      "message": "Non-finite numeric value was normalized to null.",
+      "relative_path": "experiments/redesign_v2/results_server_pull_20260524/strong_main_grid/summary_soft_segmented.json",
+      "source_role": "soft_segmented_summary"
+    },
+    {
+      "code": "non_finite_value",
+      "json_path": "$.summary[59].mean",
+      "message": "Non-finite numeric value was normalized to null.",
+      "relative_path": "experiments/redesign_v2/results_server_pull_20260524/strong_main_grid/summary_soft_segmented.json",
+      "source_role": "soft_segmented_summary"
+    },
+    {
+      "code": "non_finite_value",
+      "json_path": "$.summary[59].sd",
+      "message": "Non-finite numeric value was normalized to null.",
+      "relative_path": "experiments/redesign_v2/results_server_pull_20260524/strong_main_grid/summary_soft_segmented.json",
+      "source_role": "soft_segmented_summary"
+    },
+    {
+      "code": "non_finite_value",
+      "json_path": "$.summary[5].mean",
+      "message": "Non-finite numeric value was normalized to null.",
+      "relative_path": "experiments/redesign_v2/results_server_pull_20260524/strong_main_grid/summary_soft_segmented.json",
+      "source_role": "soft_segmented_summary"
+    },
+    {
+      "code": "non_finite_value",
+      "json_path": "$.summary[5].sd",
+      "message": "Non-finite numeric value was normalized to null.",
+      "relative_path": "experiments/redesign_v2/results_server_pull_20260524/strong_main_grid/summary_soft_segmented.json",
+      "source_role": "soft_segmented_summary"
+    },
+    {
+      "code": "non_finite_value",
+      "json_path": "$.summary[60].mean",
+      "message": "Non-finite numeric value was normalized to null.",
+      "relative_path": "experiments/redesign_v2/results_server_pull_20260524/strong_main_grid/summary_soft_segmented.json",
+      "source_role": "soft_segmented_summary"
+    },
+    {
+      "code": "non_finite_value",
+      "json_path": "$.summary[60].sd",
+      "message": "Non-finite numeric value was normalized to null.",
+      "relative_path": "experiments/redesign_v2/results_server_pull_20260524/strong_main_grid/summary_soft_segmented.json",
+      "source_role": "soft_segmented_summary"
+    },
+    {
+      "code": "non_finite_value",
+      "json_path": "$.summary[61].mean",
+      "message": "Non-finite numeric value was normalized to null.",
+      "relative_path": "experiments/redesign_v2/results_server_pull_20260524/strong_main_grid/summary_soft_segmented.json",
+      "source_role": "soft_segmented_summary"
+    },
+    {
+      "code": "non_finite_value",
+      "json_path": "$.summary[61].sd",
+      "message": "Non-finite numeric value was normalized to null.",
+      "relative_path": "experiments/redesign_v2/results_server_pull_20260524/strong_main_grid/summary_soft_segmented.json",
+      "source_role": "soft_segmented_summary"
+    },
+    {
+      "code": "non_finite_value",
+      "json_path": "$.summary[62].mean",
+      "message": "Non-finite numeric value was normalized to null.",
+      "relative_path": "experiments/redesign_v2/results_server_pull_20260524/strong_main_grid/summary_soft_segmented.json",
+      "source_role": "soft_segmented_summary"
+    },
+    {
+      "code": "non_finite_value",
+      "json_path": "$.summary[62].sd",
+      "message": "Non-finite numeric value was normalized to null.",
+      "relative_path": "experiments/redesign_v2/results_server_pull_20260524/strong_main_grid/summary_soft_segmented.json",
+      "source_role": "soft_segmented_summary"
+    },
+    {
+      "code": "non_finite_value",
+      "json_path": "$.summary[63].mean",
+      "message": "Non-finite numeric value was normalized to null.",
+      "relative_path": "experiments/redesign_v2/results_server_pull_20260524/strong_main_grid/summary_soft_segmented.json",
+      "source_role": "soft_segmented_summary"
+    },
+    {
+      "code": "non_finite_value",
+      "json_path": "$.summary[63].sd",
+      "message": "Non-finite numeric value was normalized to null.",
+      "relative_path": "experiments/redesign_v2/results_server_pull_20260524/strong_main_grid/summary_soft_segmented.json",
+      "source_role": "soft_segmented_summary"
+    },
+    {
+      "code": "non_finite_value",
+      "json_path": "$.summary[64].mean",
+      "message": "Non-finite numeric value was normalized to null.",
+      "relative_path": "experiments/redesign_v2/results_server_pull_20260524/strong_main_grid/summary_soft_segmented.json",
+      "source_role": "soft_segmented_summary"
+    },
+    {
+      "code": "non_finite_value",
+      "json_path": "$.summary[64].sd",
+      "message": "Non-finite numeric value was normalized to null.",
+      "relative_path": "experiments/redesign_v2/results_server_pull_20260524/strong_main_grid/summary_soft_segmented.json",
+      "source_role": "soft_segmented_summary"
+    },
+    {
+      "code": "non_finite_value",
+      "json_path": "$.summary[65].mean",
+      "message": "Non-finite numeric value was normalized to null.",
+      "relative_path": "experiments/redesign_v2/results_server_pull_20260524/strong_main_grid/summary_soft_segmented.json",
+      "source_role": "soft_segmented_summary"
+    },
+    {
+      "code": "non_finite_value",
+      "json_path": "$.summary[65].sd",
+      "message": "Non-finite numeric value was normalized to null.",
+      "relative_path": "experiments/redesign_v2/results_server_pull_20260524/strong_main_grid/summary_soft_segmented.json",
+      "source_role": "soft_segmented_summary"
+    },
+    {
+      "code": "non_finite_value",
+      "json_path": "$.summary[66].mean",
+      "message": "Non-finite numeric value was normalized to null.",
+      "relative_path": "experiments/redesign_v2/results_server_pull_20260524/strong_main_grid/summary_soft_segmented.json",
+      "source_role": "soft_segmented_summary"
+    },
+    {
+      "code": "non_finite_value",
+      "json_path": "$.summary[66].sd",
+      "message": "Non-finite numeric value was normalized to null.",
+      "relative_path": "experiments/redesign_v2/results_server_pull_20260524/strong_main_grid/summary_soft_segmented.json",
+      "source_role": "soft_segmented_summary"
+    },
+    {
+      "code": "non_finite_value",
+      "json_path": "$.summary[67].mean",
+      "message": "Non-finite numeric value was normalized to null.",
+      "relative_path": "experiments/redesign_v2/results_server_pull_20260524/strong_main_grid/summary_soft_segmented.json",
+      "source_role": "soft_segmented_summary"
+    },
+    {
+      "code": "non_finite_value",
+      "json_path": "$.summary[67].sd",
+      "message": "Non-finite numeric value was normalized to null.",
+      "relative_path": "experiments/redesign_v2/results_server_pull_20260524/strong_main_grid/summary_soft_segmented.json",
+      "source_role": "soft_segmented_summary"
+    },
+    {
+      "code": "non_finite_value",
+      "json_path": "$.summary[68].mean",
+      "message": "Non-finite numeric value was normalized to null.",
+      "relative_path": "experiments/redesign_v2/results_server_pull_20260524/strong_main_grid/summary_soft_segmented.json",
+      "source_role": "soft_segmented_summary"
+    },
+    {
+      "code": "non_finite_value",
+      "json_path": "$.summary[68].sd",
+      "message": "Non-finite numeric value was normalized to null.",
+      "relative_path": "experiments/redesign_v2/results_server_pull_20260524/strong_main_grid/summary_soft_segmented.json",
+      "source_role": "soft_segmented_summary"
+    },
+    {
+      "code": "non_finite_value",
+      "json_path": "$.summary[69].mean",
+      "message": "Non-finite numeric value was normalized to null.",
+      "relative_path": "experiments/redesign_v2/results_server_pull_20260524/strong_main_grid/summary_soft_segmented.json",
+      "source_role": "soft_segmented_summary"
+    },
+    {
+      "code": "non_finite_value",
+      "json_path": "$.summary[69].sd",
+      "message": "Non-finite numeric value was normalized to null.",
+      "relative_path": "experiments/redesign_v2/results_server_pull_20260524/strong_main_grid/summary_soft_segmented.json",
+      "source_role": "soft_segmented_summary"
+    },
+    {
+      "code": "non_finite_value",
+      "json_path": "$.summary[6].mean",
+      "message": "Non-finite numeric value was normalized to null.",
+      "relative_path": "experiments/redesign_v2/results_server_pull_20260524/strong_main_grid/summary_soft_segmented.json",
+      "source_role": "soft_segmented_summary"
+    },
+    {
+      "code": "non_finite_value",
+      "json_path": "$.summary[6].sd",
+      "message": "Non-finite numeric value was normalized to null.",
+      "relative_path": "experiments/redesign_v2/results_server_pull_20260524/strong_main_grid/summary_soft_segmented.json",
+      "source_role": "soft_segmented_summary"
+    },
+    {
+      "code": "non_finite_value",
+      "json_path": "$.summary[70].mean",
+      "message": "Non-finite numeric value was normalized to null.",
+      "relative_path": "experiments/redesign_v2/results_server_pull_20260524/strong_main_grid/summary_soft_segmented.json",
+      "source_role": "soft_segmented_summary"
+    },
+    {
+      "code": "non_finite_value",
+      "json_path": "$.summary[70].sd",
+      "message": "Non-finite numeric value was normalized to null.",
+      "relative_path": "experiments/redesign_v2/results_server_pull_20260524/strong_main_grid/summary_soft_segmented.json",
+      "source_role": "soft_segmented_summary"
+    },
+    {
+      "code": "non_finite_value",
+      "json_path": "$.summary[71].mean",
+      "message": "Non-finite numeric value was normalized to null.",
+      "relative_path": "experiments/redesign_v2/results_server_pull_20260524/strong_main_grid/summary_soft_segmented.json",
+      "source_role": "soft_segmented_summary"
+    },
+    {
+      "code": "non_finite_value",
+      "json_path": "$.summary[71].sd",
+      "message": "Non-finite numeric value was normalized to null.",
+      "relative_path": "experiments/redesign_v2/results_server_pull_20260524/strong_main_grid/summary_soft_segmented.json",
+      "source_role": "soft_segmented_summary"
+    },
+    {
+      "code": "non_finite_value",
+      "json_path": "$.summary[7].mean",
+      "message": "Non-finite numeric value was normalized to null.",
+      "relative_path": "experiments/redesign_v2/results_server_pull_20260524/strong_main_grid/summary_soft_segmented.json",
+      "source_role": "soft_segmented_summary"
+    },
+    {
+      "code": "non_finite_value",
+      "json_path": "$.summary[7].sd",
+      "message": "Non-finite numeric value was normalized to null.",
+      "relative_path": "experiments/redesign_v2/results_server_pull_20260524/strong_main_grid/summary_soft_segmented.json",
+      "source_role": "soft_segmented_summary"
+    },
+    {
+      "code": "non_finite_value",
+      "json_path": "$.summary[8].mean",
+      "message": "Non-finite numeric value was normalized to null.",
+      "relative_path": "experiments/redesign_v2/results_server_pull_20260524/strong_main_grid/summary_soft_segmented.json",
+      "source_role": "soft_segmented_summary"
+    },
+    {
+      "code": "non_finite_value",
+      "json_path": "$.summary[8].sd",
+      "message": "Non-finite numeric value was normalized to null.",
+      "relative_path": "experiments/redesign_v2/results_server_pull_20260524/strong_main_grid/summary_soft_segmented.json",
+      "source_role": "soft_segmented_summary"
+    },
+    {
+      "code": "non_finite_value",
+      "json_path": "$.summary[9].mean",
+      "message": "Non-finite numeric value was normalized to null.",
+      "relative_path": "experiments/redesign_v2/results_server_pull_20260524/strong_main_grid/summary_soft_segmented.json",
+      "source_role": "soft_segmented_summary"
+    },
+    {
+      "code": "non_finite_value",
+      "json_path": "$.summary[9].sd",
+      "message": "Non-finite numeric value was normalized to null.",
+      "relative_path": "experiments/redesign_v2/results_server_pull_20260524/strong_main_grid/summary_soft_segmented.json",
+      "source_role": "soft_segmented_summary"
+    },
+    {
+      "code": "non_finite_value",
+      "json_path": "$.alpha_theory_upper_bound",
+      "message": "Non-finite numeric value was normalized to null.",
+      "relative_path": "experiments/turnpike_trace/results_a800/turnpike_gsm8k_Qwen__Qwen2.5-7B-Instruct_s0.json",
+      "source_role": "trajectory_heterogeneous"
+    },
+    {
+      "code": "portable_unsupported_extension",
+      "message": "Portable mode references this source without copying it because .md is unsupported.",
+      "relative_path": "README_MANIFEST.md",
+      "source_role": "bundle_manifest"
+    }
+  ]
+}

@@ -19,6 +19,8 @@ pcl ui --runs runs --language en
 
 ## Start Here
 
+- New to the CLI: `pcl start --guide`
+- General local demo: `pcl quickstart --out demo --open-report` (guided alias: `pcl start --choice demo --out demo`)
 - Real PEOC import, step by step: [tutorial](docs/research_import_peoc.en.md)
 - Paper concept -> command -> interpretation: [research mapping](docs/research_from_paper.en.md)
 - No real bundle yet: `pcl research-quickstart --out runs/research-demo --open-report`
@@ -27,6 +29,10 @@ pcl ui --runs runs --language en
 
 Real bounded evidence: [PEOC case study](docs/case_studies/peoc_real/README.md). Demo: [4K walkthrough](docs/assets/demo/prompt_control_lab_demo.en.mp4). Install: [release guide](docs/release_install.en.md).
 
-Boundaries: imported results are not fresh reruns; task-specific hard scores are not universal rankings; trajectory/Riccati results are diagnostics or fitted-surrogate checks; public model IDs and hashes do not prove hidden weights; guard/audit are heuristics, not safety proofs.
+Engineering evidence: [production protocol](docs/production_pilot.en.md), [preflight pilot](docs/case_studies/agent_guard_pilot.en.md), and [paired Codex pilot](docs/case_studies/agent_guard_paired_pilot.en.md).
+
+Positioning visuals: [ecosystem scorecard](docs/assets/ecosystem_scorecard.svg) and [evidence matrix](docs/assets/ecosystem_evidence_matrix.svg).
+
+Boundaries: imported results are not fresh reruns; task-specific hard scores and small pilots are not universal benchmarks; trajectory/Riccati results are diagnostics or fitted-surrogate checks; public model IDs and hashes do not prove hidden weights; guard/audit are heuristics, not safety proofs.
 
 Apache-2.0. See [LICENSE](LICENSE).

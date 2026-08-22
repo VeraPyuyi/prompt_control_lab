@@ -19,6 +19,8 @@ pcl ui --runs runs --language zh
 
 ## 从这里开始
 
+- 第一次使用命令行：`pcl start --guide --language zh`
+- 通用本地 demo：`pcl quickstart --out demo --language zh --open-report`（引导别名：`pcl start --choice demo --language zh --out demo`）
 - 一步一步导入真实 PEOC：[教程](docs/research_import_peoc.zh.md)
 - 论文概念 -> 命令 -> 解释边界：[功能映射](docs/research_from_paper.zh.md)
 - 暂时没有真实复现包：`pcl research-quickstart --out runs/research-demo --language zh --open-report`
@@ -27,6 +29,10 @@ pcl ui --runs runs --language zh
 
 真实边界化证据：[PEOC 案例](docs/case_studies/peoc_real/README.zh.md)。演示：[4K 实操视频](docs/assets/demo/prompt_control_lab_demo.zh.mp4)。安装：[发布安装说明](docs/release_install.zh.md)。
 
-边界：导入结果不是重新运行；特定任务 hard 分数不是通用排名；trajectory/Riccati 只是诊断或拟合 surrogate 检查；公开 model id 和哈希不能证明隐藏权重；guard/audit 是启发式工具，不是安全证明。
+工程证据：[production protocol](docs/production_pilot.zh.md)、[preflight pilot](docs/case_studies/agent_guard_pilot.zh.md) 和 [Codex 成对试点](docs/case_studies/agent_guard_paired_pilot.zh.md)。
+
+定位图示：[生态 scorecard](docs/assets/ecosystem_scorecard.zh.svg) 和 [证据矩阵](docs/assets/ecosystem_evidence_matrix.zh.svg)。
+
+边界：导入结果不是重新运行；特定任务 hard 分数和小样本 pilot 不是通用 benchmark；trajectory/Riccati 只是诊断或拟合 surrogate 检查；公开 model id 和哈希不能证明隐藏权重；guard/audit 是启发式工具，不是安全证明。
 
 Apache-2.0。见 [LICENSE](LICENSE)。
