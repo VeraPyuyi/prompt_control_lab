@@ -11,6 +11,11 @@ from promptcontrollab.report_model import ReportModel
 
 RUN_ARTIFACTS = [
     "manifest.json",
+    "source_manifest.json",
+    "peoc_evidence.json",
+    "research_case_study.json",
+    "research_case_study.md",
+    "research_case_study.html",
     "stats.json",
     "gate_result.json",
     "comparison_validity.json",
@@ -53,6 +58,11 @@ RUN_ARTIFACTS = [
 
 RUN_LEVEL_ARTIFACTS = [
     "manifest.json",
+    "source_manifest.json",
+    "peoc_evidence.json",
+    "research_case_study.json",
+    "research_case_study.md",
+    "research_case_study.html",
     "stats.json",
     "gate_result.json",
     "comparison_validity.json",
@@ -123,6 +133,9 @@ def load_run_detail(run_dir: Path) -> JsonDict:
         "has_artifacts": model.has_artifacts,
         "artifacts": model.artifacts,
         "manifest": model.manifest,
+        "source_manifest": model.source_manifest,
+        "peoc_evidence": model.peoc_evidence,
+        "peoc_case_study": model.peoc_case_study,
         "stats": model.stats,
         "splits": model.splits,
         "gate": model.gate,
@@ -187,6 +200,186 @@ def first_comparison(stats: JsonDict) -> JsonDict:
     ):
         return stats
     return {}
+
+
+PEOC_STATUSES = ("available", "partial", "failed_validation", "unusable", "missing")
+
+
+def peoc_status_summary(detail: JsonDict, language: str = "en") -> JsonDict:
+    """Return fail-closed status counts and claim scope for a PEOC import.
+
+    A section counts as available only when its explicit status is exactly
+    ``available``. Negative, partial, unknown, and malformed states never get
+    promoted to positive evidence.
+    """
+
+    case = _mapping(detail.get("peoc_case_study"))
+    evidence = _mapping(detail.get("peoc_evidence"))
+    raw_counts = case.get("status_counts")
+    counts = {status: 0 for status in PEOC_STATUSES}
+    if isinstance(raw_counts, dict):
+        for status in PEOC_STATUSES:
+            counts[status] = _nonnegative_int(raw_counts.get(status))
+    else:
+        sections = evidence.get("sections")
+        if isinstance(sections, dict):
+            for payload in sections.values():
+                section = _mapping(payload)
+                status = str(section.get("status") or "missing")
+                if status in counts:
+                    counts[status] += 1
+                else:
+                    counts["missing"] += 1
+
+    claim_boundary = _mapping(evidence.get("claim_boundary"))
+    full_support = claim_boundary.get("full_research_support") is True
+    claim_status = str(claim_boundary.get("status") or "unknown")
+    statement = str(claim_boundary.get("statement") or "")
+    if language == "zh":
+        statement = str(case.get("safe_claim_zh") or statement)
+    else:
+        statement = str(case.get("safe_claim") or statement)
+
+    manifest_hash = str(
+        case.get("source_manifest_sha256")
+        or case.get("manifest_hash")
+        or _mapping(evidence.get("bundle")).get("manifest_sha256")
+        or _mapping(detail.get("source_manifest")).get("manifest_sha256")
+        or ""
+    )
+    return {
+        **counts,
+        "total": sum(counts.values()),
+        "has_real_evidence": bool(case or evidence),
+        "manifest_sha256": manifest_hash,
+        "full_research_support": full_support,
+        "claim_status": claim_status,
+        "statement": statement,
+    }
+
+
+def peoc_method_rows(detail: JsonDict) -> list[JsonDict]:
+    """Return public-safe hard-evaluation method rows from a PEOC import."""
+
+    case = _mapping(detail.get("peoc_case_study"))
+    rows = case.get("hard_method_rows")
+    if isinstance(rows, list):
+        hard_summary = _mapping(case.get("hard_summary"))
+        if hard_summary.get("status") != "available":
+            return []
+    else:
+        hard = _peoc_section(detail, "hard_evaluation")
+        if hard.get("status") != "available":
+            return []
+        rows = _mapping(hard.get("observations")).get("rows")
+    if not isinstance(rows, list):
+        return []
+
+    fields = ("model", "task", "method", "n", "mean", "sd", "budget", "T", "L0")
+    return [
+        {field: item.get(field) for field in fields}
+        for item in rows
+        if isinstance(item, dict)
+    ]
+
+
+def peoc_trajectory_rows(detail: JsonDict) -> list[JsonDict]:
+    """Return the selected stationary/heterogeneous trajectory comparison."""
+
+    case = _mapping(detail.get("peoc_case_study"))
+    pair = _mapping(case.get("selected_trajectory_pair"))
+    if not pair:
+        trajectory = _peoc_section(detail, "trajectory")
+        if trajectory.get("status") != "available":
+            return []
+        pair = _mapping(_mapping(trajectory.get("observations")).get("headline_pair"))
+    model = str(pair.get("model") or "")
+    seed = pair.get("seed")
+    rows: list[JsonDict] = []
+    for lane in ("stationary", "heterogeneous"):
+        payload = _mapping(pair.get(lane))
+        if payload.get("status") != "available":
+            continue
+        summary = _mapping(payload.get("summary")) or payload
+        source = _mapping(payload.get("source"))
+        rows.append(
+            {
+                "lane": lane,
+                "model": model or str(payload.get("model") or ""),
+                "seed": seed if seed is not None else payload.get("seed"),
+                "alpha_emp_mean": summary.get("alpha_emp_mean"),
+                "R2_mean": summary.get("R2_mean"),
+                "hidden_dim": summary.get("hidden_dim"),
+                "samples": summary.get("n_streams") or summary.get("n_prompts"),
+                "source": str(payload.get("relative_path") or source.get("relative_path") or ""),
+            }
+        )
+    return rows
+
+
+def peoc_limitation_rows(detail: JsonDict, language: str = "en") -> list[JsonDict]:
+    """Return non-positive PEOC sections with localized limitations."""
+
+    case = _mapping(detail.get("peoc_case_study"))
+    limited = case.get("limited_sections")
+    rows: list[JsonDict] = []
+    if isinstance(limited, list):
+        for item in limited:
+            payload = _mapping(item)
+            status = str(payload.get("status") or "missing")
+            if status == "available":
+                continue
+            limitation = payload.get("limitation_zh") if language == "zh" else None
+            rows.append(
+                {
+                    "section": str(payload.get("section") or "unknown"),
+                    "status": status,
+                    "origin": str(payload.get("origin") or "unknown"),
+                    "limitation": str(limitation or payload.get("limitation") or ""),
+                }
+            )
+        return rows
+
+    evidence = _mapping(detail.get("peoc_evidence"))
+    sections = evidence.get("sections")
+    if not isinstance(sections, dict):
+        return []
+    for name, item in sections.items():
+        payload = _mapping(item)
+        status = str(payload.get("status") or "missing")
+        if status == "available":
+            continue
+        limitations = payload.get("limitations")
+        message = ""
+        if isinstance(limitations, list) and limitations:
+            message = str(limitations[0])
+        rows.append(
+            {
+                "section": str(name),
+                "status": status if status in PEOC_STATUSES else "missing",
+                "origin": str(payload.get("origin") or "unknown"),
+                "limitation": message,
+            }
+        )
+    return rows
+
+
+def _peoc_section(detail: JsonDict, name: str) -> JsonDict:
+    evidence = _mapping(detail.get("peoc_evidence"))
+    sections = evidence.get("sections")
+    return _mapping(sections.get(name)) if isinstance(sections, dict) else {}
+
+
+def _mapping(value: object) -> JsonDict:
+    return value if isinstance(value, dict) else {}
+
+
+def _nonnegative_int(value: object) -> int:
+    if isinstance(value, bool):
+        return 0
+    if isinstance(value, int):
+        return max(0, value)
+    return 0
 
 
 def research_overview_path(detail: JsonDict) -> Path | None:

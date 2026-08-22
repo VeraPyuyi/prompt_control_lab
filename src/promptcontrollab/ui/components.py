@@ -317,11 +317,37 @@ def prompt_diff(original: str, improved: str) -> str:
 
 
 def metric_cards(st: Any, cards: list[tuple[str, object]]) -> None:
-    """Render metric cards in a stable column layout."""
+    """Render escaped metric cards in a responsive wrapping grid."""
 
-    columns = st.columns(max(1, len(cards)))
-    for column, (label, value) in zip(columns, cards, strict=False):
-        column.metric(label, "-" if value is None else str(value))
+    items = "".join(
+        (
+            '<div class="pcl-metric-card">'
+            f'<div class="pcl-metric-label">{html.escape(str(label))}</div>'
+            '<div class="pcl-metric-value">'
+            f'{html.escape("-" if value is None else str(value))}'
+            "</div>"
+            "</div>"
+        )
+        for label, value in cards
+    )
+    st.markdown(
+        (
+            '<div class="pcl-metric-grid">'
+            f"{items}</div>"
+            "<style>"
+            ".pcl-metric-grid{display:grid;"
+            "grid-template-columns:repeat(auto-fit,minmax(140px,1fr));"
+            "gap:12px;width:100%;}"
+            ".pcl-metric-card{min-width:0;border:1px solid #dce3ec;"
+            "border-radius:8px;padding:14px;background:#fff;min-height:86px;}"
+            ".pcl-metric-label{font-size:12px;color:#667085;"
+            "overflow-wrap:anywhere;}"
+            ".pcl-metric-value{margin-top:6px;font-size:22px;font-weight:700;"
+            "overflow-wrap:anywhere;}"
+            "</style>"
+        ),
+        unsafe_allow_html=True,
+    )
 
 
 def empty_state(st: Any, message: str, command: str | None = None) -> None:

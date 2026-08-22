@@ -14,6 +14,7 @@ from promptcontrollab.ui import charts
 from promptcontrollab.ui.components import (
     dashboard_css,
     evidence_ladder_html,
+    metric_cards,
     research_evidence_map_html,
     stat_card_html,
 )
@@ -39,6 +40,10 @@ from promptcontrollab.ui.data import (
     history_rows,
     list_runs,
     load_run_detail,
+    peoc_limitation_rows,
+    peoc_method_rows,
+    peoc_status_summary,
+    peoc_trajectory_rows,
     prompt_asset_rows,
     prompt_asset_summary,
     prompt_optimizer_gap_rows,
@@ -55,6 +60,90 @@ from promptcontrollab.ui.data import (
     scaffold_check_issue_rows,
     scaffold_check_summary,
 )
+
+
+def _peoc_fixture() -> dict[str, object]:
+    return {
+        "schema": "prompt_control_lab.peoc_evidence.v1",
+        "bundle": {"manifest_sha256": "sha256:" + "a" * 64},
+        "claim_boundary": {
+            "full_research_support": False,
+            "status": "not_supported",
+            "statement": "The complete research capability set is not supported.",
+        },
+        "sections": {
+            "hard_evaluation": {
+                "status": "available",
+                "observations": {
+                    "rows": [
+                        {
+                            "model": "Qwen/Qwen2.5-7B-Instruct",
+                            "task": "bbh3",
+                            "method": "tv_pmp",
+                            "n": 10,
+                            "mean": 0.69,
+                            "sd": 0.04,
+                            "budget": 128,
+                            "T": 8,
+                            "L0": 4,
+                        }
+                    ]
+                },
+            },
+            "trajectory": {
+                "status": "available",
+                "observations": {
+                    "headline_pair": {
+                        "model": "Qwen/Qwen2.5-7B-Instruct",
+                        "seed": 0,
+                        "stationary": {
+                            "status": "available",
+                            "summary": {
+                                "alpha_emp_mean": 0.0247,
+                                "R2_mean": 0.602,
+                                "hidden_dim": 3584,
+                                "n_streams": 16,
+                            },
+                            "source": {"relative_path": "stationary.json"},
+                        },
+                        "heterogeneous": {
+                            "status": "available",
+                            "summary": {
+                                "alpha_emp_mean": 0.00174,
+                                "R2_mean": 0.088,
+                                "hidden_dim": 3584,
+                                "n_prompts": 32,
+                            },
+                            "source": {"relative_path": "gsm8k.json"},
+                        },
+                    }
+                },
+            },
+            "stage_heterogeneity": {
+                "status": "failed_validation",
+                "observations": {
+                    "verdict": "FAIL",
+                    "held_spearman_rho": -0.54,
+                    "held_bootstrap_ci": [-1.0, 0.64],
+                    "n_calib": 6,
+                    "n_held": 6,
+                },
+                "limitations": ["Validation failed."],
+            },
+            "soft_evaluation": {
+                "status": "unusable",
+                "limitations": ["No row has a positive sample count."],
+            },
+            "riccati": {
+                "status": "missing",
+                "limitations": ["No DARE diagnostic source was discovered."],
+            },
+            "soft_hard": {
+                "status": "partial",
+                "limitations": ["Projection evidence is incomplete."],
+            },
+        },
+    }
 
 
 def test_cli_ui_help_is_available(capsys: pytest.CaptureFixture[str]) -> None:
@@ -895,6 +984,120 @@ def test_ui_summarizes_single_external_evidence_gap_diagnostic(tmp_path: Path) -
     ]
     action_rows = evidence_gap_action_rows(load_run_detail(run))
     assert action_rows[0]["artifact"] == "diagnostics/tv_soft.json"
+
+
+def test_peoc_helpers_keep_real_and_negative_evidence_distinct(tmp_path: Path) -> None:
+    run = tmp_path / "runs" / "peoc-real"
+    _write_json(run / "peoc_evidence.json", _peoc_fixture())
+    _write_json(run / "source_manifest.json", {"manifest_sha256": "sha256:" + "b" * 64})
+    (run / "research_case_study.html").write_text("<h1>PEOC</h1>", encoding="utf-8")
+
+    detail = load_run_detail(run)
+    summary = peoc_status_summary(detail, "en")
+
+    assert detail["peoc_evidence"]["schema"] == "prompt_control_lab.peoc_evidence.v1"
+    assert "peoc_evidence.json" in detail["artifacts"]
+    assert "source_manifest.json" in detail["artifacts"]
+    assert summary == {
+        "available": 2,
+        "partial": 1,
+        "failed_validation": 1,
+        "unusable": 1,
+        "missing": 1,
+        "total": 6,
+        "has_real_evidence": True,
+        "manifest_sha256": "sha256:" + "a" * 64,
+        "full_research_support": False,
+        "claim_status": "not_supported",
+        "statement": "The complete research capability set is not supported.",
+    }
+    assert peoc_method_rows(detail)[0]["method"] == "tv_pmp"
+    trajectory = peoc_trajectory_rows(detail)
+    assert [row["lane"] for row in trajectory] == ["stationary", "heterogeneous"]
+    assert trajectory[0]["R2_mean"] == pytest.approx(0.602)
+    limitations = peoc_limitation_rows(detail, "en")
+    assert {row["status"] for row in limitations} == {
+        "partial",
+        "failed_validation",
+        "unusable",
+        "missing",
+    }
+
+
+def test_peoc_method_rows_fail_closed_when_section_is_not_available() -> None:
+    evidence = _peoc_fixture()
+    sections = evidence["sections"]
+    assert isinstance(sections, dict)
+    hard = sections["hard_evaluation"]
+    assert isinstance(hard, dict)
+    hard["status"] = "failed_validation"
+
+    assert peoc_method_rows({"peoc_evidence": evidence}) == []
+
+
+def test_metric_cards_use_responsive_escaped_grid() -> None:
+    calls: list[tuple[str, bool]] = []
+
+    class FakeStreamlit:
+        def markdown(self, body: str, *, unsafe_allow_html: bool = False) -> None:
+            calls.append((body, unsafe_allow_html))
+
+    metric_cards(FakeStreamlit(), [("Long <label>", "value & detail"), ("Missing", None)])
+
+    body, unsafe = calls[0]
+    assert unsafe is True
+    assert "repeat(auto-fit,minmax(140px,1fr))" in body
+    assert "overflow-wrap:anywhere" in body
+    assert "Long &lt;label&gt;" in body
+    assert "value &amp; detail" in body
+    assert "Long <label>" not in body
+
+
+def test_peoc_research_section_renders_imported_evidence_and_failures(
+    tmp_path: Path,
+) -> None:
+    from promptcontrollab.ui import app
+
+    run = tmp_path / "runs" / "peoc-real"
+    _write_json(run / "peoc_evidence.json", _peoc_fixture())
+    (run / "research_case_study.html").write_text("<h1>PEOC</h1>", encoding="utf-8")
+    detail = load_run_detail(run)
+    markdown: list[str] = []
+    warnings: list[str] = []
+    captions: list[str] = []
+    frames: list[object] = []
+    code: list[str] = []
+
+    class FakeStreamlit:
+        def markdown(self, body: str, *, unsafe_allow_html: bool = False) -> None:
+            del unsafe_allow_html
+            markdown.append(body)
+
+        def caption(self, body: object) -> None:
+            captions.append(str(body))
+
+        def info(self, body: object) -> None:
+            captions.append(str(body))
+
+        def warning(self, body: object) -> None:
+            warnings.append(str(body))
+
+        def dataframe(self, data: object, *_args: object, **_kwargs: object) -> None:
+            frames.append(data)
+
+        def code(self, body: object, *_args: object, **_kwargs: object) -> None:
+            code.append(str(body))
+
+    assert app._render_peoc_evidence_section(
+        FakeStreamlit(), app.TEXT["zh"], detail, "zh"
+    )
+
+    assert "真实 PEOC 复现包" in markdown[0]
+    assert any("既有 PEOC 复现实验摘要" in item for item in captions)
+    assert any("不能用来支持正向" in item for item in warnings)
+    assert any("完整研究能力" in item or "complete research" in item.lower() for item in warnings)
+    assert any(isinstance(frame, list) and len(frame) == 1 for frame in frames)
+    assert code and code[0].endswith("research_case_study.html")
 
 
 def test_research_diagnostic_rows_summarize_paper_artifacts(tmp_path: Path) -> None:

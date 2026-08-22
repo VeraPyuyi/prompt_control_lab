@@ -67,6 +67,10 @@ from promptcontrollab.ui.data import (
     list_runs,
     load_run_detail,
     model_rows,
+    peoc_limitation_rows,
+    peoc_method_rows,
+    peoc_status_summary,
+    peoc_trajectory_rows,
     prompt_asset_rows,
     prompt_asset_summary,
     prompt_optimizer_gap_rows,
@@ -106,8 +110,44 @@ TEXT = {
         "research": "Research Overview",
         "research_title": "Control diagnostics for prompt optimization",
         "research_subtitle": (
-            "A paper-first view of tri-split evaluation, paired statistics, "
-            "soft-hard gap, trajectory, Riccati surrogate, and time-varying soft-control."
+            "Real PEOC bundle evidence first, followed by current-run tri-split, statistics, "
+            "soft-hard, trajectory, Riccati, and time-varying control diagnostics."
+        ),
+        "peoc_real_title": "Imported evidence from the real PEOC replication bundle",
+        "peoc_real_badge": "REAL PEOC BUNDLE",
+        "peoc_manifest": "Source manifest",
+        "peoc_imported_note": (
+            "These are verified imported summaries from an existing PEOC replication bundle, "
+            "not diagnostics freshly executed by this dashboard."
+        ),
+        "peoc_available": "Available",
+        "peoc_partial": "Partial",
+        "peoc_failed": "Failed validation",
+        "peoc_unusable": "Unusable",
+        "peoc_missing": "Missing",
+        "peoc_full_support": "Full research support",
+        "peoc_claim_scope": "Full-research claim",
+        "peoc_recommendation": "Recommendation",
+        "peoc_yes": "yes",
+        "peoc_no": "no",
+        "peoc_hard_methods": "Withheld hard-prompt method results",
+        "peoc_hard_methods_note": (
+            "72 valid aggregate rows across three models, four tasks, and six methods. "
+            "They show task-dependent outcomes, not universal optimizer superiority."
+        ),
+        "peoc_trajectory": "Trajectory evidence",
+        "peoc_trajectory_note": (
+            "The selected stationary/heterogeneous pair compares empirical decay and fit quality."
+        ),
+        "peoc_stage_validation": "Stage-heterogeneity validation",
+        "peoc_stage_failed": (
+            "Validation failed. This is retained as negative evidence and cannot support "
+            "a positive stage-control claim."
+        ),
+        "peoc_limitations": "Missing, unusable, or failed evidence",
+        "peoc_report": "Detailed bounded case study",
+        "peoc_report_guidance": (
+            "Open research_case_study.html from this run directory for the complete local report."
         ),
         "research_empty": "No research diagnostics found for this run.",
         "research_demo_command": "pcl research-quickstart --out runs/research-demo --open-report",
@@ -116,8 +156,8 @@ TEXT = {
         "research_overview_graphic": "Research overview graphic",
         "research_insights": "Plain-language interpretation",
         "research_evidence_map": "Research evidence map",
-        "research_diagnostics": "Paper-derived diagnostics",
-        "research_coverage": "Diagnostic coverage",
+        "research_diagnostics": "Fresh current-run diagnostics",
+        "research_coverage": "Fresh diagnostic coverage",
         "paper_protocol": "Protocol hygiene",
         "diagnostic_coverage": "Diagnostics ready",
         "artifact_evidence": "Evidence artifacts",
@@ -377,8 +417,41 @@ TEXT = {
         "research": "研究总览",
         "research_title": "Prompt 优化的控制论诊断工作台",
         "research_subtitle": (
-            "以论文功能为主线查看 tri-split、成对统计、soft-hard gap、trajectory、"
-            "Riccati surrogate 和 time-varying soft-control。"
+            "先看真实 PEOC 复现包证据，再查看当前 run 的三段切分、成对统计、软转硬、"
+            "轨迹、Riccati 和时变控制诊断。"
+        ),
+        "peoc_real_title": "从真实 PEOC 复现包导入的研究证据",
+        "peoc_real_badge": "真实 PEOC 证据包",
+        "peoc_manifest": "来源清单",
+        "peoc_imported_note": (
+            "这里展示的是经过校验后导入的既有 PEOC 复现实验摘要，"
+            "不是本仪表盘刚刚重新运行出的诊断。"
+        ),
+        "peoc_available": "可用",
+        "peoc_partial": "部分可用",
+        "peoc_failed": "验证失败",
+        "peoc_unusable": "不可用",
+        "peoc_missing": "缺失",
+        "peoc_full_support": "完整研究支持",
+        "peoc_claim_scope": "完整研究主张",
+        "peoc_recommendation": "建议",
+        "peoc_yes": "是",
+        "peoc_no": "否",
+        "peoc_hard_methods": "Withheld hard prompt 方法结果",
+        "peoc_hard_methods_note": (
+            "共 72 条有效汇总记录，覆盖 3 个模型、4 个任务和 6 种方法。"
+            "结果随任务变化，不能说明某一种优化器普遍更好。"
+        ),
+        "peoc_trajectory": "轨迹证据",
+        "peoc_trajectory_note": "选中的平稳/异质任务对比展示经验衰减率和拟合质量。",
+        "peoc_stage_validation": "阶段异质性验证",
+        "peoc_stage_failed": (
+            "该验证没有通过。系统将它保留为负面证据，不能用来支持正向的阶段控制主张。"
+        ),
+        "peoc_limitations": "缺失、不可用或验证失败的证据",
+        "peoc_report": "完整边界化案例报告",
+        "peoc_report_guidance": (
+            "请在当前 run 目录中打开 research_case_study.html，查看完整本地报告。"
         ),
         "research_empty": "当前 run 还没有研究诊断 artifact。",
         "research_demo_command": (
@@ -389,8 +462,8 @@ TEXT = {
         "research_overview_graphic": "研究总览图",
         "research_insights": "直白解释",
         "research_evidence_map": "研究证据地图",
-        "research_diagnostics": "论文诊断模块",
-        "research_coverage": "诊断覆盖情况",
+        "research_diagnostics": "当前 run 新执行的诊断",
+        "research_coverage": "新执行诊断覆盖情况",
         "paper_protocol": "协议洁净度",
         "diagnostic_coverage": "已完成诊断",
         "artifact_evidence": "证据 artifact",
@@ -1623,6 +1696,236 @@ def _select_run(st: Any, runs: list[JsonDict], text: dict[str, str]) -> JsonDict
     return load_run_detail(Path(str(match["path"])))
 
 
+def _render_peoc_evidence_section(
+    st: Any,
+    text: dict[str, str],
+    detail: JsonDict,
+    language: str,
+) -> bool:
+    """Render imported PEOC evidence without treating it as a fresh run."""
+
+    summary = peoc_status_summary(detail, language)
+    if not summary.get("has_real_evidence"):
+        return False
+
+    st.markdown(
+        f'<div class="pcl-section-title">{html.escape(text["peoc_real_title"])}</div>',
+        unsafe_allow_html=True,
+    )
+    st.markdown(badge(text["peoc_real_badge"], "verified import"))
+    manifest_hash = str(summary.get("manifest_sha256") or "unknown")
+    st.caption(f'{text["peoc_manifest"]}: {manifest_hash}')
+    st.info(text["peoc_imported_note"])
+
+    metric_cards(
+        st,
+        [
+            (text["peoc_available"], summary.get("available", 0)),
+            (text["peoc_partial"], summary.get("partial", 0)),
+            (text["peoc_failed"], summary.get("failed_validation", 0)),
+            (text["peoc_unusable"], summary.get("unusable", 0)),
+            (text["peoc_missing"], summary.get("missing", 0)),
+        ],
+    )
+    claim = claim_check_summary(detail)
+    evidence = detail.get("evidence_card")
+    evidence_dict = evidence if isinstance(evidence, dict) else {}
+    full_support = summary.get("full_research_support") is True
+    metric_cards(
+        st,
+        [
+            (
+                text["peoc_full_support"],
+                text["peoc_yes"] if full_support else text["peoc_no"],
+            ),
+            (text["peoc_claim_scope"], claim.get("status") or summary.get("claim_status")),
+            (
+                text["peoc_recommendation"],
+                evidence_dict.get("recommendation") or summary.get("claim_status"),
+            ),
+        ],
+    )
+    statement = str(summary.get("statement") or "")
+    if full_support:
+        st.info(statement)
+    else:
+        st.warning(statement)
+
+    method_rows = peoc_method_rows(detail)
+    if method_rows:
+        st.markdown(
+            f'<div class="pcl-section-title">{html.escape(text["peoc_hard_methods"])}</div>',
+            unsafe_allow_html=True,
+        )
+        st.caption(text["peoc_hard_methods_note"])
+        _peoc_table_clearance(st)
+        st.dataframe(
+            _peoc_table_rows(method_rows, "methods", language),
+            use_container_width=True,
+        )
+
+    trajectory_rows = peoc_trajectory_rows(detail)
+    if trajectory_rows:
+        st.markdown(
+            f'<div class="pcl-section-title">{html.escape(text["peoc_trajectory"])}</div>',
+            unsafe_allow_html=True,
+        )
+        st.caption(text["peoc_trajectory_note"])
+        _peoc_table_clearance(st)
+        st.dataframe(
+            _peoc_table_rows(trajectory_rows, "trajectory", language),
+            use_container_width=True,
+        )
+
+    stage = _peoc_stage_validation(detail)
+    if stage:
+        st.markdown(
+            f'<div class="pcl-section-title">{html.escape(text["peoc_stage_validation"])}</div>',
+            unsafe_allow_html=True,
+        )
+        if str(stage.get("status")) == "failed_validation" or str(
+            stage.get("verdict")
+        ).upper() == "FAIL":
+            st.warning(text["peoc_stage_failed"])
+        st.dataframe(
+            _peoc_table_rows([stage], "stage", language),
+            use_container_width=True,
+        )
+
+    limitation_rows = peoc_limitation_rows(detail, language)
+    if limitation_rows:
+        st.markdown(
+            f'<div class="pcl-section-title">{html.escape(text["peoc_limitations"])}</div>',
+            unsafe_allow_html=True,
+        )
+        st.dataframe(
+            _peoc_table_rows(limitation_rows, "limitations", language),
+            use_container_width=True,
+        )
+
+    run_path = detail.get("path")
+    if isinstance(run_path, str) and run_path:
+        report_path = (Path(run_path) / "research_case_study.html").resolve()
+        if report_path.exists():
+            st.markdown(
+                f'<div class="pcl-section-title">{html.escape(text["peoc_report"])}</div>',
+                unsafe_allow_html=True,
+            )
+            st.caption(text["peoc_report_guidance"])
+            st.markdown(f'[{text["peoc_report"]}]({report_path.as_uri()})')
+            st.code(str(report_path))
+    return True
+
+
+def _peoc_stage_validation(detail: JsonDict) -> JsonDict:
+    case = detail.get("peoc_case_study")
+    case_dict = case if isinstance(case, dict) else {}
+    stage = case_dict.get("stage_validation")
+    stage_dict = stage if isinstance(stage, dict) else {}
+    if not stage_dict:
+        evidence = detail.get("peoc_evidence")
+        evidence_dict = evidence if isinstance(evidence, dict) else {}
+        sections = evidence_dict.get("sections")
+        sections_dict = sections if isinstance(sections, dict) else {}
+        stage = sections_dict.get("stage_heterogeneity")
+        stage_dict = stage if isinstance(stage, dict) else {}
+    if not stage_dict:
+        return {}
+    observations = stage_dict.get("observations")
+    observations_dict = observations if isinstance(observations, dict) else {}
+    data = observations_dict.get("data")
+    data_dict = data if isinstance(data, dict) else {}
+    result: JsonDict = {
+        "status": stage_dict.get("status") or "unknown",
+        "verdict": _first_not_none(
+            stage_dict.get("verdict"),
+            observations_dict.get("verdict"),
+            data_dict.get("verdict"),
+            "unknown",
+        ),
+        "held_spearman_rho": _first_not_none(
+            stage_dict.get("held_spearman_rho"),
+            observations_dict.get("held_spearman_rho"),
+            data_dict.get("held_spearman_rho"),
+        ),
+        "held_bootstrap_ci": _first_not_none(
+            stage_dict.get("held_bootstrap_ci"),
+            observations_dict.get("held_bootstrap_ci"),
+            data_dict.get("held_bootstrap_ci"),
+        ),
+        "n_calib": _first_not_none(
+            stage_dict.get("n_calib"),
+            observations_dict.get("n_calib"),
+            data_dict.get("n_calib"),
+        ),
+        "n_held": _first_not_none(
+            stage_dict.get("n_held"),
+            observations_dict.get("n_held"),
+            data_dict.get("n_held"),
+        ),
+    }
+    return {key: value for key, value in result.items() if value is not None}
+
+
+def _first_not_none(*values: object) -> object:
+    return next((value for value in values if value is not None), None)
+
+
+def _peoc_table_clearance(st: Any) -> None:
+    st.markdown(
+        "<style>"
+        ".pcl-table-clearance{height:4px;}"
+        "@media(max-width:640px){.pcl-table-clearance{height:48px;}}"
+        "</style><div class=\"pcl-table-clearance\"></div>",
+        unsafe_allow_html=True,
+    )
+
+
+def _peoc_table_rows(rows: list[JsonDict], kind: str, language: str) -> list[JsonDict]:
+    labels: dict[str, dict[str, str]] = {
+        "methods": {
+            "model": "模型" if language == "zh" else "Model",
+            "task": "任务" if language == "zh" else "Task",
+            "method": "方法" if language == "zh" else "Method",
+            "n": "样本数" if language == "zh" else "N",
+            "mean": "平均准确率" if language == "zh" else "Mean accuracy",
+            "sd": "标准差" if language == "zh" else "SD",
+            "budget": "预算" if language == "zh" else "Budget",
+            "T": "T",
+            "L0": "L0",
+        },
+        "trajectory": {
+            "lane": "任务类型" if language == "zh" else "Lane",
+            "model": "模型" if language == "zh" else "Model",
+            "seed": "随机种子" if language == "zh" else "Seed",
+            "alpha_emp_mean": "经验衰减率" if language == "zh" else "Empirical decay",
+            "R2_mean": "平均 R²" if language == "zh" else "Mean R²",
+            "hidden_dim": "隐藏维度" if language == "zh" else "Hidden dimension",
+            "samples": "轨迹数" if language == "zh" else "Traces",
+            "source": "来源" if language == "zh" else "Source",
+        },
+        "stage": {
+            "status": "状态" if language == "zh" else "Status",
+            "verdict": "结论" if language == "zh" else "Verdict",
+            "held_spearman_rho": "留出集 Spearman rho" if language == "zh" else "Held Spearman rho",
+            "held_bootstrap_ci": "留出集 bootstrap CI" if language == "zh" else "Held bootstrap CI",
+            "n_calib": "校准单元数" if language == "zh" else "Calibration cells",
+            "n_held": "留出单元数" if language == "zh" else "Held cells",
+        },
+        "limitations": {
+            "section": "研究部分" if language == "zh" else "Section",
+            "status": "状态" if language == "zh" else "Status",
+            "origin": "证据来源" if language == "zh" else "Origin",
+            "limitation": "为什么不能支持结论" if language == "zh" else "Why it cannot support the claim",
+        },
+    }
+    selected = labels.get(kind, {})
+    return [
+        {selected.get(key, key): value for key, value in row.items()}
+        for row in rows
+    ]
+
+
 def _render_research_overview_tab(
     st: Any,
     text: dict[str, str],
@@ -1631,6 +1934,7 @@ def _render_research_overview_tab(
 ) -> None:
     st.markdown(f'<div class="pcl-section-title">{html.escape(text["research_title"])}</div>', unsafe_allow_html=True)
     st.caption(text["research_subtitle"])
+    _render_peoc_evidence_section(st, text, detail, language)
     _render_tool_choice_advisor(st, text, language)
 
     diagnostics = detail.get("diagnostics")
