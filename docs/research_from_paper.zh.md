@@ -7,6 +7,7 @@ Agent guard 和 audit 很有用，但它们是应用层；项目的研究内核�
 
 | 论文概念 | 命令 | 主要输出 | 解释边界 |
 |---|---|---|---|
+| 真实 PEOC 证据桥接 | `pcl research-import peoc` | `source_manifest.json`、`peoc_evidence.json`、`research_case_study.html` | 导入并校验复现包中已有记录；不会重新运行实验。 |
 | 一键研究流程 | `pcl research-demo`、`pcl diagnose` | `research_diagnostics.json`、`research_diagnostics.md`、`research_diagnostics.html` | 运行 synthetic fixtures 或用户自己的 artifacts；demo 结果不是 benchmark。 |
 | 三段切分 withheld protocol | `pcl split`、`pcl analyze` | `splits.json`、`manifest.json` | 检查协议是否干净；不保证小任务池天然具有代表性。 |
 | 成对统计比较 | `pcl stats` | `stats.json` | 报告 mean delta、bootstrap CI、permutation p-value 和 Holm-adjusted p-value。 |
@@ -18,6 +19,28 @@ Agent guard 和 audit 很有用，但它们是应用层；项目的研究内核�
 | hidden-state trajectory | `pcl trajectory` | `diagnostics/trajectory.json` | 报告 drift、log-decay slope、fit quality 和 turnpike-like signal。 |
 | Riccati surrogate | `pcl riccati` | `diagnostics/riccati.json` | 检查拟合出的有限维 surrogate，不证明完整语言模型稳定。 |
 | time-varying soft-control lane | `pcl tv-soft` | `diagnostics/tv_soft.json` | 比较 static、time-varying、shuffled 和 random control lane。 |
+
+## 0. 优先导入真实 PEOC 证据
+
+如果已经有 PEOC 复现包，应先查看真实记录，而不是从 synthetic demo 开始：
+
+```bash
+pcl research-import peoc \
+  --bundle <nmi_replication_bundle-路径> \
+  --out runs/peoc-real \
+  --portable \
+  --language zh
+pcl research-bundle --run runs/peoc-real --verify --strict
+```
+
+导入器会生成带哈希的来源清单、归一化证据状态、带边界的案例报告、证据卡、
+完整研究主张检查和缺口计划。状态采用 fail-closed 规则：只有 `available` 是正向证据；
+`partial`、`failed_validation`、`unusable` 和 `missing` 都必须保留为限制。
+先打开 `research_case_study.html`，再到本地 UI 的“研究总览”查看 hard 方法结果、
+轨迹证据和负面结果。
+
+完整的“怎么操作 -> 得到什么 -> 说明什么 -> 下一步”教程见
+[导入真实 PEOC 研究证据](research_import_peoc.zh.md)。
 
 ## 1. 一键体验论文诊断流程
 

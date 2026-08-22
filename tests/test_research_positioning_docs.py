@@ -11,10 +11,14 @@ def test_readmes_lead_with_paper_research_core() -> None:
     )
     assert "What It Adds" in readme
     assert "Applied Agent Layer" in readme
+    assert "pcl research-import peoc" in readme
     assert "pcl research-quickstart" in readme
     assert "pcl research-demo" in readme
     assert "pcl diagnose" in readme
     assert readme.find("What It Adds") < readme.find("Applied Agent Layer")
+    assert readme.find("pcl research-import peoc") < readme.find("pcl research-quickstart")
+    assert len(readme.splitlines()) <= 40
+    assert "docs/research_import_peoc.en.md" in readme
     assert "docs/research_from_paper.en.md" in readme
     assert (
         "Preflight, provenance, and reproducible evaluation for AI coding agents."
@@ -24,10 +28,16 @@ def test_readmes_lead_with_paper_research_core() -> None:
     assert "面向 prompt 优化的控制论诊断与可复现证据工具。" in readme_zh
     assert "它补上了什么" in readme_zh
     assert "Applied Agent Layer" in readme_zh
+    assert "pcl research-import peoc" in readme_zh
     assert "pcl research-quickstart" in readme_zh
     assert "pcl research-demo" in readme_zh
     assert "pcl diagnose" in readme_zh
     assert readme_zh.find("它补上了什么") < readme_zh.find("Applied Agent Layer")
+    assert readme_zh.find("pcl research-import peoc") < readme_zh.find(
+        "pcl research-quickstart"
+    )
+    assert len(readme_zh.splitlines()) <= 40
+    assert "docs/research_import_peoc.zh.md" in readme_zh
     assert "docs/research_from_paper.zh.md" in readme_zh
 
 
@@ -36,6 +46,8 @@ def test_research_from_paper_docs_map_concepts_to_commands() -> None:
     doc_zh = Path("docs/research_from_paper.zh.md").read_text(encoding="utf-8")
 
     for text in [doc_en, doc_zh]:
+        assert "pcl research-import peoc" in text
+        assert "pcl research-bundle --run runs/peoc-real --verify --strict" in text
         assert "pcl split" in text
         assert "pcl research-quickstart" in text
         assert "pcl research-demo" in text
@@ -51,6 +63,43 @@ def test_research_from_paper_docs_map_concepts_to_commands() -> None:
     assert "hidden-state trajectory" in doc_en
     assert "Riccati surrogate" in doc_en
     assert "time-varying soft-control lane" in doc_en
+
+
+def test_real_peoc_import_tutorials_are_bilingual_and_fail_closed() -> None:
+    tutorial_en = Path("docs/research_import_peoc.en.md").read_text(encoding="utf-8")
+    tutorial_zh = Path("docs/research_import_peoc.zh.md").read_text(encoding="utf-8")
+
+    shared_commands = [
+        "pcl research-import peoc",
+        "pcl claim-check --run runs/peoc-real --claim full-research",
+        "pcl gap-status --run runs/peoc-real",
+        "pcl research-bundle --run runs/peoc-real --verify --strict",
+        "pcl ui --runs runs",
+        "pcl soft-hard",
+        "pcl trajectory",
+        "pcl riccati",
+        "pcl tv-soft",
+    ]
+    for command in shared_commands:
+        assert command in tutorial_en
+        assert command in tutorial_zh
+
+    for status in ["available", "partial", "failed_validation", "unusable", "missing"]:
+        assert status in tutorial_en
+        assert status in tutorial_zh
+
+    for phrase in ["Operation", "What you get", "What it means", "Next"]:
+        assert phrase in tutorial_en
+    for phrase in ["怎么操作", "会得到什么", "这说明什么问题", "下一步"]:
+        assert phrase in tutorial_zh
+
+    for text in [tutorial_en, tutorial_zh]:
+        assert "source_manifest.json" in text
+        assert "peoc_evidence.json" in text
+        assert "research_case_study.html" in text
+        assert "not a proof" in text.lower() or "不是" in text
+        assert "SaaS" not in text
+        assert "pricing" not in text.lower()
 
 
 def test_competitive_positioning_stays_evidence_layer_first() -> None:

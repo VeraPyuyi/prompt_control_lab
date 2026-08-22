@@ -8,6 +8,7 @@ paper-derived diagnostic stack below.
 
 | Paper concept | Command | Main output | Interpretation boundary |
 |---|---|---|---|
+| real PEOC evidence bridge | `pcl research-import peoc` | `source_manifest.json`, `peoc_evidence.json`, `research_case_study.html` | Imports and verifies recorded bundle evidence; it does not rerun the experiments. |
 | one-command research workflow | `pcl research-demo`, `pcl diagnose` | `research_diagnostics.json`, `research_diagnostics.md`, `research_diagnostics.html` | Runs synthetic fixtures or user-provided artifacts; demo outputs are not benchmark results. |
 | tri-split withheld protocol | `pcl split`, `pcl analyze` | `splits.json`, `manifest.json` | Checks protocol hygiene; it does not make a small task pool representative. |
 | paired statistical comparison | `pcl stats` | `stats.json` | Reports mean delta, bootstrap CI, permutation p-value, and Holm-adjusted p-value. |
@@ -19,6 +20,29 @@ paper-derived diagnostic stack below.
 | hidden-state trajectory | `pcl trajectory` | `diagnostics/trajectory.json` | Reports drift, log-decay slope, fit quality, and turnpike-like signal. |
 | Riccati surrogate | `pcl riccati` | `diagnostics/riccati.json` | Checks a fitted finite-dimensional surrogate, not the full language model. |
 | time-varying soft-control lane | `pcl tv-soft` | `diagnostics/tv_soft.json` | Compares static, time-varying, shuffled, and random control lanes. |
+
+## 0. Import Real PEOC Evidence First
+
+When a PEOC replication bundle is available, start with its recorded evidence
+instead of a synthetic demo:
+
+```bash
+pcl research-import peoc \
+  --bundle <path-to-nmi_replication_bundle> \
+  --out runs/peoc-real \
+  --portable
+pcl research-bundle --run runs/peoc-real --verify --strict
+```
+
+The importer writes a source manifest with hashes, normalized evidence states,
+a bounded case study, an evidence card, a full-research claim check, and a gap
+plan. The status vocabulary is fail-closed: only `available` is positive;
+`partial`, `failed_validation`, `unusable`, and `missing` remain limitations.
+Open `research_case_study.html` first, then use the local Research Overview UI
+to inspect hard-method rows, trajectory evidence, and negative findings.
+
+Follow the complete operation -> output -> meaning -> next tutorial in
+[Import Real PEOC Evidence](research_import_peoc.en.md).
 
 ## 1. One-Command Research Workflow
 
