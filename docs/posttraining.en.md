@@ -112,7 +112,8 @@ confirms zero pending and running jobs. A narrowly scoped `selected_gpu` approva
 when the resource owner explicitly assigns GPUs: both the approval and snapshot must record the
 selected/assigned GPUs, the explicit authorization, GPU reservation, and the SHA-256 of a verified
 external scheduler policy that avoids GPUs with foreign compute processes. This mode never skips
-the final two GPU-idle samples or the exclusive lock. An approval cannot substitute for a fresh
+the final two GPU-idle samples or the exclusive lock. A selected-GPU approval may record an explicit
+idle-memory ceiling up to 4096 MiB; the default remains 1024 MiB. An approval cannot substitute for a fresh
 resource snapshot.
 
 The pilot's `trajectory` value is adjacent prompt-token drift in the final hidden layer. Its

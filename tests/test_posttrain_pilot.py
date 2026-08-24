@@ -205,6 +205,7 @@ def test_resource_approval_accepts_explicit_selected_gpu_assignment(
         "authorization_type": "explicit_user_gpu_assignment",
         "external_scheduler_process_isolation_verified": True,
         "external_scheduler_policy_sha256": scheduler_sha256,
+        "max_idle_memory_mib": 2048,
     }
     queue_snapshot = tmp_path / "queue_snapshot.json"
     queue_sha256 = _write_queue_snapshot(
@@ -250,6 +251,7 @@ def test_resource_approval_accepts_explicit_selected_gpu_assignment(
         ("selected_gpu_reserved", "reserved"),
         ("external_scheduler_process_isolation_verified", "isolation"),
         ("external_scheduler_policy_sha256", "scheduler"),
+        ("max_idle_memory_mib", "memory"),
         ("authorization_reason", "reason"),
     ],
 )
@@ -268,6 +270,7 @@ def test_selected_gpu_approval_requires_explicit_auditable_assignment(
         "authorization_type": "explicit_user_gpu_assignment",
         "external_scheduler_process_isolation_verified": True,
         "external_scheduler_policy_sha256": "sha256:" + "a" * 64,
+        "max_idle_memory_mib": 2048,
     }
     snapshot_fields = dict(scoped_fields)
     snapshot_fields.pop(missing_field, None)
@@ -420,6 +423,29 @@ def test_gpu_idle_execution_check_observes_the_gpu_twice(
     assert result["consecutive_idle_checks"] == 2
     assert sleeps == [15.0]
     assert snapshots == []
+
+
+def test_gpu_idle_execution_check_uses_explicit_memory_ceiling(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    snapshots = [
+        {"gpu": 1, "uuid": "GPU-123", "memory_used_mib": 1327, "active_compute_pids": []},
+        {"gpu": 1, "uuid": "GPU-123", "memory_used_mib": 1327, "active_compute_pids": []},
+    ]
+    monkeypatch.setattr(
+        posttrain_pilot_runner,
+        "_gpu_idle_snapshot",
+        lambda index: snapshots.pop(0),
+    )
+
+    result = _assert_gpu_idle_twice(
+        1,
+        max_memory_mib=2048,
+        interval_seconds=0.0,
+        sleep=lambda _: None,
+    )
+
+    assert result["snapshots"][0]["memory_used_mib"] == 1327
 
 
 @pytest.mark.parametrize(

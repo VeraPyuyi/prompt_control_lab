@@ -280,6 +280,13 @@ def _validate_selected_gpu_approval(payload: JsonDict, *, gpu: int) -> None:
         raise ValueError("Selected-GPU approval must verify external scheduler process isolation")
     if not _valid_sha256(payload.get("external_scheduler_policy_sha256")):
         raise ValueError("Selected-GPU approval requires a scheduler policy SHA-256 digest")
+    max_idle_memory = payload.get("max_idle_memory_mib")
+    if (
+        not isinstance(max_idle_memory, int)
+        or isinstance(max_idle_memory, bool)
+        or not 0 <= max_idle_memory <= 4096
+    ):
+        raise ValueError("Selected-GPU approval memory ceiling must be between 0 and 4096 MiB")
     selected_gpu = payload.get("selected_gpu")
     if not isinstance(selected_gpu, int) or isinstance(selected_gpu, bool) or selected_gpu != gpu:
         raise ValueError(f"Selected-GPU approval does not reserve requested GPU {gpu}")
@@ -363,6 +370,7 @@ def _validate_queue_snapshot(
         "authorization_type",
         "external_scheduler_process_isolation_verified",
         "external_scheduler_policy_sha256",
+        "max_idle_memory_mib",
     )
     for key in selected_fields:
         if snapshot.get(key) != approval.get(key):
@@ -389,6 +397,13 @@ def _validate_selected_gpu_snapshot(snapshot: JsonDict, *, gpu: int) -> None:
         raise ValueError("Selected-GPU queue snapshot lacks scheduler process isolation evidence")
     if not _valid_sha256(snapshot.get("external_scheduler_policy_sha256")):
         raise ValueError("Selected-GPU queue snapshot requires a scheduler policy SHA-256")
+    max_idle_memory = snapshot.get("max_idle_memory_mib")
+    if (
+        not isinstance(max_idle_memory, int)
+        or isinstance(max_idle_memory, bool)
+        or not 0 <= max_idle_memory <= 4096
+    ):
+        raise ValueError("Selected-GPU queue snapshot has an invalid memory ceiling")
     if snapshot.get("selected_gpu") != gpu:
         raise ValueError(f"Selected-GPU queue snapshot does not identify GPU {gpu}")
     assigned_gpus = snapshot.get("assigned_gpus")

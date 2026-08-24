@@ -106,7 +106,10 @@ def _execute_sft_pilot_locked(
             gpu=gpu,
             runtime_root=inputs.runtime_root,
         )
-        gpu_gate = _assert_gpu_idle_twice(gpu)
+        max_idle_memory_mib = approval.get("max_idle_memory_mib", 1024)
+        if not isinstance(max_idle_memory_mib, int) or isinstance(max_idle_memory_mib, bool):
+            raise PosttrainPilotError("Resource approval has an invalid GPU memory ceiling")
+        gpu_gate = _assert_gpu_idle_twice(gpu, max_memory_mib=max_idle_memory_mib)
         os.environ["CUDA_VISIBLE_DEVICES"] = str(gpu)
         write_json(
             inputs.out_dir / "resource_gate.json",
@@ -268,6 +271,7 @@ def _exclusive_lock(path: Path) -> Iterator[None]:
 def _assert_gpu_idle_twice(
     index: int,
     *,
+    max_memory_mib: int = 1024,
     interval_seconds: float = 15.0,
     sleep: Callable[[float], None] = time.sleep,
 ) -> JsonDict:
@@ -276,7 +280,12 @@ def _assert_gpu_idle_twice(
     first = _gpu_idle_snapshot(index)
     sleep(interval_seconds)
     second = _gpu_idle_snapshot(index)
-    return validate_gpu_idle_snapshots(first, second, gpu=index)
+    return validate_gpu_idle_snapshots(
+        first,
+        second,
+        gpu=index,
+        max_memory_mib=max_memory_mib,
+    )
 
 
 def _assert_gpu_idle(index: int) -> None:
