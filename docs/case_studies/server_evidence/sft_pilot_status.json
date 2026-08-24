@@ -1,7 +1,11 @@
 {
-  "checked_at": "2026-08-24T13:59:42Z",
+  "checked_at": "2026-08-24T18:13:41Z",
+  "deployment_ready": true,
+  "deployed_source_commit": "4e216bdb2ae0b9bb935a2e98f1cb2f24718c4e46",
   "execution_status": "blocked_existing_gpu_work",
   "gpu_work_started": false,
+  "package_version": "0.2.0a1",
+  "wheel_sha256": "sha256:21bc40a6c84398e9b07017390311fc2b86b01255d02f9ed9c35d8efc197e0158",
   "planned_model": "Qwen/Qwen2.5-0.5B-Instruct",
   "model_revision": "7ae557604adf67be50417f59c2c2f167def9a775",
   "model_snapshot_sha256": "sha256:c1c9aa0607fa7d45da6dafb1ce4eda469e18c285ad13c50cd1e4ed4caf1817a4",
@@ -9,23 +13,32 @@
   "split_sha256": "sha256:664cb24ac6d779378bf256c49f1369f910f49a788594d8813af51655af7bd4b4",
   "planned_seeds": [0, 1, 2],
   "planned_checkpoint_runs": 9,
-  "queue_snapshot_sha256": "sha256:d62fccf62ec5e345d3760b90c7c907a5a23dce86a07d6e162bf630db56a99118",
-  "live_check_sha256": "sha256:633cd7bc80def366754fff9f40109151db3e024f96f5642baccd98c1f0666b17",
+  "queue_snapshot_sha256": "sha256:acec6cca76114653828a3743e1d79a750c15efb2260742117855581e5ee23934e",
   "resource_snapshot": {
-    "gpu_compute_process_count": 2,
-    "queue_running_jobs": 4,
-    "queue_pending_jobs": 20,
+    "gpu_compute_process_count": 1,
+    "queue_running_jobs": 1,
+    "queue_pending_jobs": 1,
     "queue_driver_present": true,
     "queue_clear": false
   },
+  "isolated_environment": {
+    "python": "3.10.20",
+    "torch": "2.4.1+cu121",
+    "transformers": "4.55.4",
+    "peft": "0.17.1",
+    "accelerate": "0.34.2",
+    "datasets": "2.19.2",
+    "numpy": "1.26.4",
+    "scipy": "1.13.1"
+  },
   "reasons": [
-    "The pinned model and deterministic train/validation/withheld inputs are prepared and hash-verified in the isolated runtime.",
-    "The latest read-only check reported four running queue jobs and twenty pending queue jobs, with active GPU compute processes, so the pilot did not start.",
-    "The isolated execution environment is not finalized; a copy-on-write environment clone was unsupported and its partial copy was removed."
+    "The current source archive and wheel were deployed into the isolated runtime and their SHA-256 hashes were verified.",
+    "The pinned model, deterministic train/validation/withheld inputs, and a dedicated dependency environment are complete and hash-verified.",
+    "Two consecutive read-only resource samples reported one running queue job and one pending queue job, with an active GPU compute process, so the pilot did not start."
   ],
   "required_before_launch": [
+    "The external experiment queue must report zero pending and zero running jobs.",
     "An expiring operator approval bound to a matching queue snapshot that is no more than 90 seconds old and still reports zero pending/running jobs inside the execution lock.",
-    "A complete dependency environment contained inside the PromptControlLab runtime.",
     "An idle selected GPU and an exclusive flock acquired immediately before launch."
   ],
   "claim_boundary": "This status records a blocked preflight, not checkpoint performance evidence.",
