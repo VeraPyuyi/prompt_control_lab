@@ -246,12 +246,14 @@ def _locked_path(
                     lock_path,
                     os.O_CREAT | os.O_EXCL | os.O_WRONLY,
                 )
-            except FileExistsError:
-                if _remove_stale_lock(lock_path, stale_after=stale_after):
-                    continue
+            except (FileExistsError, PermissionError):
+                # Windows can report an exclusive-create collision as EACCES while
+                # another process owns the sibling lock file.
                 if time.monotonic() >= deadline:
                     msg = f"Timed out acquiring {label} lock: {lock_path}"
                     raise TimeoutError(msg) from None
+                if _remove_stale_lock(lock_path, stale_after=stale_after):
+                    continue
                 time.sleep(0.01)
                 continue
             try:

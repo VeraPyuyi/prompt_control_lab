@@ -68,6 +68,9 @@ from promptcontrollab.peoc_import import (
     import_peoc_bundle,
 )
 from promptcontrollab.plugin_installer import install_plugin
+from promptcontrollab.posttrain_gate import run_posttrain_gate
+from promptcontrollab.posttrain_pilot import PilotInputs, build_sft_pilot_plan
+from promptcontrollab.posttrain_pilot_runner import execute_sft_pilot
 from promptcontrollab.pr_summary import write_pr_summary
 from promptcontrollab.prompt_context import load_prompt_context
 from promptcontrollab.prompt_diff import render_prompt_diff
@@ -91,6 +94,11 @@ from promptcontrollab.research_workflow import (
 from promptcontrollab.riccati import analyze_riccati
 from promptcontrollab.run_comparison import compare_runs
 from promptcontrollab.scaffold_check import write_scaffold_check
+from promptcontrollab.server_evidence import (
+    EvidenceImportOptions,
+    import_evidence_manifest,
+    scan_evidence_root,
+)
 from promptcontrollab.soft_hard import analyze_soft_hard
 from promptcontrollab.splitting import load_tasks, make_split, write_split
 from promptcontrollab.statistics import compare_prediction_files
@@ -1313,6 +1321,72 @@ def build_parser() -> argparse.ArgumentParser:
     export_parser.add_argument("--run", type=Path, required=True, help="Run directory.")
     export_parser.add_argument("--out", type=Path, required=True, help="Zip output path.")
     export_parser.set_defaults(func=_cmd_export_report)
+
+    evidence_parser = subcommands.add_parser(
+        "evidence",
+        help="Scan or import dispersed local diagnostic evidence.",
+    )
+    evidence_subcommands = evidence_parser.add_subparsers(
+        dest="evidence_command",
+        required=True,
+    )
+    evidence_scan = evidence_subcommands.add_parser(
+        "scan",
+        help="Read-only scan of a known evidence layout.",
+    )
+    evidence_scan.add_argument("--root", type=Path, required=True, help="Evidence root.")
+    evidence_scan.add_argument("--profile", default="peoc-server", help="Scanner profile.")
+    evidence_scan.add_argument("--out", type=Path, required=True, help="Manifest JSON path.")
+    evidence_scan.set_defaults(func=_cmd_evidence_scan)
+    evidence_import = evidence_subcommands.add_parser(
+        "import",
+        help="Verify and normalize a scanned evidence manifest.",
+    )
+    evidence_import.add_argument("--manifest", type=Path, required=True)
+    evidence_import.add_argument("--out", type=Path, required=True, help="Output run directory.")
+    evidence_import.add_argument(
+        "--portable",
+        action="store_true",
+        help="Write a path-free bundle of derived reports; raw sources are never copied.",
+    )
+    evidence_import.add_argument("--overwrite", action="store_true")
+    evidence_import.set_defaults(func=_cmd_evidence_import)
+
+    posttrain_parser = subcommands.add_parser(
+        "posttrain-gate",
+        help="Compare baseline and candidate checkpoint evidence.",
+    )
+    posttrain_parser.add_argument("--baseline", type=Path, required=True)
+    posttrain_parser.add_argument("--candidate", type=Path, required=True)
+    posttrain_parser.add_argument(
+        "--policy",
+        type=Path,
+        help="Policy path. Uses the packaged bounded default when omitted.",
+    )
+    posttrain_parser.add_argument("--out", type=Path, required=True)
+    posttrain_parser.set_defaults(func=_cmd_posttrain_gate)
+
+    pilot_parser = subcommands.add_parser(
+        "posttrain-pilot",
+        help="Plan or execute the guarded three-stage local LoRA checkpoint pilot.",
+    )
+    pilot_parser.add_argument("--model", type=Path, required=True, help="Cached local model path.")
+    pilot_parser.add_argument("--train", type=Path, required=True)
+    pilot_parser.add_argument("--validation", type=Path, required=True)
+    pilot_parser.add_argument("--withheld", type=Path, required=True)
+    pilot_parser.add_argument("--format-fixture", type=Path, required=True)
+    pilot_parser.add_argument("--out", type=Path, required=True)
+    pilot_parser.add_argument("--seed", type=int, action="append", dest="seeds")
+    pilot_parser.add_argument("--max-steps", type=int, default=60)
+    pilot_parser.add_argument("--execute", action="store_true")
+    pilot_parser.add_argument("--approval", type=Path)
+    pilot_parser.add_argument("--gpu", type=int, default=0)
+    pilot_parser.add_argument(
+        "--lock-file",
+        type=Path,
+        default=Path("/tmp/prompt_control_lab_sft_pilot.lock"),
+    )
+    pilot_parser.set_defaults(func=_cmd_posttrain_pilot)
 
     research_import_parser = subcommands.add_parser(
         "research-import",
@@ -3062,6 +3136,81 @@ def _cmd_ui(args: argparse.Namespace) -> None:
 def _cmd_export_report(args: argparse.Namespace) -> None:
     payload = export_report_zip(run_dir=args.run, zip_path=args.out)
     print(json.dumps(payload, indent=2, ensure_ascii=False, sort_keys=True))
+
+
+def _cmd_evidence_scan(args: argparse.Namespace) -> None:
+    payload = scan_evidence_root(root=args.root, profile=args.profile)
+    write_json(args.out, payload)
+    summary = {
+        "schema": "prompt_control_lab.evidence_scan_result.v1",
+        "manifest_path": str(args.out.resolve()),
+        "source_count": len(payload.get("sources", [])),
+        "adapter_counts": payload.get("adapter_counts", {}),
+        "snapshot_sha256": payload.get("snapshot_sha256"),
+    }
+    print(json.dumps(summary, indent=2, ensure_ascii=False, sort_keys=True))
+
+
+def _cmd_evidence_import(args: argparse.Namespace) -> None:
+    payload = import_evidence_manifest(
+        EvidenceImportOptions(
+            manifest_path=args.manifest,
+            out_dir=args.out,
+            portable=args.portable,
+            overwrite=args.overwrite,
+        )
+    )
+    print(json.dumps(payload, indent=2, ensure_ascii=False, sort_keys=True))
+
+
+def _cmd_posttrain_gate(args: argparse.Namespace) -> None:
+    payload = run_posttrain_gate(
+        baseline_dir=args.baseline,
+        candidate_dir=args.candidate,
+        policy_path=args.policy,
+        out_dir=args.out,
+    )
+    print(json.dumps(payload, indent=2, ensure_ascii=False, sort_keys=True))
+
+
+def _cmd_posttrain_pilot(args: argparse.Namespace) -> None:
+    inputs = PilotInputs(
+        model_path=args.model,
+        train_path=args.train,
+        validation_path=args.validation,
+        withheld_path=args.withheld,
+        format_fixture_path=args.format_fixture,
+        out_dir=args.out,
+        seeds=tuple(args.seeds or (0, 1, 2)),
+        max_steps=args.max_steps,
+    )
+    plan = build_sft_pilot_plan(inputs)
+    ensure_dir(args.out)
+    protocol_path = args.out / "pilot_protocol.json"
+    write_json(protocol_path, plan)
+    if not args.execute:
+        print(json.dumps({"status": "plan_only", "protocol": str(protocol_path)}, indent=2))
+        return
+    if args.approval is None:
+        raise ValueError("--execute requires --approval with queue_clear=true")
+    plan["execution_status"] = "running"
+    plan["selected_gpu"] = args.gpu
+    write_json(protocol_path, plan)
+    try:
+        execute_sft_pilot(
+            inputs,
+            approval_path=args.approval,
+            gpu=args.gpu,
+            lock_file=args.lock_file,
+        )
+    except Exception as exc:
+        plan["execution_status"] = "failed"
+        plan["failure_type"] = type(exc).__name__
+        write_json(protocol_path, plan)
+        raise
+    plan["execution_status"] = "complete"
+    write_json(protocol_path, plan)
+    print(json.dumps({"status": "complete", "protocol": str(protocol_path)}, indent=2))
 
 
 def _cmd_research_import_peoc(args: argparse.Namespace) -> None:

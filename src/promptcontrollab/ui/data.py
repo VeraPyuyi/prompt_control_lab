@@ -31,6 +31,9 @@ RUN_ARTIFACTS = [
     *CONTROL_ARTIFACTS,
     "manifest.json",
     "source_manifest.json",
+    "evidence_matrix.json",
+    "interpretability_report.json",
+    "interpretability_report.html",
     "peoc_evidence.json",
     "research_case_study.json",
     "research_case_study.md",
@@ -44,6 +47,9 @@ RUN_ARTIFACTS = [
     "history_index.json",
     "history_compare.json",
     "agent_run.json",
+    "posttrain_gate.json",
+    "checkpoint_comparison.json",
+    "mechanism_attribution.json",
     "research_bundle.json",
     "research_bundle.html",
     "research_overview.svg",
@@ -79,6 +85,9 @@ RUN_LEVEL_ARTIFACTS = [
     *CONTROL_ARTIFACTS,
     "manifest.json",
     "source_manifest.json",
+    "evidence_matrix.json",
+    "interpretability_report.json",
+    "interpretability_report.html",
     "peoc_evidence.json",
     "research_case_study.json",
     "research_case_study.md",
@@ -90,6 +99,9 @@ RUN_LEVEL_ARTIFACTS = [
     "model_drift.json",
     "audit_result.json",
     "agent_run.json",
+    "posttrain_gate.json",
+    "checkpoint_comparison.json",
+    "mechanism_attribution.json",
     "research_bundle.json",
     "research_bundle.html",
     "research_overview.svg",
@@ -173,6 +185,8 @@ def load_run_detail(run_dir: Path) -> JsonDict:
         "audit_result": audit,
         "manifest": model.manifest,
         "source_manifest": model.source_manifest,
+        "evidence_matrix": model.evidence_matrix,
+        "interpretability_report": model.interpretability_report,
         "peoc_evidence": model.peoc_evidence,
         "peoc_case_study": model.peoc_case_study,
         "stats": model.stats,
@@ -185,6 +199,9 @@ def load_run_detail(run_dir: Path) -> JsonDict:
         "history_index": model.history_index,
         "history_compare": model.history_compare,
         "agent_run": model.agent_run,
+        "posttrain_gate": model.posttrain_gate,
+        "checkpoint_comparison": model.checkpoint_comparison,
+        "mechanism_attribution": model.mechanism_attribution,
         "research_diagnostics": model.research_diagnostics,
         "research_gap_plan": model.research_gap_plan,
         "research_gap_status": model.research_gap_status,
@@ -239,6 +256,61 @@ def first_comparison(stats: JsonDict) -> JsonDict:
     ):
         return stats
     return {}
+
+
+def interpretability_rows(detail: JsonDict) -> list[JsonDict]:
+    """Normalize explanation-first evidence findings for UI tables and cards."""
+
+    report_value = detail.get("interpretability_report")
+    report = report_value if isinstance(report_value, dict) else {}
+    findings = report.get("findings")
+    if not isinstance(findings, list):
+        return []
+    rows: list[JsonDict] = []
+    for raw in findings:
+        if not isinstance(raw, dict):
+            continue
+        finding = cast(JsonDict, raw)
+        rows.append(
+            {
+                "adapter": finding.get("adapter"),
+                "role": finding.get("interpretation_role"),
+                "status": finding.get("support_status"),
+                "confidence": finding.get("confidence"),
+                "observation": finding.get("observation"),
+                "explanation": finding.get("explanation"),
+                "scope": finding.get("scope"),
+                "claim_boundary": finding.get("claim_boundary"),
+                "next_action": finding.get("next_action"),
+            }
+        )
+    return rows
+
+
+def evidence_matrix_rows(detail: JsonDict) -> list[JsonDict]:
+    """Normalize evidence availability and interpretation roles."""
+
+    matrix_value = detail.get("evidence_matrix")
+    matrix = matrix_value if isinstance(matrix_value, dict) else {}
+    diagnostics = matrix.get("diagnostics")
+    if not isinstance(diagnostics, list):
+        return []
+    rows: list[JsonDict] = []
+    for raw in diagnostics:
+        if not isinstance(raw, dict):
+            continue
+        item = cast(JsonDict, raw)
+        rows.append(
+            {
+                "adapter": item.get("adapter"),
+                "status": item.get("support_status"),
+                "role": item.get("interpretation_role"),
+                "confidence": item.get("confidence"),
+                "sources": item.get("source_count"),
+                "next_action": item.get("next_action"),
+            }
+        )
+    return rows
 
 
 PEOC_STATUSES = ("available", "partial", "failed_validation", "unusable", "missing")

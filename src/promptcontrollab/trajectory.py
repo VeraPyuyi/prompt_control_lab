@@ -13,7 +13,7 @@ def analyze_trajectory(*, states_path: Path, out_dir: Path, tail: int = 3) -> Js
     """Analyze drift and log-decay slope from a hidden-state trajectory artifact."""
 
     np = require_module("numpy", feature="trajectory diagnostics", extra="research")
-    data = cast(Any, np.load(states_path, allow_pickle=True))
+    data = cast(Any, np.load(states_path, allow_pickle=False))
     if "states" not in data:
         msg = f"{states_path} must contain an array named `states`"
         raise ValueError(msg)

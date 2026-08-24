@@ -58,7 +58,7 @@ def analyze_riccati(
 
 
 def _load_matrices(np: Any, path: Path) -> tuple[Any, Any, Any, Any]:
-    data = cast(Any, np.load(path, allow_pickle=True))
+    data = cast(Any, np.load(path, allow_pickle=False))
     required = ["A", "B", "Q", "R"]
     missing = [name for name in required if name not in data]
     if missing:
@@ -68,7 +68,7 @@ def _load_matrices(np: Any, path: Path) -> tuple[Any, Any, Any, Any]:
 
 
 def _fit_linear_surrogate(np: Any, path: Path) -> Any:
-    data = cast(Any, np.load(path, allow_pickle=True))
+    data = cast(Any, np.load(path, allow_pickle=False))
     if "states" not in data:
         msg = f"{path} must contain an array named `states`"
         raise ValueError(msg)

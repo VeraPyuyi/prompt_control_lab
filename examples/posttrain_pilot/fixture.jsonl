@@ -1,0 +1,2 @@
+{"id":"math-1","prompt":"What is 2 + 2?","answer":"4","slice":"arithmetic"}
+{"id":"format-1","prompt":"Return exactly the label OK.","answer":"OK","slice":"format"}

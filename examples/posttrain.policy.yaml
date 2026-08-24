@@ -1,0 +1,12 @@
+# Checkpoint promotion policy for `pcl posttrain-gate`.
+min_score_delta: 0.0
+max_slice_regression: 0.05
+max_trajectory_drift_increase: 0.05
+max_generation_mismatch: 0.1
+max_selective_aurc: 0.4
+max_soft_hard_risk: medium
+min_paired_ci_lower: 0.0
+max_token_increase_ratio: 0.2
+max_latency_increase_ratio: 0.2
+require_split_hash_match: true
+require_model_match: true

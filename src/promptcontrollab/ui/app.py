@@ -63,11 +63,13 @@ from promptcontrollab.ui.data import (
     evidence_gap_rows,
     evidence_gate_rows,
     evidence_gate_summary,
+    evidence_matrix_rows,
     external_bridge_summary,
     filter_history_rows,
     first_comparison,
     guard_download_payloads,
     history_rows,
+    interpretability_rows,
     list_runs,
     load_run_detail,
     model_rows,
@@ -111,49 +113,56 @@ DEFAULT_PRIMARY_VIEW = "before"
 PRIMARY_VIEW_ORDER = (
     "before",
     "run",
-    "why",
-    "after",
+    "mechanism",
+    "stability",
+    "training",
+    "evidence",
     "decision",
     "history",
-    "advanced",
 )
 PRIMARY_VIEW_LABELS = {
     "en": {
         "before": "Before",
         "run": "Run",
-        "why": "Why",
-        "after": "After",
+        "mechanism": "Mechanism",
+        "stability": "Stability",
+        "training": "Training Gate",
+        "evidence": "Evidence Scope",
         "decision": "Decision",
         "history": "History",
-        "advanced": "Advanced",
     },
     "zh": {
         "before": "执行前",
         "run": "运行中",
-        "why": "原因",
-        "after": "执行后",
+        "mechanism": "机制解释",
+        "stability": "稳定性",
+        "training": "训练门禁",
+        "evidence": "证据边界",
         "decision": "决策",
         "history": "历史",
-        "advanced": "高级",
     },
 }
 LEGACY_VIEW_GROUPS = {
     "before": ("guard", "tutorial"),
     "run": ("workflows",),
-    "why": (),
-    "after": ("drift", "audit"),
+    "mechanism": (),
+    "stability": ("drift", "audit"),
+    "training": ("posttrain",),
+    "evidence": ("research",),
     "decision": ("report",),
     "history": ("history",),
-    "advanced": ("research",),
 }
 LEGACY_VIEW_ALIASES = {
     "guard": "before",
     "tutorial": "before",
     "workflows": "run",
-    "drift": "after",
-    "audit": "after",
+    "why": "mechanism",
+    "drift": "stability",
+    "audit": "stability",
+    "after": "stability",
     "report": "decision",
-    "research": "advanced",
+    "research": "evidence",
+    "advanced": "evidence",
 }
 
 CONTROL_TEXT = {
@@ -163,15 +172,19 @@ CONTROL_TEXT = {
         "before_caption": "Preflight and prompt-gate evidence for the selected control run.",
         "run_title": "Run evidence",
         "run_caption": "Ordered public session, turn, tool, and provider metadata.",
-        "why_title": "Why this run looks this way",
-        "why_caption": "Observed factors and Harness guard signals, without causal claims.",
-        "after_title": "After execution",
-        "after_caption": "Bounded stability signals, file changes, and recorded test outcomes.",
+        "why_title": "Mechanism interpretation",
+        "why_caption": "Observed factors and diagnostic associations, without causal claims.",
+        "after_title": "Stability and execution evidence",
+        "after_caption": "Trajectory, uncertainty, file changes, and recorded test outcomes.",
+        "training_title": "Post-training checkpoint gate",
+        "training_caption": "Checkpoint promotion based on performance and diagnostic evidence.",
+        "evidence_title": "Evidence scope and claim boundary",
+        "evidence_caption": "What is observed, what it can explain, and what remains unsupported.",
         "decision_title": "Decision",
         "decision_caption": "Current recommendation and locally available reports.",
-        "advanced_title": "Advanced diagnostics",
+        "advanced_title": "Evidence scope",
         "advanced_caption": (
-            "PEOC and research diagnostics are isolated here and do not constitute causal or "
+            "PEOC and server evidence are interpreted as bounded diagnostics, not causal or "
             "safety proof."
         ),
         "missing": "No control-run artifacts are available for the selected run.",
@@ -223,14 +236,18 @@ CONTROL_TEXT = {
         "before_caption": "所选 control run 的预检与 prompt gate 证据。",
         "run_title": "运行证据",
         "run_caption": "按顺序展示公开的 session、turn、工具与 provider 元数据。",
-        "why_title": "为什么会得到当前结果",
-        "why_caption": "只展示可观察因素和 Harness guard 信号，不作因果主张。",
-        "after_title": "执行后",
-        "after_caption": "有界的稳定性信号、文件变更与已记录测试结果。",
+        "why_title": "机制解释",
+        "why_caption": "展示可观察因素和诊断关联，不作未经验证的因果主张。",
+        "after_title": "稳定性与执行证据",
+        "after_caption": "展示轨迹、不确定性、文件变更与已记录测试结果。",
+        "training_title": "后训练 Checkpoint 门禁",
+        "training_caption": "结合性能与诊断证据判断 checkpoint 是否值得晋级。",
+        "evidence_title": "证据范围与结论边界",
+        "evidence_caption": "说明观察到了什么、能解释什么，以及仍然不能证明什么。",
         "decision_title": "决策",
         "decision_caption": "当前建议与本地可用报告。",
-        "advanced_title": "高级诊断",
-        "advanced_caption": "PEOC 与研究诊断集中在这里；它们不构成因果证明或安全证明。",
+        "advanced_title": "证据边界",
+        "advanced_caption": "PEOC 与服务器证据按有界诊断解释，不构成因果证明或安全证明。",
         "missing": "所选 run 暂无 control-run artifact。",
         "run_id": "Run ID",
         "session_id": "Harness session",
@@ -1697,16 +1714,18 @@ def _render_view(
             overwrite,
             allow_external_outputs,
         )
-    elif primary == "why":
-        _render_why_view(st, language, detail)
-    elif primary == "after":
-        _render_after_view(st, text, language, detail)
+    elif primary == "mechanism":
+        _render_mechanism_view(st, language, detail)
+    elif primary == "stability":
+        _render_stability_view(st, text, language, detail)
+    elif primary == "training":
+        _render_training_gate_view(st, language, detail)
+    elif primary == "evidence":
+        _render_evidence_scope_view(st, text, language, detail)
     elif primary == "decision":
         _render_decision_view(st, text, language, detail)
     elif primary == "history":
         _render_history_tab(st, text, detail)
-    elif primary == "advanced":
-        _render_advanced_view(st, text, language, detail)
 
 
 def _render_before_view(
@@ -1892,6 +1911,19 @@ def _render_why_view(st: Any, language: str, detail: JsonDict) -> None:
     st.caption(str(recommendation.get("boundary") or ""))
 
 
+def _render_mechanism_view(st: Any, language: str, detail: JsonDict) -> None:
+    _render_why_view(st, language, detail)
+    rows = [
+        row
+        for row in interpretability_rows(detail)
+        if row.get("role") in {"mechanism", "boundary"}
+    ]
+    title = "Mechanism and boundary findings" if language == "en" else "机制与适用边界"
+    if rows:
+        st.markdown(f"### {title}")
+        st.dataframe(rows, use_container_width=True, hide_index=True)
+
+
 def _render_after_view(
     st: Any,
     text: dict[str, str],
@@ -1939,6 +1971,89 @@ def _render_after_view(
         _render_model_drift_tab(st, text, detail)
     with st.expander(control_text["legacy_audit"], expanded=False):
         _render_audit_tab(st, text, detail)
+
+
+def _render_stability_view(
+    st: Any,
+    text: dict[str, str],
+    language: str,
+    detail: JsonDict,
+) -> None:
+    _render_after_view(st, text, language, detail)
+    rows = [
+        row
+        for row in interpretability_rows(detail)
+        if row.get("role") in {"stability", "uncertainty"}
+    ]
+    title = "Stability and uncertainty findings" if language == "en" else "稳定性与不确定性"
+    if rows:
+        st.markdown(f"### {title}")
+        st.dataframe(rows, use_container_width=True, hide_index=True)
+
+
+def _render_training_gate_view(st: Any, language: str, detail: JsonDict) -> None:
+    control_text = CONTROL_TEXT[language]
+    gate = _dict(detail.get("posttrain_gate"))
+    comparison = _dict(detail.get("checkpoint_comparison"))
+    attribution = _dict(detail.get("mechanism_attribution"))
+    st.subheader(control_text["training_title"])
+    st.caption(control_text["training_caption"])
+    if not gate:
+        command = (
+            "pcl posttrain-gate --baseline runs/checkpoint-000 "
+            "--candidate runs/checkpoint-500 --policy examples/posttrain.policy.yaml "
+            "--out runs/posttrain-gate"
+        )
+        st.info("No post-training gate artifact is available." if language == "en" else "当前没有后训练门禁结果。")
+        st.code(command, language="bash")
+        return
+    paired = _dict(comparison.get("paired_statistics"))
+    resources = _dict(comparison.get("resources"))
+    metric_cards(
+        st,
+        [
+            ("Decision" if language == "en" else "决策", gate.get("decision")),
+            ("Score delta" if language == "en" else "分数变化", comparison.get("score_delta")),
+            (
+                "Paired CI" if language == "en" else "配对置信区间",
+                paired.get("bootstrap_ci"),
+            ),
+            (
+                "Token change" if language == "en" else "Token 变化",
+                resources.get("token_increase_ratio"),
+            ),
+            (
+                "Latency change" if language == "en" else "延迟变化",
+                resources.get("latency_increase_ratio"),
+            ),
+            (
+                "Missing evidence" if language == "en" else "缺失证据",
+                len(_list(gate.get("missing_artifacts")))
+                + len(_list(gate.get("invalid_evidence"))),
+            ),
+        ],
+    )
+    st.info(str(gate.get("plain_summary") or ""))
+    checks = _dict(gate.get("checks"))
+    if checks:
+        st.dataframe(
+            [
+                {
+                    "check": name,
+                    "passed": _dict(raw).get("passed"),
+                    "severity": _dict(raw).get("severity"),
+                    "message": _dict(raw).get("message"),
+                }
+                for name, raw in checks.items()
+            ],
+            use_container_width=True,
+            hide_index=True,
+        )
+    findings = _list(attribution.get("findings"))
+    if findings:
+        st.markdown("### Mechanism attribution" if language == "en" else "### 机制归因")
+        st.dataframe(findings, use_container_width=True, hide_index=True)
+    st.caption(str(gate.get("claim_boundary") or ""))
 
 
 def _render_decision_view(
@@ -1995,8 +2110,24 @@ def _render_advanced_view(
     control_text = CONTROL_TEXT[language]
     st.subheader(control_text["advanced_title"])
     st.caption(control_text["advanced_caption"])
+    matrix = evidence_matrix_rows(detail)
+    if matrix:
+        st.dataframe(matrix, use_container_width=True, hide_index=True)
+    findings = interpretability_rows(detail)
+    if findings:
+        st.markdown("### Explanation records" if language == "en" else "### 可解释性记录")
+        st.dataframe(findings, use_container_width=True, hide_index=True)
     with st.expander(control_text["legacy_research"], expanded=True):
         _render_research_overview_tab(st, text, detail, language)
+
+
+def _render_evidence_scope_view(
+    st: Any,
+    text: dict[str, str],
+    language: str,
+    detail: JsonDict,
+) -> None:
+    _render_advanced_view(st, text, language, detail)
 
 
 def _hide_streamlit_chrome(st: Any) -> None:

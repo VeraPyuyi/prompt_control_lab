@@ -1,0 +1,17 @@
+{
+  "checked_at": "2026-08-24T03:59:04Z",
+  "execution_status": "not_started_resource_gate",
+  "gpu_work_started": false,
+  "planned_model": "Qwen2.5-0.5B",
+  "planned_seeds": [0, 1, 2],
+  "reasons": [
+    "Two queued handoff processes were waiting for GPU resources.",
+    "The required cached Qwen2.5-0.5B model was not present in the checked Hugging Face and ModelScope cache locations."
+  ],
+  "required_before_launch": [
+    "An expiring operator approval with queue_clear=true.",
+    "A confirmed local model path and fixed train/validation/withheld inputs.",
+    "An idle selected GPU and an exclusive flock acquired immediately before launch."
+  ],
+  "schema": "prompt_control_lab.posttrain_sft_pilot_status.v1"
+}

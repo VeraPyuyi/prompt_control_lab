@@ -56,17 +56,17 @@ def _first_screen(text: str) -> str:
     return text.split(marker, 1)[0]
 
 
-def test_readme_first_screens_lead_with_the_local_control_loop() -> None:
+def test_readme_first_screens_lead_with_the_local_diagnostic_control_loop() -> None:
     english = _read(README_EN)
     chinese = _read(README_ZH)
     first_en = _first_screen(english)
     first_zh = _first_screen(chinese)
 
     assert english.startswith(
-        "# PromptControlLab 2.0\n\n**The local control loop for prompts and AI agents.**"
+        "# PromptControlLab 2.0\n\n**The local evidence, diagnosis, and control loop"
     )
     assert chinese.startswith(
-        "# PromptControlLab 2.0\n\n**Prompt 与 AI Agent 的本地控制闭环。**"
+        "# PromptControlLab 2.0\n\n**Prompt、Checkpoint 与 AI Agent 的本地证据、诊断和控制闭环。**"
     )
     for first in (first_en, first_zh):
         assert "2-Minute" in first or "2 分钟" in first
@@ -84,8 +84,10 @@ def test_readme_first_screens_lead_with_the_local_control_loop() -> None:
         assert "Claude Code" in first
         assert "GitHub Action" in first
         assert "prompt_control_lab.control_event.v1" in first
-        assert "Before / Run / Why / After / Decision / History / Advanced" in first
         assert "PEOC" not in first
+
+    assert "Before / Run / Mechanism / Stability / Training Gate / Evidence Scope" in first_en
+    assert "机制解释 / 稳定性 / 训练门禁 / 证据边界" in first_zh
 
     assert "Control-theoretic diagnostics and reproducible evidence" not in english
     assert "面向 prompt 优化的控制论诊断与可复现证据工具" not in chinese
@@ -104,12 +106,10 @@ def test_readmes_link_every_bilingual_control_guide() -> None:
         assert f"]({zh_name})" in _read(ROOT / "docs" / en_name)
         assert f"]({en_name})" in _read(ROOT / "docs" / zh_name)
 
-    for text in (english, chinese):
-        advanced = text.find("Advanced Diagnostics")
-        if advanced < 0:
-            advanced = text.find("高级诊断")
-        assert advanced >= 0
-        assert text.find("PEOC") > advanced
+    origins_en = english.find("Method Origins and Boundaries")
+    origins_zh = chinese.find("方法来源与结论边界")
+    assert origins_en >= 0 and english.find("PEOC") > origins_en
+    assert origins_zh >= 0 and chinese.find("PEOC") > origins_zh
 
 
 def test_control_loop_docs_define_authorization_and_artifact_authority() -> None:

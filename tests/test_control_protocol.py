@@ -368,6 +368,57 @@ EventLog(path, run_id="concurrent-run").append_new(
     }
 
 
+def test_event_log_retries_transient_windows_lock_permission_error(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    import promptcontrollab.control_events as control_events
+
+    real_open = os.open
+    calls = 0
+
+    def transient_open(
+        path: str | bytes | os.PathLike[str] | os.PathLike[bytes],
+        flags: int,
+    ) -> int:
+        nonlocal calls
+        calls += 1
+        if calls == 1:
+            raise PermissionError(13, "simulated Windows lock contention", str(path))
+        return int(real_open(path, flags))
+
+    monkeypatch.setattr(os, "open", transient_open)
+    log = control_events.EventLog(tmp_path / "events.jsonl", run_id="run")
+
+    _, appended = log.append_new(event_type="test/event", payload={"ok": True})
+
+    assert appended is True
+    assert calls >= 2
+
+
+def test_event_log_bounds_persistent_windows_lock_permission_error(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    import promptcontrollab.control_events as control_events
+
+    def denied_open(
+        path: str | bytes | os.PathLike[str] | os.PathLike[bytes],
+        flags: int,
+    ) -> int:
+        raise PermissionError(13, "simulated permanent permission denial", str(path))
+
+    monkeypatch.setattr(os, "open", denied_open)
+    log = control_events.EventLog(
+        tmp_path / "events.jsonl",
+        run_id="run",
+        lock_timeout=0.02,
+    )
+
+    with pytest.raises(TimeoutError, match="Timed out acquiring event log lock"):
+        log.append_new(event_type="test/event", payload={"ok": True})
+
+
 def test_event_log_recovers_a_stale_sibling_lock(tmp_path: Path) -> None:
     from promptcontrollab.control_events import EventLog
 

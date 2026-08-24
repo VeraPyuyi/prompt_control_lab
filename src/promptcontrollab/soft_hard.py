@@ -13,8 +13,8 @@ def analyze_soft_hard(*, soft_path: Path, vocab_path: Path, out_dir: Path) -> Js
     """Project soft prompt vectors to nearest vocabulary embeddings."""
 
     np = require_module("numpy", feature="soft-hard diagnostics", extra="research")
-    soft_data = cast(Any, np.load(soft_path, allow_pickle=True))
-    vocab_data = cast(Any, np.load(vocab_path, allow_pickle=True))
+    soft_data = cast(Any, np.load(soft_path, allow_pickle=False))
+    vocab_data = cast(Any, np.load(vocab_path, allow_pickle=False))
     if "soft" not in soft_data:
         msg = f"{soft_path} must contain an array named `soft`"
         raise ValueError(msg)
