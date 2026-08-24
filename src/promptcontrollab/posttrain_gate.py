@@ -20,6 +20,12 @@ _REQUIRED_ARTIFACTS = (
     "diagnostics/selective_risk.json",
 )
 _CANDIDATE_REQUIRED_ARTIFACTS = ("stats.json",)
+_BLACK_BOX_REQUIRED_ARTIFACTS = ("manifest.json", "metrics.json")
+_BLACK_BOX_CANDIDATE_ARTIFACTS = (
+    "stats.json",
+    "diagnostics/selective_risk.json",
+)
+_CAPABILITY_PROFILES = {"auto", "full-open-model", "black-box"}
 
 
 def run_posttrain_gate(
@@ -28,22 +34,35 @@ def run_posttrain_gate(
     candidate_dir: Path,
     policy_path: Path | None,
     out_dir: Path,
+    capability: str = "auto",
 ) -> JsonDict:
     """Compare checkpoint evidence and write a bounded deployment decision."""
 
     baseline = baseline_dir.resolve()
     candidate = candidate_dir.resolve()
+    capability_profile = _resolve_capability_profile(baseline, candidate, capability)
     policy, policy_label = _load_policy(policy_path)
-    missing = _missing_artifacts(baseline, candidate)
+    missing = _missing_artifacts(baseline, candidate, capability_profile)
     comparison = _build_comparison(baseline, candidate)
-    invalid = _invalid_evidence(comparison)
+    invalid = _invalid_evidence(comparison, capability_profile)
     evidence_gaps = [*missing, *invalid]
-    checks = _build_checks(comparison, policy, missing=evidence_gaps)
+    checks = _build_checks(
+        comparison,
+        policy,
+        missing=evidence_gaps,
+        capability_profile=capability_profile,
+    )
     decision = _decision(checks, missing=evidence_gaps)
     attribution = _build_attribution(comparison, checks)
+    decision_trace = _build_decision_trace(
+        checks,
+        decision=decision,
+        capability_profile=capability_profile,
+    )
     payload: JsonDict = {
         "schema": "prompt_control_lab.posttrain_gate.v1",
         "decision": decision,
+        "capability_profile": capability_profile,
         "baseline": str(baseline),
         "candidate": str(candidate),
         "policy_path": policy_label,
@@ -60,6 +79,7 @@ def run_posttrain_gate(
     write_json(out_dir / "posttrain_gate.json", payload)
     write_json(out_dir / "checkpoint_comparison.json", comparison)
     write_json(out_dir / "mechanism_attribution.json", attribution)
+    write_json(out_dir / "decision_trace.json", decision_trace)
     markdown = render_posttrain_markdown(payload, comparison, attribution)
     (out_dir / "report.md").write_text(markdown, encoding="utf-8")
     (out_dir / "report.html").write_text(
@@ -157,8 +177,25 @@ p{{line-height:1.5;overflow-wrap:anywhere}}</style></head><body><main>
 </main></body></html>"""
 
 
-def _missing_artifacts(baseline: Path, candidate: Path) -> list[str]:
+def _missing_artifacts(
+    baseline: Path,
+    candidate: Path,
+    capability_profile: str,
+) -> list[str]:
     missing: list[str] = []
+    if capability_profile == "black-box":
+        for label, root in (("baseline", baseline), ("candidate", candidate)):
+            missing.extend(
+                f"{label}:{relative}"
+                for relative in _BLACK_BOX_REQUIRED_ARTIFACTS
+                if not (root / relative).is_file()
+            )
+        missing.extend(
+            f"candidate:{relative}"
+            for relative in _BLACK_BOX_CANDIDATE_ARTIFACTS
+            if not (candidate / relative).is_file()
+        )
+        return missing
     for label, root in [("baseline", baseline), ("candidate", candidate)]:
         missing.extend(
             f"{label}:{relative}"
@@ -171,6 +208,127 @@ def _missing_artifacts(baseline: Path, candidate: Path) -> list[str]:
         if not (candidate / relative).is_file()
     )
     return missing
+
+
+def _resolve_capability_profile(
+    baseline: Path,
+    candidate: Path,
+    requested: str,
+) -> str:
+    if requested not in _CAPABILITY_PROFILES:
+        supported = ", ".join(sorted(_CAPABILITY_PROFILES))
+        raise ValueError(f"Unsupported post-training capability `{requested}`; use {supported}")
+    if requested != "auto":
+        return requested
+    manifests = [
+        _optional_json(baseline / "manifest.json"),
+        _optional_json(candidate / "manifest.json"),
+    ]
+    hidden_state_flags: list[bool] = []
+    for manifest in manifests:
+        capabilities = _dict(_checkpoint(manifest).get("capabilities"))
+        hidden_state = capabilities.get("hidden_states")
+        if isinstance(hidden_state, bool):
+            hidden_state_flags.append(hidden_state)
+    if hidden_state_flags and not all(hidden_state_flags):
+        return "black-box"
+    trajectory_available = all(
+        (root / "diagnostics/trajectory.json").is_file() for root in (baseline, candidate)
+    )
+    return "full-open-model" if trajectory_available else "black-box"
+
+
+def _not_applicable_check(message: str) -> JsonDict:
+    return {
+        "passed": True,
+        "applicable": False,
+        "severity": "info",
+        "observed": "not_applicable",
+        "message": message,
+    }
+
+
+def _build_decision_trace(
+    checks: JsonDict,
+    *,
+    decision: str,
+    capability_profile: str,
+) -> JsonDict:
+    evidence_map = {
+        "artifact_completeness": ["manifest.json", "metrics.json", "stats.json"],
+        "provenance": ["checkpoint_comparison.json"],
+        "task_score": ["checkpoint_comparison.json"],
+        "paired_uncertainty": ["checkpoint_comparison.json"],
+        "slice_regression": ["checkpoint_comparison.json"],
+        "resource_cost": ["checkpoint_comparison.json"],
+        "trajectory_stability": ["diagnostics/trajectory.json"],
+        "soft_hard_deployment": ["diagnostics/soft_hard.json"],
+        "generation_mismatch": ["diagnostics/generation_mismatch.json"],
+        "selective_risk": ["diagnostics/selective_risk.json"],
+    }
+    rows: list[JsonDict] = []
+    for name, raw in checks.items():
+        if not isinstance(raw, dict):
+            continue
+        check = _dict(raw)
+        applicable = check.get("applicable") is not False
+        passed = check.get("passed") is True
+        severity = str(check.get("severity", "info"))
+        if not applicable:
+            status = "not_applicable"
+            impact = "none"
+        elif passed:
+            status = "passed"
+            impact = "none"
+        else:
+            status = "triggered"
+            impact = {
+                "fail": "hold",
+                "review": "needs_review",
+                "insufficient": "insufficient_evidence",
+            }.get(severity, "needs_review")
+        observed = next(
+            (
+                check[key]
+                for key in (
+                    "observed",
+                    "increase",
+                    "bootstrap_ci",
+                    "regressed_slices",
+                    "violations",
+                    "missing",
+                )
+                if key in check
+            ),
+            check.get("message"),
+        )
+        threshold = check.get("threshold")
+        if threshold is None and name == "resource_cost":
+            threshold = {
+                "max_token_increase_ratio": check.get("max_token_increase_ratio"),
+                "max_latency_increase_ratio": check.get("max_latency_increase_ratio"),
+            }
+        rows.append(
+            {
+                "check": name,
+                "observed": observed,
+                "threshold": threshold,
+                "status": status,
+                "impact": impact,
+                "evidence": evidence_map.get(name, ["posttrain_gate.json"]),
+                "next_action": _next_action(name, passed or not applicable),
+            }
+        )
+    return {
+        "schema": "prompt_control_lab.posttrain_decision_trace.v1",
+        "decision": decision,
+        "capability_profile": capability_profile,
+        "checks": rows,
+        "claim_boundary": (
+            "The trace records how configured evidence checks produced the gate decision; it is "
+            "not a causal proof of model behavior."
+        ),
+    }
 
 
 def _load_policy(path: Path | None) -> tuple[JsonDict, str]:
@@ -220,7 +378,7 @@ def _build_comparison(baseline: Path, candidate: Path) -> JsonDict:
     }
 
 
-def _invalid_evidence(comparison: JsonDict) -> list[str]:
+def _invalid_evidence(comparison: JsonDict, capability_profile: str) -> list[str]:
     invalid: list[str] = []
     if not str(comparison.get("baseline_checkpoint") or "").strip():
         invalid.append("baseline:manifest.checkpoint.id")
@@ -233,12 +391,13 @@ def _invalid_evidence(comparison: JsonDict) -> list[str]:
     diagnostics = _dict(comparison.get("diagnostics"))
     baseline = _dict(diagnostics.get("baseline"))
     candidate = _dict(diagnostics.get("candidate"))
-    if _diagnostic_number(baseline, "trajectory", "mean_step_drift") is None:
-        invalid.append("baseline:diagnostics.trajectory.mean_step_drift")
-    if _diagnostic_number(candidate, "trajectory", "mean_step_drift") is None:
-        invalid.append("candidate:diagnostics.trajectory.mean_step_drift")
-    if _diagnostic_number(candidate, "generation_mismatch", "gap") is None:
-        invalid.append("candidate:diagnostics.generation_mismatch.gap")
+    if capability_profile == "full-open-model":
+        if _diagnostic_number(baseline, "trajectory", "mean_step_drift") is None:
+            invalid.append("baseline:diagnostics.trajectory.mean_step_drift")
+        if _diagnostic_number(candidate, "trajectory", "mean_step_drift") is None:
+            invalid.append("candidate:diagnostics.trajectory.mean_step_drift")
+        if _diagnostic_number(candidate, "generation_mismatch", "gap") is None:
+            invalid.append("candidate:diagnostics.generation_mismatch.gap")
     if _diagnostic_number(candidate, "selective_risk", "observed_aurc") is None:
         invalid.append("candidate:diagnostics.selective_risk.observed_aurc")
     paired = _dict(comparison.get("paired_statistics"))
@@ -310,14 +469,25 @@ def _invalid_evidence(comparison: JsonDict) -> list[str]:
     for key in resource_fields:
         if _optional_float(resources.get(key)) is None:
             invalid.append(f"metrics:{key}")
-    soft_hard = _dict(candidate.get("soft_hard"))
-    not_applicable = str(soft_hard.get("applicability", "")).lower() == "not_applicable"
-    if not not_applicable and str(soft_hard.get("risk", "")) not in {"low", "medium", "high"}:
-        invalid.append("candidate:diagnostics.soft_hard.risk")
+    if capability_profile == "full-open-model":
+        soft_hard = _dict(candidate.get("soft_hard"))
+        not_applicable = str(soft_hard.get("applicability", "")).lower() == "not_applicable"
+        if not not_applicable and str(soft_hard.get("risk", "")) not in {
+            "low",
+            "medium",
+            "high",
+        }:
+            invalid.append("candidate:diagnostics.soft_hard.risk")
     return invalid
 
 
-def _build_checks(comparison: JsonDict, policy: JsonDict, *, missing: list[str]) -> JsonDict:
+def _build_checks(
+    comparison: JsonDict,
+    policy: JsonDict,
+    *,
+    missing: list[str],
+    capability_profile: str,
+) -> JsonDict:
     diagnostics = comparison.get("diagnostics", {})
     diagnostic_dict = diagnostics if isinstance(diagnostics, dict) else {}
     baseline = _dict(diagnostic_dict.get("baseline"))
@@ -338,9 +508,21 @@ def _build_checks(comparison: JsonDict, policy: JsonDict, *, missing: list[str])
         "paired_uncertainty": _paired_uncertainty_check(comparison, policy),
         "slice_regression": _slice_check(comparison, policy),
         "resource_cost": _resource_check(comparison, policy),
-        "trajectory_stability": _trajectory_check(baseline, candidate, policy),
-        "soft_hard_deployment": _soft_hard_check(candidate, policy),
-        "generation_mismatch": _generation_check(candidate, policy),
+        "trajectory_stability": (
+            _trajectory_check(baseline, candidate, policy)
+            if capability_profile == "full-open-model"
+            else _not_applicable_check("Hidden-state trajectory access was not recorded.")
+        ),
+        "soft_hard_deployment": (
+            _soft_hard_check(candidate, policy)
+            if capability_profile == "full-open-model"
+            else _not_applicable_check("Soft-prompt projection evidence was not requested.")
+        ),
+        "generation_mismatch": (
+            _generation_check(candidate, policy)
+            if capability_profile == "full-open-model"
+            else _not_applicable_check("Teacher-forced logits were not available.")
+        ),
         "selective_risk": _selective_check(candidate, policy),
     }
 

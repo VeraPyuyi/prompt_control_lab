@@ -6,18 +6,28 @@ from pathlib import Path
 
 import pytest
 
+from promptcontrollab import posttrain_pilot_runner
 from promptcontrollab.cli import main
 from promptcontrollab.posttrain_pilot import (
     PilotInputs,
+    aggregate_pilot_decisions,
     build_sft_pilot_plan,
     canonical_answer_exact_match,
     paired_checkpoint_statistics,
+    score_pilot_output,
     sequence_exact_match,
     token_trajectory_drift,
     training_strategy_argument,
+    validate_gpu_idle_snapshots,
+    validate_model_provenance,
     validate_resource_approval,
+    write_model_provenance,
 )
-from promptcontrollab.posttrain_pilot_runner import _aurc
+from promptcontrollab.posttrain_pilot_runner import (
+    _assert_gpu_idle_twice,
+    _aurc,
+    _representation_shift,
+)
 
 
 def _write_jsonl(
@@ -112,6 +122,10 @@ def test_resource_approval_requires_queue_clear_matching_gpu_and_fresh_expiry(
             {
                 "approved": True,
                 "queue_clear": True,
+                "queue_pending_jobs": 0,
+                "queue_running_jobs": 0,
+                "queue_source": "/root/prompt_control_lab_runtime/queue_snapshot.json",
+                "queue_snapshot_sha256": "sha256:" + "a" * 64,
                 "gpu": 3,
                 "checked_at": (now - timedelta(minutes=5)).isoformat(),
                 "expires_at": (now + timedelta(minutes=25)).isoformat(),
@@ -185,6 +199,72 @@ def test_pilot_diagnostics_use_comparable_sequence_and_token_trajectory_units() 
     assert drift == pytest.approx((1.0 / (2**0.5) + 2.0 / (2**0.5)) / 2.0)
     assert canonical_answer_exact_match("  FINAL   Answer ", "final answer") == 1.0
     assert canonical_answer_exact_match("#### 4", "4") == 1.0
+    assert _representation_shift([0.0, 0.0], [1.0, 1.0]) == pytest.approx(1.0)
+    assert _representation_shift([], []) is None
+
+
+def test_pilot_scoring_extracts_gsm8k_final_number_but_keeps_format_strict() -> None:
+    reasoning = "We add 19 and 23. The answer is 42."
+
+    assert score_pilot_output(reasoning, "#### 42", "gsm8k") == 1.0
+    assert score_pilot_output("19 + 23 = 41. Final answer: 41", "#### 42", "gsm8k") == 0.0
+    assert score_pilot_output("LABEL: YES\nExplanation", "LABEL: YES", "format") == 0.0
+    assert score_pilot_output("LABEL: YES", "LABEL: YES", "format_following") == 1.0
+
+
+def test_gpu_idle_validation_requires_two_matching_idle_snapshots() -> None:
+    first = {
+        "gpu": 3,
+        "uuid": "GPU-123",
+        "memory_used_mib": 0,
+        "active_compute_pids": [],
+    }
+    second = dict(first)
+
+    result = validate_gpu_idle_snapshots(first, second, gpu=3)
+
+    assert result["consecutive_idle_checks"] == 2
+    assert result["gpu_uuid"] == "GPU-123"
+    with pytest.raises(ValueError, match="active compute"):
+        validate_gpu_idle_snapshots(first, {**second, "active_compute_pids": [123]}, gpu=3)
+    with pytest.raises(ValueError, match="identity changed"):
+        validate_gpu_idle_snapshots(first, {**second, "uuid": "GPU-456"}, gpu=3)
+
+
+def test_gpu_idle_execution_check_observes_the_gpu_twice(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    snapshots = [
+        {"gpu": 3, "uuid": "GPU-123", "memory_used_mib": 0, "active_compute_pids": []},
+        {"gpu": 3, "uuid": "GPU-123", "memory_used_mib": 0, "active_compute_pids": []},
+    ]
+    sleeps: list[float] = []
+    monkeypatch.setattr(
+        posttrain_pilot_runner,
+        "_gpu_idle_snapshot",
+        lambda index: snapshots.pop(0),
+    )
+
+    result = _assert_gpu_idle_twice(3, interval_seconds=15.0, sleep=sleeps.append)
+
+    assert result["consecutive_idle_checks"] == 2
+    assert sleeps == [15.0]
+    assert snapshots == []
+
+
+@pytest.mark.parametrize(
+    ("decisions", "expected"),
+    [
+        (["pass", "pass"], "pass"),
+        (["pass", "needs_review"], "needs_review"),
+        (["pass", "insufficient_evidence"], "insufficient_evidence"),
+        (["insufficient_evidence", "hold"], "hold"),
+    ],
+)
+def test_pilot_decision_aggregation_is_conservative(
+    decisions: list[str], expected: str
+) -> None:
+    assert aggregate_pilot_decisions(decisions) == expected
 
 
 @pytest.mark.parametrize("overlap_kind", ["id", "content", "format_content"])
@@ -243,6 +323,10 @@ def test_resource_approval_fails_closed(
     payload: dict[str, object] = {
         "approved": True,
         "queue_clear": True,
+        "queue_pending_jobs": 0,
+        "queue_running_jobs": 0,
+        "queue_source": "/root/prompt_control_lab_runtime/queue_snapshot.json",
+        "queue_snapshot_sha256": "sha256:" + "a" * 64,
         "gpu": 3,
         "checked_at": "2026-08-23T11:55:00+00:00",
         "expires_at": "2026-08-23T12:25:00+00:00",
@@ -254,3 +338,75 @@ def test_resource_approval_fails_closed(
 
     with pytest.raises(ValueError, match=message):
         validate_resource_approval(approval, gpu=3, now=now)
+
+
+@pytest.mark.parametrize(
+    ("overrides", "message"),
+    [
+        ({"queue_pending_jobs": 1}, "pending"),
+        ({"queue_running_jobs": 1}, "running"),
+        ({"queue_source": ""}, "queue_source"),
+        ({"queue_snapshot_sha256": "sha256:bad"}, "queue_snapshot_sha256"),
+    ],
+)
+def test_resource_approval_requires_auditable_queue_snapshot(
+    tmp_path: Path,
+    overrides: dict[str, object],
+    message: str,
+) -> None:
+    now = datetime(2026, 8, 23, 12, 0, tzinfo=timezone.utc)
+    payload: dict[str, object] = {
+        "approved": True,
+        "queue_clear": True,
+        "queue_pending_jobs": 0,
+        "queue_running_jobs": 0,
+        "queue_source": "/root/prompt_control_lab_runtime/queue_snapshot.json",
+        "queue_snapshot_sha256": "sha256:" + "a" * 64,
+        "gpu": 3,
+        "checked_at": "2026-08-23T11:55:00+00:00",
+        "expires_at": "2026-08-23T12:25:00+00:00",
+        "approved_by": "server-operator",
+    }
+    payload.update(overrides)
+    approval = tmp_path / "approval.json"
+    approval.write_text(json.dumps(payload), encoding="utf-8")
+
+    with pytest.raises(ValueError, match=message):
+        validate_resource_approval(approval, gpu=3, now=now)
+
+
+def test_model_provenance_locks_revision_and_detects_cache_tampering(tmp_path: Path) -> None:
+    model = tmp_path / "model"
+    model.mkdir()
+    (model / "config.json").write_text('{"model_type":"qwen2"}', encoding="utf-8")
+    (model / "weights.safetensors").write_bytes(b"safe-model-weights")
+
+    written = write_model_provenance(
+        model,
+        model_id="Qwen/Qwen2.5-0.5B-Instruct",
+        revision="a" * 40,
+    )
+    validated = validate_model_provenance(model)
+
+    assert written == validated
+    assert validated["combined_sha256"].startswith("sha256:")
+    assert len(validated["files"]) == 2
+    (model / "weights.safetensors").write_bytes(b"tampered")
+    with pytest.raises(ValueError, match="hash mismatch"):
+        validate_model_provenance(model)
+
+
+@pytest.mark.parametrize("revision", ["main", "latest", "not-a-hash", "abc123"])
+def test_model_provenance_requires_pinned_commit_revision(
+    tmp_path: Path, revision: str
+) -> None:
+    model = tmp_path / revision.replace("/", "_")
+    model.mkdir()
+    (model / "config.json").write_text("{}", encoding="utf-8")
+
+    with pytest.raises(ValueError, match="revision"):
+        write_model_provenance(
+            model,
+            model_id="Qwen/Qwen2.5-0.5B-Instruct",
+            revision=revision,
+        )

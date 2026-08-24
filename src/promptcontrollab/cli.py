@@ -97,6 +97,7 @@ from promptcontrollab.scaffold_check import write_scaffold_check
 from promptcontrollab.server_evidence import (
     EvidenceImportOptions,
     import_evidence_manifest,
+    merge_evidence_manifests,
     scan_evidence_root,
 )
 from promptcontrollab.soft_hard import analyze_soft_hard
@@ -1351,6 +1352,16 @@ def build_parser() -> argparse.ArgumentParser:
     )
     evidence_import.add_argument("--overwrite", action="store_true")
     evidence_import.set_defaults(func=_cmd_evidence_import)
+    evidence_merge = evidence_subcommands.add_parser(
+        "merge",
+        help="Reconcile two compatible evidence manifests by canonical identity.",
+    )
+    evidence_merge.add_argument("--primary", type=Path, required=True)
+    evidence_merge.add_argument("--secondary", type=Path, required=True)
+    evidence_merge.add_argument("--out", type=Path, required=True)
+    evidence_merge.add_argument("--portable", action="store_true")
+    evidence_merge.add_argument("--overwrite", action="store_true")
+    evidence_merge.set_defaults(func=_cmd_evidence_merge)
 
     posttrain_parser = subcommands.add_parser(
         "posttrain-gate",
@@ -1362,6 +1373,12 @@ def build_parser() -> argparse.ArgumentParser:
         "--policy",
         type=Path,
         help="Policy path. Uses the packaged bounded default when omitted.",
+    )
+    posttrain_parser.add_argument(
+        "--capability",
+        choices=["auto", "full-open-model", "black-box"],
+        default="auto",
+        help="Evidence capability profile. Auto detects open-model diagnostics.",
     )
     posttrain_parser.add_argument("--out", type=Path, required=True)
     posttrain_parser.set_defaults(func=_cmd_posttrain_gate)
@@ -3163,12 +3180,24 @@ def _cmd_evidence_import(args: argparse.Namespace) -> None:
     print(json.dumps(payload, indent=2, ensure_ascii=False, sort_keys=True))
 
 
+def _cmd_evidence_merge(args: argparse.Namespace) -> None:
+    payload = merge_evidence_manifests(
+        primary=args.primary,
+        secondary=args.secondary,
+        out_dir=args.out,
+        portable=args.portable,
+        overwrite=args.overwrite,
+    )
+    print(json.dumps(payload, indent=2, ensure_ascii=False, sort_keys=True))
+
+
 def _cmd_posttrain_gate(args: argparse.Namespace) -> None:
     payload = run_posttrain_gate(
         baseline_dir=args.baseline,
         candidate_dir=args.candidate,
         policy_path=args.policy,
         out_dir=args.out,
+        capability=args.capability,
     )
     print(json.dumps(payload, indent=2, ensure_ascii=False, sort_keys=True))
 

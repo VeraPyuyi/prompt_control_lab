@@ -6,25 +6,42 @@ import contextlib
 import importlib
 import inspect
 import json
+import math
 import os
 import subprocess
 import time
 from collections import defaultdict
-from collections.abc import Iterator
+from collections.abc import Callable, Iterator
+from dataclasses import dataclass
+from datetime import datetime, timezone
 from itertools import groupby
 from pathlib import Path
 from typing import Any
 
 from promptcontrollab.files import JsonDict, ensure_dir, stable_digest, write_json
+from promptcontrollab.posttrain_gate import run_posttrain_gate
 from promptcontrollab.posttrain_pilot import (
     PilotInputs,
     build_sft_pilot_plan,
-    canonical_answer_exact_match,
     paired_checkpoint_statistics,
+    score_pilot_output,
     token_trajectory_drift,
     training_strategy_argument,
+    validate_gpu_idle_snapshots,
+    validate_model_provenance,
     validate_resource_approval,
 )
+from promptcontrollab.posttrain_pilot_summary import write_pilot_summary
+
+
+@dataclass(frozen=True)
+class CheckpointEvaluation:
+    """In-memory checkpoint evidence needed for matched stage comparisons."""
+
+    scores: list[float]
+    representation_centroid: list[float]
+    mean_score: float
+    teacher_forced_score: float
 
 
 def execute_sft_pilot(
@@ -36,11 +53,27 @@ def execute_sft_pilot(
 ) -> None:
     """Execute the pilot only after explicit queue, GPU, and lock checks pass."""
 
-    validate_resource_approval(approval_path, gpu=gpu)
-    _assert_gpu_idle(gpu)
+    model_provenance = validate_model_provenance(inputs.model_path)
+    approval = validate_resource_approval(approval_path, gpu=gpu)
+    gpu_gate = _assert_gpu_idle_twice(gpu)
     os.environ["CUDA_VISIBLE_DEVICES"] = str(gpu)
     with _exclusive_lock(lock_file):
-        _run_pilot(inputs)
+        ensure_dir(inputs.out_dir)
+        write_json(
+            inputs.out_dir / "resource_gate.json",
+            {
+                "schema": "prompt_control_lab.resource_gate.v1",
+                "approval": approval,
+                "gpu_gate": gpu_gate,
+                "lock_file": str(lock_file.resolve()),
+                "model_provenance": {
+                    "model_id": model_provenance.get("model_id"),
+                    "revision": model_provenance.get("revision"),
+                    "combined_sha256": model_provenance.get("combined_sha256"),
+                },
+            },
+        )
+        _run_pilot(inputs, model_provenance=model_provenance)
 
 
 @contextlib.contextmanager
@@ -63,7 +96,31 @@ def _exclusive_lock(path: Path) -> Iterator[None]:
             fcntl.flock(stream.fileno(), fcntl.LOCK_UN)
 
 
+def _assert_gpu_idle_twice(
+    index: int,
+    *,
+    interval_seconds: float = 15.0,
+    sleep: Callable[[float], None] = time.sleep,
+) -> JsonDict:
+    """Require two consecutive observations before allocating the selected GPU."""
+
+    first = _gpu_idle_snapshot(index)
+    sleep(interval_seconds)
+    second = _gpu_idle_snapshot(index)
+    return validate_gpu_idle_snapshots(first, second, gpu=index)
+
+
 def _assert_gpu_idle(index: int) -> None:
+    """Backward-compatible single-check wrapper used by older callers."""
+
+    validate_gpu_idle_snapshots(
+        _gpu_idle_snapshot(index),
+        _gpu_idle_snapshot(index),
+        gpu=index,
+    )
+
+
+def _gpu_idle_snapshot(index: int) -> JsonDict:
     gpu_query = subprocess.run(
         [
             "nvidia-smi",
@@ -97,14 +154,25 @@ def _assert_gpu_idle(index: int) -> None:
         text=True,
         timeout=15,
     )
-    active = [line for line in process_query.stdout.splitlines() if line.startswith(selected_uuid)]
-    if active:
-        raise RuntimeError(f"GPU {index} has active compute processes")
-    if selected_memory > 1024:
-        raise RuntimeError(f"GPU {index} has {selected_memory} MiB allocated; refusing to start")
+    active: list[int] = []
+    for line in process_query.stdout.splitlines():
+        parts = [part.strip() for part in line.split(",")]
+        if len(parts) != 2 or parts[0] != selected_uuid:
+            continue
+        try:
+            active.append(int(parts[1]))
+        except ValueError:
+            continue
+    return {
+        "observed_at": datetime.now(timezone.utc).isoformat(),
+        "gpu": index,
+        "uuid": selected_uuid,
+        "memory_used_mib": selected_memory,
+        "active_compute_pids": active,
+    }
 
 
-def _run_pilot(inputs: PilotInputs) -> None:
+def _run_pilot(inputs: PilotInputs, *, model_provenance: JsonDict) -> None:
     try:
         torch = importlib.import_module("torch")
         peft = importlib.import_module("peft")
@@ -202,7 +270,35 @@ def _run_pilot(inputs: PilotInputs) -> None:
                 mlm=False,
             ),
         )
-        trainer.train()
+        if torch.cuda.is_available():
+            torch.cuda.reset_peak_memory_stats()
+        training_started = time.perf_counter()
+        train_result = trainer.train()
+        measured_runtime = time.perf_counter() - training_started
+        peak_memory_mib = (
+            float(torch.cuda.max_memory_allocated()) / (1024.0 * 1024.0)
+            if torch.cuda.is_available()
+            else 0.0
+        )
+        raw_train_metrics = getattr(train_result, "metrics", {})
+        train_metrics = {
+            str(key): value
+            for key, value in raw_train_metrics.items()
+            if isinstance(value, str | int | float | bool) or value is None
+        }
+        write_json(
+            seed_root / "training_resources.json",
+            {
+                "schema": "prompt_control_lab.sft_training_resources.v1",
+                "seed": seed,
+                "max_steps": inputs.max_steps,
+                "measured_runtime_seconds": measured_runtime,
+                "peak_memory_mib": peak_memory_mib,
+                "trainer_metrics": train_metrics,
+                "lora": {"r": 8, "alpha": 16, "dropout": 0.05},
+                "optimizer": {"learning_rate": 0.0002},
+            },
+        )
         final_adapter = adapter_root / "final"
         trainer.model.save_pretrained(final_adapter)
         mid_adapter = training_root / f"checkpoint-{mid_step}"
@@ -210,7 +306,7 @@ def _run_pilot(inputs: PilotInputs) -> None:
         if torch.cuda.is_available():
             torch.cuda.empty_cache()
 
-        stage_scores: dict[str, list[float]] = {}
+        stage_evaluations: dict[str, CheckpointEvaluation] = {}
         for stage, adapter_path in (
             ("initial", initial_adapter),
             ("mid", mid_adapter),
@@ -227,14 +323,16 @@ def _run_pilot(inputs: PilotInputs) -> None:
             evaluation_model.eval()
             if torch.cuda.is_available():
                 evaluation_model.cuda()
-            stage_scores[stage] = _evaluate_checkpoint(
+            stage_evaluations[stage] = _evaluate_checkpoint(
                 model=evaluation_model,
                 tokenizer=tokenizer,
                 rows=eval_rows,
                 out_dir=seed_root / f"checkpoint-{stage}",
                 checkpoint_id=f"seed-{seed}-{stage}",
                 seed=seed,
-                model_id=str(inputs.model_path.resolve()),
+                model_id=str(model_provenance["model_id"]),
+                model_revision=str(model_provenance["revision"]),
+                model_snapshot_sha256=str(model_provenance["combined_sha256"]),
                 split_hash=split_hash,
                 sample_hash=sample_hash,
                 torch_module=torch,
@@ -242,13 +340,21 @@ def _run_pilot(inputs: PilotInputs) -> None:
             del evaluation_model
             if torch.cuda.is_available():
                 torch.cuda.empty_cache()
-        baseline_scores = stage_scores["initial"]
+        baseline_evaluation = stage_evaluations["initial"]
+        baseline_scores = baseline_evaluation.scores
         for stage in ("initial", "mid", "final"):
+            evaluation = stage_evaluations[stage]
+            _write_relative_prompt_diagnostics(
+                seed_root / f"checkpoint-{stage}",
+                baseline=baseline_evaluation,
+                candidate=evaluation,
+                stage=stage,
+            )
             write_json(
                 seed_root / f"checkpoint-{stage}" / "stats.json",
                 paired_checkpoint_statistics(
                     baseline_scores,
-                    stage_scores[stage],
+                    evaluation.scores,
                     seed=seed,
                     baseline_checkpoint=f"seed-{seed}-initial",
                     candidate_checkpoint=f"seed-{seed}-{stage}",
@@ -258,6 +364,15 @@ def _run_pilot(inputs: PilotInputs) -> None:
                     candidate_sample_hash=sample_hash,
                 ),
             )
+        for stage in ("mid", "final"):
+            run_posttrain_gate(
+                baseline_dir=seed_root / "checkpoint-initial",
+                candidate_dir=seed_root / f"checkpoint-{stage}",
+                policy_path=None,
+                out_dir=seed_root / "gates" / f"initial-to-{stage}",
+                capability="full-open-model",
+            )
+    write_pilot_summary(inputs.out_dir, seeds=inputs.seeds)
 
 
 def _evaluate_checkpoint(
@@ -269,16 +384,19 @@ def _evaluate_checkpoint(
     checkpoint_id: str,
     seed: int,
     model_id: str,
+    model_revision: str,
+    model_snapshot_sha256: str,
     split_hash: str,
     sample_hash: str,
     torch_module: Any,
-) -> list[float]:
+) -> CheckpointEvaluation:
     scores: list[float] = []
     confidences: list[float] = []
     teacher_matches: list[float] = []
     drifts: list[float] = []
     generated_lengths: list[float] = []
     latencies_ms: list[float] = []
+    representation_sum: list[float] | None = None
     by_slice: dict[str, list[float]] = defaultdict(list)
     device = next(model.parameters()).device
     with torch_module.no_grad():
@@ -301,9 +419,10 @@ def _evaluate_checkpoint(
             generated_lengths.append(float(new_tokens.numel()))
             output = tokenizer.decode(new_tokens, skip_special_tokens=True).strip()
             expected = str(row["answer"]).strip()
-            score = canonical_answer_exact_match(output, expected)
+            task_slice = str(row.get("slice", "default"))
+            score = score_pilot_output(output, expected, task_slice)
             scores.append(score)
-            by_slice[str(row.get("slice", "default"))].append(score)
+            by_slice[task_slice].append(score)
             probabilities = [
                 float(logits[0].softmax(dim=-1).max().item()) for logits in generated.scores
             ]
@@ -314,16 +433,33 @@ def _evaluate_checkpoint(
                     tokenizer,
                     prompt,
                     expected,
+                    task_slice,
                     device,
                     torch_module,
                 )
             )
             hidden = model(**encoded, output_hidden_states=True, return_dict=True).hidden_states
-            final_layer = hidden[-1][0].float().detach().cpu().tolist()
+            final_tensor = hidden[-1][0].float().detach().cpu()
+            final_layer = final_tensor.tolist()
             drifts.append(token_trajectory_drift(final_layer))
+            representation = final_tensor.mean(dim=0).tolist()
+            if representation_sum is None:
+                representation_sum = [float(value) for value in representation]
+            else:
+                representation_sum = [
+                    current + float(value)
+                    for current, value in zip(
+                        representation_sum,
+                        representation,
+                        strict=True,
+                    )
+                ]
 
     mean_score = _mean(scores)
     teacher_score = _mean(teacher_matches)
+    representation_centroid = [
+        value / len(rows) for value in (representation_sum or [])
+    ]
     ensure_dir(out_dir / "diagnostics")
     write_json(
         out_dir / "manifest.json",
@@ -333,8 +469,16 @@ def _evaluate_checkpoint(
                 "training_method": "sft_lora",
                 "provider": "huggingface-local",
                 "model_id": model_id,
+                "model_revision": model_revision,
+                "model_snapshot_sha256": model_snapshot_sha256,
                 "split_hash": split_hash,
                 "seed": seed,
+                "capabilities": {
+                    "hidden_states": True,
+                    "output_head": True,
+                    "repeated_runs": True,
+                    "interventions": False,
+                },
             }
         },
     )
@@ -385,7 +529,95 @@ def _evaluate_checkpoint(
             "confidence_definition": "Mean maximum token probability over generated answer tokens.",
         },
     )
-    return scores
+    write_json(
+        out_dir / "diagnostics/readout_alignment.json",
+        {
+            "schema": "prompt_control_lab.readout_alignment.v1",
+            "teacher_forced_score": teacher_score,
+            "free_generation_score": mean_score,
+            "alignment_gap": abs(teacher_score - mean_score),
+            "interpretation_role": "mechanism",
+            "claim_boundary": (
+                "This score-level alignment proxy does not identify a unique hidden mechanism."
+            ),
+        },
+    )
+    write_json(
+        out_dir / "diagnostics/prompt_routing.json",
+        {
+            "schema": "prompt_control_lab.prompt_routing.v1",
+            "evidence_status": "insufficient_evidence",
+            "reason": "The SFT pilot does not intervene on a prompt-routing mechanism.",
+            "interpretation_role": "boundary",
+        },
+    )
+    write_json(
+        out_dir / "diagnostics/prompt_projection.json",
+        {
+            "schema": "prompt_control_lab.prompt_projection.v1",
+            "applicability": "not_applicable",
+            "reason": "A standard LoRA checkpoint does not require soft-to-hard prompt rounding.",
+            "interpretation_role": "boundary",
+        },
+    )
+    write_json(
+        out_dir / "diagnostics/prompt_stability.json",
+        {
+            "schema": "prompt_control_lab.prompt_stability.v1",
+            "mean_step_drift": _mean(drifts),
+            "interpretation_role": "stability",
+            "claim_boundary": (
+                "Observed trajectory consistency is a diagnostic association, not a stability "
+                "guarantee."
+            ),
+        },
+    )
+    return CheckpointEvaluation(
+        scores=scores,
+        representation_centroid=representation_centroid,
+        mean_score=mean_score,
+        teacher_forced_score=teacher_score,
+    )
+
+
+def _write_relative_prompt_diagnostics(
+    out_dir: Path,
+    *,
+    baseline: CheckpointEvaluation,
+    candidate: CheckpointEvaluation,
+    stage: str,
+) -> None:
+    shift = _representation_shift(
+        baseline.representation_centroid,
+        candidate.representation_centroid,
+    )
+    write_json(
+        out_dir / "diagnostics/prompt_reachability.json",
+        {
+            "schema": "prompt_control_lab.prompt_reachability.v1",
+            "baseline_stage": "initial",
+            "candidate_stage": stage,
+            "representation_shift_l2_normalized": shift,
+            "score_delta": candidate.mean_score - baseline.mean_score,
+            "baseline_centroid_sha256": _centroid_digest(baseline.representation_centroid),
+            "candidate_centroid_sha256": _centroid_digest(candidate.representation_centroid),
+            "interpretation_role": "mechanism",
+            "claim_boundary": (
+                "The measured checkpoint-to-checkpoint representation shift is associated with "
+                "training stage; it does not prove a unique causal path."
+            ),
+        },
+    )
+
+
+def _representation_shift(baseline: list[float], candidate: list[float]) -> float | None:
+    if not baseline or len(baseline) != len(candidate):
+        return None
+    return math.dist(baseline, candidate) / math.sqrt(len(baseline))
+
+
+def _centroid_digest(values: list[float]) -> str:
+    return f"sha256:{stable_digest([round(value, 8) for value in values])}"
 
 
 def _teacher_forced_canonical_exact_match(
@@ -393,6 +625,7 @@ def _teacher_forced_canonical_exact_match(
     tokenizer: Any,
     prompt: str,
     expected: str,
+    task_slice: str,
     device: Any,
     torch_module: Any,
 ) -> float:
@@ -410,7 +643,7 @@ def _teacher_forced_canonical_exact_match(
     targets = answer[0].tolist()
     predicted_text = tokenizer.decode(predictions, skip_special_tokens=True)
     target_text = tokenizer.decode(targets, skip_special_tokens=True)
-    return canonical_answer_exact_match(predicted_text, target_text)
+    return score_pilot_output(predicted_text, target_text, task_slice)
 
 
 def _read_rows(path: Path) -> list[JsonDict]:

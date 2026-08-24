@@ -145,6 +145,69 @@ def test_posttrain_gate_passes_matched_checkpoint_improvement(tmp_path: Path) ->
     attribution = read_json(tmp_path / "gate/mechanism_attribution.json")
     assert attribution["findings"]
     assert (tmp_path / "gate/report.html").is_file()
+    trace = read_json(tmp_path / "gate/decision_trace.json")
+    assert trace["capability_profile"] == "full-open-model"
+    assert trace["checks"]
+    assert all(
+        {"check", "observed", "threshold", "status", "impact", "evidence", "next_action"}
+        <= set(row)
+        for row in trace["checks"]
+    )
+
+
+def test_posttrain_gate_black_box_does_not_fail_on_inapplicable_open_model_evidence(
+    tmp_path: Path,
+) -> None:
+    baseline = tmp_path / "checkpoint-000"
+    candidate = tmp_path / "checkpoint-500"
+    _write_checkpoint(baseline, checkpoint_id="000", score=0.6)
+    _write_checkpoint(candidate, checkpoint_id="500", score=0.7)
+    for root in (baseline, candidate):
+        manifest = read_json(root / "manifest.json")
+        manifest["checkpoint"]["provider"] = "openai"
+        manifest["checkpoint"]["capabilities"] = {"hidden_states": False}
+        _write_json(root / "manifest.json", manifest)
+        (root / "diagnostics/trajectory.json").unlink()
+        (root / "diagnostics/soft_hard.json").unlink()
+        (root / "diagnostics/generation_mismatch.json").unlink()
+    policy = tmp_path / "posttrain.policy.yaml"
+    _write_policy(policy)
+
+    payload = run_posttrain_gate(
+        baseline_dir=baseline,
+        candidate_dir=candidate,
+        policy_path=policy,
+        out_dir=tmp_path / "gate",
+        capability="auto",
+    )
+
+    assert payload["capability_profile"] == "black-box"
+    assert payload["decision"] == "pass"
+    assert payload["checks"]["trajectory_stability"]["applicable"] is False
+    assert payload["checks"]["generation_mismatch"]["applicable"] is False
+
+
+def test_posttrain_gate_explicit_open_model_profile_fails_closed_without_hidden_evidence(
+    tmp_path: Path,
+) -> None:
+    baseline = tmp_path / "checkpoint-000"
+    candidate = tmp_path / "checkpoint-500"
+    _write_checkpoint(baseline, checkpoint_id="000", score=0.6)
+    _write_checkpoint(candidate, checkpoint_id="500", score=0.7)
+    (candidate / "diagnostics/trajectory.json").unlink()
+    policy = tmp_path / "posttrain.policy.yaml"
+    _write_policy(policy)
+
+    payload = run_posttrain_gate(
+        baseline_dir=baseline,
+        candidate_dir=candidate,
+        policy_path=policy,
+        out_dir=tmp_path / "gate",
+        capability="full-open-model",
+    )
+
+    assert payload["capability_profile"] == "full-open-model"
+    assert payload["decision"] == "insufficient_evidence"
 
 
 def test_posttrain_gate_holds_score_gain_with_stability_or_deployment_regression(
