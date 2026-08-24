@@ -40,19 +40,16 @@ def _write_queue_snapshot(
     checked_at: datetime,
     pending: int = 0,
     running: int = 0,
+    extra: dict[str, object] | None = None,
 ) -> str:
-    path.write_text(
-        json.dumps(
-            {
-                "checked_at": checked_at.isoformat(),
-                "queue_clear": pending == 0 and running == 0,
-                "queue_pending_jobs": pending,
-                "queue_running_jobs": running,
-            },
-            sort_keys=True,
-        ),
-        encoding="utf-8",
-    )
+    payload: dict[str, object] = {
+        "checked_at": checked_at.isoformat(),
+        "queue_clear": pending == 0 and running == 0,
+        "queue_pending_jobs": pending,
+        "queue_running_jobs": running,
+    }
+    payload.update(extra or {})
+    path.write_text(json.dumps(payload, sort_keys=True), encoding="utf-8")
     return "sha256:" + hashlib.sha256(path.read_bytes()).hexdigest()
 
 
@@ -192,6 +189,116 @@ def test_resource_approval_requires_queue_clear_matching_gpu_and_fresh_expiry(
     assert result["queue_clear"] is True
     assert result["gpu"] == 3
     assert result["queue_snapshot_validation"]["verified_inside_execution_lock"] is True
+
+
+def test_resource_approval_accepts_explicit_selected_gpu_assignment(
+    tmp_path: Path,
+) -> None:
+    now = datetime(2026, 8, 23, 12, 0, tzinfo=timezone.utc)
+    checked_at = now - timedelta(seconds=20)
+    scheduler_sha256 = "sha256:" + "a" * 64
+    scoped_fields: dict[str, object] = {
+        "resource_scope": "selected_gpu",
+        "selected_gpu": 1,
+        "assigned_gpus": [1, 2],
+        "selected_gpu_reserved": True,
+        "authorization_type": "explicit_user_gpu_assignment",
+        "external_scheduler_process_isolation_verified": True,
+        "external_scheduler_policy_sha256": scheduler_sha256,
+    }
+    queue_snapshot = tmp_path / "queue_snapshot.json"
+    queue_sha256 = _write_queue_snapshot(
+        queue_snapshot,
+        checked_at=checked_at,
+        pending=1,
+        running=1,
+        extra=scoped_fields,
+    )
+    approval = tmp_path / "approval.json"
+    approval.write_text(
+        json.dumps(
+            {
+                "approved": True,
+                "approved_by": "workspace-owner",
+                "authorization_reason": "User explicitly assigned GPUs 1 and 2.",
+                "gpu": 1,
+                "queue_clear": False,
+                "queue_pending_jobs": 1,
+                "queue_running_jobs": 1,
+                "queue_source": str(queue_snapshot),
+                "queue_snapshot_sha256": queue_sha256,
+                "checked_at": checked_at.isoformat(),
+                "expires_at": (now + timedelta(minutes=2)).isoformat(),
+                **scoped_fields,
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    result = validate_resource_approval(approval, gpu=1, now=now)
+
+    assert result["resource_scope"] == "selected_gpu"
+    assert result["queue_clear"] is False
+    assert result["queue_snapshot_validation"]["queue_pending_jobs"] == 1
+    assert result["queue_snapshot_validation"]["queue_running_jobs"] == 1
+    assert result["queue_snapshot_validation"]["selected_gpu"] == 1
+
+
+@pytest.mark.parametrize(
+    ("missing_field", "message"),
+    [
+        ("selected_gpu_reserved", "reserved"),
+        ("external_scheduler_process_isolation_verified", "isolation"),
+        ("external_scheduler_policy_sha256", "scheduler"),
+        ("authorization_reason", "reason"),
+    ],
+)
+def test_selected_gpu_approval_requires_explicit_auditable_assignment(
+    tmp_path: Path,
+    missing_field: str,
+    message: str,
+) -> None:
+    now = datetime(2026, 8, 23, 12, 0, tzinfo=timezone.utc)
+    checked_at = now - timedelta(seconds=20)
+    scoped_fields: dict[str, object] = {
+        "resource_scope": "selected_gpu",
+        "selected_gpu": 1,
+        "assigned_gpus": [1, 2],
+        "selected_gpu_reserved": True,
+        "authorization_type": "explicit_user_gpu_assignment",
+        "external_scheduler_process_isolation_verified": True,
+        "external_scheduler_policy_sha256": "sha256:" + "a" * 64,
+    }
+    snapshot_fields = dict(scoped_fields)
+    snapshot_fields.pop(missing_field, None)
+    queue_snapshot = tmp_path / "queue_snapshot.json"
+    queue_sha256 = _write_queue_snapshot(
+        queue_snapshot,
+        checked_at=checked_at,
+        pending=1,
+        running=1,
+        extra=snapshot_fields,
+    )
+    payload: dict[str, object] = {
+        "approved": True,
+        "approved_by": "workspace-owner",
+        "authorization_reason": "User explicitly assigned GPUs 1 and 2.",
+        "gpu": 1,
+        "queue_clear": False,
+        "queue_pending_jobs": 1,
+        "queue_running_jobs": 1,
+        "queue_source": str(queue_snapshot),
+        "queue_snapshot_sha256": queue_sha256,
+        "checked_at": checked_at.isoformat(),
+        "expires_at": (now + timedelta(minutes=2)).isoformat(),
+        **scoped_fields,
+    }
+    payload.pop(missing_field, None)
+    approval = tmp_path / "approval.json"
+    approval.write_text(json.dumps(payload), encoding="utf-8")
+
+    with pytest.raises(ValueError, match=message):
+        validate_resource_approval(approval, gpu=1, now=now)
 
 
 def test_paired_checkpoint_statistics_are_deterministic_and_matched() -> None:

@@ -104,8 +104,11 @@ pcl posttrain-pilot \
 使用 `--execute` 时，模型、provenance、split、审批记录、锁文件和输出都必须解析到
 `--runtime-root` 内；工具会在创建任何锁或输出文件之前完成该检查。
 审批记录必须指向同一 runtime 内真实且非符号链接的 JSON `queue_source`。进入执行锁后，
-PromptControlLab 会重新读取该文件，核对精确 SHA-256，要求它的 `checked_at` 与审批记录一致且
-不超过 90 秒，并再次确认 pending/running job 都为零。审批记录不能替代新鲜的队列快照。
+PromptControlLab 会重新读取该文件，核对精确 SHA-256，并要求它的 `checked_at` 与审批记录一致且
+不超过 90 秒。默认 `global_queue` 范围仍要求 pending/running job 都为零。如果资源所有者明确分配
+指定 GPU，也可以使用范围更窄的 `selected_gpu` 审批：审批记录和快照必须同时记录选中/获准 GPU、
+明确授权、单卡预留，以及已验证“避开外来计算进程”的外部调度策略 SHA-256。该模式不会跳过最后
+两次 GPU 空闲检查或独占锁。审批记录不能替代新鲜的资源快照。
 
 pilot 中的 `trajectory` 指最终 hidden layer 里相邻 prompt token 的表示漂移。generation mismatch
 会对 teacher-forced 与 free-generation 使用同一套任务评分器：GSM8K 提取最终数值答案，格式任务

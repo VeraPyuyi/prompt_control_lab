@@ -3295,7 +3295,7 @@ def _cmd_posttrain_pilot(args: argparse.Namespace) -> None:
         print(json.dumps({"status": "plan_only", "protocol": str(protocol_path)}, indent=2))
         return
     if args.approval is None:
-        raise ValueError("--execute requires --approval with queue_clear=true")
+        raise ValueError("--execute requires an expiring --approval resource record")
     lock_file = args.lock_file or args.runtime_root / "locks" / "sft-pilot.lock"
     execute_sft_pilot(
         inputs,

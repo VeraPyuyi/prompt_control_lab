@@ -106,9 +106,14 @@ training additionally requires `--execute --approval <expiring-resource-approval
 For `--execute`, the model, provenance, split files, approval record, lock, and output must all
 resolve inside `--runtime-root`; validation happens before any lock or output file is created.
 The approval must point to a real, non-symlink JSON `queue_source` inside the same runtime. Inside
-the execution lock, PromptControlLab rereads that file, verifies its exact SHA-256, requires its
-`checked_at` to match the approval and be at most 90 seconds old, and confirms zero pending and
-running jobs. An approval cannot substitute for a fresh queue snapshot.
+the execution lock, PromptControlLab rereads that file, verifies its exact SHA-256, and requires its
+`checked_at` to match the approval and be at most 90 seconds old. The default `global_queue` scope
+confirms zero pending and running jobs. A narrowly scoped `selected_gpu` approval is also supported
+when the resource owner explicitly assigns GPUs: both the approval and snapshot must record the
+selected/assigned GPUs, the explicit authorization, GPU reservation, and the SHA-256 of a verified
+external scheduler policy that avoids GPUs with foreign compute processes. This mode never skips
+the final two GPU-idle samples or the exclusive lock. An approval cannot substitute for a fresh
+resource snapshot.
 
 The pilot's `trajectory` value is adjacent prompt-token drift in the final hidden layer. Its
 generation-mismatch value applies the same task-specific scorer to teacher-forced and

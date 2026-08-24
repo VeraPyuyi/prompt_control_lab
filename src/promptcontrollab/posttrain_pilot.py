@@ -178,7 +178,10 @@ def build_sft_pilot_plan(inputs: PilotInputs) -> JsonDict:
         "planned_evaluations": evaluations,
         "resource_gate": {
             "approval_record_required": True,
-            "queue_clear_required": True,
+            "default_resource_scope": "global_queue",
+            "resource_scopes": ["global_queue", "selected_gpu"],
+            "queue_clear_required_by_default": True,
+            "selected_gpu_assignment_requires_explicit_authorization": True,
             "exclusive_lock_required": True,
             "gpu_process_check_required": True,
         },
@@ -211,14 +214,24 @@ def validate_resource_approval(
     payload = read_json(path)
     if payload.get("approved") is not True:
         raise ValueError("Resource approval record is not approved")
-    if payload.get("queue_clear") is not True:
-        raise ValueError("Resource approval record does not confirm the server queue is clear")
+    resource_scope = str(payload.get("resource_scope", "global_queue")).strip()
+    if resource_scope not in {"global_queue", "selected_gpu"}:
+        raise ValueError(f"Resource approval has unsupported resource_scope: {resource_scope}")
     pending_jobs = payload.get("queue_pending_jobs")
-    if not isinstance(pending_jobs, int) or isinstance(pending_jobs, bool) or pending_jobs != 0:
-        raise ValueError("Resource approval record must report zero pending jobs")
+    if not _nonnegative_int(pending_jobs):
+        raise ValueError("Resource approval record must report non-negative pending jobs")
     running_jobs = payload.get("queue_running_jobs")
-    if not isinstance(running_jobs, int) or isinstance(running_jobs, bool) or running_jobs != 0:
-        raise ValueError("Resource approval record must report zero running jobs")
+    if not _nonnegative_int(running_jobs):
+        raise ValueError("Resource approval record must report non-negative running jobs")
+    if resource_scope == "global_queue":
+        if payload.get("queue_clear") is not True:
+            raise ValueError("Resource approval record does not confirm the server queue is clear")
+        if pending_jobs != 0:
+            raise ValueError("Resource approval record must report zero pending jobs")
+        if running_jobs != 0:
+            raise ValueError("Resource approval record must report zero running jobs")
+    else:
+        _validate_selected_gpu_approval(payload, gpu=gpu)
     if not str(payload.get("queue_source", "")).strip():
         raise ValueError("Resource approval record is missing queue_source")
     if not _valid_sha256(payload.get("queue_snapshot_sha256")):
@@ -256,6 +269,33 @@ def validate_resource_approval(
     return payload
 
 
+def _validate_selected_gpu_approval(payload: JsonDict, *, gpu: int) -> None:
+    if payload.get("selected_gpu_reserved") is not True:
+        raise ValueError("Selected-GPU approval must confirm the GPU is reserved")
+    if payload.get("authorization_type") != "explicit_user_gpu_assignment":
+        raise ValueError("Selected-GPU approval requires explicit user GPU assignment")
+    if not str(payload.get("authorization_reason", "")).strip():
+        raise ValueError("Selected-GPU approval is missing an authorization reason")
+    if payload.get("external_scheduler_process_isolation_verified") is not True:
+        raise ValueError("Selected-GPU approval must verify external scheduler process isolation")
+    if not _valid_sha256(payload.get("external_scheduler_policy_sha256")):
+        raise ValueError("Selected-GPU approval requires a scheduler policy SHA-256 digest")
+    selected_gpu = payload.get("selected_gpu")
+    if not isinstance(selected_gpu, int) or isinstance(selected_gpu, bool) or selected_gpu != gpu:
+        raise ValueError(f"Selected-GPU approval does not reserve requested GPU {gpu}")
+    assigned_gpus = payload.get("assigned_gpus")
+    if (
+        not isinstance(assigned_gpus, list)
+        or not assigned_gpus
+        or any(not isinstance(value, int) or isinstance(value, bool) for value in assigned_gpus)
+        or len(set(assigned_gpus)) != len(assigned_gpus)
+        or gpu not in assigned_gpus
+    ):
+        raise ValueError("Selected-GPU approval must list unique assigned GPUs including the GPU")
+    if not isinstance(payload.get("queue_clear"), bool):
+        raise ValueError("Selected-GPU approval queue_clear must be a boolean observation")
+
+
 def _validate_queue_snapshot(
     approval: JsonDict,
     *,
@@ -287,23 +327,77 @@ def _validate_queue_snapshot(
     )
     if snapshot_checked_at != approval_checked_at:
         raise ValueError("Resource approval checked_at does not match the queue snapshot")
-    if snapshot.get("queue_clear") is not True:
-        raise ValueError("Current queue snapshot does not report queue_clear=true")
+    resource_scope = str(approval.get("resource_scope", "global_queue")).strip()
+    if str(snapshot.get("resource_scope", "global_queue")).strip() != resource_scope:
+        raise ValueError("Queue snapshot resource_scope does not match the approval")
     for key in ("queue_pending_jobs", "queue_running_jobs"):
         value = snapshot.get(key)
-        if not isinstance(value, int) or isinstance(value, bool) or value != 0:
-            raise ValueError(f"Current queue snapshot must report zero {key}")
+        if not _nonnegative_int(value):
+            raise ValueError(f"Current queue snapshot must report non-negative {key}")
         if value != approval.get(key):
             raise ValueError(f"Resource approval {key} does not match the queue snapshot")
-    return {
+    queue_clear = snapshot.get("queue_clear")
+    if not isinstance(queue_clear, bool) or queue_clear != approval.get("queue_clear"):
+        raise ValueError("Queue snapshot queue_clear does not match the approval")
+    validation: JsonDict = {
         "path": str(resolved),
         "sha256": observed_sha256,
         "checked_at": snapshot_checked_at.isoformat(),
-        "queue_clear": True,
-        "queue_pending_jobs": 0,
-        "queue_running_jobs": 0,
+        "resource_scope": resource_scope,
+        "queue_clear": queue_clear,
+        "queue_pending_jobs": snapshot["queue_pending_jobs"],
+        "queue_running_jobs": snapshot["queue_running_jobs"],
         "verified_inside_execution_lock": True,
     }
+    if resource_scope == "global_queue":
+        if queue_clear is not True:
+            raise ValueError("Current queue snapshot does not report queue_clear=true")
+        if snapshot["queue_pending_jobs"] != 0 or snapshot["queue_running_jobs"] != 0:
+            raise ValueError("Current global queue snapshot must report zero pending/running jobs")
+        return validation
+
+    selected_fields = (
+        "selected_gpu",
+        "assigned_gpus",
+        "selected_gpu_reserved",
+        "authorization_type",
+        "external_scheduler_process_isolation_verified",
+        "external_scheduler_policy_sha256",
+    )
+    for key in selected_fields:
+        if snapshot.get(key) != approval.get(key):
+            raise ValueError(f"Selected-GPU queue snapshot {key} does not match the approval")
+    _validate_selected_gpu_snapshot(snapshot, gpu=int(approval["gpu"]))
+    validation.update(
+        {
+            "selected_gpu": snapshot["selected_gpu"],
+            "assigned_gpus": snapshot["assigned_gpus"],
+            "external_scheduler_policy_sha256": snapshot[
+                "external_scheduler_policy_sha256"
+            ],
+        }
+    )
+    return validation
+
+
+def _validate_selected_gpu_snapshot(snapshot: JsonDict, *, gpu: int) -> None:
+    if snapshot.get("selected_gpu_reserved") is not True:
+        raise ValueError("Selected-GPU queue snapshot does not confirm the GPU is reserved")
+    if snapshot.get("authorization_type") != "explicit_user_gpu_assignment":
+        raise ValueError("Selected-GPU queue snapshot lacks explicit assignment authorization")
+    if snapshot.get("external_scheduler_process_isolation_verified") is not True:
+        raise ValueError("Selected-GPU queue snapshot lacks scheduler process isolation evidence")
+    if not _valid_sha256(snapshot.get("external_scheduler_policy_sha256")):
+        raise ValueError("Selected-GPU queue snapshot requires a scheduler policy SHA-256")
+    if snapshot.get("selected_gpu") != gpu:
+        raise ValueError(f"Selected-GPU queue snapshot does not identify GPU {gpu}")
+    assigned_gpus = snapshot.get("assigned_gpus")
+    if not isinstance(assigned_gpus, list) or gpu not in assigned_gpus:
+        raise ValueError("Selected-GPU queue snapshot does not include the requested GPU")
+
+
+def _nonnegative_int(value: object) -> bool:
+    return isinstance(value, int) and not isinstance(value, bool) and value >= 0
 
 
 def paired_checkpoint_statistics(
