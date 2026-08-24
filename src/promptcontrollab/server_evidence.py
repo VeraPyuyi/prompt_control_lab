@@ -305,6 +305,16 @@ def merge_evidence_manifests(
 ) -> JsonDict:
     """Reconcile two scanner manifests using canonical structured-data identity."""
 
+    if primary.is_dir() or secondary.is_dir():
+        if not primary.is_dir() or not secondary.is_dir():
+            raise ValueError("Evidence merge inputs must both be manifests or both be run dirs")
+        return _merge_portable_runs(
+            primary=primary,
+            secondary=secondary,
+            out_dir=out_dir,
+            portable=portable,
+            overwrite=overwrite,
+        )
     primary_manifest = read_json(primary)
     secondary_manifest = read_json(secondary)
     _validate_manifest(primary_manifest)
@@ -387,6 +397,231 @@ def merge_evidence_manifests(
     )
     result["conflict_count"] = status_counts.get("requires_reanalysis", 0)
     return result
+
+
+def _merge_portable_runs(
+    *,
+    primary: Path,
+    secondary: Path,
+    out_dir: Path,
+    portable: bool,
+    overwrite: bool,
+) -> JsonDict:
+    primary_manifest = read_json(primary / "public_source_manifest.json")
+    secondary_manifest = read_json(secondary / "public_source_manifest.json")
+    profile_name = str(primary_manifest.get("profile", ""))
+    if not profile_name or secondary_manifest.get("profile") != profile_name:
+        raise ValueError("Portable evidence merge requires matching profiles")
+    profile = get_evidence_profile(profile_name)
+    primary_sources = _public_sources(primary_manifest)
+    secondary_sources = _public_sources(secondary_manifest)
+    primary_by_key = {_public_source_key(row): row for row in primary_sources}
+    secondary_by_key = {_public_source_key(row): row for row in secondary_sources}
+    status_counts: Counter[str] = Counter()
+    reconciliation_rows: list[JsonDict] = []
+    conflict_adapters: set[str] = set()
+    merged_sources: list[JsonDict] = []
+    for key in sorted(set(primary_by_key) | set(secondary_by_key)):
+        first = primary_by_key.get(key)
+        second = secondary_by_key.get(key)
+        if first is None:
+            assert second is not None
+            status = "secondary_only"
+            selected = second
+        elif second is None:
+            status = "primary_only"
+            selected = first
+        elif first.get("canonical_sha256") == second.get("canonical_sha256"):
+            status = "canonical_equivalent"
+            selected = first
+        else:
+            status = "requires_reanalysis"
+            selected = first
+            conflict_adapters.add(key[0])
+        status_counts[status] += 1
+        merged_sources.append({**selected, "reconciliation_status": status})
+        reconciliation_rows.append(
+            {
+                "adapter": key[0],
+                "source_path_sha256": key[1],
+                "status": status,
+                "primary_canonical_sha256": (
+                    first.get("canonical_sha256") if first is not None else None
+                ),
+                "secondary_canonical_sha256": (
+                    second.get("canonical_sha256") if second is not None else None
+                ),
+            }
+        )
+    findings: list[JsonDict] = []
+    for adapter in profile.adapter_names:
+        first = read_json(primary / f"{adapter}.json")
+        second = read_json(secondary / f"{adapter}.json")
+        selected = first if first.get("support_status") == "observed" else second
+        quality_flags = list(selected.get("quality_flags", []))
+        support_status = str(selected.get("support_status", "unavailable"))
+        confidence = str(selected.get("confidence", "unknown"))
+        if adapter in conflict_adapters:
+            support_status = "requires_reanalysis"
+            confidence = "low"
+            if "source_conflict" not in quality_flags:
+                quality_flags.append("source_conflict")
+        finding: JsonDict = {
+            **selected,
+            "support_status": support_status,
+            "confidence": confidence,
+            "quality_flags": quality_flags,
+            "source_comparison": {
+                "primary_support_status": first.get("support_status"),
+                "secondary_support_status": second.get("support_status"),
+                "primary_metrics": first.get("metrics", {}),
+                "secondary_metrics": second.get("metrics", {}),
+            },
+            "source_evidence": [
+                row for row in merged_sources if row.get("adapter") == adapter
+            ],
+        }
+        findings.append(finding)
+    reconciliation: JsonDict = {
+        "schema": "prompt_control_lab.source_reconciliation.v1",
+        "profile": profile_name,
+        "status_counts": dict(sorted(status_counts.items())),
+        "sources": reconciliation_rows,
+    }
+    merged_manifest: JsonDict = {
+        "schema": "prompt_control_lab.public_evidence_source_manifest.v1",
+        "classification": "public_derived_reconciled",
+        "profile": profile_name,
+        "snapshot_sha256": f"sha256:{stable_digest(reconciliation_rows)}",
+        "sources": merged_sources,
+        "boundary": "Only path hashes and derived numeric summaries are retained.",
+    }
+    result = _write_derived_findings_run(
+        manifest=merged_manifest,
+        findings=findings,
+        reconciliation=reconciliation,
+        out_dir=out_dir,
+        portable=portable,
+        overwrite=overwrite,
+    )
+    result["conflict_count"] = status_counts.get("requires_reanalysis", 0)
+    return result
+
+
+def _write_derived_findings_run(
+    *,
+    manifest: JsonDict,
+    findings: list[JsonDict],
+    reconciliation: JsonDict,
+    out_dir: Path,
+    portable: bool,
+    overwrite: bool,
+) -> JsonDict:
+    resolved_out = out_dir.resolve()
+    _prepare_adapter_output(resolved_out, overwrite=overwrite)
+    profile = get_evidence_profile(str(manifest["profile"]))
+    for finding in findings:
+        write_json(resolved_out / f"{finding['adapter']}.json", finding)
+    diagnostics = [
+        {
+            "adapter": finding["adapter"],
+            "source_count": len(finding.get("source_evidence", [])),
+            "support_status": finding["support_status"],
+            "interpretation_role": finding["interpretation_role"],
+            "confidence": finding["confidence"],
+            "next_action": finding["next_action"],
+        }
+        for finding in findings
+    ]
+    matrix: JsonDict = {
+        "schema": "prompt_control_lab.evidence_matrix.v2",
+        "profile": manifest["profile"],
+        "snapshot_sha256": manifest["snapshot_sha256"],
+        "diagnostics": diagnostics,
+        "status_counts": dict(
+            sorted(Counter(str(row["support_status"]) for row in diagnostics).items())
+        ),
+    }
+    report: JsonDict = {
+        "schema": "prompt_control_lab.interpretability_report.v2",
+        "profile": manifest["profile"],
+        "snapshot_sha256": manifest["snapshot_sha256"],
+        "findings": findings,
+        "interpretation_roles": sorted(
+            {str(entry["interpretation_role"]) for entry in findings}
+        ),
+        "boundary": (
+            "The reconciled package compares independently verified derived evidence. It does "
+            "not prove a unique causal mechanism."
+        ),
+    }
+    gaps: JsonDict = {
+        "schema": "prompt_control_lab.source_gap_report.v1",
+        "profile": manifest["profile"],
+        "gaps": [
+            {
+                "adapter": finding["adapter"],
+                "support_status": finding["support_status"],
+                "quality_flags": finding.get("quality_flags", []),
+                "next_action": finding["next_action"],
+            }
+            for finding in findings
+            if finding["support_status"] != "observed"
+        ],
+    }
+    write_json(resolved_out / "source_manifest.json", manifest)
+    write_json(resolved_out / "public_source_manifest.json", manifest)
+    write_json(resolved_out / "source_reconciliation.json", reconciliation)
+    write_json(resolved_out / "source_gap_report.json", gaps)
+    write_json(resolved_out / "evidence_matrix.json", matrix)
+    write_json(resolved_out / "interpretability_report.json", report)
+    write_json(resolved_out / "claim_check.json", _claim_check(findings))
+    (resolved_out / "interpretability_report.html").write_text(
+        render_interpretability_html(report, matrix), encoding="utf-8"
+    )
+    artifact_names = [
+        "public_source_manifest.json",
+        "source_reconciliation.json",
+        "source_gap_report.json",
+        "evidence_matrix.json",
+        "interpretability_report.json",
+        "interpretability_report.html",
+        "claim_check.json",
+        *(f"{adapter}.json" for adapter in profile.adapter_names),
+    ]
+    if portable:
+        portable_dir = resolved_out / "portable"
+        ensure_dir(portable_dir)
+        for name in artifact_names:
+            shutil.copyfile(resolved_out / name, portable_dir / name)
+    write_json(
+        resolved_out / "manifest.json",
+        {
+            "schema": "prompt_control_lab.evidence_run.v2",
+            "mode": "evidence_merge",
+            "profile": manifest["profile"],
+            "source_snapshot_sha256": manifest["snapshot_sha256"],
+            "artifacts": artifact_names,
+        },
+    )
+    return {
+        "schema": "prompt_control_lab.evidence_import_result.v2",
+        "output_dir": str(resolved_out),
+        "source_count": len(manifest.get("sources", [])),
+        "finding_count": len(findings),
+        "snapshot_sha256": manifest["snapshot_sha256"],
+    }
+
+
+def _public_sources(manifest: JsonDict) -> list[JsonDict]:
+    sources = manifest.get("sources")
+    if not isinstance(sources, list):
+        raise ValueError("Public evidence manifest sources must be a list")
+    return [cast(JsonDict, row) for row in sources if isinstance(row, dict)]
+
+
+def _public_source_key(row: JsonDict) -> tuple[str, str]:
+    return (str(row.get("adapter", "")), str(row.get("source_path_sha256", "")))
 
 
 def _write_adapter_run(
@@ -695,6 +930,7 @@ def _public_source_manifest(manifest: JsonDict) -> JsonDict:
                 ),
                 "bytes": row.get("bytes"),
                 "sha256": row.get("sha256"),
+                "canonical_sha256": row.get("canonical_sha256"),
                 "media_type": row.get("media_type"),
                 "load_policy": row.get("load_policy"),
             }

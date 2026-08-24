@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import shutil
 from pathlib import Path
 
 from pytest import CaptureFixture
@@ -147,6 +148,8 @@ def test_prompt_reach_scan_and_import_write_bounded_diagnostics(tmp_path: Path) 
     stability = read_json(out_dir / "prompt_stability.json")
     assert stability["metrics"]["repeat_score_gap"]["mean"] == 0.05
     assert stability["metrics"]["parameter_cosine"]["count"] == 2
+    public_manifest = read_json(out_dir / "public_source_manifest.json")
+    assert all("canonical_sha256" in row for row in public_manifest["sources"])
 
     rendered = "\n".join(
         path.read_text(encoding="utf-8")
@@ -256,3 +259,40 @@ def test_evidence_merge_cli_writes_complete_run(
     assert (out_dir / "source_reconciliation.json").is_file()
     assert (out_dir / "interpretability_report.html").is_file()
     assert '"conflict_count": 0' in capsys.readouterr().out
+
+
+def test_evidence_merge_accepts_verified_portable_runs_without_source_roots(
+    tmp_path: Path,
+) -> None:
+    runs: list[Path] = []
+    roots: list[Path] = []
+    for name in ("local", "server"):
+        root = tmp_path / f"{name}-source"
+        roots.append(root)
+        _write_prompt_reach_fixture(root)
+        manifest_path = tmp_path / f"{name}-manifest.json"
+        _scan_to(root, manifest_path)
+        run = tmp_path / f"{name}-run"
+        server_evidence.import_evidence_manifest(
+            server_evidence.EvidenceImportOptions(
+                manifest_path=manifest_path,
+                out_dir=run,
+                portable=True,
+            )
+        )
+        runs.append(run / "portable")
+    for root in roots:
+        shutil.rmtree(root)
+
+    result = server_evidence.merge_evidence_manifests(
+        primary=runs[0],
+        secondary=runs[1],
+        out_dir=tmp_path / "portable-merged",
+    )
+
+    assert result["conflict_count"] == 0
+    merged = read_json(tmp_path / "portable-merged/source_reconciliation.json")
+    assert merged["status_counts"]["canonical_equivalent"] >= 1
+    assert read_json(tmp_path / "portable-merged/prompt_stability.json")[
+        "support_status"
+    ] == "observed"
