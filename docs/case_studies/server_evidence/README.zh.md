@@ -16,4 +16,4 @@
 
 参见[完整说明](../../server_evidence.zh.md)，以及机器可读的[公开来源清单](public_source_manifest.json)、[证据矩阵](evidence_matrix.json)、[可解释性报告](interpretability_report.json)、[HTML 报告](interpretability_report.html)和[结论检查](claim_check.json)。adapter 校验发现 68 条 generation record 和 1 条 trajectory 侧 record 的 schema 不完整；它们仍计入来源数量，但不会被静默提升为已验证结论。
 
-三 seed SFT checkpoint pilot 现在已经具备锁定版本并完成哈希校验的 Qwen2.5-0.5B-Instruct，以及确定性的 train/validation/withheld 输入。但最新只读检查仍报告 2 个运行中的 GPU job 和 4 个 pending queue job，而且独立依赖环境还未完整，因此 pilot 仍没有启动。这个资源门禁决定记录在 [sft_pilot_status.json](sft_pilot_status.json) 中；仓库不会声称已经得到 checkpoint 结果。
+三 seed SFT checkpoint pilot 现在已经具备锁定版本并完成哈希校验的 Qwen2.5-0.5B-Instruct，以及确定性的 train/validation/withheld 输入。但 `2026-08-24T13:59:42Z` 的只读检查报告 4 个 running queue job、20 个 pending queue job，并且仍有 GPU 计算进程；独立依赖环境也尚未完整，因此 pilot 没有启动。这个资源门禁决定记录在 [sft_pilot_status.json](sft_pilot_status.json) 中；仓库不会声称已经得到 checkpoint 结果。

@@ -1,5 +1,5 @@
 {
-  "checked_at": "2026-08-24T12:42:14Z",
+  "checked_at": "2026-08-24T13:59:42Z",
   "execution_status": "blocked_existing_gpu_work",
   "gpu_work_started": false,
   "planned_model": "Qwen/Qwen2.5-0.5B-Instruct",
@@ -9,18 +9,18 @@
   "split_sha256": "sha256:664cb24ac6d779378bf256c49f1369f910f49a788594d8813af51655af7bd4b4",
   "planned_seeds": [0, 1, 2],
   "planned_checkpoint_runs": 9,
-  "queue_snapshot_sha256": "sha256:6ed3edf8da86ef55ddff28508574d9c12e3a5cc90c6159e98378cf5ee40ef2c1",
-  "live_check_sha256": "sha256:663fa95cd95303526dfe2598662deaaa3ec02eacb498e8cb3c84b03310e88aa0",
+  "queue_snapshot_sha256": "sha256:d62fccf62ec5e345d3760b90c7c907a5a23dce86a07d6e162bf630db56a99118",
+  "live_check_sha256": "sha256:633cd7bc80def366754fff9f40109151db3e024f96f5642baccd98c1f0666b17",
   "resource_snapshot": {
     "gpu_compute_process_count": 2,
-    "queue_running_jobs": 2,
-    "queue_pending_jobs": 4,
+    "queue_running_jobs": 4,
+    "queue_pending_jobs": 20,
     "queue_driver_present": true,
     "queue_clear": false
   },
   "reasons": [
     "The pinned model and deterministic train/validation/withheld inputs are prepared and hash-verified in the isolated runtime.",
-    "The latest read-only check reported two running GPU jobs and four pending queue jobs, so the pilot did not start.",
+    "The latest read-only check reported four running queue jobs and twenty pending queue jobs, with active GPU compute processes, so the pilot did not start.",
     "The isolated execution environment is not finalized; a copy-on-write environment clone was unsupported and its partial copy was removed."
   ],
   "required_before_launch": [

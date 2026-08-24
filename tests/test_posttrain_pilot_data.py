@@ -1,7 +1,10 @@
 from __future__ import annotations
 
+import importlib
 import json
 from pathlib import Path
+
+import pytest
 
 from promptcontrollab.cli import main
 from promptcontrollab.files import read_json
@@ -10,6 +13,7 @@ from promptcontrollab.posttrain_pilot_data import (
     GSM8K_DATASET_ID,
     GSM8K_DATASET_REVISION,
     prepare_sft_pilot_data,
+    prepare_sft_pilot_data_from_huggingface,
 )
 
 
@@ -124,3 +128,17 @@ def test_posttrain_pilot_prepare_cli_requires_both_offline_sources(tmp_path: Pat
         )
         == 2
     )
+
+
+def test_huggingface_prepare_reports_missing_optional_dependency(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    def missing_datasets(name: str) -> object:
+        assert name == "datasets"
+        raise ModuleNotFoundError(name)
+
+    monkeypatch.setattr(importlib, "import_module", missing_datasets)
+
+    with pytest.raises(ValueError, match="install the post-training environment"):
+        prepare_sft_pilot_data_from_huggingface(out_dir=tmp_path)

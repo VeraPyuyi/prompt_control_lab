@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import hashlib
+import importlib
 import json
 from collections.abc import Iterable, Mapping
 from pathlib import Path
@@ -107,12 +108,15 @@ def prepare_sft_pilot_data_from_huggingface(
     """Download the pinned public dataset through the optional datasets package."""
 
     try:
-        from datasets import load_dataset  # type: ignore[import-untyped]
+        datasets_module = importlib.import_module("datasets")
     except ImportError as exc:
         raise ValueError(
             "Preparing GSM8K from Hugging Face requires `datasets`; "
             "install the post-training environment first."
         ) from exc
+    load_dataset = getattr(datasets_module, "load_dataset", None)
+    if not callable(load_dataset):
+        raise ValueError("The installed `datasets` package does not expose load_dataset().")
     dataset = load_dataset(
         dataset_id,
         GSM8K_CONFIGURATION,
