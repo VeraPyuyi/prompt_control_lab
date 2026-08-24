@@ -37,7 +37,9 @@ def test_prompt_reach_public_case_is_portable_and_bounded() -> None:
     assert isinstance(artifact_sha256, dict)
     for name in artifacts:
         assert isinstance(name, str)
-        digest = "sha256:" + hashlib.sha256((PUBLIC_ROOT / name).read_bytes()).hexdigest()
+        content = (PUBLIC_ROOT / name).read_bytes()
+        assert b"\r\n" not in content
+        digest = "sha256:" + hashlib.sha256(content).hexdigest()
         assert artifact_sha256[name] == digest
 
     rendered = "\n".join(

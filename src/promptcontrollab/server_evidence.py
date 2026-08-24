@@ -999,6 +999,11 @@ def _prepare_adapter_output(out_dir: Path, *, overwrite: bool) -> None:
     resolved = validate_evidence_destination(out_dir)
     if resolved.exists() and not resolved.is_dir():
         raise ValueError(f"Evidence output must be a directory: {resolved}")
+    portable_dir = resolved / "portable"
+    if portable_dir.is_symlink():
+        raise ValueError(
+            f"Portable evidence destination cannot be a symbolic link: {portable_dir}"
+        )
     if not resolved.exists() or not any(resolved.iterdir()):
         ensure_dir(resolved)
         return
