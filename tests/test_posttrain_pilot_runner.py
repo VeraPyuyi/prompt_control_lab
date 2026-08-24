@@ -4,6 +4,7 @@ import contextlib
 import importlib
 import os
 from collections.abc import Iterator
+from importlib import metadata as importlib_metadata
 from pathlib import Path
 
 import pytest
@@ -13,6 +14,7 @@ from promptcontrollab.posttrain_pilot import PilotInputs
 from promptcontrollab.posttrain_pilot_runner import (
     PosttrainPilotError,
     _posix_exclusive_lock,
+    _validate_training_runtime_dependencies,
     execute_sft_pilot,
 )
 
@@ -164,3 +166,59 @@ def test_execute_pilot_rejects_paths_outside_the_runtime_before_locking(
 
     assert lock_called is False
     assert not inputs.out_dir.exists()
+
+
+def test_training_runtime_rejects_old_accelerate_before_writing_output(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    inputs = _inputs(tmp_path)
+
+    @contextlib.contextmanager
+    def unlocked(path: Path) -> Iterator[None]:
+        del path
+        yield
+
+    versions = {
+        "accelerate": "0.34.2",
+        "torch": "2.4.1",
+        "peft": "0.17.1",
+        "transformers": "4.55.4",
+    }
+
+    monkeypatch.setattr(posttrain_pilot_runner, "_exclusive_lock", unlocked)
+    monkeypatch.setattr(
+        importlib_metadata,
+        "version",
+        versions.__getitem__,
+    )
+
+    with pytest.raises(PosttrainPilotError, match=r"accelerate>=1\.1\.0"):
+        execute_sft_pilot(
+            inputs,
+            approval_path=tmp_path / "approval.json",
+            gpu=0,
+            lock_file=tmp_path / "global.lock",
+        )
+
+    assert not inputs.out_dir.exists()
+
+
+def test_training_runtime_accepts_supported_accelerate_version(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    versions = {
+        "accelerate": "1.10.1",
+        "torch": "2.4.1",
+        "peft": "0.17.1",
+        "transformers": "4.55.4",
+    }
+    monkeypatch.setattr(
+        importlib_metadata,
+        "version",
+        versions.__getitem__,
+    )
+
+    runtime = _validate_training_runtime_dependencies()
+
+    assert runtime["accelerate"] == "1.10.1"

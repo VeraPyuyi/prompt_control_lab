@@ -8,12 +8,14 @@ import inspect
 import json
 import math
 import os
+import re
 import subprocess
 import time
 from collections import defaultdict
 from collections.abc import Callable, Iterator
 from dataclasses import dataclass
 from datetime import datetime, timezone
+from importlib import metadata as importlib_metadata
 from itertools import groupby
 from pathlib import Path
 from typing import Any
@@ -90,6 +92,7 @@ def _execute_sft_pilot_locked(
     output_lock: Path,
     runtime_gate: JsonDict,
 ) -> JsonDict:
+    training_runtime = _validate_training_runtime_dependencies()
     plan = build_sft_pilot_plan(inputs)
     _prepare_execution_output(inputs.out_dir, plan)
     protocol_path = inputs.out_dir / "pilot_protocol.json"
@@ -120,6 +123,7 @@ def _execute_sft_pilot_locked(
                 "lock_file": str(lock_file.absolute()),
                 "output_lock_file": str(output_lock.absolute()),
                 "runtime": runtime_gate,
+                "training_runtime": training_runtime,
                 "model_provenance": {
                     "model_id": model_provenance.get("model_id"),
                     "revision": model_provenance.get("revision"),
@@ -348,6 +352,43 @@ def _gpu_idle_snapshot(index: int) -> JsonDict:
         "memory_used_mib": selected_memory,
         "active_compute_pids": active,
     }
+
+
+def _validate_training_runtime_dependencies() -> JsonDict:
+    """Validate training packages without importing CUDA-capable modules."""
+
+    versions: JsonDict = {}
+    missing: list[str] = []
+    for package in ("torch", "transformers", "peft", "accelerate"):
+        try:
+            versions[package] = importlib_metadata.version(package)
+        except importlib_metadata.PackageNotFoundError:
+            missing.append(package)
+    if missing:
+        missing_text = ", ".join(missing)
+        raise PosttrainPilotError(
+            "Execution requires the post-training dependencies; missing: "
+            f"{missing_text}. Install promptcontrollab[posttrain]."
+        )
+
+    accelerate_version = str(versions["accelerate"])
+    if _release_version(accelerate_version) < (1, 1, 0):
+        raise PosttrainPilotError(
+            "The SFT pilot requires accelerate>=1.1.0 because deterministic data_seed "
+            f"is enabled; found accelerate=={accelerate_version}."
+        )
+    return versions
+
+
+def _release_version(value: str) -> tuple[int, int, int]:
+    match = re.match(r"^\s*(\d+)\.(\d+)(?:\.(\d+))?", value)
+    if match is None:
+        raise PosttrainPilotError(f"Could not parse installed package version: {value}")
+    return (
+        int(match.group(1)),
+        int(match.group(2)),
+        int(match.group(3) or 0),
+    )
 
 
 def _run_pilot(inputs: PilotInputs, *, model_provenance: JsonDict) -> None:

@@ -50,7 +50,7 @@ posttrain = [
   "torch>=2.1",
   "transformers>=4.40",
   "peft>=0.11",
-  "accelerate>=0.30",
+  "accelerate>=1.1.0",
   "datasets>=2.19"
 ]
 ui = [
