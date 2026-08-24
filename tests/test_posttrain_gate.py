@@ -37,17 +37,24 @@ def _write_checkpoint(
     paired_mean_delta: float | None = None,
     sample_hash: str = _SAMPLE_HASH,
     n: int = 2,
+    seed: int = 0,
+    training_method: str = "sft",
+    model_revision: str = "a" * 40,
+    model_snapshot_sha256: str = "sha256:" + "b" * 64,
+    include_prompt_diagnostics: bool = True,
 ) -> None:
     _write_json(
         root / "manifest.json",
         {
             "checkpoint": {
                 "id": checkpoint_id,
-                "training_method": "sft",
+                "training_method": training_method,
                 "provider": "huggingface",
                 "model_id": model_id,
+                "model_revision": model_revision,
+                "model_snapshot_sha256": model_snapshot_sha256,
                 "split_hash": split_hash,
-                "seed": 0,
+                "seed": seed,
             }
         },
     )
@@ -97,6 +104,8 @@ def _write_checkpoint(
         {"gap": generation_gap, "teacher_forced_score": score + generation_gap},
     )
     _write_json(root / "diagnostics/selective_risk.json", {"observed_aurc": aurc})
+    if include_prompt_diagnostics:
+        _write_prompt_diagnostics(root, routing_status="observed")
 
 
 def _write_policy(path: Path) -> None:
@@ -114,6 +123,10 @@ def _write_policy(path: Path) -> None:
                 "max_latency_increase_ratio: 0.2",
                 "require_split_hash_match: true",
                 "require_model_match: true",
+                "max_prompt_reachability_shift: 0.5",
+                "max_readout_alignment_gap: 0.1",
+                "max_prompt_stability_drift_increase: 0.05",
+                "require_prompt_routing_evidence: false",
             ]
         )
         + "\n",
@@ -153,6 +166,148 @@ def test_posttrain_gate_passes_matched_checkpoint_improvement(tmp_path: Path) ->
         <= set(row)
         for row in trace["checks"]
     )
+
+
+def _write_prompt_diagnostics(
+    root: Path,
+    *,
+    reachability_shift: float = 0.2,
+    alignment_gap: float = 0.04,
+    stability_drift: float = 0.2,
+    routing_status: str = "insufficient_evidence",
+) -> None:
+    _write_json(
+        root / "diagnostics/prompt_reachability.json",
+        {"representation_shift_l2_normalized": reachability_shift},
+    )
+    _write_json(
+        root / "diagnostics/readout_alignment.json",
+        {"alignment_gap": alignment_gap},
+    )
+    _write_json(
+        root / "diagnostics/prompt_routing.json",
+        {"evidence_status": routing_status},
+    )
+    _write_json(
+        root / "diagnostics/prompt_projection.json",
+        {
+            "applicability": "not_applicable",
+            "reason": "Standard LoRA does not deploy a learned soft prompt.",
+        },
+    )
+    _write_json(
+        root / "diagnostics/prompt_stability.json",
+        {"mean_step_drift": stability_drift},
+    )
+
+
+def test_posttrain_gate_uses_prompt_reach_diagnostics_when_available(
+    tmp_path: Path,
+) -> None:
+    baseline = tmp_path / "checkpoint-000"
+    candidate = tmp_path / "checkpoint-500"
+    _write_checkpoint(baseline, checkpoint_id="000", score=0.6)
+    _write_checkpoint(candidate, checkpoint_id="500", score=0.7)
+    _write_prompt_diagnostics(
+        baseline,
+        reachability_shift=0.0,
+        alignment_gap=0.03,
+        stability_drift=0.2,
+    )
+    _write_prompt_diagnostics(
+        candidate,
+        reachability_shift=0.2,
+        alignment_gap=0.04,
+        stability_drift=0.22,
+    )
+    policy = tmp_path / "posttrain.policy.yaml"
+    _write_policy(policy)
+
+    payload = run_posttrain_gate(
+        baseline_dir=baseline,
+        candidate_dir=candidate,
+        policy_path=policy,
+        out_dir=tmp_path / "gate",
+        capability="full-open-model",
+    )
+
+    assert payload["decision"] == "insufficient_evidence"
+    assert payload["checks"]["prompt_reachability"]["observed"] == 0.2
+    assert payload["checks"]["readout_alignment"]["observed"] == 0.04
+    assert payload["checks"]["prompt_routing"]["applicable"] is True
+    assert payload["checks"]["prompt_routing"]["passed"] is False
+    assert payload["checks"]["prompt_routing"]["evidence_status"] == (
+        "insufficient_evidence"
+    )
+    assert payload["checks"]["prompt_routing"]["severity"] == "insufficient"
+    assert payload["checks"]["prompt_projection"]["applicable"] is False
+    assert payload["checks"]["prompt_stability"]["increase"] == pytest.approx(0.02)
+    trace = read_json(tmp_path / "gate/decision_trace.json")
+    trace_rows = {row["check"]: row for row in trace["checks"]}
+    assert trace_rows["prompt_reachability"]["evidence"] == [
+        "diagnostics/prompt_reachability.json"
+    ]
+    assert trace_rows["readout_alignment"]["evidence"] == [
+        "diagnostics/readout_alignment.json"
+    ]
+
+
+@pytest.mark.parametrize(
+    ("diagnostic", "candidate_value", "expected_decision"),
+    [
+        ("prompt_reachability", 0.8, "needs_review"),
+        ("readout_alignment", 0.3, "hold"),
+        ("prompt_stability", 0.4, "hold"),
+    ],
+)
+def test_posttrain_gate_promotes_prompt_diagnostic_thresholds_to_decisions(
+    tmp_path: Path,
+    diagnostic: str,
+    candidate_value: float,
+    expected_decision: str,
+) -> None:
+    baseline = tmp_path / "checkpoint-000"
+    candidate = tmp_path / "checkpoint-500"
+    _write_checkpoint(baseline, checkpoint_id="000", score=0.6)
+    _write_checkpoint(candidate, checkpoint_id="500", score=0.7)
+    _write_prompt_diagnostics(
+        baseline,
+        stability_drift=0.2,
+        routing_status="intervention_observed",
+    )
+    if diagnostic == "prompt_reachability":
+        _write_prompt_diagnostics(
+            candidate,
+            reachability_shift=candidate_value,
+            stability_drift=0.22,
+            routing_status="intervention_observed",
+        )
+    elif diagnostic == "readout_alignment":
+        _write_prompt_diagnostics(
+            candidate,
+            alignment_gap=candidate_value,
+            stability_drift=0.22,
+            routing_status="intervention_observed",
+        )
+    else:
+        _write_prompt_diagnostics(
+            candidate,
+            stability_drift=candidate_value,
+            routing_status="intervention_observed",
+        )
+    policy = tmp_path / "posttrain.policy.yaml"
+    _write_policy(policy)
+
+    payload = run_posttrain_gate(
+        baseline_dir=baseline,
+        candidate_dir=candidate,
+        policy_path=policy,
+        out_dir=tmp_path / "gate",
+        capability="full-open-model",
+    )
+
+    assert payload["decision"] == expected_decision
+    assert payload["checks"][diagnostic]["passed"] is False
 
 
 def test_posttrain_gate_black_box_does_not_fail_on_inapplicable_open_model_evidence(
@@ -267,8 +422,71 @@ def test_posttrain_gate_accepts_explicitly_not_applicable_soft_hard_diagnostic(
     check = payload["checks"]["soft_hard_deployment"]
     assert payload["decision"] == "pass"
     assert check["applicable"] is False
-    assert check["passed"] is True
+    assert check["passed"] is None
     assert check["severity"] == "info"
+
+
+def test_posttrain_gate_holds_before_reporting_other_missing_evidence(
+    tmp_path: Path,
+) -> None:
+    baseline = tmp_path / "checkpoint-000"
+    candidate = tmp_path / "checkpoint-500"
+    _write_checkpoint(baseline, checkpoint_id="000", score=0.6)
+    _write_checkpoint(candidate, checkpoint_id="500", score=0.7)
+    readout = read_json(candidate / "diagnostics/readout_alignment.json")
+    readout["alignment_gap"] = 0.5
+    _write_json(candidate / "diagnostics/readout_alignment.json", readout)
+    (candidate / "diagnostics/prompt_routing.json").unlink()
+    policy = tmp_path / "posttrain.policy.yaml"
+    _write_policy(policy)
+
+    payload = run_posttrain_gate(
+        baseline_dir=baseline,
+        candidate_dir=candidate,
+        policy_path=policy,
+        out_dir=tmp_path / "gate",
+        capability="full-open-model",
+    )
+
+    assert payload["missing_artifacts"]
+    assert payload["checks"]["readout_alignment"]["passed"] is False
+    assert payload["decision"] == "hold"
+
+
+@pytest.mark.parametrize(
+    ("changed_field", "changed_value", "violation"),
+    [
+        ("model_revision", "c" * 40, "model_mismatch"),
+        ("model_snapshot_sha256", "sha256:" + "d" * 64, "model_mismatch"),
+        ("seed", 1, "seed_mismatch"),
+        ("training_method", "dpo", "training_method_mismatch"),
+    ],
+)
+def test_posttrain_gate_binds_checkpoint_provenance_beyond_model_alias(
+    tmp_path: Path,
+    changed_field: str,
+    changed_value: object,
+    violation: str,
+) -> None:
+    baseline = tmp_path / "checkpoint-000"
+    candidate = tmp_path / "checkpoint-500"
+    _write_checkpoint(baseline, checkpoint_id="000", score=0.6)
+    _write_checkpoint(candidate, checkpoint_id="500", score=0.7)
+    manifest = read_json(candidate / "manifest.json")
+    manifest["checkpoint"][changed_field] = changed_value
+    _write_json(candidate / "manifest.json", manifest)
+    policy = tmp_path / "posttrain.policy.yaml"
+    _write_policy(policy)
+
+    payload = run_posttrain_gate(
+        baseline_dir=baseline,
+        candidate_dir=candidate,
+        policy_path=policy,
+        out_dir=tmp_path / "gate",
+    )
+
+    assert payload["decision"] == "hold"
+    assert violation in payload["checks"]["provenance"]["violations"]
 
 
 def test_posttrain_gate_marks_missing_required_evidence_insufficient(tmp_path: Path) -> None:
@@ -289,6 +507,33 @@ def test_posttrain_gate_marks_missing_required_evidence_insufficient(tmp_path: P
 
     assert payload["decision"] == "insufficient_evidence"
     assert "candidate:diagnostics/generation_mismatch.json" in payload["missing_artifacts"]
+
+
+def test_posttrain_gate_marks_generation_saturation_as_insufficient_evidence(
+    tmp_path: Path,
+) -> None:
+    baseline = tmp_path / "checkpoint-000"
+    candidate = tmp_path / "checkpoint-500"
+    _write_checkpoint(baseline, checkpoint_id="000", score=0.6)
+    _write_checkpoint(candidate, checkpoint_id="500", score=0.7)
+    mismatch_path = candidate / "diagnostics/generation_mismatch.json"
+    mismatch = read_json(mismatch_path)
+    mismatch["generation_saturation_rate"] = 0.1
+    _write_json(mismatch_path, mismatch)
+    policy = tmp_path / "posttrain.policy.yaml"
+    _write_policy(policy)
+
+    payload = run_posttrain_gate(
+        baseline_dir=baseline,
+        candidate_dir=candidate,
+        policy_path=policy,
+        out_dir=tmp_path / "gate",
+    )
+
+    assert payload["decision"] == "insufficient_evidence"
+    assert "candidate:diagnostics.generation_mismatch.generation_saturation_rate" in payload[
+        "invalid_evidence"
+    ]
 
 
 def test_posttrain_gate_marks_non_finite_required_metric_insufficient(tmp_path: Path) -> None:

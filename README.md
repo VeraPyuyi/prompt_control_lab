@@ -1,8 +1,8 @@
-# PromptControlLab 2.0
+# PromptControlLab
 
 **The local evidence, diagnosis, and control loop for prompts, checkpoints, and AI agents.**
 
-> Framework direction: 2.0. Current installable Python package: `promptcontrollab 0.1.0`.
+> Alpha package candidate: `promptcontrollab 0.2.0a1`. Public pre-release remains gated on a real three-seed checkpoint pilot and a real DeepSeek Harness session.
 
 PromptControlLab is an open-source, local-first framework for explaining where a result changed, whether the comparison is valid, how stable the observed behavior is, and whether a prompt, checkpoint, or agent run should continue. It combines preflight control with trajectory, soft-hard, generation-mismatch, selective-risk, and fitted-surrogate evidence. Chinese: [README.zh.md](README.zh.md).
 
@@ -19,16 +19,16 @@ pcl ui --runs runs --language en
 ## Core Diagnostic Loop
 
 ```bash
-pcl evidence scan --root /path/to/experiments --profile peoc-server --out server_evidence_manifest.json
-pcl evidence import --manifest server_evidence_manifest.json --out runs/server-evidence
+pcl evidence scan --root /path/to/evidence --profile prompt-reach-v2 --out manifest.json
+pcl evidence import --manifest manifest.json --out runs/prompt-reach-v2 --portable
 pcl posttrain-gate --baseline runs/checkpoint-000 --candidate runs/checkpoint-500 --policy examples/posttrain.policy.yaml --out runs/posttrain-gate
 ```
 
-These commands connect dispersed real experiment artifacts to five explanation roles: mechanism, stability, boundary, uncertainty, and decision. See the [real 911-source server snapshot](docs/case_studies/server_evidence/README.md), [evidence import guide](docs/server_evidence.en.md), and [post-training gate](docs/posttraining.en.md).
+These commands connect dispersed experiment artifacts to prompt reachability, readout alignment, routing, projection, and stability evidence. The public-safe [371-source prompt-reach-v2 case](docs/case_studies/prompt_reach_v2/README.md) reports four observed dimensions and one dimension that requires reanalysis; it does not claim universal improvement. See the [evidence import guide](docs/server_evidence.en.md) and [post-training gate](docs/posttraining.en.md).
 
 ## Flagship Integration: DeepSeek Harness
 
-The [native Cordis integration](docs/deepseek_harness.en.md) gates model requests and tools, streams redacted lifecycle evidence through one persistent local bridge, and is contract-locked to Harness `0.1.1-rc.2` at `b150a551...`.
+The [native Cordis integration](docs/deepseek_harness.en.md) gates model requests and tools, streams redacted lifecycle evidence through one persistent local bridge, and is contract-locked to Harness `0.1.1-rc.2` at `b150a551...`. The [public-safe integration status](docs/case_studies/deepseek_harness/README.md) records the verified bridge and redaction path while clearly marking the real model/tool/edit/test session as blocked until a local provider credential is supplied.
 
 ## Supported Surfaces
 
@@ -42,7 +42,7 @@ The [native Cordis integration](docs/deepseek_harness.en.md) gates model request
 
 ## Documentation
 
-[Evidence and interpretation](docs/server_evidence.en.md) | [Post-training diagnosis](docs/posttraining.en.md) | [Control loop](docs/control_loop.en.md) | [DeepSeek Harness](docs/deepseek_harness.en.md) | [Providers](docs/providers.en.md) | [Local UI](docs/control_ui.en.md)
+[5-minute quickstart](docs/quickstart.en.md) | [Evidence and interpretation](docs/server_evidence.en.md) | [Post-training diagnosis](docs/posttraining.en.md) | [Control loop](docs/control_loop.en.md) | [DeepSeek Harness](docs/deepseek_harness.en.md) | [Providers](docs/providers.en.md) | [Local UI](docs/control_ui.en.md)
 
 Install and existing workflows: [release guide](docs/release_install.en.md), `pcl start --guide`, `pcl quickstart --out demo --open-report`, `pcl start --choice demo --out demo`, and `pcl choose --need "<your goal>"`.
 

@@ -57,6 +57,20 @@ export class SessionRunLifecycle<Agent, State extends object> {
 
   dispose(agent: Agent): Promise<void> {
     const sessionId = this.options.idOf(agent)
+    return this.disposeSession(sessionId)
+  }
+
+  /** Finalize every active or starting run before the plugin bridge closes. */
+  async disposeAll(): Promise<void> {
+    const sessionIds = new Set([
+      ...this.active.keys(),
+      ...this.starts.keys(),
+      ...this.finalizations.keys(),
+    ])
+    await Promise.all([...sessionIds].map(sessionId => this.disposeSession(sessionId)))
+  }
+
+  private disposeSession(sessionId: string): Promise<void> {
     const existing = this.finalizations.get(sessionId)
     if (existing) return existing
 
@@ -64,18 +78,19 @@ export class SessionRunLifecycle<Agent, State extends object> {
     const pending = current ? Promise.resolve(current) : this.starts.get(sessionId)
     if (!pending) return Promise.resolve()
 
-    let finalized: State | undefined
     let completion: Promise<void>
     completion = pending
       .then(async state => {
-        finalized = state
         await this.options.finalize(state)
-      })
-      .catch(error => this.report(error))
-      .finally(() => {
-        if (finalized && this.active.get(sessionId) === finalized) {
+        if (this.active.get(sessionId) === state) {
           this.active.delete(sessionId)
         }
+      })
+      .catch(error => {
+        this.report(error)
+        throw error
+      })
+      .finally(() => {
         if (this.finalizations.get(sessionId) === completion) {
           this.finalizations.delete(sessionId)
         }

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import html
+from collections import Counter
 from pathlib import Path
 from statistics import mean
 
@@ -19,7 +20,18 @@ def write_pilot_summary(root: Path, *, seeds: tuple[int, ...]) -> JsonDict:
     gate_traces: list[JsonDict] = []
     stage_decisions: JsonDict = {}
     stage_deltas: dict[str, list[float]] = {stage: [] for stage in stages}
+    checkpoint_metrics: dict[str, list[JsonDict]] = {
+        stage: [] for stage in ("initial", *stages)
+    }
+    missing_checkpoints: list[str] = []
     for seed in seeds:
+        for checkpoint_stage in ("initial", *stages):
+            checkpoint_dir = root / f"seed-{seed}" / f"checkpoint-{checkpoint_stage}"
+            measurements = _checkpoint_measurements(checkpoint_dir)
+            if measurements is None:
+                missing_checkpoints.append(str(checkpoint_dir.relative_to(root)))
+            else:
+                checkpoint_metrics[checkpoint_stage].append(measurements)
         for stage in stages:
             gate_dir = root / f"seed-{seed}" / "gates" / f"initial-to-{stage}"
             gate_path = gate_dir / "posttrain_gate.json"
@@ -43,7 +55,7 @@ def write_pilot_summary(root: Path, *, seeds: tuple[int, ...]) -> JsonDict:
                     "score_delta": score_delta,
                     "capability_profile": gate.get("capability_profile"),
                     "summary": gate.get("plain_summary"),
-                    "gate_path": str(gate_path.resolve()),
+                    "gate_path": str(gate_path.relative_to(root).as_posix()),
                 }
             )
             gate_traces.append(
@@ -52,7 +64,7 @@ def write_pilot_summary(root: Path, *, seeds: tuple[int, ...]) -> JsonDict:
                     "stage": stage,
                     "decision": decision,
                     "checks": trace.get("checks", []),
-                    "source": str(trace_path.resolve()),
+                    "source": str(trace_path.relative_to(root).as_posix()),
                 }
             )
     for stage in stages:
@@ -67,16 +79,24 @@ def write_pilot_summary(root: Path, *, seeds: tuple[int, ...]) -> JsonDict:
     delta_summary = {
         stage: _numeric_summary(values) for stage, values in stage_deltas.items()
     }
+    checkpoint_summary = {
+        stage: _summarize_checkpoint_measurements(rows)
+        for stage, rows in checkpoint_metrics.items()
+    }
+    actual_checkpoint_count = sum(len(rows) for rows in checkpoint_metrics.values())
     payload: JsonDict = {
         "schema": "prompt_control_lab.posttrain_sft_pilot_summary.v1",
         "decision": decision,
         "seeds": list(seeds),
-        "checkpoint_run_count": len(seeds) * 3,
+        "planned_checkpoint_run_count": len(seeds) * 3,
+        "checkpoint_run_count": actual_checkpoint_count,
         "gate_count": len(gates),
         "stage_decisions": stage_decisions,
         "score_delta_by_stage": delta_summary,
+        "checkpoint_metrics_by_stage": checkpoint_summary,
         "gates": gates,
         "missing_gates": missing,
+        "missing_checkpoints": missing_checkpoints,
         "claim_boundary": (
             "This summary conservatively aggregates observed checkpoint evidence across seeds. "
             "It does not establish a causal training mechanism."
@@ -98,6 +118,89 @@ def write_pilot_summary(root: Path, *, seeds: tuple[int, ...]) -> JsonDict:
     write_json(root / "decision_trace.json", trace_payload)
     (root / "pilot_summary.html").write_text(_render_html(payload), encoding="utf-8")
     return payload
+
+
+def _checkpoint_measurements(checkpoint_dir: Path) -> JsonDict | None:
+    if not (checkpoint_dir / "manifest.json").is_file() or not (
+        checkpoint_dir / "metrics.json"
+    ).is_file():
+        return None
+    metrics = read_json(checkpoint_dir / "metrics.json")
+    diagnostics = checkpoint_dir / "diagnostics"
+    return {
+        "mean_score": _optional_float(metrics.get("mean_score")),
+        "mean_tokens": _optional_float(metrics.get("mean_tokens")),
+        "mean_latency_ms": _optional_float(metrics.get("mean_latency_ms")),
+        "generation_saturation_rate": _optional_float(
+            metrics.get("generation_saturation_rate")
+        ),
+        "trajectory_drift": _read_number(diagnostics / "trajectory.json", "mean_step_drift"),
+        "generation_mismatch": _read_number(diagnostics / "generation_mismatch.json", "gap"),
+        "selective_aurc": _read_number(diagnostics / "selective_risk.json", "observed_aurc"),
+        "reachability_shift": _read_number(
+            diagnostics / "prompt_reachability.json",
+            "representation_shift_l2_normalized",
+        ),
+        "readout_alignment_gap": _read_number(
+            diagnostics / "readout_alignment.json",
+            "alignment_gap",
+        ),
+        "prompt_stability_drift": _read_number(
+            diagnostics / "prompt_stability.json",
+            "mean_step_drift",
+        ),
+        "routing_status": _read_text(
+            diagnostics / "prompt_routing.json",
+            "evidence_status",
+            default="unknown",
+        ),
+        "projection_status": _read_text(
+            diagnostics / "prompt_projection.json",
+            "applicability",
+            default="unknown",
+        ),
+    }
+
+
+def _summarize_checkpoint_measurements(rows: list[JsonDict]) -> JsonDict:
+    numeric_keys = (
+        "mean_score",
+        "mean_tokens",
+        "mean_latency_ms",
+        "generation_saturation_rate",
+        "trajectory_drift",
+        "generation_mismatch",
+        "selective_aurc",
+        "reachability_shift",
+        "readout_alignment_gap",
+        "prompt_stability_drift",
+    )
+    payload: JsonDict = {
+        key: _numeric_summary(
+            [float(row[key]) for row in rows if isinstance(row.get(key), int | float)]
+        )
+        for key in numeric_keys
+    }
+    payload["routing_status_counts"] = dict(
+        sorted(Counter(str(row.get("routing_status", "unknown")) for row in rows).items())
+    )
+    payload["projection_status_counts"] = dict(
+        sorted(Counter(str(row.get("projection_status", "unknown")) for row in rows).items())
+    )
+    return payload
+
+
+def _read_number(path: Path, key: str) -> float | None:
+    if not path.is_file():
+        return None
+    return _optional_float(read_json(path).get(key))
+
+
+def _read_text(path: Path, key: str, *, default: str) -> str:
+    if not path.is_file():
+        return default
+    value = str(read_json(path).get(key, "")).strip()
+    return value or default
 
 
 def _numeric_summary(values: list[float]) -> JsonDict:

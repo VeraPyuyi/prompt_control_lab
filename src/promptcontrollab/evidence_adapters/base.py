@@ -56,7 +56,10 @@ class GenericMetricAdapter:
                 invalid_count += 1
                 continue
             try:
-                payloads = _read_structured_payloads(path)
+                payloads = _read_structured_payloads(
+                    path,
+                    row.get("_verified_content"),
+                )
             except (OSError, ValueError, json.JSONDecodeError):
                 invalid_count += 1
                 continue
@@ -121,14 +124,17 @@ class GenericMetricAdapter:
         }
 
 
-def _read_structured_payloads(path: Path) -> list[object]:
+def _read_structured_payloads(path: Path, verified_content: object) -> list[object]:
+    if not isinstance(verified_content, bytes):
+        raise ValueError("Verified structured source bytes are unavailable")
+    text = verified_content.decode("utf-8-sig")
     if path.suffix.lower() == ".jsonl":
         payloads: list[object] = []
-        for line in path.read_text(encoding="utf-8-sig").splitlines():
+        for line in text.splitlines():
             if line.strip():
                 payloads.append(json.loads(line))
         return payloads
-    return [json.loads(path.read_text(encoding="utf-8-sig"))]
+    return [json.loads(text)]
 
 
 def _collect_allowed_metrics(

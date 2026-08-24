@@ -18,11 +18,13 @@ from itertools import groupby
 from pathlib import Path
 from typing import Any
 
+from promptcontrollab.errors import PromptControlLabError
 from promptcontrollab.files import JsonDict, ensure_dir, stable_digest, write_json
 from promptcontrollab.posttrain_gate import run_posttrain_gate
 from promptcontrollab.posttrain_pilot import (
     PilotInputs,
     build_sft_pilot_plan,
+    model_provenance_path,
     paired_checkpoint_statistics,
     score_pilot_output,
     token_trajectory_drift,
@@ -44,28 +46,77 @@ class CheckpointEvaluation:
     teacher_forced_score: float
 
 
+class PosttrainPilotError(PromptControlLabError):
+    """User-facing failure from the guarded pilot runtime."""
+
+
 def execute_sft_pilot(
     inputs: PilotInputs,
     *,
     approval_path: Path,
     gpu: int,
     lock_file: Path,
-) -> None:
+) -> JsonDict:
     """Execute the pilot only after explicit queue, GPU, and lock checks pass."""
 
-    model_provenance = validate_model_provenance(inputs.model_path)
-    approval = validate_resource_approval(approval_path, gpu=gpu)
-    gpu_gate = _assert_gpu_idle_twice(gpu)
-    os.environ["CUDA_VISIBLE_DEVICES"] = str(gpu)
-    with _exclusive_lock(lock_file):
-        ensure_dir(inputs.out_dir)
+    output_lock = inputs.out_dir.parent / f".{inputs.out_dir.name}.pilot.lock"
+    runtime_gate = _validate_runtime_paths(
+        inputs,
+        approval_path=approval_path,
+        lock_file=lock_file,
+        output_lock=output_lock,
+    )
+    with contextlib.ExitStack() as locks:
+        locks.enter_context(_exclusive_lock(output_lock))
+        if lock_file.absolute() != output_lock.absolute():
+            locks.enter_context(_exclusive_lock(lock_file))
+        result = _execute_sft_pilot_locked(
+            inputs,
+            approval_path=approval_path,
+            gpu=gpu,
+            lock_file=lock_file,
+            output_lock=output_lock,
+            runtime_gate=runtime_gate,
+        )
+    return result
+
+
+def _execute_sft_pilot_locked(
+    inputs: PilotInputs,
+    *,
+    approval_path: Path,
+    gpu: int,
+    lock_file: Path,
+    output_lock: Path,
+    runtime_gate: JsonDict,
+) -> JsonDict:
+    plan = build_sft_pilot_plan(inputs)
+    _prepare_execution_output(inputs.out_dir, plan)
+    protocol_path = inputs.out_dir / "pilot_protocol.json"
+    plan["execution_status"] = "running"
+    plan["selected_gpu"] = gpu
+    write_json(protocol_path, plan)
+    try:
+        model_provenance = validate_model_provenance(
+            inputs.model_path,
+            manifest_path=inputs.model_provenance_path,
+        )
+        approval = validate_resource_approval(
+            approval_path,
+            gpu=gpu,
+            runtime_root=inputs.runtime_root,
+        )
+        gpu_gate = _assert_gpu_idle_twice(gpu)
+        os.environ["CUDA_VISIBLE_DEVICES"] = str(gpu)
         write_json(
             inputs.out_dir / "resource_gate.json",
             {
                 "schema": "prompt_control_lab.resource_gate.v1",
                 "approval": approval,
                 "gpu_gate": gpu_gate,
-                "lock_file": str(lock_file.resolve()),
+                "lock_file": str(lock_file.absolute()),
+                "output_lock_file": str(output_lock.absolute()),
+                "runtime": runtime_gate,
                 "model_provenance": {
                     "model_id": model_provenance.get("model_id"),
                     "revision": model_provenance.get("revision"),
@@ -74,26 +125,144 @@ def execute_sft_pilot(
             },
         )
         _run_pilot(inputs, model_provenance=model_provenance)
+    except Exception as exc:
+        plan["execution_status"] = "failed"
+        plan["failure_type"] = type(exc).__name__
+        plan["failure_message"] = str(exc)
+        write_json(protocol_path, plan)
+        if isinstance(
+            exc,
+            PromptControlLabError | ValueError | OSError | subprocess.SubprocessError,
+        ):
+            raise
+        raise PosttrainPilotError(str(exc)) from exc
+    plan["execution_status"] = "complete"
+    write_json(protocol_path, plan)
+    return plan
+
+
+def _prepare_execution_output(out_dir: Path, plan: JsonDict) -> None:
+    """Permit a new output or a matching plan-only protocol, never a partial run."""
+
+    if not out_dir.exists():
+        ensure_dir(out_dir)
+        return
+    if not out_dir.is_dir() or out_dir.is_symlink():
+        raise PosttrainPilotError(f"Pilot output must be a real directory: {out_dir}")
+    entries = sorted(path.name for path in out_dir.iterdir())
+    if not entries:
+        return
+    if entries != ["pilot_protocol.json"]:
+        raise PosttrainPilotError(
+            f"Pilot output is not empty and contains run artifacts: {out_dir}"
+        )
+    existing = json.loads((out_dir / "pilot_protocol.json").read_text(encoding="utf-8-sig"))
+    if not isinstance(existing, dict) or existing.get("execution_status") != "plan_only":
+        raise PosttrainPilotError("Existing pilot protocol is not a reusable plan-only record")
+    comparable_keys = (
+        "schema",
+        "training_method",
+        "model_path",
+        "out_dir",
+        "seeds",
+        "checkpoint_stages",
+        "max_steps",
+        "mid_step",
+        "split_provenance",
+        "runtime_root",
+    )
+    if any(existing.get(key) != plan.get(key) for key in comparable_keys):
+        raise PosttrainPilotError("Existing pilot protocol does not match this execution request")
+
+
+def _validate_runtime_paths(
+    inputs: PilotInputs,
+    *,
+    approval_path: Path,
+    lock_file: Path,
+    output_lock: Path,
+) -> JsonDict:
+    """Fail before locking unless every pilot resource stays in one isolated runtime."""
+
+    raw_root = inputs.runtime_root.expanduser()
+    if raw_root.is_symlink() or not raw_root.is_dir():
+        raise PosttrainPilotError(
+            f"Pilot runtime root must be an existing real directory: {raw_root}"
+        )
+    runtime_root = raw_root.resolve()
+    if runtime_root.parent == runtime_root:
+        raise PosttrainPilotError("Pilot runtime root cannot be a filesystem root")
+
+    provenance = inputs.model_provenance_path or model_provenance_path(inputs.model_path)
+    resources = {
+        "model": inputs.model_path,
+        "model_provenance": provenance,
+        "train": inputs.train_path,
+        "validation": inputs.validation_path,
+        "withheld": inputs.withheld_path,
+        "format_fixture": inputs.format_fixture_path,
+        "output": inputs.out_dir,
+        "approval": approval_path,
+        "global_lock": lock_file,
+        "output_lock": output_lock,
+    }
+    resolved_resources: JsonDict = {}
+    for name, raw_path in resources.items():
+        expanded = raw_path.expanduser()
+        if expanded.is_symlink():
+            raise PosttrainPilotError(
+                f"Pilot {name} path must not be a symbolic link: {expanded}"
+            )
+        resolved = expanded.resolve()
+        if resolved == runtime_root or not resolved.is_relative_to(runtime_root):
+            raise PosttrainPilotError(
+                f"Pilot {name} path is outside the pilot runtime {runtime_root}: {resolved}"
+            )
+        resolved_resources[name] = str(resolved)
+    return {
+        "runtime_root": str(runtime_root),
+        "resources": resolved_resources,
+    }
+
+
+@contextlib.contextmanager
+def _posix_exclusive_lock(path: Path) -> Iterator[None]:
+    """Acquire a non-following POSIX lock without truncating the current owner."""
+
+    if path.is_symlink():
+        raise PosttrainPilotError(f"Pilot lock must not be a symbolic link: {path}")
+    fcntl = importlib.import_module("fcntl")
+    ensure_dir(path.parent)
+    flags = os.O_RDWR | os.O_CREAT
+    if hasattr(os, "O_NOFOLLOW"):
+        flags |= os.O_NOFOLLOW
+    try:
+        descriptor = os.open(path, flags, 0o600)
+    except OSError as exc:
+        raise PosttrainPilotError(f"Could not open pilot lock {path}: {exc}") from exc
+    try:
+        try:
+            fcntl.flock(descriptor, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except BlockingIOError as exc:
+            raise PosttrainPilotError(f"Another pilot owns the lock: {path}") from exc
+        os.lseek(descriptor, 0, os.SEEK_SET)
+        os.ftruncate(descriptor, 0)
+        os.write(descriptor, f"{os.getpid()}\n".encode())
+        os.fsync(descriptor)
+        try:
+            yield
+        finally:
+            fcntl.flock(descriptor, fcntl.LOCK_UN)
+    finally:
+        os.close(descriptor)
 
 
 @contextlib.contextmanager
 def _exclusive_lock(path: Path) -> Iterator[None]:
     if os.name == "nt":
-        raise RuntimeError("The GPU pilot lock requires a POSIX server")
-    fcntl = importlib.import_module("fcntl")
-
-    ensure_dir(path.parent)
-    with path.open("w", encoding="utf-8") as stream:
-        try:
-            fcntl.flock(stream.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
-        except BlockingIOError as exc:
-            raise RuntimeError(f"Another pilot owns the lock: {path}") from exc
-        stream.write(str(os.getpid()))
-        stream.flush()
-        try:
-            yield
-        finally:
-            fcntl.flock(stream.fileno(), fcntl.LOCK_UN)
+        raise PosttrainPilotError("The GPU pilot lock requires a POSIX server")
+    with _posix_exclusive_lock(path):
+        yield
 
 
 def _assert_gpu_idle_twice(
@@ -141,7 +310,7 @@ def _gpu_idle_snapshot(index: int) -> JsonDict:
             selected_memory = int(parts[2])
             break
     if not selected_uuid:
-        raise RuntimeError(f"GPU {index} was not reported by nvidia-smi")
+        raise PosttrainPilotError(f"GPU {index} was not reported by nvidia-smi")
 
     process_query = subprocess.run(
         [
@@ -178,7 +347,7 @@ def _run_pilot(inputs: PilotInputs, *, model_provenance: JsonDict) -> None:
         peft = importlib.import_module("peft")
         transformers = importlib.import_module("transformers")
     except ImportError as exc:
-        raise RuntimeError(
+        raise PosttrainPilotError(
             "Execution requires torch, transformers, peft, and accelerate in the server env"
         ) from exc
 
@@ -313,7 +482,7 @@ def _run_pilot(inputs: PilotInputs, *, model_provenance: JsonDict) -> None:
             ("final", final_adapter),
         ):
             if not adapter_path.is_dir():
-                raise RuntimeError(f"Expected adapter checkpoint is missing: {adapter_path}")
+                raise PosttrainPilotError(f"Expected adapter checkpoint is missing: {adapter_path}")
             evaluation_model = peft.AutoPeftModelForCausalLM.from_pretrained(
                 str(adapter_path),
                 local_files_only=True,
@@ -395,6 +564,8 @@ def _evaluate_checkpoint(
     teacher_matches: list[float] = []
     drifts: list[float] = []
     generated_lengths: list[float] = []
+    generation_budgets: dict[str, int] = {}
+    generation_saturated_count = 0
     latencies_ms: list[float] = []
     representation_sum: list[float] | None = None
     by_slice: dict[str, list[float]] = defaultdict(list)
@@ -402,12 +573,15 @@ def _evaluate_checkpoint(
     with torch_module.no_grad():
         for row in rows:
             prompt = f"{str(row['prompt']).strip()}\nAnswer:"
+            task_slice = str(row.get("slice", "default"))
+            generation_budget = _generation_budget(task_slice)
+            generation_budgets[task_slice] = generation_budget
             encoded = tokenizer(prompt, return_tensors="pt", truncation=True, max_length=448)
             encoded = {key: value.to(device) for key, value in encoded.items()}
             started = time.perf_counter()
             generated = model.generate(
                 **encoded,
-                max_new_tokens=48,
+                max_new_tokens=generation_budget,
                 do_sample=False,
                 return_dict_in_generate=True,
                 output_scores=True,
@@ -417,9 +591,14 @@ def _evaluate_checkpoint(
             prompt_length = encoded["input_ids"].shape[1]
             new_tokens = generated.sequences[0, prompt_length:]
             generated_lengths.append(float(new_tokens.numel()))
+            if _generation_saturated(
+                new_tokens,
+                budget=generation_budget,
+                eos_token_id=tokenizer.eos_token_id,
+            ):
+                generation_saturated_count += 1
             output = tokenizer.decode(new_tokens, skip_special_tokens=True).strip()
             expected = str(row["answer"]).strip()
-            task_slice = str(row.get("slice", "default"))
             score = score_pilot_output(output, expected, task_slice)
             scores.append(score)
             by_slice[task_slice].append(score)
@@ -488,6 +667,9 @@ def _evaluate_checkpoint(
             "mean_score": mean_score,
             "mean_tokens": _mean(generated_lengths),
             "mean_latency_ms": _mean(latencies_ms),
+            "generation_saturated_count": generation_saturated_count,
+            "generation_saturation_rate": generation_saturated_count / len(scores),
+            "generation_budget_by_slice": dict(sorted(generation_budgets.items())),
             "n": len(scores),
             "sample_hash": sample_hash,
             "by_slice": {name: _mean(values) for name, values in sorted(by_slice.items())},
@@ -516,6 +698,9 @@ def _evaluate_checkpoint(
             "gap": abs(teacher_score - mean_score),
             "teacher_forced_canonical_exact_match": teacher_score,
             "free_generation_canonical_exact_match": mean_score,
+            "generation_saturated_count": generation_saturated_count,
+            "generation_saturation_rate": generation_saturated_count / len(scores),
+            "generation_budget_by_slice": dict(sorted(generation_budgets.items())),
             "definition": (
                 "Absolute difference between teacher-forced and free-generation answers "
                 "under one canonical text exact-match rule."
@@ -578,6 +763,30 @@ def _evaluate_checkpoint(
         mean_score=mean_score,
         teacher_forced_score=teacher_score,
     )
+
+
+def _generation_budget(task_slice: str) -> int:
+    normalized = task_slice.strip().casefold().replace("-", "_")
+    if normalized in {"gsm8k", "math", "arithmetic"}:
+        return 192
+    return 64
+
+
+def _generation_saturated(
+    token_ids: Any,
+    *,
+    budget: int,
+    eos_token_id: int | list[int] | None,
+) -> bool:
+    values = token_ids.tolist() if hasattr(token_ids, "tolist") else list(token_ids)
+    if len(values) < budget:
+        return False
+    eos_ids = (
+        set(eos_token_id)
+        if isinstance(eos_token_id, list)
+        else ({eos_token_id} if eos_token_id is not None else set())
+    )
+    return not values or values[-1] not in eos_ids
 
 
 def _write_relative_prompt_diagnostics(

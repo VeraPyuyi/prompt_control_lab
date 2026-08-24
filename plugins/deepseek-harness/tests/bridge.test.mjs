@@ -66,6 +66,8 @@ test('typed bridge wrappers reject malformed responses', async () => {
       runs_root: 'runs',
       harness_version: '0.1.1-rc.2',
       harness_commit: 'test',
+      session_origin: 'live_cordis',
+      bridge_transport: 'persistent_stdio',
     })],
     ['harness_pre_step', bridge => bridge.harnessPreStep({
       run_id: 'run-1',

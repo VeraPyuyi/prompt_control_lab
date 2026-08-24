@@ -1,0 +1,51 @@
+{
+  "diagnostics": [
+    {
+      "adapter": "prompt_reachability",
+      "confidence": "medium",
+      "interpretation_role": "mechanism",
+      "next_action": "Compare matched layers, prompt lengths, tasks, and seeds.",
+      "source_count": 156,
+      "support_status": "observed"
+    },
+    {
+      "adapter": "readout_alignment",
+      "confidence": "medium",
+      "interpretation_role": "mechanism",
+      "next_action": "Validate alignment against held-out generated answers and matched controls.",
+      "source_count": 32,
+      "support_status": "observed"
+    },
+    {
+      "adapter": "prompt_routing",
+      "confidence": "medium",
+      "interpretation_role": "mechanism",
+      "next_action": "Repeat matched interventions across positions, layers, and prompt classes.",
+      "source_count": 24,
+      "support_status": "observed"
+    },
+    {
+      "adapter": "prompt_projection",
+      "confidence": "medium",
+      "interpretation_role": "boundary",
+      "next_action": "Measure paired soft and deployed hard behavior before release.",
+      "source_count": 4,
+      "support_status": "observed"
+    },
+    {
+      "adapter": "prompt_stability",
+      "confidence": "low",
+      "interpretation_role": "stability",
+      "next_action": "Repeat matched runs and inspect score and direction agreement together.",
+      "source_count": 155,
+      "support_status": "requires_reanalysis"
+    }
+  ],
+  "profile": "prompt-reach-v2",
+  "schema": "prompt_control_lab.evidence_matrix.v2",
+  "snapshot_sha256": "sha256:a9622c1f3e4738799229504cdd59896c80db3857a194ecaa954f7395f0a08329",
+  "status_counts": {
+    "observed": 4,
+    "requires_reanalysis": 1
+  }
+}

@@ -1,17 +1,33 @@
 {
-  "checked_at": "2026-08-24T03:59:04Z",
-  "execution_status": "not_started_resource_gate",
+  "checked_at": "2026-08-24T12:42:14Z",
+  "execution_status": "blocked_existing_gpu_work",
   "gpu_work_started": false,
-  "planned_model": "Qwen2.5-0.5B",
+  "planned_model": "Qwen/Qwen2.5-0.5B-Instruct",
+  "model_revision": "7ae557604adf67be50417f59c2c2f167def9a775",
+  "model_snapshot_sha256": "sha256:c1c9aa0607fa7d45da6dafb1ce4eda469e18c285ad13c50cd1e4ed4caf1817a4",
+  "dataset_revision": "740312add88f781978c0658806c59bc2815b9866",
+  "split_sha256": "sha256:664cb24ac6d779378bf256c49f1369f910f49a788594d8813af51655af7bd4b4",
   "planned_seeds": [0, 1, 2],
+  "planned_checkpoint_runs": 9,
+  "queue_snapshot_sha256": "sha256:6ed3edf8da86ef55ddff28508574d9c12e3a5cc90c6159e98378cf5ee40ef2c1",
+  "live_check_sha256": "sha256:663fa95cd95303526dfe2598662deaaa3ec02eacb498e8cb3c84b03310e88aa0",
+  "resource_snapshot": {
+    "gpu_compute_process_count": 2,
+    "queue_running_jobs": 2,
+    "queue_pending_jobs": 4,
+    "queue_driver_present": true,
+    "queue_clear": false
+  },
   "reasons": [
-    "Two queued handoff processes were waiting for GPU resources.",
-    "The required cached Qwen2.5-0.5B model was not present in the checked Hugging Face and ModelScope cache locations."
+    "The pinned model and deterministic train/validation/withheld inputs are prepared and hash-verified in the isolated runtime.",
+    "The latest read-only check reported two running GPU jobs and four pending queue jobs, so the pilot did not start.",
+    "The isolated execution environment is not finalized; a copy-on-write environment clone was unsupported and its partial copy was removed."
   ],
   "required_before_launch": [
-    "An expiring operator approval with queue_clear=true.",
-    "A confirmed local model path and fixed train/validation/withheld inputs.",
+    "An expiring operator approval bound to a matching queue snapshot that is no more than 90 seconds old and still reports zero pending/running jobs inside the execution lock.",
+    "A complete dependency environment contained inside the PromptControlLab runtime.",
     "An idle selected GPU and an exclusive flock acquired immediately before launch."
   ],
+  "claim_boundary": "This status records a blocked preflight, not checkpoint performance evidence.",
   "schema": "prompt_control_lab.posttrain_sft_pilot_status.v1"
 }

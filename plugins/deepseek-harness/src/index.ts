@@ -91,6 +91,8 @@ export function apply(ctx: Context, input: import('./config.ts').Config): void {
         runs_root: config.runsRoot,
         harness_version: HARNESS_VERSION,
         harness_commit: HARNESS_COMMIT,
+        session_origin: 'live_cordis',
+        bridge_transport: 'persistent_stdio',
       })
       return {
         runId: result.run_id,
@@ -175,10 +177,13 @@ export function apply(ctx: Context, input: import('./config.ts').Config): void {
     const request = await next()
     void ensureRun(agent).then(state => {
       const attempt = state.retryAttempts.next('agent/request', turn, step)
+      const requestId = stableEventKey(state.sessionId, 'agent/request', [turn, step, attempt])
       enqueueEvent(state, 'agent/request', {
         turn,
         step,
         attempt,
+        request_id: requestId,
+        request_id_source: 'prompt_control_lab',
         provider: request.provider,
         model: request.model,
         max_tokens: request.maxTokens ?? null,
@@ -311,6 +316,7 @@ export function apply(ctx: Context, input: import('./config.ts').Config): void {
   if (config.exposeStatusTool) registerStatusTool(ctx, bridge, ensureRun)
 
   ctx.effect(() => async () => {
+    await lifecycle.disposeAll()
     await observations.flush()
     await bridge.close()
   }, 'prompt-control-lab bridge teardown')

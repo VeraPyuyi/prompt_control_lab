@@ -5,10 +5,68 @@ import os
 import subprocess
 import sys
 from pathlib import Path
+from typing import Any
 
 import pytest
 
 from promptcontrollab.files import JsonDict, read_json, read_jsonl, stable_digest
+
+
+def _record_accepted_harness_events(
+    bridge: Any,
+    *,
+    run_id: str,
+    session_id: str,
+    start_sequence: int = 10,
+) -> None:
+    records: list[tuple[str, JsonDict]] = [
+        (
+            "agent/request",
+            {
+                "turn": 1,
+                "step": 1,
+                "request_id": "pcl-request-1",
+                "request_id_source": "prompt_control_lab",
+                "provider": "deepseek",
+                "model": "deepseek-test",
+            },
+        ),
+        (
+            "session/assistant/message",
+            {
+                "turn": 1,
+                "step": 1,
+                "response_id": "assistant-message-1",
+                "provider": "deepseek",
+                "model": "deepseek-test",
+            },
+        ),
+        (
+            "tools/result",
+            {"tool": {"operation_category": "file_read"}, "result": {"is_error": False}},
+        ),
+        (
+            "tools/result",
+            {"tool": {"operation_category": "file_write"}, "result": {"is_error": False}},
+        ),
+        (
+            "tools/result",
+            {"tool": {"operation_category": "test_execution"}, "result": {"is_error": False}},
+        ),
+    ]
+    for offset, (event_type, payload) in enumerate(records):
+        bridge.dispatch(
+            "harness_event",
+            {
+                "run_id": run_id,
+                "session_id": session_id,
+                "idempotency_key": f"acceptance-{start_sequence + offset}",
+                "event_type": event_type,
+                "sequence": start_sequence + offset,
+                "timestamp": "2026-08-23T00:00:00Z",
+                "payload": payload,
+            },
+        )
 
 
 def test_stdio_bridge_handles_a_persistent_control_lifecycle(tmp_path: Path) -> None:
@@ -560,6 +618,8 @@ def test_harness_bridge_supports_pending_prompt_gate_events_status_and_finalize(
         "runs_root": str(runs_root),
         "harness_version": HARNESS_VERSION,
         "harness_commit": HARNESS_COMMIT,
+        "session_origin": "live_cordis",
+        "bridge_transport": "persistent_stdio",
     }
     started = bridge.dispatch("harness_session_start", start_params)
     run_id = str(started["run_id"])
@@ -689,6 +749,11 @@ def test_harness_bridge_supports_pending_prompt_gate_events_status_and_finalize(
             {"run_id": run_id, "session_id": "different-session"},
         )
 
+    _record_accepted_harness_events(
+        bridge,
+        run_id=run_id,
+        session_id=session_id,
+    )
     finalized = bridge.dispatch(
         "harness_finalize",
         {"run_id": run_id, "session_id": session_id},
@@ -735,6 +800,8 @@ def test_harness_finalized_resume_allocates_one_fresh_idempotent_run(
         "runs_root": str(runs_root),
         "harness_version": HARNESS_VERSION,
         "harness_commit": HARNESS_COMMIT,
+        "session_origin": "live_cordis",
+        "bridge_transport": "persistent_stdio",
     }
     first = bridge.dispatch("harness_session_start", start_params)
     first_run_id = str(first["run_id"])
@@ -751,6 +818,11 @@ def test_harness_finalized_resume_allocates_one_fresh_idempotent_run(
             "policy_path": None,
             "feedback_max_chars": 100,
         },
+    )
+    _record_accepted_harness_events(
+        bridge,
+        run_id=first_run_id,
+        session_id=session_id,
     )
     bridge.dispatch(
         "harness_finalize",

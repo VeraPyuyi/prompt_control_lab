@@ -96,6 +96,12 @@ pcl harness doctor --project . --json
 
 Doctor is offline. It checks the local config schema, redacted capture, compatibility lock, Python bridge health, Node version, and packaged plugin files. A passing result does not prove that the active Harness profile loaded the row, that a provider credential works, or that a live session emitted events. Verify those separately with a bounded Harness run.
 
+A completed live acceptance additionally requires `session_origin=live_cordis`, the persistent
+stdio transport, the pinned Harness version/commit, and lifecycle events carrying bridge source
+sequence and timestamp fields. Replay data and events appended directly by fixtures cannot satisfy
+this acceptance. These checks establish the captured native lifecycle path; they still do not prove
+a provider's hidden model weights or the semantic safety of every action.
+
 ## Exact Event Mapping
 
 Harness distinguishes live Cordis events from durable session events. `turn/*`, `step/*`, `tool/call`, `tool/result`, and `compaction/*` arrive through the Cordis `session/event` listener; they are not same-named Cordis events.
@@ -177,6 +183,14 @@ pcl harness replay --session <session.jsonl> --out runs/harness-replay --json
 ```
 
 Replay requires at least one user prompt so it can perform an honest preflight. It hashes content, removes hidden reasoning and raw content from persisted events, records the source-session hash, and does not rerun the agent.
+
+If the external Harness process exits before plugin teardown runs, close the local run explicitly:
+
+```bash
+pcl harness finalize --runs .promptcontrol/runs --session <session-or-run-id> --outcome failed --exit-code 1 --json
+```
+
+This command does not invent missing activity. If no preflight was observed, it records an incomplete run with `insufficient_evidence` and states that no model request, tool execution, or code change was proven.
 
 Resolve a local report by Harness session id or PromptControlLab run id:
 

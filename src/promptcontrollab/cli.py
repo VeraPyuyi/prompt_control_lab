@@ -46,6 +46,7 @@ from promptcontrollab.files import JsonDict, ensure_dir, read_json, write_json
 from promptcontrollab.gate import run_gate
 from promptcontrollab.harness_integration import (
     doctor_harness,
+    finalize_harness_run,
     initialize_harness_project,
     replay_harness_session,
     resolve_harness_report,
@@ -69,7 +70,19 @@ from promptcontrollab.peoc_import import (
 )
 from promptcontrollab.plugin_installer import install_plugin
 from promptcontrollab.posttrain_gate import run_posttrain_gate
-from promptcontrollab.posttrain_pilot import PilotInputs, build_sft_pilot_plan
+from promptcontrollab.posttrain_pilot import (
+    PilotInputs,
+    build_sft_pilot_plan,
+    write_model_provenance,
+)
+from promptcontrollab.posttrain_pilot_data import (
+    GSM8K_DATASET_ID,
+    GSM8K_DATASET_REVISION,
+    PILOT_SELECTION_SEED,
+    load_gsm8k_jsonl,
+    prepare_sft_pilot_data,
+    prepare_sft_pilot_data_from_huggingface,
+)
 from promptcontrollab.posttrain_pilot_runner import execute_sft_pilot
 from promptcontrollab.pr_summary import write_pr_summary
 from promptcontrollab.prompt_context import load_prompt_context
@@ -99,6 +112,7 @@ from promptcontrollab.server_evidence import (
     import_evidence_manifest,
     merge_evidence_manifests,
     scan_evidence_root,
+    validate_evidence_destination,
 )
 from promptcontrollab.soft_hard import analyze_soft_hard
 from promptcontrollab.splitting import load_tasks, make_split, write_split
@@ -686,6 +700,20 @@ def build_parser() -> argparse.ArgumentParser:
     )
     harness_replay_parser.add_argument("--json", action="store_true", help="Emit stable JSON.")
     harness_replay_parser.set_defaults(func=_cmd_harness_replay)
+    harness_finalize_parser = harness_subcommands.add_parser(
+        "finalize",
+        help="Explicitly close a Harness control run after the external process exits.",
+    )
+    harness_finalize_parser.add_argument("--runs", type=Path, required=True)
+    harness_finalize_parser.add_argument("--session", required=True)
+    harness_finalize_parser.add_argument(
+        "--outcome",
+        choices=["completed", "failed", "cancelled"],
+        default="completed",
+    )
+    harness_finalize_parser.add_argument("--exit-code", type=int, default=None)
+    harness_finalize_parser.add_argument("--json", action="store_true", help="Emit stable JSON.")
+    harness_finalize_parser.set_defaults(func=_cmd_harness_finalize)
     harness_report_parser = harness_subcommands.add_parser(
         "report",
         help="Resolve an existing Harness control report.",
@@ -1388,11 +1416,22 @@ def build_parser() -> argparse.ArgumentParser:
         help="Plan or execute the guarded three-stage local LoRA checkpoint pilot.",
     )
     pilot_parser.add_argument("--model", type=Path, required=True, help="Cached local model path.")
+    pilot_parser.add_argument(
+        "--model-provenance",
+        type=Path,
+        help="External model snapshot provenance manifest. Defaults beside the model directory.",
+    )
     pilot_parser.add_argument("--train", type=Path, required=True)
     pilot_parser.add_argument("--validation", type=Path, required=True)
     pilot_parser.add_argument("--withheld", type=Path, required=True)
     pilot_parser.add_argument("--format-fixture", type=Path, required=True)
     pilot_parser.add_argument("--out", type=Path, required=True)
+    pilot_parser.add_argument(
+        "--runtime-root",
+        type=Path,
+        default=Path(os.environ.get("PCL_RUNTIME_ROOT", "/root/prompt_control_lab_runtime")),
+        help="Isolated root that must contain every resource used by --execute.",
+    )
     pilot_parser.add_argument("--seed", type=int, action="append", dest="seeds")
     pilot_parser.add_argument("--max-steps", type=int, default=60)
     pilot_parser.add_argument("--execute", action="store_true")
@@ -1401,9 +1440,31 @@ def build_parser() -> argparse.ArgumentParser:
     pilot_parser.add_argument(
         "--lock-file",
         type=Path,
-        default=Path("/tmp/prompt_control_lab_sft_pilot.lock"),
+        help="Global pilot lock. Defaults to <runtime-root>/locks/sft-pilot.lock.",
     )
     pilot_parser.set_defaults(func=_cmd_posttrain_pilot)
+
+    model_provenance_parser = subcommands.add_parser(
+        "posttrain-model-provenance",
+        help="Hash a pinned local model snapshot without modifying the model cache.",
+    )
+    model_provenance_parser.add_argument("--model", type=Path, required=True)
+    model_provenance_parser.add_argument("--model-id", required=True)
+    model_provenance_parser.add_argument("--revision", required=True)
+    model_provenance_parser.add_argument("--out", type=Path, required=True)
+    model_provenance_parser.set_defaults(func=_cmd_posttrain_model_provenance)
+
+    pilot_prepare_parser = subcommands.add_parser(
+        "posttrain-pilot-prepare",
+        help="Prepare the fixed, provenance-bound GSM8K and format pilot splits.",
+    )
+    pilot_prepare_parser.add_argument("--out", type=Path, required=True)
+    pilot_prepare_parser.add_argument("--dataset-id", default=GSM8K_DATASET_ID)
+    pilot_prepare_parser.add_argument("--dataset-revision", default=GSM8K_DATASET_REVISION)
+    pilot_prepare_parser.add_argument("--selection-seed", type=int, default=PILOT_SELECTION_SEED)
+    pilot_prepare_parser.add_argument("--gsm8k-train-jsonl", type=Path, default=None)
+    pilot_prepare_parser.add_argument("--gsm8k-test-jsonl", type=Path, default=None)
+    pilot_prepare_parser.set_defaults(func=_cmd_posttrain_pilot_prepare)
 
     research_import_parser = subcommands.add_parser(
         "research-import",
@@ -2953,6 +3014,16 @@ def _cmd_harness_replay(args: argparse.Namespace) -> None:
     _print_command_payload(payload, compact=args.json)
 
 
+def _cmd_harness_finalize(args: argparse.Namespace) -> None:
+    payload = finalize_harness_run(
+        args.runs,
+        args.session,
+        outcome=args.outcome,
+        exit_code=args.exit_code,
+    )
+    _print_command_payload(payload, compact=args.json)
+
+
 def _cmd_harness_report(args: argparse.Namespace) -> None:
     payload = resolve_harness_report(args.runs, args.session)
     _print_command_payload(payload, compact=args.json)
@@ -3156,6 +3227,7 @@ def _cmd_export_report(args: argparse.Namespace) -> None:
 
 
 def _cmd_evidence_scan(args: argparse.Namespace) -> None:
+    validate_evidence_destination(args.out, protected_roots=(args.root,))
     payload = scan_evidence_root(root=args.root, profile=args.profile)
     write_json(args.out, payload)
     summary = {
@@ -3210,36 +3282,68 @@ def _cmd_posttrain_pilot(args: argparse.Namespace) -> None:
         withheld_path=args.withheld,
         format_fixture_path=args.format_fixture,
         out_dir=args.out,
+        model_provenance_path=args.model_provenance,
+        runtime_root=args.runtime_root,
         seeds=tuple(args.seeds or (0, 1, 2)),
         max_steps=args.max_steps,
     )
-    plan = build_sft_pilot_plan(inputs)
-    ensure_dir(args.out)
-    protocol_path = args.out / "pilot_protocol.json"
-    write_json(protocol_path, plan)
     if not args.execute:
+        plan = build_sft_pilot_plan(inputs)
+        ensure_dir(args.out)
+        protocol_path = args.out / "pilot_protocol.json"
+        write_json(protocol_path, plan)
         print(json.dumps({"status": "plan_only", "protocol": str(protocol_path)}, indent=2))
         return
     if args.approval is None:
         raise ValueError("--execute requires --approval with queue_clear=true")
-    plan["execution_status"] = "running"
-    plan["selected_gpu"] = args.gpu
-    write_json(protocol_path, plan)
-    try:
-        execute_sft_pilot(
-            inputs,
-            approval_path=args.approval,
-            gpu=args.gpu,
-            lock_file=args.lock_file,
-        )
-    except Exception as exc:
-        plan["execution_status"] = "failed"
-        plan["failure_type"] = type(exc).__name__
-        write_json(protocol_path, plan)
-        raise
-    plan["execution_status"] = "complete"
-    write_json(protocol_path, plan)
+    lock_file = args.lock_file or args.runtime_root / "locks" / "sft-pilot.lock"
+    execute_sft_pilot(
+        inputs,
+        approval_path=args.approval,
+        gpu=args.gpu,
+        lock_file=lock_file,
+    )
+    protocol_path = args.out / "pilot_protocol.json"
     print(json.dumps({"status": "complete", "protocol": str(protocol_path)}, indent=2))
+
+
+def _cmd_posttrain_model_provenance(args: argparse.Namespace) -> None:
+    payload = write_model_provenance(
+        args.model,
+        model_id=args.model_id,
+        revision=args.revision,
+        manifest_path=args.out,
+    )
+    print(json.dumps(payload, indent=2, ensure_ascii=False, sort_keys=True))
+
+
+def _cmd_posttrain_pilot_prepare(args: argparse.Namespace) -> None:
+    offline_paths = (args.gsm8k_train_jsonl, args.gsm8k_test_jsonl)
+    if any(path is not None for path in offline_paths) and not all(
+        path is not None for path in offline_paths
+    ):
+        raise ValueError(
+            "Offline preparation requires both --gsm8k-train-jsonl and "
+            "--gsm8k-test-jsonl"
+        )
+    if all(path is not None for path in offline_paths):
+        payload = prepare_sft_pilot_data(
+            train_rows=load_gsm8k_jsonl(args.gsm8k_train_jsonl),
+            test_rows=load_gsm8k_jsonl(args.gsm8k_test_jsonl),
+            out_dir=args.out,
+            dataset_id=args.dataset_id,
+            dataset_revision=args.dataset_revision,
+            selection_seed=args.selection_seed,
+            source_mode="offline_jsonl",
+        )
+    else:
+        payload = prepare_sft_pilot_data_from_huggingface(
+            out_dir=args.out,
+            dataset_id=args.dataset_id,
+            dataset_revision=args.dataset_revision,
+            selection_seed=args.selection_seed,
+        )
+    print(json.dumps(payload, indent=2, ensure_ascii=False, sort_keys=True))
 
 
 def _cmd_research_import_peoc(args: argparse.Namespace) -> None:

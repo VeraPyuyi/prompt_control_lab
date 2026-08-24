@@ -29,7 +29,7 @@ python -m build
 Expected result: `dist/` contains a wheel named like:
 
 ```text
-promptcontrollab-0.1.0-py3-none-any.whl
+promptcontrollab-0.2.0a1-py3-none-any.whl
 ```
 
 Do not commit `dist/` artifacts unless a release process explicitly asks for
@@ -50,7 +50,7 @@ network or proxy access to build dependencies rather than by the project itself.
 Create a temporary environment or use `pipx`:
 
 ```bash
-pipx install dist/promptcontrollab-0.1.0-py3-none-any.whl
+pipx install dist/promptcontrollab-0.2.0a1-py3-none-any.whl
 pcl --help
 pcl doctor
 pcl install-plugin all --target ./tmp-pcl-templates --dry-run
@@ -64,10 +64,10 @@ can write Codex, Cursor, Claude Code, and GitHub Action templates. The prompt-op
 also writes `eval_scaffold/scaffold_check.json` and `.html` from the wheel-installed package.
 
 When the current environment already has the `research` extra installed, also
-verify the paper-derived workflow from the built wheel:
+verify the advanced diagnostic workflow from the built wheel:
 
 ```bash
-python -m pip install --force-reinstall --no-deps dist/promptcontrollab-0.1.0-py3-none-any.whl
+python -m pip install --force-reinstall --no-deps dist/promptcontrollab-0.2.0a1-py3-none-any.whl
 pcl research-quickstart --out ./tmp-pcl-research-demo --open-report
 ```
 

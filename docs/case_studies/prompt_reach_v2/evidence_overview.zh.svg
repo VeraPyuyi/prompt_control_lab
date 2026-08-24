@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="900" viewBox="0 0 1600 900" role="img" aria-labelledby="title desc">
+  <title id="title">Prompt Reach v2 证据概览</title>
+  <desc id="desc">两份只读证据快照经规范化对齐后，形成五类有边界的诊断和一个可携带证据包。</desc>
+  <rect width="1600" height="900" fill="#f6f8fb"/>
+  <text x="80" y="82" font-family="Microsoft YaHei, Arial, sans-serif" font-size="42" font-weight="700" fill="#172b4d">prompt_control_lab · Prompt Reach v2</text>
+  <text x="80" y="128" font-family="Microsoft YaHei, Arial, sans-serif" font-size="24" fill="#526581">只读证据 → 规范化对齐 → 有边界的可解释诊断</text>
+  <rect x="80" y="205" width="340" height="210" rx="8" fill="#ffffff" stroke="#9fb3c8" stroke-width="3"/>
+  <text x="110" y="258" font-family="Microsoft YaHei, Arial, sans-serif" font-size="28" font-weight="700" fill="#1f4b7a">本地快照</text>
+  <text x="110" y="312" font-family="Arial, sans-serif" font-size="52" font-weight="700" fill="#172b4d">198</text>
+  <text x="110" y="354" font-family="Microsoft YaHei, Arial, sans-serif" font-size="23" fill="#526581">条结构化来源记录</text>
+  <text x="110" y="390" font-family="Microsoft YaHei, Arial, sans-serif" font-size="20" fill="#526581">只读 · 哈希化 · 已脱敏</text>
+  <rect x="80" y="485" width="340" height="210" rx="8" fill="#ffffff" stroke="#9fb3c8" stroke-width="3"/>
+  <text x="110" y="538" font-family="Microsoft YaHei, Arial, sans-serif" font-size="28" font-weight="700" fill="#1f4b7a">服务器快照</text>
+  <text x="110" y="592" font-family="Arial, sans-serif" font-size="52" font-weight="700" fill="#172b4d">371</text>
+  <text x="110" y="634" font-family="Microsoft YaHei, Arial, sans-serif" font-size="23" fill="#526581">条结构化来源记录</text>
+  <text x="110" y="670" font-family="Microsoft YaHei, Arial, sans-serif" font-size="20" fill="#526581">额外 173 条 · 冲突 0 条</text>
+  <path d="M430 310 H530" stroke="#2f80ed" stroke-width="6" fill="none"/>
+  <path d="M430 590 H530" stroke="#2f80ed" stroke-width="6" fill="none"/>
+  <path d="M515 294 L545 310 L515 326 Z" fill="#2f80ed"/>
+  <path d="M515 574 L545 590 L515 606 Z" fill="#2f80ed"/>
+  <rect x="550" y="205" width="430" height="490" rx="8" fill="#ffffff" stroke="#2f80ed" stroke-width="4"/>
+  <text x="590" y="264" font-family="Microsoft YaHei, Arial, sans-serif" font-size="30" font-weight="700" fill="#153e75">五类诊断 Adapter</text>
+  <g font-family="Microsoft YaHei, Arial, sans-serif" font-size="24" fill="#243b53">
+    <text x="600" y="333">1 · Prompt 可达性</text>
+    <text x="600" y="400">2 · Readout 对齐</text>
+    <text x="600" y="467">3 · Prompt 路由</text>
+    <text x="600" y="534">4 · Prompt 投影</text>
+    <text x="600" y="601">5 · Prompt 稳定性</text>
+  </g>
+  <text x="600" y="655" font-family="Microsoft YaHei, Arial, sans-serif" font-size="20" fill="#7b341e">4 项已观测 · 1 项需要重分析</text>
+  <path d="M990 450 H1090" stroke="#2f80ed" stroke-width="6" fill="none"/>
+  <path d="M1075 434 L1105 450 L1075 466 Z" fill="#2f80ed"/>
+  <rect x="1110" y="205" width="410" height="490" rx="8" fill="#ffffff" stroke="#3b8c6e" stroke-width="4"/>
+  <text x="1150" y="264" font-family="Microsoft YaHei, Arial, sans-serif" font-size="30" font-weight="700" fill="#276749">可携带证据包</text>
+  <g font-family="Microsoft YaHei, Arial, sans-serif" font-size="22" fill="#243b53">
+    <text x="1150" y="333">观察结果</text>
+    <text x="1150" y="395">解释范围</text>
+    <text x="1150" y="457">结论边界</text>
+    <text x="1150" y="519">下一步行动</text>
+    <text x="1150" y="581">来源哈希</text>
+  </g>
+  <rect x="1150" y="624" width="320" height="42" rx="6" fill="#e6fffa"/>
+  <text x="1170" y="653" font-family="Microsoft YaHei, Arial, sans-serif" font-size="19" font-weight="700" fill="#276749">不含原始 Prompt 或模型权重</text>
+  <rect x="80" y="760" width="1440" height="76" rx="8" fill="#172b4d"/>
+  <text x="120" y="808" font-family="Microsoft YaHei, Arial, sans-serif" font-size="25" fill="#ffffff">这是有边界的解释性证据，不是普遍提升声明或严格因果证明。</text>
+</svg>

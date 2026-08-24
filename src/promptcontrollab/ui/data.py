@@ -27,6 +27,20 @@ CONTROL_ARTIFACTS = (
     "report.html",
 )
 
+PROMPT_REACH_ARTIFACTS = (
+    "prompt_reachability",
+    "readout_alignment",
+    "prompt_routing",
+    "prompt_projection",
+    "prompt_stability",
+)
+
+_PROMPT_REACH_PATHS = tuple(
+    path
+    for name in PROMPT_REACH_ARTIFACTS
+    for path in (f"{name}.json", f"diagnostics/{name}.json")
+)
+
 RUN_ARTIFACTS = [
     *CONTROL_ARTIFACTS,
     "manifest.json",
@@ -50,6 +64,8 @@ RUN_ARTIFACTS = [
     "posttrain_gate.json",
     "checkpoint_comparison.json",
     "mechanism_attribution.json",
+    "decision_trace.json",
+    *_PROMPT_REACH_PATHS,
     "research_bundle.json",
     "research_bundle.html",
     "research_overview.svg",
@@ -102,6 +118,8 @@ RUN_LEVEL_ARTIFACTS = [
     "posttrain_gate.json",
     "checkpoint_comparison.json",
     "mechanism_attribution.json",
+    "decision_trace.json",
+    *_PROMPT_REACH_PATHS,
     "research_bundle.json",
     "research_bundle.html",
     "research_overview.svg",
@@ -167,9 +185,14 @@ def load_run_detail(run_dir: Path) -> JsonDict:
     decision = _read_control_json(run_dir / "decision.json")
     provider_result = _read_control_json(run_dir / "provider_result.json")
     audit = cast(JsonDict, redact_for_display(model.audit))
+    prompt_reach_artifacts, prompt_reach_paths = _load_prompt_reach_artifacts(run_dir)
+    decision_trace = _read_control_json(run_dir / "decision_trace.json")
     control_artifacts = [name for name in CONTROL_ARTIFACTS if (run_dir / name).exists()]
     artifacts = [*model.artifacts]
     artifacts.extend(name for name in control_artifacts if name not in artifacts)
+    artifacts.extend(name for name in prompt_reach_paths if name not in artifacts)
+    if decision_trace and "decision_trace.json" not in artifacts:
+        artifacts.append("decision_trace.json")
     return {
         "name": run_dir.name,
         "path": str(run_dir),
@@ -202,6 +225,8 @@ def load_run_detail(run_dir: Path) -> JsonDict:
         "posttrain_gate": model.posttrain_gate,
         "checkpoint_comparison": model.checkpoint_comparison,
         "mechanism_attribution": model.mechanism_attribution,
+        "prompt_reach_artifacts": prompt_reach_artifacts,
+        "decision_trace": decision_trace,
         "research_diagnostics": model.research_diagnostics,
         "research_gap_plan": model.research_gap_plan,
         "research_gap_status": model.research_gap_status,
@@ -273,18 +298,225 @@ def interpretability_rows(detail: JsonDict) -> list[JsonDict]:
         finding = cast(JsonDict, raw)
         rows.append(
             {
-                "adapter": finding.get("adapter"),
+                "adapter": finding.get("adapter") or finding.get("dimension"),
                 "role": finding.get("interpretation_role"),
                 "status": finding.get("support_status"),
                 "confidence": finding.get("confidence"),
                 "observation": finding.get("observation"),
                 "explanation": finding.get("explanation"),
+                "observed": finding.get("observation"),
+                "explains": finding.get("explanation"),
                 "scope": finding.get("scope"),
                 "claim_boundary": finding.get("claim_boundary"),
+                "does_not_prove": finding.get("claim_boundary"),
                 "next_action": finding.get("next_action"),
             }
         )
     return rows
+
+
+def prompt_reach_interpretation_rows(
+    detail: JsonDict,
+    language: str = "en",
+) -> list[JsonDict]:
+    """Normalize the five prompt-reach diagnostics into explanation-first rows."""
+
+    artifacts_value = detail.get("prompt_reach_artifacts")
+    artifacts = artifacts_value if isinstance(artifacts_value, dict) else {}
+    rows: list[JsonDict] = []
+    for name in PROMPT_REACH_ARTIFACTS:
+        raw = artifacts.get(name)
+        if not isinstance(raw, dict):
+            continue
+        payload = cast(JsonDict, raw)
+        defaults = _prompt_reach_defaults(name, language)
+        status = (
+            payload.get("support_status")
+            or payload.get("evidence_status")
+            or payload.get("applicability")
+            or "unknown"
+        )
+        rows.append(
+            {
+                "adapter": name,
+                "role": payload.get("interpretation_role") or defaults["role"],
+                "status": status,
+                "confidence": payload.get("confidence") or "unknown",
+                "observed": (
+                    payload.get("observation")
+                    or payload.get("reason")
+                    or _prompt_reach_metric_observation(name, payload, language)
+                ),
+                "explains": payload.get("explanation") or defaults["explains"],
+                "does_not_prove": payload.get("claim_boundary")
+                or defaults["does_not_prove"],
+                "next_action": payload.get("next_action") or defaults["next_action"],
+                "metrics": payload.get("metrics") or {},
+            }
+        )
+    return rows
+
+
+def decision_trace_interpretation_rows(
+    detail: JsonDict,
+    language: str = "en",
+) -> list[JsonDict]:
+    """Normalize post-training decision checks into the same four-part UI contract."""
+
+    trace_value = detail.get("decision_trace")
+    trace = trace_value if isinstance(trace_value, dict) else {}
+    checks = trace.get("checks")
+    if isinstance(checks, dict):
+        check_rows = [
+            {"check": name, **cast(JsonDict, value)}
+            for name, value in checks.items()
+            if isinstance(value, dict)
+        ]
+    elif isinstance(checks, list):
+        check_rows = [cast(JsonDict, value) for value in checks if isinstance(value, dict)]
+    else:
+        check_rows = []
+    boundary = str(
+        trace.get("claim_boundary")
+        or (
+            "The gate trace records configured checks; it does not prove causality or safety."
+            if language == "en"
+            else "门禁轨迹记录的是已配置检查, 不能证明因果关系或安全性。"
+        )
+    )
+    rows: list[JsonDict] = []
+    for check in check_rows:
+        impact = str(check.get("impact") or "none")
+        explanation = (
+            f"This check contributes {impact} to the recorded checkpoint decision."
+            if language == "en"
+            else f"这项检查对已记录的 checkpoint 决策产生 {impact} 影响。"
+        )
+        evidence = check.get("evidence")
+        rows.append(
+            {
+                "adapter": check.get("check") or "unnamed_check",
+                "role": "decision",
+                "status": check.get("status") or "unknown",
+                "confidence": check.get("confidence") or "unknown",
+                "observed": check.get("observed"),
+                "explains": check.get("explanation") or explanation,
+                "does_not_prove": boundary,
+                "next_action": check.get("next_action")
+                or (
+                    "Review the recorded evidence for this check."
+                    if language == "en"
+                    else "复核这项检查对应的已记录证据。"
+                ),
+                "threshold": check.get("threshold"),
+                "evidence": evidence if isinstance(evidence, list) else [],
+            }
+        )
+    return rows
+
+
+def _load_prompt_reach_artifacts(run_dir: Path) -> tuple[JsonDict, list[str]]:
+    artifacts: JsonDict = {}
+    paths: list[str] = []
+    for name in PROMPT_REACH_ARTIFACTS:
+        for relative in (Path(f"{name}.json"), Path("diagnostics") / f"{name}.json"):
+            payload = _read_control_json(run_dir / relative)
+            if payload:
+                artifacts[name] = payload
+                paths.append(relative.as_posix())
+                break
+    return artifacts, paths
+
+
+def _prompt_reach_metric_observation(
+    name: str,
+    payload: JsonDict,
+    language: str,
+) -> str:
+    fields = {
+        "prompt_reachability": ("representation_shift_l2_normalized", "score_delta"),
+        "readout_alignment": ("alignment_gap", "teacher_forced_score", "free_generation_score"),
+        "prompt_routing": (),
+        "prompt_projection": (),
+        "prompt_stability": ("mean_step_drift",),
+    }[name]
+    values = [f"{key}={payload[key]}" for key in fields if payload.get(key) is not None]
+    if values:
+        prefix = "Recorded" if language == "en" else "已记录"
+        return f"{prefix}: {', '.join(values)}."
+    return (
+        "The artifact is present, but it contains no concise supported observation."
+        if language == "en"
+        else "该 artifact 已存在, 但没有可简洁展示的受支持观测值。"
+    )
+
+
+def _prompt_reach_defaults(name: str, language: str) -> JsonDict:
+    english: dict[str, JsonDict] = {
+        "prompt_reachability": {
+            "role": "mechanism",
+            "explains": "How reachable prompt-conditioned representations differ across runs.",
+            "does_not_prove": "It does not prove a unique causal representation path.",
+            "next_action": "Compare matched checkpoints and seeds.",
+        },
+        "readout_alignment": {
+            "role": "mechanism",
+            "explains": "How closely the recorded readout agrees with generated answers.",
+            "does_not_prove": "It does not identify a unique hidden mechanism.",
+            "next_action": "Inspect tasks with the largest alignment gap.",
+        },
+        "prompt_routing": {
+            "role": "boundary",
+            "explains": "Whether routing-specific evidence was recorded.",
+            "does_not_prove": "Without an intervention, it does not prove a routing mechanism.",
+            "next_action": "Add a controlled routing intervention if routing is material.",
+        },
+        "prompt_projection": {
+            "role": "boundary",
+            "explains": "Whether soft-to-hard prompt projection is applicable and measured.",
+            "does_not_prove": "A not-applicable result says nothing about other deployment paths.",
+            "next_action": "Run projection diagnostics only for soft-prompt deployment.",
+        },
+        "prompt_stability": {
+            "role": "stability",
+            "explains": "How consistent the observed prompt-conditioned trajectory is.",
+            "does_not_prove": "It is not a global model stability guarantee.",
+            "next_action": "Compare matched seeds and heterogeneous task slices.",
+        },
+    }
+    chinese: dict[str, JsonDict] = {
+        "prompt_reachability": {
+            "role": "mechanism",
+            "explains": "不同运行中, Prompt 条件表示的可达范围如何变化。",
+            "does_not_prove": "它不能证明唯一的因果表示路径。",
+            "next_action": "比较配对 checkpoint 与多个 seed。",
+        },
+        "readout_alignment": {
+            "role": "mechanism",
+            "explains": "已记录 readout 与自由生成答案的对齐程度。",
+            "does_not_prove": "它不能识别唯一的隐藏机制。",
+            "next_action": "检查 alignment gap 最大的任务。",
+        },
+        "prompt_routing": {
+            "role": "boundary",
+            "explains": "是否记录了与 Prompt 路由直接相关的证据。",
+            "does_not_prove": "没有受控干预时, 不能证明存在特定路由机制。",
+            "next_action": "如果路由很重要, 应增加受控路由干预。",
+        },
+        "prompt_projection": {
+            "role": "boundary",
+            "explains": "soft-to-hard Prompt 投影是否适用并被测量。",
+            "does_not_prove": "不适用结果不能说明其他部署路径的风险。",
+            "next_action": "仅在部署 soft prompt 时运行投影诊断。",
+        },
+        "prompt_stability": {
+            "role": "stability",
+            "explains": "观测到的 Prompt 条件轨迹是否一致。",
+            "does_not_prove": "它不是模型全局稳定性保证。",
+            "next_action": "比较多个匹配 seed 和异质任务切片。",
+        },
+    }
+    return (english if language == "en" else chinese)[name]
 
 
 def evidence_matrix_rows(detail: JsonDict) -> list[JsonDict]:

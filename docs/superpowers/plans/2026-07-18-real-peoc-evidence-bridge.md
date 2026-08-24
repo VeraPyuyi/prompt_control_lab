@@ -1525,7 +1525,7 @@ Run:
 
 ```powershell
 python -m promptcontrollab research-import peoc `
-  --bundle "D:\Vibe Research Projects\02-Prompt-Engineering-Optimal-Control\experiments\nmi_replication_bundle" `
+  --bundle "<read-only-peoc-root>\experiments\nmi_replication_bundle" `
   --out runs\peoc-real `
   --language en `
   --overwrite
@@ -1565,7 +1565,7 @@ Run:
 
 ```powershell
 python -m promptcontrollab research-import peoc `
-  --bundle "D:\Vibe Research Projects\02-Prompt-Engineering-Optimal-Control\experiments\nmi_replication_bundle" `
+  --bundle "<read-only-peoc-root>\experiments\nmi_replication_bundle" `
   --out runs\peoc-real-portable `
   --portable `
   --overwrite

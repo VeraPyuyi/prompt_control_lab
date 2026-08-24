@@ -52,6 +52,7 @@ from promptcontrollab.ui.data import (
     changed_line_rows,
     claim_check_summary,
     claim_evidence_ladder,
+    decision_trace_interpretation_rows,
     deepseek_harness_view,
     ecosystem_demo_rows,
     ecosystem_evidence_matrix_rows,
@@ -80,6 +81,7 @@ from promptcontrollab.ui.data import (
     prompt_asset_rows,
     prompt_asset_summary,
     prompt_optimizer_gap_rows,
+    prompt_reach_interpretation_rows,
     research_at_a_glance_rows,
     research_diagnostic_rows,
     research_evidence_map,
@@ -140,6 +142,25 @@ PRIMARY_VIEW_LABELS = {
         "evidence": "证据边界",
         "decision": "决策",
         "history": "历史",
+    },
+}
+
+INTERPRETATION_LABELS = {
+    "en": {
+        "observed": "Observed",
+        "explains": "Explains",
+        "does_not_prove": "Does not prove",
+        "next_action": "Next action",
+        "status": "Status",
+        "confidence": "Confidence",
+    },
+    "zh": {
+        "observed": "观察到了什么",
+        "explains": "可以解释什么",
+        "does_not_prove": "不能证明什么",
+        "next_action": "下一步行动",
+        "status": "状态",
+        "confidence": "置信度",
     },
 }
 LEGACY_VIEW_GROUPS = {
@@ -1913,15 +1934,20 @@ def _render_why_view(st: Any, language: str, detail: JsonDict) -> None:
 
 def _render_mechanism_view(st: Any, language: str, detail: JsonDict) -> None:
     _render_why_view(st, language, detail)
-    rows = [
+    prompt_rows = [
+        row
+        for row in prompt_reach_interpretation_rows(detail, language)
+        if row.get("role") in {"mechanism", "boundary"}
+    ]
+    report_rows = [
         row
         for row in interpretability_rows(detail)
         if row.get("role") in {"mechanism", "boundary"}
     ]
+    rows = _merge_interpretation_records(prompt_rows, report_rows)
     title = "Mechanism and boundary findings" if language == "en" else "机制与适用边界"
     if rows:
-        st.markdown(f"### {title}")
-        st.dataframe(rows, use_container_width=True, hide_index=True)
+        _render_interpretation_records(st, rows, language, title=title)
 
 
 def _render_after_view(
@@ -1980,15 +2006,20 @@ def _render_stability_view(
     detail: JsonDict,
 ) -> None:
     _render_after_view(st, text, language, detail)
-    rows = [
+    prompt_rows = [
+        row
+        for row in prompt_reach_interpretation_rows(detail, language)
+        if row.get("role") in {"stability", "uncertainty"}
+    ]
+    report_rows = [
         row
         for row in interpretability_rows(detail)
         if row.get("role") in {"stability", "uncertainty"}
     ]
+    rows = _merge_interpretation_records(prompt_rows, report_rows)
     title = "Stability and uncertainty findings" if language == "en" else "稳定性与不确定性"
     if rows:
-        st.markdown(f"### {title}")
-        st.dataframe(rows, use_container_width=True, hide_index=True)
+        _render_interpretation_records(st, rows, language, title=title)
 
 
 def _render_training_gate_view(st: Any, language: str, detail: JsonDict) -> None:
@@ -1996,9 +2027,10 @@ def _render_training_gate_view(st: Any, language: str, detail: JsonDict) -> None
     gate = _dict(detail.get("posttrain_gate"))
     comparison = _dict(detail.get("checkpoint_comparison"))
     attribution = _dict(detail.get("mechanism_attribution"))
+    trace_rows = decision_trace_interpretation_rows(detail, language)
     st.subheader(control_text["training_title"])
     st.caption(control_text["training_caption"])
-    if not gate:
+    if not gate and not trace_rows:
         command = (
             "pcl posttrain-gate --baseline runs/checkpoint-000 "
             "--candidate runs/checkpoint-500 --policy examples/posttrain.policy.yaml "
@@ -2053,6 +2085,13 @@ def _render_training_gate_view(st: Any, language: str, detail: JsonDict) -> None
     if findings:
         st.markdown("### Mechanism attribution" if language == "en" else "### 机制归因")
         st.dataframe(findings, use_container_width=True, hide_index=True)
+    if trace_rows:
+        _render_interpretation_records(
+            st,
+            trace_rows,
+            language,
+            title="Decision trace" if language == "en" else "决策轨迹",
+        )
     st.caption(str(gate.get("claim_boundary") or ""))
 
 
@@ -2113,10 +2152,17 @@ def _render_advanced_view(
     matrix = evidence_matrix_rows(detail)
     if matrix:
         st.dataframe(matrix, use_container_width=True, hide_index=True)
-    findings = interpretability_rows(detail)
+    findings = _merge_interpretation_records(
+        prompt_reach_interpretation_rows(detail, language),
+        interpretability_rows(detail),
+    )
     if findings:
-        st.markdown("### Explanation records" if language == "en" else "### 可解释性记录")
-        st.dataframe(findings, use_container_width=True, hide_index=True)
+        _render_interpretation_records(
+            st,
+            findings,
+            language,
+            title="Explanation records" if language == "en" else "可解释性记录",
+        )
     with st.expander(control_text["legacy_research"], expanded=True):
         _render_research_overview_tab(st, text, detail, language)
 
@@ -2128,6 +2174,59 @@ def _render_evidence_scope_view(
     detail: JsonDict,
 ) -> None:
     _render_advanced_view(st, text, language, detail)
+
+
+def _render_interpretation_records(
+    st: Any,
+    rows: list[JsonDict],
+    language: str,
+    *,
+    title: str | None = None,
+) -> None:
+    """Render bounded diagnostic findings with one shared bilingual structure."""
+
+    labels = INTERPRETATION_LABELS[language]
+    if title:
+        st.markdown(f"### {title}")
+    for row in rows:
+        name = str(row.get("adapter") or "diagnostic")
+        status = str(row.get("status") or "unknown")
+        confidence = str(row.get("confidence") or "unknown")
+        st.markdown(f"#### `{name}`")
+        st.markdown(
+            f"**{labels['status']}:** {html.escape(status)} · "
+            f"**{labels['confidence']}:** {html.escape(confidence)}"
+        )
+        for key in ("observed", "explains", "does_not_prove", "next_action"):
+            value = row.get(key)
+            rendered = _interpretation_value(value)
+            st.markdown(f"**{labels[key]}:** {html.escape(rendered)}")
+
+
+def _merge_interpretation_records(
+    primary: list[JsonDict],
+    secondary: list[JsonDict],
+) -> list[JsonDict]:
+    """Prefer direct diagnostic artifacts and append non-duplicate report findings."""
+
+    rows: list[JsonDict] = []
+    seen: set[str] = set()
+    for row in [*primary, *secondary]:
+        identity = str(row.get("adapter") or row.get("dimension") or "")
+        if identity and identity in seen:
+            continue
+        if identity:
+            seen.add(identity)
+        rows.append(row)
+    return rows
+
+
+def _interpretation_value(value: object) -> str:
+    if value is None or value == "":
+        return "unknown"
+    if isinstance(value, dict | list):
+        return json.dumps(value, ensure_ascii=False, sort_keys=True, default=str)
+    return str(value)
 
 
 def _hide_streamlit_chrome(st: Any) -> None:

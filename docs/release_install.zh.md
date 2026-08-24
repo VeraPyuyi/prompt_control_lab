@@ -27,7 +27,7 @@ python -m build
 预期结果：`dist/` 中出现类似下面的 wheel：
 
 ```text
-promptcontrollab-0.1.0-py3-none-any.whl
+promptcontrollab-0.2.0a1-py3-none-any.whl
 ```
 
 除非正式 release 流程明确要求，不要把 `dist/` 产物提交进仓库。
@@ -47,7 +47,7 @@ python -m build --wheel --no-isolation
 可以创建临时环境，或用 `pipx`：
 
 ```bash
-pipx install dist/promptcontrollab-0.1.0-py3-none-any.whl
+pipx install dist/promptcontrollab-0.2.0a1-py3-none-any.whl
 pcl --help
 pcl doctor
 pcl install-plugin all --target ./tmp-pcl-templates --dry-run
@@ -60,10 +60,10 @@ pcl scaffold-check --run ./tmp-pcl-prompt-optimizer
 Claude Code 和 GitHub Action 模板。prompt-optimizer 桥接也能通过 wheel 安装后的包写出
 `eval_scaffold/scaffold_check.json` 和 `.html`。
 
-如果当前环境已经安装了 `research` extra，也要用构建出的 wheel 验证论文研究流程：
+如果当前环境已经安装了 `research` extra，也要用构建出的 wheel 验证高级诊断流程：
 
 ```bash
-python -m pip install --force-reinstall --no-deps dist/promptcontrollab-0.1.0-py3-none-any.whl
+python -m pip install --force-reinstall --no-deps dist/promptcontrollab-0.2.0a1-py3-none-any.whl
 pcl research-quickstart --out ./tmp-pcl-research-demo --language zh --open-report
 ```
 

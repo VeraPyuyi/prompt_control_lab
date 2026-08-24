@@ -1,0 +1,30 @@
+{
+  "schema": "prompt_control_lab.deepseek_harness_live_status.v1",
+  "checked_at": "2026-08-24T11:05:00Z",
+  "harness": {
+    "version": "0.1.1-rc.2",
+    "commit": "b150a551b8d465e31e418e1b2eaf5e79bbb7d28e"
+  },
+  "integration_evidence": {
+    "native_plugin_built": true,
+    "typescript_contract_tests_passed": 27,
+    "cordis_profile_resolved": true,
+    "persistent_bridge_started": true,
+    "redacted_control_run_created": true,
+    "incomplete_run_finalization_verified": true,
+    "machine_acceptance_enforced": true,
+    "fixture_replay_rejected_from_live_acceptance": true
+  },
+  "live_acceptance": {
+    "credential_available": false,
+    "model_request_observed": false,
+    "provider_request_id_recorded": false,
+    "tool_read_observed": false,
+    "controlled_file_edit_observed": false,
+    "test_execution_observed": false,
+    "accepted": false
+  },
+  "decision": "blocked_missing_provider_credential",
+  "next_action": "Provide DEEPSEEK_API_KEY through the local environment or secret store, then run the bounded disposable-repository session.",
+  "claim_boundary": "This snapshot proves local plugin, profile, bridge, redaction, and interrupted-run reporting behavior. It is not a real DeepSeek Harness model or tool execution session."
+}

@@ -51,12 +51,17 @@ test('autoRecover intent is transmitted and automatic steering stays bounded', a
     const start = calls.find(call => call.method === 'harness_session_start')
     assert.equal(start.params.auto_recover, true)
     assert.equal(start.params.max_auto_recoveries, 1)
+    assert.equal(start.params.session_origin, 'live_cordis')
+    assert.equal(start.params.bridge_transport, 'persistent_stdio')
 
     await handlers.get('agent/turn-stopping')({ agent, turn: 1 })
     await handlers.get('agent/turn-stopping')({ agent, turn: 2 })
     assert.equal(calls.filter(call => call.method === 'harness_turn_end').length, 1)
     assert.equal(steers.length, 1)
     assert.deepEqual(warnings, [])
+    await cleanup()
+    cleanup = async () => {}
+    assert.equal(calls.filter(call => call.method === 'harness_finalize').length, 1)
   } finally {
     await cleanup()
     JsonRpcBridgeClient.prototype.call = originalCall

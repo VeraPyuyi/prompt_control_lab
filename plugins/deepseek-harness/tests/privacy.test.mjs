@@ -34,6 +34,7 @@ test('tool projections contain hashes and status, never raw values', () => {
   })
   const serialized = JSON.stringify({ tool, result })
   assert.equal(tool.argument_keys.join(','), 'api_key,path')
+  assert.equal(tool.operation_category, 'file_write')
   assert.match(tool.argument_hash, /^sha256:/)
   assert.equal(result.content_block_count, 1)
   assert.doesNotMatch(serialized, /sk-super-secret|secret output/)
@@ -54,14 +55,32 @@ test('session projection drops prompt, assistant text, and hidden reasoning', ()
     seq: 5,
     time: 1_700_000_000_001,
     data: {
-      message: { content: [{ type: 'reasoning', text: 'hidden chain' }] },
+      message: {
+        id: 'assistant-message-1',
+        source: { kind: 'model', provider: 'deepseek', model: 'deepseek-chat' },
+        content: [{ type: 'reasoning', text: 'hidden chain' }],
+      },
       usage: { inputTokens: 10, outputTokens: 4 },
     },
   })
   const serialized = JSON.stringify({ user, assistant })
   assert.deepEqual(user.harness_guard_signals, ['repeat_tool_reminder'])
   assert.equal(assistant.usage.input_tokens, 10)
+  assert.equal(assistant.response_id, 'assistant-message-1')
+  assert.equal(assistant.provider, 'deepseek')
+  assert.equal(assistant.model, 'deepseek-chat')
   assert.doesNotMatch(serialized, /private prompt|hidden chain/)
+})
+
+test('tool projections classify test execution without persisting commands', () => {
+  const tool = safeToolMetadata({
+    callId: 'call-2',
+    name: 'bash',
+    arguments: { command: 'pytest tests/test_auth.py -q' },
+  })
+
+  assert.equal(tool.operation_category, 'test_execution')
+  assert.doesNotMatch(JSON.stringify(tool), /pytest|test_auth/)
 })
 
 test('token-level session events are filtered before observation', () => {

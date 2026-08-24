@@ -121,6 +121,217 @@ def test_interpretability_and_posttrain_artifacts_are_loaded_for_core_views(
     assert evidence_matrix_rows(detail)[0]["status"] == "observed"
 
 
+def test_prompt_reach_artifacts_and_decision_trace_are_loaded_and_normalized(
+    tmp_path: Path,
+) -> None:
+    from promptcontrollab.ui.data import (
+        decision_trace_interpretation_rows,
+        prompt_reach_interpretation_rows,
+    )
+
+    run = tmp_path / "runs" / "checkpoint-gate"
+    payloads = {
+        "prompt_reachability": {
+            "interpretation_role": "mechanism",
+            "observation": "The candidate representation moved by 0.12.",
+            "explanation": "The prompt-conditioned representation changed across checkpoints.",
+            "claim_boundary": "This does not identify a unique causal path.",
+            "next_action": "Compare matched seeds.",
+        },
+        "readout_alignment": {
+            "interpretation_role": "mechanism",
+            "alignment_gap": 0.08,
+            "claim_boundary": "This does not identify a unique hidden mechanism.",
+        },
+        "prompt_routing": {
+            "interpretation_role": "boundary",
+            "evidence_status": "insufficient_evidence",
+            "reason": "No routing intervention was recorded.",
+        },
+        "prompt_projection": {
+            "interpretation_role": "boundary",
+            "applicability": "not_applicable",
+            "reason": "This LoRA checkpoint does not use prompt rounding.",
+        },
+        "prompt_stability": {
+            "interpretation_role": "stability",
+            "mean_step_drift": 0.04,
+            "claim_boundary": "This is not a global stability guarantee.",
+        },
+    }
+    for index, (name, payload) in enumerate(payloads.items()):
+        directory = run if index % 2 == 0 else run / "diagnostics"
+        _write_json(directory / f"{name}.json", payload)
+    _write_json(
+        run / "decision_trace.json",
+        {
+            "decision": "needs_review",
+            "claim_boundary": "The gate trace is not a causal proof.",
+            "checks": [
+                {
+                    "check": "slice_regression",
+                    "observed": -0.08,
+                    "threshold": -0.05,
+                    "status": "triggered",
+                    "impact": "hold",
+                    "next_action": "Inspect the regressed slice.",
+                }
+            ],
+        },
+    )
+
+    detail = load_run_detail(run)
+    reach_rows = prompt_reach_interpretation_rows(detail, "en")
+    trace_rows = decision_trace_interpretation_rows(detail, "en")
+
+    assert list(detail["prompt_reach_artifacts"]) == list(payloads)
+    assert detail["decision_trace"]["decision"] == "needs_review"
+    assert [row["adapter"] for row in reach_rows] == list(payloads)
+    assert reach_rows[0]["status"] == "unknown"
+    assert all(
+        {"observed", "explains", "does_not_prove", "next_action"} <= set(row)
+        for row in reach_rows
+    )
+    assert trace_rows == [
+        {
+            "adapter": "slice_regression",
+            "role": "decision",
+            "status": "triggered",
+            "confidence": "unknown",
+            "observed": -0.08,
+            "explains": "This check contributes hold to the recorded checkpoint decision.",
+            "does_not_prove": "The gate trace is not a causal proof.",
+            "next_action": "Inspect the regressed slice.",
+            "threshold": -0.05,
+            "evidence": [],
+        }
+    ]
+
+
+def test_four_part_interpretation_renderer_uses_bilingual_labels() -> None:
+    from promptcontrollab.ui import app
+
+    class FakeStreamlit:
+        def __init__(self) -> None:
+            self.markdown_calls: list[str] = []
+
+        def markdown(self, value: str, **_kwargs: object) -> None:
+            self.markdown_calls.append(value)
+
+    row = {
+        "adapter": "prompt_reachability",
+        "observed": "A representation shift was measured.",
+        "explains": "The checkpoint changed the reachable representation region.",
+        "does_not_prove": "This does not prove a unique causal path.",
+        "next_action": "Compare matched seeds.",
+    }
+
+    english = FakeStreamlit()
+    chinese = FakeStreamlit()
+    app._render_interpretation_records(english, [row], "en")
+    app._render_interpretation_records(chinese, [row], "zh")
+
+    assert any("Observed" in value for value in english.markdown_calls)
+    assert any("Explains" in value for value in english.markdown_calls)
+    assert any("Does not prove" in value for value in english.markdown_calls)
+    assert any("Next action" in value for value in english.markdown_calls)
+    assert any("观察到了什么" in value for value in chinese.markdown_calls)
+    assert any("可以解释什么" in value for value in chinese.markdown_calls)
+    assert any("不能证明什么" in value for value in chinese.markdown_calls)
+    assert any("下一步行动" in value for value in chinese.markdown_calls)
+
+
+def test_core_diagnostic_views_route_prompt_reach_and_trace_to_four_part_renderer(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from promptcontrollab.ui import app
+
+    rendered: list[tuple[str, list[str]]] = []
+
+    class FakeExpander:
+        def __enter__(self) -> FakeExpander:
+            return self
+
+        def __exit__(self, *_args: object) -> None:
+            return None
+
+    class FakeStreamlit:
+        def subheader(self, _value: str) -> None:
+            return None
+
+        def caption(self, _value: str) -> None:
+            return None
+
+        def info(self, _value: str) -> None:
+            return None
+
+        def code(self, *_args: object, **_kwargs: object) -> None:
+            return None
+
+        def markdown(self, *_args: object, **_kwargs: object) -> None:
+            return None
+
+        def dataframe(self, *_args: object, **_kwargs: object) -> None:
+            return None
+
+        def expander(self, *_args: object, **_kwargs: object) -> FakeExpander:
+            return FakeExpander()
+
+    detail = {
+        "prompt_reach_artifacts": {
+            "prompt_reachability": {"interpretation_role": "mechanism"},
+            "readout_alignment": {"interpretation_role": "mechanism"},
+            "prompt_routing": {"interpretation_role": "boundary"},
+            "prompt_projection": {"interpretation_role": "boundary"},
+            "prompt_stability": {"interpretation_role": "stability"},
+        },
+        "posttrain_gate": {"decision": "needs_review", "checks": {}},
+        "decision_trace": {
+            "checks": [{"check": "task_score", "status": "passed"}]
+        },
+    }
+    fake = FakeStreamlit()
+
+    monkeypatch.setattr(app, "_render_why_view", lambda *_args: None)
+    monkeypatch.setattr(app, "_render_after_view", lambda *_args: None)
+    monkeypatch.setattr(app, "metric_cards", lambda *_args, **_kwargs: None)
+    monkeypatch.setattr(app, "_render_research_overview_tab", lambda *_args: None)
+    monkeypatch.setattr(
+        app,
+        "_render_interpretation_records",
+        lambda _st, rows, language, **_kwargs: rendered.append(
+            (language, [str(row.get("adapter")) for row in rows])
+        ),
+    )
+
+    app._render_mechanism_view(fake, "en", detail)
+    app._render_stability_view(fake, {}, "zh", detail)
+    app._render_training_gate_view(fake, "en", detail)
+    app._render_evidence_scope_view(fake, {}, "zh", detail)
+
+    assert rendered[0] == (
+        "en",
+        [
+            "prompt_reachability",
+            "readout_alignment",
+            "prompt_routing",
+            "prompt_projection",
+        ],
+    )
+    assert rendered[1] == ("zh", ["prompt_stability"])
+    assert rendered[2] == ("en", ["task_score"])
+    assert rendered[3] == (
+        "zh",
+        [
+            "prompt_reachability",
+            "readout_alignment",
+            "prompt_routing",
+            "prompt_projection",
+            "prompt_stability",
+        ],
+    )
+
+
 def test_control_artifacts_load_safely_and_make_a_control_only_run_visible(tmp_path: Path) -> None:
     run = tmp_path / "runs" / "deepseek-session"
     _write_json(

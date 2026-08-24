@@ -244,6 +244,19 @@ def make_control_decision(
             reasons=[preflight_summary or "The preflight risk level is medium."],
         )
 
+    external_outcome = _failed_external_outcome(normalized_events)
+    if external_outcome is not None:
+        return ControlDecision(
+            run_id=run_id,
+            decision="needs_review",
+            next_action=(
+                "Inspect the external process failure and recorded artifacts before rerunning."
+            ),
+            reasons=[
+                f"The external Harness process ended with outcome `{external_outcome}`."
+            ],
+        )
+
     state = _lower_string(stability_data.get("state")) or "insufficient_evidence"
     stability_signals = _as_dict(stability_data.get("signals"))
     stability_confidence = _lower_string(stability_signals.get("confidence"))
@@ -376,6 +389,17 @@ def _normalize_events(events: object) -> list[JsonDict]:
             )
         )
     return [item[2] for item in sorted(normalized, key=lambda item: (item[0], item[1]))]
+
+
+def _failed_external_outcome(events: list[JsonDict]) -> str | None:
+    for event in reversed(events):
+        if event.get("event_type") != "harness/process-exit":
+            continue
+        payload = _as_dict(event.get("payload"))
+        outcome = _lower_string(payload.get("outcome"))
+        if outcome in {"failed", "cancelled"}:
+            return outcome
+    return None
 
 
 def _baseline_dict(

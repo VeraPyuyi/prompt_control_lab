@@ -12,8 +12,9 @@ def test_readmes_lead_with_evidence_diagnosis_and_control() -> None:
     assert "pcl posttrain-gate" in readme
     assert "Flagship Integration: DeepSeek Harness" in readme
     assert "Method Origins and Boundaries" in readme
-    assert readme.find("Core Diagnostic Loop") < readme.find("DeepSeek Harness")
-    assert readme.find("DeepSeek Harness") < readme.find("PEOC")
+    harness_heading = "## Flagship Integration: DeepSeek Harness"
+    assert readme.find("Core Diagnostic Loop") < readme.find(harness_heading)
+    assert readme.find(harness_heading) < readme.find("PEOC")
     assert len(readme.splitlines()) <= 70
     assert "docs/research_import_peoc.en.md" in readme
     assert "docs/research_from_paper.en.md" in readme
@@ -26,8 +27,9 @@ def test_readmes_lead_with_evidence_diagnosis_and_control() -> None:
     assert "pcl posttrain-gate" in readme_zh
     assert "旗舰集成" in readme_zh and "DeepSeek Harness" in readme_zh
     assert "方法来源与结论边界" in readme_zh
-    assert readme_zh.find("核心诊断闭环") < readme_zh.find("DeepSeek Harness")
-    assert readme_zh.find("DeepSeek Harness") < readme_zh.find("PEOC")
+    harness_heading_zh = "## 旗舰集成\uFF1ADeepSeek Harness"
+    assert readme_zh.find("核心诊断闭环") < readme_zh.find(harness_heading_zh)
+    assert readme_zh.find(harness_heading_zh) < readme_zh.find("PEOC")
     assert len(readme_zh.splitlines()) <= 70
     assert "docs/research_import_peoc.zh.md" in readme_zh
     assert "docs/research_from_paper.zh.md" in readme_zh

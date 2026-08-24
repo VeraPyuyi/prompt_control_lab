@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "promptcontrollab"
-version = "0.1.0"
+version = "0.2.0a1"
 description = "Local control, attribution, and stability diagnostics for prompts and AI agents."
 readme = "README.md"
 requires-python = ">=3.10"
@@ -50,7 +50,8 @@ posttrain = [
   "torch>=2.1",
   "transformers>=4.40",
   "peft>=0.11",
-  "accelerate>=0.30"
+  "accelerate>=0.30",
+  "datasets>=2.19"
 ]
 ui = [
   "streamlit>=1.40",

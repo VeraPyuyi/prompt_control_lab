@@ -29,6 +29,8 @@ export interface HarnessSessionStartParams extends JsonObject {
   runs_root: string
   harness_version: string
   harness_commit: string
+  session_origin: 'live_cordis'
+  bridge_transport: 'persistent_stdio'
 }
 
 export interface HarnessSessionStartResult extends JsonObject {

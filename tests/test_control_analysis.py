@@ -808,6 +808,32 @@ def test_control_decision_handles_divergence_and_lower_risk_states_conservativel
     assert converging.decision == "allow"
 
 
+def test_control_decision_never_allows_a_failed_external_harness_process() -> None:
+    from promptcontrollab.control_analysis import make_control_decision
+
+    run = _fully_observed_run("failed-harness")
+    preflight, attribution, stability, events = _complete_safe_control_evidence(run)
+    events.append(
+        _event(
+            len(events) + 1,
+            "harness/process-exit",
+            outcome="failed",
+            exit_code=1,
+        )
+    )
+
+    decision = make_control_decision(
+        run,
+        preflight=preflight,
+        attribution=attribution,
+        stability=stability,
+        events=events,
+    )
+
+    assert decision.decision == "needs_review"
+    assert "failed" in decision.reasons[0].lower()
+
+
 def test_control_decision_never_allows_incomplete_or_unsafe_evidence() -> None:
     from promptcontrollab.control_analysis import make_control_decision
 

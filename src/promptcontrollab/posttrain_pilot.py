@@ -25,12 +25,15 @@ class PilotInputs:
     withheld_path: Path
     format_fixture_path: Path
     out_dir: Path
+    model_provenance_path: Path | None = None
+    runtime_root: Path = Path("/root/prompt_control_lab_runtime")
     seeds: tuple[int, ...] = (0, 1, 2)
     max_steps: int = 60
 
 
 _MODEL_PROVENANCE_FILE = "model_provenance.json"
 _PINNED_REVISION_PATTERN = re.compile(r"[0-9a-f]{40}|[0-9a-f]{64}")
+_QUEUE_SNAPSHOT_MAX_AGE_SECONDS = 90.0
 
 
 def write_model_provenance(
@@ -38,6 +41,7 @@ def write_model_provenance(
     *,
     model_id: str,
     revision: str,
+    manifest_path: Path | None = None,
 ) -> JsonDict:
     """Hash a local model snapshot and bind it to a pinned provider revision."""
 
@@ -58,17 +62,27 @@ def write_model_provenance(
         "files": files,
         "combined_sha256": f"sha256:{stable_digest(files)}",
     }
-    write_json(model_path / _MODEL_PROVENANCE_FILE, payload)
+    write_json(manifest_path or model_provenance_path(model_path), payload)
     return payload
 
 
-def validate_model_provenance(model_path: Path) -> JsonDict:
+def model_provenance_path(model_path: Path) -> Path:
+    """Return the external provenance path without mutating a shared model cache."""
+
+    return model_path.with_name(f"{model_path.name}.{_MODEL_PROVENANCE_FILE}")
+
+
+def validate_model_provenance(
+    model_path: Path,
+    *,
+    manifest_path: Path | None = None,
+) -> JsonDict:
     """Verify the pinned identity and every file hash before GPU execution."""
 
-    manifest_path = model_path / _MODEL_PROVENANCE_FILE
-    if not manifest_path.is_file():
-        raise ValueError(f"Model provenance manifest is missing: {manifest_path}")
-    payload = read_json(manifest_path)
+    provenance_path = manifest_path or model_provenance_path(model_path)
+    if not provenance_path.is_file():
+        raise ValueError(f"Model provenance manifest is missing: {provenance_path}")
+    payload = read_json(provenance_path)
     if not str(payload.get("model_id", "")).strip():
         raise ValueError("Model provenance is missing model_id")
     revision = str(payload.get("revision", "")).strip().lower()
@@ -91,6 +105,8 @@ def build_sft_pilot_plan(inputs: PilotInputs) -> JsonDict:
 
     if not inputs.seeds:
         raise ValueError("SFT pilot requires at least one seed")
+    if len(set(inputs.seeds)) != len(inputs.seeds):
+        raise ValueError("SFT pilot seeds must be unique")
     if inputs.max_steps < 2:
         raise ValueError("SFT pilot max_steps must be at least 2")
     split_paths = {
@@ -129,6 +145,11 @@ def build_sft_pilot_plan(inputs: PilotInputs) -> JsonDict:
                 "trajectory_stability",
                 "generation_mismatch",
                 "selective_risk",
+                "prompt_reachability",
+                "readout_alignment",
+                "prompt_routing",
+                "prompt_projection",
+                "prompt_stability",
             ],
             "soft_hard_applicability": "not_applicable",
         }
@@ -140,7 +161,11 @@ def build_sft_pilot_plan(inputs: PilotInputs) -> JsonDict:
         "execution_status": "plan_only",
         "training_method": "sft_lora",
         "model_path": str(inputs.model_path.resolve()),
+        "model_provenance_path": str(
+            (inputs.model_provenance_path or model_provenance_path(inputs.model_path)).resolve()
+        ),
         "out_dir": str(inputs.out_dir.resolve()),
+        "runtime_root": str(inputs.runtime_root.resolve()),
         "seeds": list(inputs.seeds),
         "checkpoint_stages": list(stages),
         "max_steps": inputs.max_steps,
@@ -177,10 +202,11 @@ def validate_resource_approval(
     *,
     gpu: int,
     now: datetime | None = None,
+    runtime_root: Path | None = None,
 ) -> JsonDict:
-    """Validate an explicit, expiring server-operator resource approval record."""
+    """Validate an expiring approval and its exact, fresh queue snapshot."""
 
-    if not path.is_file():
+    if path.is_symlink() or not path.is_file():
         raise ValueError(f"Resource approval record is missing: {path}")
     payload = read_json(path)
     if payload.get("approved") is not True:
@@ -214,7 +240,70 @@ def validate_resource_approval(
         raise ValueError("Resource approval record has expired")
     if expires_at <= checked_at:
         raise ValueError("Resource approval expires_at must be after checked_at")
+    age_seconds = (current - checked_at).total_seconds()
+    if age_seconds > _QUEUE_SNAPSHOT_MAX_AGE_SECONDS:
+        raise ValueError(
+            "Resource approval queue snapshot is stale; refresh it immediately before launch"
+        )
+
+    queue_snapshot = _validate_queue_snapshot(
+        payload,
+        approval_path=path,
+        approval_checked_at=checked_at,
+        runtime_root=runtime_root,
+    )
+    payload["queue_snapshot_validation"] = queue_snapshot
     return payload
+
+
+def _validate_queue_snapshot(
+    approval: JsonDict,
+    *,
+    approval_path: Path,
+    approval_checked_at: datetime,
+    runtime_root: Path | None,
+) -> JsonDict:
+    source_value = str(approval["queue_source"]).strip()
+    source = Path(source_value).expanduser()
+    if not source.is_absolute():
+        source = approval_path.parent / source
+    if source.is_symlink() or not source.is_file():
+        raise ValueError(f"Resource approval queue_source is not a real file: {source}")
+    resolved = source.resolve()
+    if runtime_root is not None:
+        root = runtime_root.expanduser().resolve()
+        if resolved == root or not resolved.is_relative_to(root):
+            raise ValueError(
+                f"Resource approval queue_source is outside the pilot runtime {root}: {resolved}"
+            )
+
+    observed_sha256 = _sha256(resolved)
+    expected_sha256 = str(approval["queue_snapshot_sha256"])
+    if observed_sha256 != expected_sha256:
+        raise ValueError("Resource approval queue snapshot hash does not match queue_source")
+    snapshot = read_json(resolved)
+    snapshot_checked_at = _parse_timestamp(
+        snapshot.get("checked_at"), field="queue snapshot checked_at"
+    )
+    if snapshot_checked_at != approval_checked_at:
+        raise ValueError("Resource approval checked_at does not match the queue snapshot")
+    if snapshot.get("queue_clear") is not True:
+        raise ValueError("Current queue snapshot does not report queue_clear=true")
+    for key in ("queue_pending_jobs", "queue_running_jobs"):
+        value = snapshot.get(key)
+        if not isinstance(value, int) or isinstance(value, bool) or value != 0:
+            raise ValueError(f"Current queue snapshot must report zero {key}")
+        if value != approval.get(key):
+            raise ValueError(f"Resource approval {key} does not match the queue snapshot")
+    return {
+        "path": str(resolved),
+        "sha256": observed_sha256,
+        "checked_at": snapshot_checked_at.isoformat(),
+        "queue_clear": True,
+        "queue_pending_jobs": 0,
+        "queue_running_jobs": 0,
+        "verified_inside_execution_lock": True,
+    }
 
 
 def paired_checkpoint_statistics(
@@ -326,7 +415,7 @@ def score_pilot_output(prediction: str, target: str, task_slice: str) -> float:
         if predicted_number is None or target_number is None:
             return 0.0
         return float(predicted_number == target_number)
-    return canonical_answer_exact_match(prediction, target)
+    return float(prediction == target)
 
 
 def validate_gpu_idle_snapshots(
@@ -435,11 +524,16 @@ def _split_identities(path: Path) -> tuple[set[str], set[str]]:
 def _model_file_records(model_path: Path) -> list[JsonDict]:
     records: list[JsonDict] = []
     for path in sorted(model_path.rglob("*"), key=lambda item: item.as_posix()):
-        if not path.is_file() or path.name == _MODEL_PROVENANCE_FILE:
+        relative = path.relative_to(model_path)
+        if (
+            not path.is_file()
+            or path.name == _MODEL_PROVENANCE_FILE
+            or ".cache" in relative.parts
+        ):
             continue
         records.append(
             {
-                "path": path.relative_to(model_path).as_posix(),
+                "path": relative.as_posix(),
                 "bytes": path.stat().st_size,
                 "sha256": _sha256(path),
             }

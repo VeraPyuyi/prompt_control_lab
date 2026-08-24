@@ -63,10 +63,10 @@ def test_readme_first_screens_lead_with_the_local_diagnostic_control_loop() -> N
     first_zh = _first_screen(chinese)
 
     assert english.startswith(
-        "# PromptControlLab 2.0\n\n**The local evidence, diagnosis, and control loop"
+        "# PromptControlLab\n\n**The local evidence, diagnosis, and control loop"
     )
     assert chinese.startswith(
-        "# PromptControlLab 2.0\n\n**Prompt、Checkpoint 与 AI Agent 的本地证据、诊断和控制闭环。**"
+        "# PromptControlLab\n\n**Prompt、Checkpoint 与 AI Agent 的本地证据、诊断和控制闭环。**"
     )
     for first in (first_en, first_zh):
         assert "2-Minute" in first or "2 分钟" in first
@@ -155,6 +155,8 @@ def test_deepseek_harness_docs_match_the_pinned_native_contract() -> None:
         "pcl harness init --project .",
         "pcl harness doctor --project . --json",
         "pcl harness replay --session <session.jsonl> --out runs/harness-replay --json",
+        "pcl harness finalize --runs .promptcontrol/runs "
+        "--session <session-or-run-id> --outcome failed --exit-code 1 --json",
         "pcl harness report --runs .promptcontrol/runs --session <session-or-run-id> --json",
     )
     official_links = (

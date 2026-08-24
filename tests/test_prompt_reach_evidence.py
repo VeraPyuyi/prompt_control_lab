@@ -4,6 +4,7 @@ import json
 import shutil
 from pathlib import Path
 
+import pytest
 from pytest import CaptureFixture
 
 from promptcontrollab import server_evidence
@@ -106,6 +107,40 @@ def test_prompt_reach_profile_registry_exposes_five_independent_adapters() -> No
     assert len({type(adapter) for adapter in registry["prompt-reach-v2"].adapters}) == 5
 
 
+def test_prompt_reach_scan_finds_evidence_below_an_archive_prefix_once(
+    tmp_path: Path,
+) -> None:
+    root = tmp_path / "archive"
+    evidence = (
+        root
+        / "_release"
+        / "prompt-reach"
+        / "results"
+        / "reach_length"
+        / "summary.json"
+    )
+    _write_json(
+        evidence,
+        {"effective_rank": 4.25, "gramian_trace": 8.5, "sample_count": 12},
+    )
+
+    manifest = server_evidence.scan_evidence_root(
+        root=root,
+        profile="prompt-reach-v2",
+    )
+
+    reachability = [
+        row
+        for row in manifest["sources"]
+        if row["adapter"] == "prompt_reachability"
+    ]
+    assert len(reachability) == 1
+    assert reachability[0]["relative_path"] == (
+        "_release/prompt-reach/results/reach_length/summary.json"
+    )
+    assert manifest["adapter_counts"]["prompt_reachability"] == 1
+
+
 def test_prompt_reach_scan_and_import_write_bounded_diagnostics(tmp_path: Path) -> None:
     root = tmp_path / "source"
     _write_prompt_reach_fixture(root)
@@ -167,6 +202,78 @@ def test_prompt_reach_scan_and_import_write_bounded_diagnostics(tmp_path: Path) 
     assert "not-a-pickle" not in rendered
 
 
+def test_prompt_reach_import_overwrite_refuses_an_unowned_directory(
+    tmp_path: Path,
+) -> None:
+    root = tmp_path / "source"
+    _write_prompt_reach_fixture(root)
+    manifest_path = tmp_path / "manifest.json"
+    _scan_to(root, manifest_path)
+    out_dir = tmp_path / "user-owned"
+    out_dir.mkdir()
+    marker = out_dir / "keep.txt"
+    marker.write_text("do not delete", encoding="utf-8")
+
+    with pytest.raises(ValueError, match="not a PromptControlLab evidence run"):
+        server_evidence.import_evidence_manifest(
+            server_evidence.EvidenceImportOptions(
+                manifest_path=manifest_path,
+                out_dir=out_dir,
+                overwrite=True,
+            )
+        )
+
+    assert marker.read_text(encoding="utf-8") == "do not delete"
+
+
+def test_prompt_reach_import_parses_the_same_bytes_that_were_verified(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    root = tmp_path / "source"
+    source = root / "reachable/prompt_reachability.json"
+    _write_json(source, {"effective_rank": 4.0})
+    manifest_path = tmp_path / "manifest.json"
+    _scan_to(root, manifest_path)
+    original_verify = server_evidence._verify_sources
+
+    def verify_then_mutate(manifest: JsonDict) -> list[JsonDict]:
+        rows = original_verify(manifest)
+        _write_json(source, {"effective_rank": 99.0})
+        return rows
+
+    monkeypatch.setattr(server_evidence, "_verify_sources", verify_then_mutate)
+    out_dir = tmp_path / "run"
+    server_evidence.import_evidence_manifest(
+        server_evidence.EvidenceImportOptions(
+            manifest_path=manifest_path,
+            out_dir=out_dir,
+        )
+    )
+
+    metric = read_json(out_dir / "prompt_reachability.json")["metrics"][
+        "effective_rank"
+    ]
+    assert metric["mean"] == 4.0
+
+
+def test_prompt_reach_manifest_binds_the_canonical_digest(tmp_path: Path) -> None:
+    root = tmp_path / "source"
+    _write_prompt_reach_fixture(root)
+    manifest_path = tmp_path / "manifest.json"
+    manifest = _scan_to(root, manifest_path)
+    manifest["sources"][0]["canonical_sha256"] = "sha256:" + "0" * 64
+    manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+
+    with pytest.raises(ValueError, match="snapshot_sha256"):
+        server_evidence.import_evidence_manifest(
+            server_evidence.EvidenceImportOptions(
+                manifest_path=manifest_path,
+                out_dir=tmp_path / "run",
+            )
+        )
+
+
 def test_prompt_reach_unsupported_source_is_reported_without_guessing(tmp_path: Path) -> None:
     root = tmp_path / "source"
     _write_json(
@@ -183,7 +290,10 @@ def test_prompt_reach_unsupported_source_is_reported_without_guessing(tmp_path: 
 
     diagnostic = read_json(out_dir / "prompt_reachability.json")
     gaps = read_json(out_dir / "source_gap_report.json")
+    claims = read_json(out_dir / "claim_check.json")
     assert diagnostic["support_status"] == "requires_reanalysis"
+    assert claims["status"] == "insufficient_evidence"
+    assert claims["mechanism_interpretation_available"] is False
     assert "unsupported_source_format" in diagnostic["quality_flags"]
     assert any(row["adapter"] == "prompt_reachability" for row in gaps["gaps"])
     assert "PRIVATE_TEXT" not in json.dumps(gaps)
@@ -296,3 +406,63 @@ def test_evidence_merge_accepts_verified_portable_runs_without_source_roots(
     assert read_json(tmp_path / "portable-merged/prompt_stability.json")[
         "support_status"
     ] == "observed"
+
+
+def test_portable_merge_rejects_a_tampered_derived_artifact(tmp_path: Path) -> None:
+    portable_runs: list[Path] = []
+    for name in ("primary", "secondary"):
+        root = tmp_path / f"{name}-source"
+        _write_prompt_reach_fixture(root)
+        manifest_path = tmp_path / f"{name}.json"
+        _scan_to(root, manifest_path)
+        run = tmp_path / f"{name}-run"
+        server_evidence.import_evidence_manifest(
+            server_evidence.EvidenceImportOptions(
+                manifest_path=manifest_path,
+                out_dir=run,
+                portable=True,
+            )
+        )
+        portable_runs.append(run / "portable")
+    tampered = portable_runs[1] / "prompt_reachability.json"
+    payload = read_json(tampered)
+    payload["metrics"]["effective_rank"]["mean"] = 999.0
+    _write_json(tampered, payload)
+
+    with pytest.raises(ValueError, match="digest mismatch"):
+        server_evidence.merge_evidence_manifests(
+            primary=portable_runs[0],
+            secondary=portable_runs[1],
+            out_dir=tmp_path / "merged",
+        )
+
+
+def test_portable_merge_pools_non_conflicting_numeric_summaries(tmp_path: Path) -> None:
+    first_root = tmp_path / "first-source"
+    second_root = tmp_path / "second-source"
+    _write_json(first_root / "reachable/first.json", {"effective_rank": 1.0})
+    _write_json(second_root / "reachable/second.json", {"effective_rank": 3.0})
+    portable_runs: list[Path] = []
+    for name, root in (("first", first_root), ("second", second_root)):
+        manifest_path = tmp_path / f"{name}.json"
+        _scan_to(root, manifest_path)
+        run = tmp_path / f"{name}-run"
+        server_evidence.import_evidence_manifest(
+            server_evidence.EvidenceImportOptions(
+                manifest_path=manifest_path,
+                out_dir=run,
+                portable=True,
+            )
+        )
+        portable_runs.append(run / "portable")
+
+    server_evidence.merge_evidence_manifests(
+        primary=portable_runs[0],
+        secondary=portable_runs[1],
+        out_dir=tmp_path / "merged",
+    )
+
+    metric = read_json(tmp_path / "merged/prompt_reachability.json")["metrics"][
+        "effective_rank"
+    ]
+    assert metric == {"count": 2, "max": 3.0, "mean": 2.0, "min": 1.0}

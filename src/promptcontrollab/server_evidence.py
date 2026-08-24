@@ -121,19 +121,28 @@ def _scan_adapter_profile(root: Path, profile: str) -> JsonDict:
     discovered: dict[str, tuple[str, str]] = {}
     for adapter in profile_spec.adapters:
         for pattern in adapter.patterns:
-            for candidate in root.glob(pattern):
-                if not candidate.is_file():
-                    continue
-                resolved = candidate.resolve()
-                if not resolved.is_relative_to(root):
-                    continue
-                relative = resolved.relative_to(root).as_posix()
-                discovered[relative] = (adapter.name, adapter.source_role(resolved))
+            search_patterns = (
+                (pattern,)
+                if pattern.startswith("**/")
+                else (pattern, f"**/{pattern}")
+            )
+            for search_pattern in search_patterns:
+                for candidate in root.glob(search_pattern):
+                    if not candidate.is_file():
+                        continue
+                    resolved = candidate.resolve()
+                    if not resolved.is_relative_to(root):
+                        continue
+                    relative = resolved.relative_to(root).as_posix()
+                    discovered[relative] = (
+                        adapter.name,
+                        adapter.source_role(resolved),
+                    )
     sources: list[JsonDict] = []
     for relative in sorted(discovered):
         adapter_name, role = discovered[relative]
         path = root / relative
-        size, digest = _file_integrity(path)
+        size, digest, canonical_digest = _adapter_file_integrity(path)
         sources.append(
             {
                 "adapter": adapter_name,
@@ -142,7 +151,7 @@ def _scan_adapter_profile(root: Path, profile: str) -> JsonDict:
                 "resolved_path": str(path.resolve()),
                 "bytes": size,
                 "sha256": digest,
-                "canonical_sha256": _canonical_source_digest(path, digest),
+                "canonical_sha256": canonical_digest,
                 "media_type": _media_type(path),
                 "availability": "available",
                 "load_policy": _adapter_load_policy(path),
@@ -168,19 +177,28 @@ def _scan_adapter_profile(root: Path, profile: str) -> JsonDict:
     return manifest
 
 
-def _canonical_source_digest(path: Path, fallback: str) -> str:
+def _adapter_file_integrity(path: Path) -> tuple[int, str, str]:
+    if path.suffix.lower() not in {".json", ".jsonl"}:
+        size, digest = _file_integrity(path)
+        return size, digest, digest
+    content = path.read_bytes()
+    digest = "sha256:" + hashlib.sha256(content).hexdigest()
+    return len(content), digest, _canonical_source_digest(path, content, digest)
+
+
+def _canonical_source_digest(path: Path, content: bytes, fallback: str) -> str:
     try:
         if path.suffix.lower() == ".json":
-            value = json.loads(path.read_text(encoding="utf-8-sig"))
+            value = json.loads(content.decode("utf-8-sig"))
             return f"sha256:{stable_digest(value)}"
         if path.suffix.lower() == ".jsonl":
             values = [
                 json.loads(line)
-                for line in path.read_text(encoding="utf-8-sig").splitlines()
+                for line in content.decode("utf-8-sig").splitlines()
                 if line.strip()
             ]
             return f"sha256:{stable_digest(values)}"
-    except (OSError, UnicodeError, json.JSONDecodeError):
+    except (UnicodeError, json.JSONDecodeError):
         return fallback
     return fallback
 
@@ -198,6 +216,11 @@ def import_evidence_manifest(options: EvidenceImportOptions) -> JsonDict:
 
     manifest = read_json(options.manifest_path)
     _validate_manifest(manifest)
+    protected = [options.manifest_path]
+    root_value = manifest.get("root")
+    if isinstance(root_value, dict) and isinstance(root_value.get("resolved_path"), str):
+        protected.append(Path(root_value["resolved_path"]))
+    validate_evidence_destination(options.out_dir, protected_roots=protected)
     if manifest.get("profile") != "peoc-server":
         return _import_adapter_manifest(manifest, options)
     if options.out_dir.is_symlink():
@@ -308,6 +331,7 @@ def merge_evidence_manifests(
     if primary.is_dir() or secondary.is_dir():
         if not primary.is_dir() or not secondary.is_dir():
             raise ValueError("Evidence merge inputs must both be manifests or both be run dirs")
+        validate_evidence_destination(out_dir, protected_roots=(primary, secondary))
         return _merge_portable_runs(
             primary=primary,
             secondary=secondary,
@@ -319,6 +343,14 @@ def merge_evidence_manifests(
     secondary_manifest = read_json(secondary)
     _validate_manifest(primary_manifest)
     _validate_manifest(secondary_manifest)
+    protected_roots: list[Path] = [primary, secondary]
+    for manifest in (primary_manifest, secondary_manifest):
+        root_value = manifest.get("root")
+        if isinstance(root_value, dict) and isinstance(
+            root_value.get("resolved_path"), str
+        ):
+            protected_roots.append(Path(root_value["resolved_path"]))
+    validate_evidence_destination(out_dir, protected_roots=protected_roots)
     profile = str(primary_manifest["profile"])
     if secondary_manifest.get("profile") != profile:
         raise ValueError("Evidence merge requires matching profiles")
@@ -377,10 +409,7 @@ def merge_evidence_manifests(
         "profile": profile,
         "classification": "private_local_reconciled",
         "root": {"resolved_path": "multiple_verified_roots"},
-        "sources": [
-            {key: value for key, value in row.items() if key != "verified_path"}
-            for row in merged
-        ],
+        "sources": [_source_manifest_row(row) for row in merged],
         "snapshot_sha256": f"sha256:{stable_digest(reconciliation_rows)}",
         "source_snapshots": [
             primary_manifest.get("snapshot_sha256"),
@@ -407,8 +436,10 @@ def _merge_portable_runs(
     portable: bool,
     overwrite: bool,
 ) -> JsonDict:
-    primary_manifest = read_json(primary / "public_source_manifest.json")
-    secondary_manifest = read_json(secondary / "public_source_manifest.json")
+    primary_artifacts = _load_verified_evidence_artifacts(primary)
+    secondary_artifacts = _load_verified_evidence_artifacts(secondary)
+    primary_manifest = primary_artifacts["public_source_manifest.json"]
+    secondary_manifest = secondary_artifacts["public_source_manifest.json"]
     profile_name = str(primary_manifest.get("profile", ""))
     if not profile_name or secondary_manifest.get("profile") != profile_name:
         raise ValueError("Portable evidence merge requires matching profiles")
@@ -455,22 +486,60 @@ def _merge_portable_runs(
         )
     findings: list[JsonDict] = []
     for adapter in profile.adapter_names:
-        first = read_json(primary / f"{adapter}.json")
-        second = read_json(secondary / f"{adapter}.json")
-        selected = first if first.get("support_status") == "observed" else second
-        quality_flags = list(selected.get("quality_flags", []))
-        support_status = str(selected.get("support_status", "unavailable"))
-        confidence = str(selected.get("confidence", "unknown"))
+        first = primary_artifacts[f"{adapter}.json"]
+        second = secondary_artifacts[f"{adapter}.json"]
+        first_status = str(first.get("support_status", "unavailable"))
+        second_status = str(second.get("support_status", "unavailable"))
+        selected = first if first_status == "observed" else second
+        quality_flags = sorted(
+            {
+                str(flag)
+                for finding in (first, second)
+                for flag in finding.get("quality_flags", [])
+                if isinstance(flag, str)
+            }
+        )
+        if "observed" in {first_status, second_status}:
+            support_status = "observed"
+            confidence = "medium"
+        elif "requires_reanalysis" in {first_status, second_status}:
+            support_status = "requires_reanalysis"
+            confidence = "low"
+        else:
+            support_status = "unavailable"
+            confidence = "unknown"
         if adapter in conflict_adapters:
             support_status = "requires_reanalysis"
             confidence = "low"
             if "source_conflict" not in quality_flags:
                 quality_flags.append("source_conflict")
+        has_source_overlap = any(
+            row.get("adapter") == adapter
+            and row.get("status") == "canonical_equivalent"
+            for row in reconciliation_rows
+        )
+        first_metrics = _dict_value(first.get("metrics"))
+        second_metrics = _dict_value(second.get("metrics"))
+        if has_source_overlap:
+            metrics = first_metrics if first_status == "observed" else second_metrics
+            aggregation_method = "single_summary_with_overlapping_sources"
+            metrics_scope = (
+                "Primary and secondary summaries are preserved separately because their source "
+                "sets overlap; the displayed summary is not a joint aggregate."
+            )
+        else:
+            metrics = _pool_metric_summaries(first_metrics, second_metrics)
+            aggregation_method = "count_weighted_non_overlapping_numeric_summary"
+            metrics_scope = "Primary and secondary source sets are non-overlapping."
         finding: JsonDict = {
             **selected,
             "support_status": support_status,
             "confidence": confidence,
             "quality_flags": quality_flags,
+            "metrics": metrics,
+            "metric_sets": {"primary": first_metrics, "secondary": second_metrics},
+            "aggregation_method": aggregation_method,
+            "metrics_scope": metrics_scope,
             "source_comparison": {
                 "primary_support_status": first.get("support_status"),
                 "secondary_support_status": second.get("support_status"),
@@ -517,8 +586,8 @@ def _write_derived_findings_run(
     portable: bool,
     overwrite: bool,
 ) -> JsonDict:
+    _prepare_adapter_output(out_dir, overwrite=overwrite)
     resolved_out = out_dir.resolve()
-    _prepare_adapter_output(resolved_out, overwrite=overwrite)
     profile = get_evidence_profile(str(manifest["profile"]))
     for finding in findings:
         write_json(resolved_out / f"{finding['adapter']}.json", finding)
@@ -580,6 +649,7 @@ def _write_derived_findings_run(
         render_interpretability_html(report, matrix), encoding="utf-8"
     )
     artifact_names = [
+        "source_manifest.json",
         "public_source_manifest.json",
         "source_reconciliation.json",
         "source_gap_report.json",
@@ -590,10 +660,13 @@ def _write_derived_findings_run(
         *(f"{adapter}.json" for adapter in profile.adapter_names),
     ]
     if portable:
-        portable_dir = resolved_out / "portable"
-        ensure_dir(portable_dir)
-        for name in artifact_names:
-            shutil.copyfile(resolved_out / name, portable_dir / name)
+        _write_adapter_portable_bundle(
+            resolved_out,
+            artifact_names,
+            profile=str(manifest["profile"]),
+            snapshot_sha256=str(manifest["snapshot_sha256"]),
+        )
+    artifact_sha256 = _artifact_sha256(resolved_out, artifact_names)
     write_json(
         resolved_out / "manifest.json",
         {
@@ -602,6 +675,7 @@ def _write_derived_findings_run(
             "profile": manifest["profile"],
             "source_snapshot_sha256": manifest["snapshot_sha256"],
             "artifacts": artifact_names,
+            "artifact_sha256": artifact_sha256,
         },
     )
     return {
@@ -624,6 +698,142 @@ def _public_source_key(row: JsonDict) -> tuple[str, str]:
     return (str(row.get("adapter", "")), str(row.get("source_path_sha256", "")))
 
 
+def _dict_value(value: object) -> JsonDict:
+    return cast(JsonDict, value) if isinstance(value, dict) else {}
+
+
+def _pool_metric_summaries(primary: JsonDict, secondary: JsonDict) -> JsonDict:
+    pooled: JsonDict = {}
+    for name in sorted(set(primary) | set(secondary)):
+        first = _dict_value(primary.get(name))
+        second = _dict_value(secondary.get(name))
+        summaries = [summary for summary in (first, second) if summary]
+        if len(summaries) == 1:
+            pooled[name] = summaries[0]
+            continue
+        counts = [summary.get("count") for summary in summaries]
+        means = [summary.get("mean") for summary in summaries]
+        minima = [summary.get("min") for summary in summaries]
+        maxima = [summary.get("max") for summary in summaries]
+        if not (
+            all(
+                isinstance(value, int) and not isinstance(value, bool) and value >= 0
+                for value in counts
+            )
+            and all(_finite_number(value) for value in means)
+            and all(_finite_number(value) for value in minima)
+            and all(_finite_number(value) for value in maxima)
+        ):
+            pooled[name] = {"primary": first, "secondary": second}
+            continue
+        valid_counts = cast(list[int], counts)
+        valid_means = cast(list[int | float], means)
+        valid_minima = cast(list[int | float], minima)
+        valid_maxima = cast(list[int | float], maxima)
+        total = sum(valid_counts)
+        if total == 0:
+            pooled[name] = {"count": 0, "mean": None, "min": None, "max": None}
+            continue
+        weighted = sum(
+            count * float(mean_value)
+            for count, mean_value in zip(valid_counts, valid_means, strict=True)
+        )
+        pooled[name] = {
+            "count": total,
+            "mean": weighted / total,
+            "min": min(float(value) for value in valid_minima),
+            "max": max(float(value) for value in valid_maxima),
+        }
+    return pooled
+
+
+def _artifact_sha256(root: Path, names: Iterable[str]) -> JsonDict:
+    return {
+        name: _file_integrity(root / name)[1]
+        for name in sorted(names)
+    }
+
+
+def _write_adapter_portable_bundle(
+    source: Path,
+    artifact_names: list[str],
+    *,
+    profile: str,
+    snapshot_sha256: str,
+) -> None:
+    portable_dir = source / "portable"
+    ensure_dir(portable_dir)
+    public_names = [name for name in artifact_names if name != "source_manifest.json"]
+    for name in public_names:
+        shutil.copyfile(source / name, portable_dir / name)
+    write_json(
+        portable_dir / "portable_manifest.json",
+        {
+            "schema": "prompt_control_lab.portable_evidence_bundle.v1",
+            "profile": profile,
+            "source_snapshot_sha256": snapshot_sha256,
+            "artifacts": public_names,
+            "artifact_sha256": _artifact_sha256(portable_dir, public_names),
+        },
+    )
+
+
+def _load_verified_evidence_artifacts(root: Path) -> dict[str, JsonDict]:
+    if root.is_symlink() or not root.is_dir():
+        raise ValueError(f"Portable evidence input must be a real directory: {root}")
+    sentinel = (
+        root / "portable_manifest.json"
+        if (root / "portable_manifest.json").is_file()
+        else root / "manifest.json"
+    )
+    if sentinel.is_symlink() or not sentinel.is_file():
+        raise ValueError(f"Evidence artifact digest manifest is missing: {root}")
+    metadata = read_json(sentinel)
+    if metadata.get("schema") not in {
+        "prompt_control_lab.portable_evidence_bundle.v1",
+        "prompt_control_lab.evidence_run.v2",
+    }:
+        raise ValueError(f"Unsupported evidence artifact digest manifest: {sentinel}")
+    profile_name = metadata.get("profile")
+    if not isinstance(profile_name, str) or not profile_name:
+        raise ValueError("Evidence artifact digest manifest is missing profile")
+    profile = get_evidence_profile(profile_name)
+    digests = metadata.get("artifact_sha256")
+    if not isinstance(digests, dict):
+        raise ValueError("Evidence artifact digest manifest is missing artifact_sha256")
+    required = {
+        "public_source_manifest.json",
+        *(f"{adapter}.json" for adapter in profile.adapter_names),
+    }
+    if not required <= set(digests):
+        missing = ", ".join(sorted(required - set(digests)))
+        raise ValueError(f"Evidence artifact digest manifest is incomplete: {missing}")
+    parsed: dict[str, JsonDict] = {}
+    for raw_name, expected in sorted(digests.items()):
+        if not isinstance(raw_name, str) or Path(raw_name).name != raw_name:
+            raise ValueError("Evidence artifact digest manifest contains an unsafe path")
+        if not isinstance(expected, str) or not expected.startswith("sha256:"):
+            raise ValueError(f"Evidence artifact digest is invalid: {raw_name}")
+        path = root / raw_name
+        if path.is_symlink() or not path.is_file():
+            raise ValueError(f"Evidence artifact is missing or unsafe: {path}")
+        content = path.read_bytes()
+        observed = "sha256:" + hashlib.sha256(content).hexdigest()
+        if observed != expected:
+            raise ValueError(f"Evidence artifact digest mismatch: {raw_name}")
+        if path.suffix.lower() == ".json":
+            value = json.loads(content.decode("utf-8-sig"))
+            if not isinstance(value, dict):
+                raise ValueError(f"Evidence artifact must contain a JSON object: {raw_name}")
+            parsed[raw_name] = cast(JsonDict, value)
+    source_manifest = parsed["public_source_manifest.json"]
+    if source_manifest.get("profile") != profile_name:
+        raise ValueError("Evidence artifact profile does not match its source manifest")
+    if source_manifest.get("snapshot_sha256") != metadata.get("source_snapshot_sha256"):
+        raise ValueError("Evidence artifact snapshot does not match its source manifest")
+    return parsed
+
+
 def _write_adapter_run(
     *,
     manifest: JsonDict,
@@ -633,8 +843,8 @@ def _write_adapter_run(
     overwrite: bool,
     reconciliation: JsonDict,
 ) -> JsonDict:
+    _prepare_adapter_output(out_dir, overwrite=overwrite)
     resolved_out = out_dir.resolve()
-    _prepare_adapter_output(resolved_out, overwrite=overwrite)
     profile = get_evidence_profile(str(manifest["profile"]))
     findings = []
     for adapter in profile.adapters:
@@ -716,11 +926,13 @@ def _write_adapter_run(
         *(f"{adapter}.json" for adapter in profile.adapter_names),
     ]
     if portable:
-        portable_dir = resolved_out / "portable"
-        ensure_dir(portable_dir)
-        for name in artifact_names:
-            if name != "source_manifest.json":
-                shutil.copyfile(resolved_out / name, portable_dir / name)
+        _write_adapter_portable_bundle(
+            resolved_out,
+            artifact_names,
+            profile=str(manifest["profile"]),
+            snapshot_sha256=str(manifest["snapshot_sha256"]),
+        )
+    artifact_sha256 = _artifact_sha256(resolved_out, artifact_names)
     write_json(
         resolved_out / "manifest.json",
         {
@@ -729,6 +941,7 @@ def _write_adapter_run(
             "profile": manifest["profile"],
             "source_snapshot_sha256": manifest["snapshot_sha256"],
             "artifacts": artifact_names,
+            "artifact_sha256": artifact_sha256,
         },
     )
     return {
@@ -744,14 +957,108 @@ def _source_key(row: JsonDict) -> tuple[str, str]:
     return (str(row.get("adapter", "")), str(row.get("relative_path", "")))
 
 
+def _source_manifest_row(row: JsonDict) -> JsonDict:
+    return {
+        key: value
+        for key, value in row.items()
+        if key != "verified_path" and not key.startswith("_verified_")
+    }
+
+
+def validate_evidence_destination(
+    output: Path,
+    *,
+    protected_roots: Iterable[Path] = (),
+) -> Path:
+    """Reject evidence writes that overlap source inputs or protected project roots."""
+
+    expanded = output.expanduser()
+    if expanded.is_symlink():
+        raise ValueError(f"Evidence output cannot be a symbolic link: {expanded}")
+    resolved = expanded.resolve()
+    if resolved.parent == resolved:
+        raise ValueError(f"Evidence output cannot be a filesystem root: {resolved}")
+    if resolved == Path.cwd().resolve():
+        raise ValueError("Evidence output cannot replace the current working directory")
+    if resolved.is_dir() and (resolved / ".git").exists():
+        raise ValueError(f"Evidence output cannot replace a Git repository root: {resolved}")
+    for raw in protected_roots:
+        protected = raw.expanduser().resolve()
+        if protected.is_file():
+            if protected == resolved or protected.is_relative_to(resolved):
+                raise ValueError(
+                    f"Evidence output overlaps an input artifact: {protected}"
+                )
+            continue
+        if resolved.is_relative_to(protected) or protected.is_relative_to(resolved):
+            raise ValueError(f"Evidence output overlaps a protected source root: {protected}")
+    return resolved
+
+
 def _prepare_adapter_output(out_dir: Path, *, overwrite: bool) -> None:
-    if out_dir.is_symlink():
-        raise ValueError(f"Evidence output cannot be a symbolic link: {out_dir}")
-    if out_dir.exists() and any(out_dir.iterdir()):
-        if not overwrite:
-            raise ValueError(f"Evidence output already exists: {out_dir}")
-        shutil.rmtree(out_dir)
-    ensure_dir(out_dir)
+    resolved = validate_evidence_destination(out_dir)
+    if resolved.exists() and not resolved.is_dir():
+        raise ValueError(f"Evidence output must be a directory: {resolved}")
+    if not resolved.exists() or not any(resolved.iterdir()):
+        ensure_dir(resolved)
+        return
+    if not overwrite:
+        raise ValueError(f"Evidence output already exists: {resolved}")
+
+    manifest_path = resolved / "manifest.json"
+    if manifest_path.is_symlink() or not manifest_path.is_file():
+        raise ValueError(
+            f"Refusing to overwrite a directory that is not a PromptControlLab evidence run: "
+            f"{resolved}"
+        )
+    try:
+        manifest = read_json(manifest_path)
+    except (OSError, UnicodeError, json.JSONDecodeError, ValueError) as exc:
+        raise ValueError(
+            f"Refusing to overwrite a directory with an invalid evidence sentinel: {resolved}"
+        ) from exc
+    if manifest.get("schema") not in {
+        "prompt_control_lab.evidence_run.v1",
+        "prompt_control_lab.evidence_run.v2",
+    }:
+        raise ValueError(
+            f"Refusing to overwrite a directory that is not a PromptControlLab evidence run: "
+            f"{resolved}"
+        )
+    artifact_names = manifest.get("artifacts", [])
+    if not isinstance(artifact_names, list) or not all(
+        isinstance(name, str) and Path(name).name == name for name in artifact_names
+    ):
+        raise ValueError("Evidence run sentinel contains unsafe artifact paths")
+    known = {
+        "manifest.json",
+        "source_manifest.json",
+        "public_source_manifest.json",
+        "source_reconciliation.json",
+        "source_gap_report.json",
+        "evidence_matrix.json",
+        "interpretability_report.json",
+        "interpretability_report.html",
+        "claim_check.json",
+        "portable",
+        *artifact_names,
+    }
+    unknown = sorted(path.name for path in resolved.iterdir() if path.name not in known)
+    if unknown:
+        raise ValueError(
+            "Refusing to overwrite evidence output with unowned files: "
+            + ", ".join(unknown)
+        )
+    for path in list(resolved.iterdir()):
+        if path.name == "portable":
+            if path.is_symlink() or not path.is_dir():
+                raise ValueError(f"Portable evidence destination is unsafe: {path}")
+            shutil.rmtree(path)
+        elif path.is_dir():
+            raise ValueError(f"Unexpected directory in evidence output: {path}")
+        else:
+            path.unlink()
+    ensure_dir(resolved)
 
 
 def render_interpretability_html(report: JsonDict, matrix: JsonDict) -> str:
@@ -875,20 +1182,21 @@ def _snapshot_identity(manifest: JsonDict) -> JsonDict:
             if not isinstance(raw, dict):
                 continue
             row = cast(JsonDict, raw)
-            sources.append(
-                {
-                    key: row.get(key)
-                    for key in (
-                        "adapter",
-                        "role",
-                        "relative_path",
-                        "bytes",
-                        "sha256",
-                        "media_type",
-                        "load_policy",
-                    )
-                }
-            )
+            identity = {
+                key: row.get(key)
+                for key in (
+                    "adapter",
+                    "role",
+                    "relative_path",
+                    "bytes",
+                    "sha256",
+                    "media_type",
+                    "load_policy",
+                )
+            }
+            if "canonical_sha256" in row:
+                identity["canonical_sha256"] = row.get("canonical_sha256")
+            sources.append(identity)
     return {
         "schema": manifest["schema"],
         "profile": manifest["profile"],
@@ -968,11 +1276,32 @@ def _verify_sources(manifest: JsonDict) -> list[JsonDict]:
         if not path.is_file():
             msg = f"Evidence source is missing: {path}"
             raise ValueError(msg)
-        size, digest = _file_integrity(path)
+        content: bytes | None = None
+        if path.suffix.lower() in {".json", ".jsonl"}:
+            content = path.read_bytes()
+            size = len(content)
+            digest = "sha256:" + hashlib.sha256(content).hexdigest()
+        else:
+            size, digest = _file_integrity(path)
         if size != row.get("bytes") or digest != row.get("sha256"):
             msg = f"Evidence source changed after scan: {relative}"
             raise ValueError(msg)
-        verified.append({**row, "verified_path": str(path)})
+        if "canonical_sha256" in row:
+            canonical = (
+                _canonical_source_digest(path, content, digest)
+                if content is not None
+                else digest
+            )
+            if canonical != row.get("canonical_sha256"):
+                msg = f"Evidence canonical digest changed after scan: {relative}"
+                raise ValueError(msg)
+        verified.append(
+            {
+                **row,
+                "verified_path": str(path),
+                "_verified_content": content,
+            }
+        )
     return verified
 
 
@@ -1047,7 +1376,12 @@ def _json_payloads(rows: Iterable[JsonDict]) -> list[tuple[JsonDict, JsonDict]]:
     for row in rows:
         if Path(str(row["relative_path"])).suffix.lower() != ".json":
             continue
-        payloads.append((row, read_json(Path(str(row["verified_path"])))))
+        content = row.get("_verified_content")
+        if not isinstance(content, bytes):
+            continue
+        value = json.loads(content.decode("utf-8-sig"))
+        if isinstance(value, dict):
+            payloads.append((row, cast(JsonDict, value)))
     return payloads
 
 
@@ -1480,7 +1814,10 @@ def _matrix_row(adapter: str, sources: list[JsonDict], findings: list[JsonDict])
 
 
 def _claim_check(findings: list[JsonDict]) -> JsonDict:
-    available = [entry for entry in findings if entry["support_status"] != "unavailable"]
+    available = [entry for entry in findings if entry["support_status"] == "observed"]
+    pending = [
+        entry for entry in findings if entry["support_status"] == "requires_reanalysis"
+    ]
     return {
         "schema": "prompt_control_lab.interpretability_claim_check.v1",
         "status": "bounded_interpretation_available" if available else "insufficient_evidence",
@@ -1491,6 +1828,8 @@ def _claim_check(findings: list[JsonDict]) -> JsonDict:
         "decision_evidence_available": any(
             entry["interpretation_role"] == "decision" for entry in available
         ),
+        "observed_diagnostic_count": len(available),
+        "requires_reanalysis_count": len(pending),
         "universal_improvement_supported": False,
         "allowed_claims": [
             "Recorded diagnostics can characterize mechanisms, stability, uncertainty, and scope.",
@@ -1520,31 +1859,7 @@ def _write_portable_bundle(out_dir: Path) -> None:
 
 
 def _prepare_output(out_dir: Path, *, overwrite: bool) -> None:
-    generated = [
-        "manifest.json",
-        "source_manifest.json",
-        "public_source_manifest.json",
-        "evidence_matrix.json",
-        "interpretability_report.json",
-        "interpretability_report.html",
-        "claim_check.json",
-    ]
-    existing = [out_dir / name for name in generated if (out_dir / name).exists()]
-    portable = out_dir / "portable"
-    if portable.is_symlink():
-        msg = f"Portable evidence destination cannot be a symbolic link: {portable}"
-        raise ValueError(msg)
-    if portable.exists() and not overwrite:
-        existing.append(portable)
-    if existing and not overwrite:
-        msg = f"Evidence output already exists: {existing[0]}; pass --overwrite to replace it"
-        raise ValueError(msg)
-    ensure_dir(out_dir)
-    if overwrite:
-        for path in existing:
-            path.unlink()
-        if portable.exists():
-            shutil.rmtree(portable)
+    _prepare_adapter_output(out_dir, overwrite=overwrite)
 
 
 def _mean_field(payloads: list[JsonDict], key: str) -> float | None:

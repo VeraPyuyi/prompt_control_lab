@@ -360,6 +360,81 @@ def finalize_control_session(session: ControlSession) -> JsonDict:
         return _finalize_control_session_locked(session)
 
 
+def finalize_incomplete_control_session(
+    session: ControlSession,
+    *,
+    outcome: str,
+    exit_code: int | None = None,
+) -> JsonDict:
+    """Close an externally terminated run without inventing a missing preflight."""
+
+    if outcome not in {"failed", "cancelled"}:
+        msg = "Incomplete control sessions require outcome `failed` or `cancelled`"
+        raise ValueError(msg)
+    with run_lifecycle_lock(session.run_dir):
+        current = ControlRun.from_json(read_json(session.run_dir / "control_run.json"))
+        if current.status == "finalized":
+            return control_status(ControlSession(session.run_dir, current))
+        if (session.run_dir / "preflight.json").exists():
+            msg = "A preflight exists; use normal control-session finalization"
+            raise ValueError(msg)
+
+        events = ControlSession(session.run_dir, current).events
+        termination: JsonDict = {
+            "schema": "prompt_control_lab.harness_termination.v1",
+            "outcome": outcome,
+            "exit_code": exit_code,
+            "preflight_observed": False,
+            "evidence_status": "insufficient_evidence",
+        }
+        write_json(session.run_dir / "harness_termination.json", termination)
+        events.append_new(
+            event_type="session/terminated",
+            payload=termination,
+            idempotency_key="session-terminated",
+        )
+        attribution = AttributionReport(
+            run_id=current.run_id,
+            status="insufficient_evidence",
+            factors=[],
+            summary="The external session ended before prompt preflight was observed.",
+        )
+        stability = StabilityReport(
+            run_id=current.run_id,
+            state="insufficient_evidence",
+            signals={"observed_events": len(events.read()), "external_outcome": outcome},
+            summary="No post-preflight execution trajectory was recorded.",
+        )
+        decision = ControlDecision(
+            run_id=current.run_id,
+            decision="insufficient_evidence",
+            next_action="Fix the external Harness startup failure and rerun the bounded session.",
+            reasons=["No prompt preflight was observed before the external session ended."],
+        )
+        write_json(session.run_dir / "attribution.json", attribution.to_json())
+        write_json(session.run_dir / "stability.json", stability.to_json())
+        write_json(session.run_dir / "decision.json", decision.to_json())
+        _write_incomplete_report(
+            session.run_dir,
+            current,
+            attribution,
+            stability,
+            decision,
+            termination=termination,
+        )
+        events.append_new(
+            event_type="session/finalized",
+            payload={"decision": decision.decision, "outcome": outcome},
+            idempotency_key="session-finalized",
+        )
+        metadata = dict(current.metadata)
+        metadata["termination_outcome"] = outcome
+        finalized = replace(current, status="finalized", metadata=metadata)
+        write_json(session.run_dir / "control_run.json", finalized.to_json())
+        _index_control_run(session.run_dir)
+        return control_status(ControlSession(session.run_dir, finalized))
+
+
 def _finalize_control_session_locked(session: ControlSession) -> JsonDict:
     current = ControlRun.from_json(read_json(session.run_dir / "control_run.json"))
     if current.status == "finalized":
@@ -798,6 +873,54 @@ def _write_report(
             f"<p><strong>Decision:</strong> {html.escape(decision.decision)}</p>",
             f"<p><strong>Next action:</strong> {html.escape(decision.next_action)}</p>",
             f"<p>{html.escape(evidence_note)}</p>",
+            "</main></body></html>\n",
+        ]
+    )
+    (run_dir / "report.html").write_text(report_html, encoding="utf-8")
+
+
+def _write_incomplete_report(
+    run_dir: Path,
+    run: ControlRun,
+    attribution: AttributionReport,
+    stability: StabilityReport,
+    decision: ControlDecision,
+    *,
+    termination: JsonDict,
+) -> None:
+    markdown = "\n".join(
+        [
+            "# PromptControlLab Control Run",
+            "",
+            f"- Run: `{run.run_id}`",
+            f"- Authorization: `{run.authorization}`",
+            "- Preflight: `not_observed`",
+            f"- External outcome: `{termination['outcome']}`",
+            f"- Attribution: `{attribution.status}`",
+            f"- Stability: `{stability.state}`",
+            f"- Decision: `{decision.decision}`",
+            "",
+            "## Next Action",
+            "",
+            decision.next_action,
+            "",
+            "This report closes an interrupted external session. It does not claim that prompt "
+            "preflight, a model request, tool execution, or code modification occurred.",
+            "",
+        ]
+    )
+    (run_dir / "report.md").write_text(markdown, encoding="utf-8")
+    report_html = "\n".join(
+        [
+            "<!doctype html>",
+            '<html lang="en"><head><meta charset="utf-8">',
+            "<title>PromptControlLab Incomplete Control Run</title></head><body>",
+            "<main><h1>PromptControlLab Incomplete Control Run</h1>",
+            f"<p><strong>Run:</strong> <code>{html.escape(run.run_id)}</code></p>",
+            "<p><strong>Preflight:</strong> not_observed</p>",
+            f"<p><strong>Decision:</strong> {html.escape(decision.decision)}</p>",
+            f"<p><strong>Next action:</strong> {html.escape(decision.next_action)}</p>",
+            "<p>No model or agent execution is inferred from this interrupted run.</p>",
             "</main></body></html>\n",
         ]
     )
