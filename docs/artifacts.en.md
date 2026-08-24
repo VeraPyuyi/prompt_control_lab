@@ -540,3 +540,38 @@ What it explains: whether time-varying gains are more consistent with temporal s
 Collects split hygiene, metrics, statistics, and diagnostics into a readable report.
 
 What it explains: whether the prompt change should be kept and what should be inspected next.
+
+## Server evidence import artifacts
+
+Written by `pcl evidence scan` and `pcl evidence import`:
+
+- `server_evidence_manifest.json`: deterministic source roles, sizes, SHA-256 hashes, adapters,
+  availability, and safe load policies.
+- `source_manifest.json`: the private-local verified snapshot, including paths needed to recheck
+  source bytes. Do not publish this file.
+- `public_source_manifest.json`: path-free source roles, content hashes, path hashes, sizes, and
+  load policies suitable for the portable derived bundle.
+- `evidence_matrix.json`: source coverage, support status, interpretation role, confidence, and next
+  action for every adapter.
+- `interpretability_report.json/html`: observation, explanation, scope, claim boundary, and next
+  action for mechanism, stability, boundary, uncertainty, and decision findings.
+- `claim_check.json`: statements supported or disallowed by the current snapshot.
+
+What they explain: which real artifacts support each diagnostic question and where interpretation
+must stop. The import preserves raw p-values, intervals, and statuses; it does not turn an
+inconclusive result into a confirmed improvement. `--portable` copies only derived reports and the
+public manifest, never the raw source files.
+
+## Post-training gate artifacts
+
+Written by `pcl posttrain-gate`:
+
+- `posttrain_gate.json`: `pass`, `needs_review`, `hold`, or `insufficient_evidence`, plus all checks.
+- `checkpoint_comparison.json`: matched model/split provenance, score and slice deltas, paired CI,
+  token/latency changes, and recorded checkpoint diagnostics.
+- `mechanism_attribution.json`: bounded mechanism, stability, boundary, and uncertainty readings.
+- `report.md/html`: the reviewer-facing checkpoint decision.
+
+What they explain: whether a candidate checkpoint is worth continuing and which evidence drove the
+decision. They support checkpoint selection for SFT, DPO, PPO, and GRPO, but do not replace training
+or prove a hidden causal mechanism.

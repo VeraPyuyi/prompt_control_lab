@@ -16,16 +16,17 @@ def test_control_navigation_has_fixed_order_and_before_default() -> None:
     assert app.PRIMARY_VIEW_ORDER == (
         "before",
         "run",
-        "why",
-        "after",
+        "mechanism",
+        "stability",
+        "training",
+        "evidence",
         "decision",
         "history",
-        "advanced",
     )
     assert app.DEFAULT_PRIMARY_VIEW == "before"
     assert app._ordered_views("history") == list(app.PRIMARY_VIEW_ORDER)
     assert app._resolve_primary_view("") == "before"
-    assert app._resolve_primary_view("research") == "advanced"
+    assert app._resolve_primary_view("research") == "evidence"
 
 
 def test_control_navigation_labels_are_localized() -> None:
@@ -34,37 +35,90 @@ def test_control_navigation_labels_are_localized() -> None:
     assert app.primary_view_labels("en") == [
         "Before",
         "Run",
-        "Why",
-        "After",
+        "Mechanism",
+        "Stability",
+        "Training Gate",
+        "Evidence Scope",
         "Decision",
         "History",
-        "Advanced",
     ]
     assert app.primary_view_labels("zh") == [
         "执行前",
         "运行中",
-        "原因",
-        "执行后",
+        "机制解释",
+        "稳定性",
+        "训练门禁",
+        "证据边界",
         "决策",
         "历史",
-        "高级",
     ]
 
 
-def test_legacy_research_and_peoc_render_only_under_advanced() -> None:
+def test_legacy_research_and_peoc_render_under_evidence_scope() -> None:
     from promptcontrollab.ui import app
 
     assert app.legacy_sections_for("before") == ("guard", "tutorial")
     assert app.legacy_sections_for("run") == ("workflows",)
-    assert app.legacy_sections_for("after") == ("drift", "audit")
+    assert app.legacy_sections_for("stability") == ("drift", "audit")
+    assert app.legacy_sections_for("training") == ("posttrain",)
     assert app.legacy_sections_for("decision") == ("report",)
     assert app.legacy_sections_for("history") == ("history",)
-    assert app.legacy_sections_for("advanced") == ("research",)
+    assert app.legacy_sections_for("evidence") == ("research",)
     assert all(
         "research" not in app.legacy_sections_for(view)
         for view in app.PRIMARY_VIEW_ORDER
-        if view != "advanced"
+        if view != "evidence"
     )
+
+
+def test_interpretability_and_posttrain_artifacts_are_loaded_for_core_views(
+    tmp_path: Path,
+) -> None:
+    from promptcontrollab.ui.data import evidence_matrix_rows, interpretability_rows
+
+    run = tmp_path / "runs" / "diagnostic"
+    _write_json(
+        run / "interpretability_report.json",
+        {
+            "findings": [
+                {
+                    "adapter": "turnpike_a800",
+                    "interpretation_role": "stability",
+                    "observation": "Decay differs by task family.",
+                    "explanation": "Task heterogeneity changes the trajectory signature.",
+                    "confidence": "medium",
+                    "scope": "Recorded tasks.",
+                    "claim_boundary": "Not global convergence proof.",
+                    "next_action": "Add matched seeds.",
+                }
+            ]
+        },
+    )
+    _write_json(
+        run / "evidence_matrix.json",
+        {
+            "diagnostics": [
+                {
+                    "adapter": "turnpike_a800",
+                    "support_status": "observed",
+                    "interpretation_role": "stability",
+                }
+            ]
+        },
+    )
+    _write_json(run / "posttrain_gate.json", {"decision": "needs_review"})
+    _write_json(run / "checkpoint_comparison.json", {"score_delta": 0.1})
+    _write_json(
+        run / "mechanism_attribution.json",
+        {"findings": [{"dimension": "trajectory_stability", "confidence": "medium"}]},
+    )
+
+    detail = load_run_detail(run)
+
+    assert detail["posttrain_gate"]["decision"] == "needs_review"
+    assert detail["checkpoint_comparison"]["score_delta"] == 0.1
+    assert interpretability_rows(detail)[0]["role"] == "stability"
+    assert evidence_matrix_rows(detail)[0]["status"] == "observed"
 
 
 def test_control_artifacts_load_safely_and_make_a_control_only_run_visible(tmp_path: Path) -> None:

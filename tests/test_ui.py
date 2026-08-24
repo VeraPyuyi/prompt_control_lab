@@ -1589,7 +1589,7 @@ def test_ui_has_history_view_order_and_text() -> None:
     assert app._ordered_views("workflows") == expected
     assert app._ordered_views("history") == expected
     assert app._ordered_views("tutorial") == expected
-    assert app._resolve_primary_view("research") == "advanced"
+    assert app._resolve_primary_view("research") == "evidence"
     assert app._resolve_primary_view("workflows") == "run"
     assert app._resolve_primary_view("history") == "history"
     assert app._resolve_primary_view("tutorial") == "before"

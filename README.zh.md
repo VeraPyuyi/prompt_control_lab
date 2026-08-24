@@ -1,8 +1,10 @@
 # PromptControlLab 2.0
 
-**Prompt 与 AI Agent 的本地控制闭环。**
+**Prompt、Checkpoint 与 AI Agent 的本地证据、诊断和控制闭环。**
 
-PromptControlLab 是一个开源、本地优先的控制框架，负责执行前检查、显式执行授权、脱敏事件记录、运行诊断和可复核决策。它面向真实 Prompt 与 Agent 工作流；研究诊断是可选能力。英文：[README.md](README.md)。
+> 框架方向版本：2.0；当前可安装的 Python 包版本：`promptcontrollab 0.1.0`。
+
+PromptControlLab 是一个开源、本地优先的框架，用来解释结果为什么变化、比较是否有效、观察到的行为是否稳定，以及 Prompt、checkpoint 或 Agent run 是否值得继续。它把执行前控制与 trajectory、soft-hard、generation mismatch、selective-risk 和拟合 surrogate 证据连接起来。英文：[README.md](README.md)。
 
 ## 2 分钟 Control Demo
 
@@ -13,6 +15,16 @@ pcl ui --runs runs --language zh
 ```
 
 `inspect` 只运行本地 preflight 并写出完整 control run，不调用模型，也不启动 Agent。
+
+## 核心诊断闭环
+
+```bash
+pcl evidence scan --root /path/to/experiments --profile peoc-server --out server_evidence_manifest.json
+pcl evidence import --manifest server_evidence_manifest.json --out runs/server-evidence
+pcl posttrain-gate --baseline runs/checkpoint-000 --candidate runs/checkpoint-500 --policy examples/posttrain.policy.yaml --out runs/posttrain-gate
+```
+
+这三步把分散的真实实验 artifact 归入五种解释角色：机制、稳定性、适用边界、不确定性和决策。参见[真实 911 项服务器证据快照](docs/case_studies/server_evidence/README.zh.md)、[证据导入说明](docs/server_evidence.zh.md)和[后训练门禁](docs/posttraining.zh.md)。
 
 ## 旗舰集成：DeepSeek Harness
 
@@ -25,11 +37,12 @@ pcl ui --runs runs --language zh
 | Provider | OpenAI、Anthropic、Gemini、DeepSeek、Qwen / DashScope、Kimi / Moonshot、OpenAI-compatible endpoint |
 | Agent | DeepSeek Harness 原生控制；Codex、Cursor、Claude Code、GitHub Action prompt-guard adapter |
 | 开放协议 | 版本化 `prompt_control_lab.control_event.v1` JSONL 协议与确定性 [control benchmark](docs/control_benchmark.zh.md) |
-| 本地 UI | Before / Run / Why / After / Decision / History / Advanced |
+| 诊断证据 | Trajectory/turnpike、Riccati/DARE surrogate、soft-hard/time-varying control、generation mismatch、selective risk、checkpoint gate |
+| 本地 UI | 执行前 / 运行中 / 机制解释 / 稳定性 / 训练门禁 / 证据边界 / 决策 / 历史 |
 
 ## Documentation
 
-[控制闭环与授权](docs/control_loop.zh.md) | [DeepSeek Harness](docs/deepseek_harness.zh.md) | [Provider 与溯源](docs/providers.zh.md) | [Benchmark 解读](docs/control_benchmark.zh.md) | [本地 UI](docs/control_ui.zh.md)
+[证据与可解释性](docs/server_evidence.zh.md) | [后训练诊断](docs/posttraining.zh.md) | [控制闭环](docs/control_loop.zh.md) | [DeepSeek Harness](docs/deepseek_harness.zh.md) | [Provider](docs/providers.zh.md) | [本地 UI](docs/control_ui.zh.md)
 
 安装与已有流程：[发布安装说明](docs/release_install.zh.md)、`pcl start --guide --language zh`、`pcl quickstart --language zh --out demo --open-report`、`pcl start --choice demo --language zh --out demo`、`pcl choose --need "<你的目标>" --language zh`。
 
@@ -37,8 +50,8 @@ pcl ui --runs runs --language zh
 
 工程参考：[production protocol](docs/production_pilot.zh.md)、[preflight pilot](docs/case_studies/agent_guard_pilot.zh.md)、[Codex 成对试点](docs/case_studies/agent_guard_paired_pilot.zh.md)、[生态 scorecard](docs/assets/ecosystem_scorecard.zh.svg)和[证据矩阵](docs/assets/ecosystem_evidence_matrix.zh.svg)。这些小样本试点不是通用 benchmark。
 
-## 高级诊断 / Advanced Diagnostics
+## 方法来源与结论边界
 
-PEOC import 与 `soft-hard`、`trajectory`、`riccati`、`tv-soft` 只属于有边界的研究诊断，不是默认控制主线。入口见[高级功能映射](docs/research_from_paper.zh.md)和 [PEOC 导入说明](docs/research_import_peoc.zh.md)。
+PEOC 提供控制论框架和若干诊断方法；产品层将其推广到 Prompt、checkpoint 与 Agent 证据。`soft-hard`、`trajectory`、`riccati`、`tv-soft` 属于基于观测或拟合 surrogate 的解释，不能当作线上 LLM 的数学安全证明。参见[方法映射](docs/research_from_paper.zh.md)和 [PEOC 导入说明](docs/research_import_peoc.zh.md)。
 
 Apache-2.0。见 [LICENSE](LICENSE)。

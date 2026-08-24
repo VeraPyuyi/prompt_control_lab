@@ -298,3 +298,27 @@ workflow/dependency/secret/test 删除等风险区域，是否需要人工复核
 
 说明什么问题：跨多个 run 查看 score、model、prompt hash、gate status、risk level 和
 review required 的变化趋势。
+
+## 服务器证据导入 artifact
+
+由 `pcl evidence scan` 和 `pcl evidence import` 写出：
+
+- `server_evidence_manifest.json`：稳定排序的来源角色、大小、SHA-256、adapter、可用性和安全读取策略。
+- `source_manifest.json`：包含复核来源字节所需路径的本地私有快照，不应公开。
+- `public_source_manifest.json`：不含原始路径的来源角色、内容哈希、路径哈希、大小和读取策略，可放入 portable 派生包。
+- `evidence_matrix.json`：每个 adapter 的来源覆盖、支持状态、解释角色、置信度和下一步。
+- `interpretability_report.json/html`：机制、稳定性、边界、不确定性和决策项的观察、解释、范围、结论边界和下一步。
+- `claim_check.json`：当前快照允许和不允许表达的结论。
+
+说明什么问题：每项诊断问题到底由哪些真实 artifact 支持，以及解释应该在哪里停止。导入过程保留原始 p-value、区间和状态，不会把 `inconclusive` 包装成已经证实的提升。`--portable` 只复制派生报告和公开清单，不复制原始来源文件。
+
+## 后训练门禁 artifact
+
+由 `pcl posttrain-gate` 写出：
+
+- `posttrain_gate.json`：`pass`、`needs_review`、`hold` 或 `insufficient_evidence`，以及全部检查项。
+- `checkpoint_comparison.json`：匹配的模型/split 来源、分数与 slice delta、paired CI、token/latency 变化，以及 checkpoint 诊断。
+- `mechanism_attribution.json`：有边界的机制、稳定性、适用边界和不确定性解释。
+- `report.md/html`：给 reviewer 阅读的 checkpoint 决策报告。
+
+说明什么问题：candidate checkpoint 是否值得继续，以及哪些依据触发了该决策。它可以辅助 SFT、DPO、PPO、GRPO 的 checkpoint 选择，但不替代训练算法，也不证明隐藏因果机制。

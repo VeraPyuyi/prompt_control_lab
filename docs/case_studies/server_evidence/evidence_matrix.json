@@ -1,0 +1,67 @@
+{
+  "diagnostics": [
+    {
+      "adapter": "agent_episode",
+      "confidence": "medium",
+      "interpretation_role": "mechanism",
+      "next_action": "Map ControlRun and ControlEvent records into versioned episode instances.",
+      "source_count": 1,
+      "support_status": "observed"
+    },
+    {
+      "adapter": "deployment_gate",
+      "confidence": "high",
+      "interpretation_role": "decision",
+      "next_action": "Inspect the primary interaction and mechanism-health fields before deployment.",
+      "source_count": 3,
+      "support_status": "inconclusive"
+    },
+    {
+      "adapter": "generation_aware",
+      "confidence": "medium",
+      "interpretation_role": "boundary",
+      "next_action": "Compare matched held-out rollouts only after the pilot gate permits continuation.",
+      "source_count": 169,
+      "support_status": "inconclusive"
+    },
+    {
+      "adapter": "riccati_ass_hyp",
+      "confidence": "medium",
+      "interpretation_role": "stability",
+      "next_action": "Audit fit residuals, conditioning, rank, and sensitivity before comparison.",
+      "source_count": 4,
+      "support_status": "observed"
+    },
+    {
+      "adapter": "selective_risk",
+      "confidence": "medium",
+      "interpretation_role": "uncertainty",
+      "next_action": "Monitor AURC and fixed-coverage accuracy under model and task drift.",
+      "source_count": 1,
+      "support_status": "observed"
+    },
+    {
+      "adapter": "soft_hard_tv",
+      "confidence": "medium",
+      "interpretation_role": "mechanism",
+      "next_action": "Use paired cells and matched parameter budgets when interpreting each contrast.",
+      "source_count": 722,
+      "support_status": "inconclusive"
+    },
+    {
+      "adapter": "turnpike_a800",
+      "confidence": "medium",
+      "interpretation_role": "stability",
+      "next_action": "Compare matched models, seeds, layers, and task families before generalizing.",
+      "source_count": 11,
+      "support_status": "observed"
+    }
+  ],
+  "profile": "peoc-server",
+  "schema": "prompt_control_lab.evidence_matrix.v1",
+  "snapshot_sha256": "sha256:f06e78767d7d399ed5d120de9671ea9ec2881c8e2c41a161ad6bfb716e914367",
+  "status_counts": {
+    "inconclusive": 3,
+    "observed": 4
+  }
+}

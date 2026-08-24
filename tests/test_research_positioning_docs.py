@@ -1,26 +1,32 @@
 from pathlib import Path
 
 
-def test_readmes_lead_with_control_loop_and_keep_research_advanced() -> None:
+def test_readmes_lead_with_evidence_diagnosis_and_control() -> None:
     readme = Path("README.md").read_text(encoding="utf-8")
     readme_zh = Path("README.zh.md").read_text(encoding="utf-8")
 
-    assert "The local control loop for prompts and AI agents." in readme
+    assert "The local evidence, diagnosis, and control loop" in readme
     assert "pcl control" in readme
+    assert "Core Diagnostic Loop" in readme
+    assert "pcl evidence scan" in readme
+    assert "pcl posttrain-gate" in readme
     assert "Flagship Integration: DeepSeek Harness" in readme
-    assert "Advanced Diagnostics" in readme
-    assert readme.find("pcl control") < readme.find("Advanced Diagnostics")
+    assert "Method Origins and Boundaries" in readme
+    assert readme.find("Core Diagnostic Loop") < readme.find("DeepSeek Harness")
     assert readme.find("DeepSeek Harness") < readme.find("PEOC")
     assert len(readme.splitlines()) <= 70
     assert "docs/research_import_peoc.en.md" in readme
     assert "docs/research_from_paper.en.md" in readme
     assert "Control-theoretic diagnostics and reproducible evidence" not in readme[:600]
 
-    assert "Prompt 与 AI Agent 的本地控制闭环。" in readme_zh
+    assert "本地证据、诊断和控制闭环" in readme_zh
     assert "pcl control" in readme_zh
+    assert "核心诊断闭环" in readme_zh
+    assert "pcl evidence scan" in readme_zh
+    assert "pcl posttrain-gate" in readme_zh
     assert "旗舰集成" in readme_zh and "DeepSeek Harness" in readme_zh
-    assert "高级诊断" in readme_zh
-    assert readme_zh.find("pcl control") < readme_zh.find("高级诊断")
+    assert "方法来源与结论边界" in readme_zh
+    assert readme_zh.find("核心诊断闭环") < readme_zh.find("DeepSeek Harness")
     assert readme_zh.find("DeepSeek Harness") < readme_zh.find("PEOC")
     assert len(readme_zh.splitlines()) <= 70
     assert "docs/research_import_peoc.zh.md" in readme_zh
@@ -86,6 +92,27 @@ def test_real_peoc_import_tutorials_are_bilingual_and_fail_closed() -> None:
         assert "not a proof" in text.lower() or "不是" in text
         assert "SaaS" not in text
         assert "pricing" not in text.lower()
+
+
+def test_server_evidence_and_posttraining_guides_are_bilingual_and_bounded() -> None:
+    evidence_en = Path("docs/server_evidence.en.md").read_text(encoding="utf-8")
+    evidence_zh = Path("docs/server_evidence.zh.md").read_text(encoding="utf-8")
+    posttrain_en = Path("docs/posttraining.en.md").read_text(encoding="utf-8")
+    posttrain_zh = Path("docs/posttraining.zh.md").read_text(encoding="utf-8")
+
+    for text in [evidence_en, evidence_zh]:
+        assert "pcl evidence scan" in text
+        assert "pcl evidence import" in text
+        assert "evidence_matrix.json" in text
+        assert "interpretability_report.json" in text
+        assert "claim_check.json" in text
+        assert "universal" in text.lower() or "普遍" in text
+
+    for text in [posttrain_en, posttrain_zh]:
+        assert "pcl posttrain-gate" in text
+        for decision in ["pass", "needs_review", "hold", "insufficient_evidence"]:
+            assert decision in text
+        assert "SFT" in text and "DPO" in text and "GRPO" in text
 
 
 def test_competitive_positioning_stays_evidence_layer_first() -> None:

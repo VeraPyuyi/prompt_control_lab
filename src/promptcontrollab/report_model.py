@@ -15,6 +15,8 @@ class ReportModel:
     run_dir: Path
     manifest: JsonDict
     source_manifest: JsonDict
+    evidence_matrix: JsonDict
+    interpretability_report: JsonDict
     peoc_evidence: JsonDict
     peoc_case_study: JsonDict
     metrics: JsonDict
@@ -30,6 +32,9 @@ class ReportModel:
     history_index: JsonDict
     history_compare: JsonDict
     agent_run: JsonDict
+    posttrain_gate: JsonDict
+    checkpoint_comparison: JsonDict
+    mechanism_attribution: JsonDict
     research_diagnostics: JsonDict
     research_gap_plan: JsonDict
     research_gap_status: JsonDict
@@ -63,6 +68,8 @@ class ReportModel:
             run_dir=run_dir,
             manifest=manifest,
             source_manifest=_read_optional(run_dir / "source_manifest.json"),
+            evidence_matrix=_read_optional(run_dir / "evidence_matrix.json"),
+            interpretability_report=_read_optional(run_dir / "interpretability_report.json"),
             peoc_evidence=_read_optional(run_dir / "peoc_evidence.json"),
             peoc_case_study=_read_optional(run_dir / "research_case_study.json"),
             metrics=metrics,
@@ -78,6 +85,9 @@ class ReportModel:
             history_index=_read_optional(run_dir / "history_index.json"),
             history_compare=_read_optional(run_dir / "history_compare.json"),
             agent_run=_read_optional(run_dir / "agent_run.json"),
+            posttrain_gate=_read_optional(run_dir / "posttrain_gate.json"),
+            checkpoint_comparison=_read_optional(run_dir / "checkpoint_comparison.json"),
+            mechanism_attribution=_read_optional(run_dir / "mechanism_attribution.json"),
             research_diagnostics=_read_optional(run_dir / "research_diagnostics.json"),
             research_gap_plan=_read_optional(run_dir / "research_gap_plan.json"),
             research_gap_status=_read_optional(run_dir / "research_gap_status.json"),
@@ -145,6 +155,9 @@ def _existing_artifacts(run_dir: Path, diagnostics: dict[str, JsonDict]) -> list
     names = [
         "manifest.json",
         "source_manifest.json",
+        "evidence_matrix.json",
+        "interpretability_report.json",
+        "interpretability_report.html",
         "peoc_evidence.json",
         "research_case_study.json",
         "research_case_study.md",
@@ -162,6 +175,9 @@ def _existing_artifacts(run_dir: Path, diagnostics: dict[str, JsonDict]) -> list
         "history_index.json",
         "history_compare.json",
         "agent_run.json",
+        "posttrain_gate.json",
+        "checkpoint_comparison.json",
+        "mechanism_attribution.json",
         "research_bundle.json",
         "research_bundle.html",
         "research_overview.svg",
