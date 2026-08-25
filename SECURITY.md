@@ -7,13 +7,13 @@ Do not report a vulnerability in a public issue, discussion, pull request, or so
 PromptControlLab accepts vulnerability reports only through
 **GitHub Private Vulnerability Reporting**:
 
-1. Open the repository's **Security** tab.
+1. Open the repository's [**Security advisories**](https://github.com/VeraPyuyi/prompt_control_lab/security/advisories) page.
 2. Select **Advisories**.
 3. Select **Report a vulnerability**.
 4. Include affected versions, reproduction steps, impact, and a minimal proof of concept.
 
-The reporting entry becomes available when the public repository enables GitHub Private
-Vulnerability Reporting. No security-reporting email address is used by this project.
+Private Vulnerability Reporting is enabled for this public repository.
+No security-reporting email address is used by this project.
 
 Please do not include a real API key, private prompt, private dataset record, hidden reasoning,
 or unrelated personal data. Use redacted placeholders and the smallest artifact needed to

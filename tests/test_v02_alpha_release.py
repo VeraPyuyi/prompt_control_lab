@@ -23,7 +23,7 @@ def test_v02_alpha_version_and_readmes_are_consistent() -> None:
     assert "PromptControlLab 2.0" not in chinese
 
 
-def test_public_release_governance_files_are_present_and_private_by_default() -> None:
+def test_public_release_governance_files_are_present() -> None:
     required = [
         "CONTRIBUTING.md",
         "CONTRIBUTING.zh.md",
@@ -44,7 +44,7 @@ def test_public_release_governance_files_are_present_and_private_by_default() ->
     assert "GitHub Private Vulnerability Reporting" in security
     assert "security-reporting email address is used" in security
     assert "public issue" in security
-    assert "remain private" in checklist
+    assert "source repository is public" in checklist
     assert "Rotate the credential" in checklist
     assert "return the repository to Private" in checklist
 

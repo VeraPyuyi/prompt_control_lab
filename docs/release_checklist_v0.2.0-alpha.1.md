@@ -1,8 +1,8 @@
 # v0.2.0-alpha.1 public pre-release checklist
 
 This checklist separates automated release evidence from actions that require the repository
-owner's explicit approval. The repository must remain private and PR #3 must remain unmerged
-until the owner completes the final inspection.
+owner's explicit approval. The source repository is public and PR #3 is merged; the remaining
+unchecked items cover credential rotation and packaged pre-release distribution.
 
 ## Acceptance evidence
 
@@ -16,14 +16,14 @@ until the owner completes the final inspection.
 
 ## Automated release verification
 
-- [ ] Full Python tests pass on the final candidate commit.
-- [ ] Ruff and strict mypy pass on the final candidate commit.
-- [ ] DeepSeek Harness TypeScript contracts and build pass.
-- [ ] Wheel and sdist build from the candidate source tree.
-- [ ] A fresh environment can install the wheel and run `pcl --help`, `pcl doctor --json`, and
+- [x] Full Python tests pass on the final candidate commit.
+- [x] Ruff and strict mypy pass on the final candidate commit.
+- [x] DeepSeek Harness TypeScript contracts and build pass.
+- [x] Wheel and sdist build from the candidate source tree.
+- [x] A fresh environment can install the wheel and run `pcl --help`, `pcl doctor --json`, and
   `pcl quickstart`.
-- [ ] README links, UTF-8 text, and release-version references pass the release checks.
-- [ ] Tracked files and a fresh-clone Git history pass the scoped credential-shape scan.
+- [x] README links, UTF-8 text, and release-version references pass the release checks.
+- [x] Tracked files and a fresh-clone Git history pass the scoped credential-shape scan.
 - [ ] Release artifact checksums are generated after the final candidate build.
 
 Local checks against an uncommitted tree do not complete this section. Record these items only
@@ -31,11 +31,11 @@ after the exact candidate commit exists and its CI and release artifacts have be
 
 ## Maintainer inspection and publication
 
-- [ ] Review the complete PR #3 diff and public-safe case-study artifacts.
+- [x] Review the complete PR #3 diff and public-safe case-study artifacts.
 - [ ] Rotate the credential that was used for the live DeepSeek acceptance session.
-- [ ] Confirm the repository description, topics, and public claims.
-- [ ] Mark PR #3 ready, merge it into `main`, and confirm CI on the merge commit.
-- [ ] In one owner-controlled maintenance window, change visibility to Public, immediately enable
+- [x] Confirm the repository description, topics, and public claims.
+- [x] Mark PR #3 ready, merge it into `main`, and confirm CI on the merge commit.
+- [x] In one owner-controlled maintenance window, change visibility to Public, immediately enable
   GitHub Private Vulnerability Reporting, and verify that **Report a vulnerability** is available.
   If enablement or verification fails, return the repository to Private before any announcement,
   tag, or release.

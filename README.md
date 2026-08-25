@@ -2,7 +2,7 @@
 
 **The local evidence, diagnosis, and control loop for prompts, checkpoints, and AI agents.**
 
-> Alpha package candidate: `promptcontrollab 0.2.0a1`. The two real acceptance runs are complete; publication still requires credential rotation, candidate-commit CI, final maintainer inspection, and the fail-closed visibility/security transition.
+> Public alpha source preview: `promptcontrollab 0.2.0a1`. Two bounded acceptance cases are included. GitHub release artifacts and PyPI distribution are not yet published.
 
 PromptControlLab is an open-source, local-first framework for explaining where a result changed, whether the comparison is valid, how stable the observed behavior is, and whether a prompt, checkpoint, or agent run should continue. It combines preflight control with trajectory, soft-hard, generation-mismatch, selective-risk, and fitted-surrogate evidence. 中文: [README.zh.md](https://github.com/VeraPyuyi/prompt_control_lab/blob/main/README.zh.md). Related paper: [*Horizon-Uniform Sensitivity and Decay of Terminal Reward Perturbations in Discrete-Time Pontryagin Systems*](https://arxiv.org/abs/2606.17762).
 
