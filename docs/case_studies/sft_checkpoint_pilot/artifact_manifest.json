@@ -1,0 +1,40 @@
+{
+  "artifact_count": 5,
+  "artifacts": [
+    {
+      "bytes": 2976,
+      "path": "checkpoint_metrics.csv",
+      "sha256": "sha256:59b99ce816196bee3f5fd765f5b9a11c58e2406a8f57681282b8c9f4b8785632"
+    },
+    {
+      "bytes": 11371,
+      "path": "gate_decisions.json",
+      "sha256": "sha256:10e8eb095097f50e932e1b8c1042af825cf4b06512a0157fab9bedd6b3d127cc"
+    },
+    {
+      "bytes": 5975,
+      "path": "pilot_summary.json",
+      "sha256": "sha256:873162e97f78148b886159544a65032c81d70bfcb7faf2a454c97ee01e4437fd"
+    },
+    {
+      "bytes": 1886,
+      "path": "provenance.json",
+      "sha256": "sha256:9c573cd30cdbd15954ccd08e52c23720fedc7fcda9514ee18bb66eb2cc5e542c"
+    },
+    {
+      "bytes": 2305,
+      "path": "report.md",
+      "sha256": "sha256:9fcda65a766de26b8c3a90511c07895534426c26a52773163b0b1064d22b88f7"
+    }
+  ],
+  "excluded": [
+    "raw prompts",
+    "predictions.jsonl",
+    "dataset records",
+    "model weights",
+    "LoRA adapters",
+    "trainer state",
+    "absolute source paths"
+  ],
+  "schema": "prompt_control_lab.public_posttrain_artifact_manifest.v1"
+}

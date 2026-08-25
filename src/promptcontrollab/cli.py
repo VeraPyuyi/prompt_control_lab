@@ -69,6 +69,7 @@ from promptcontrollab.peoc_import import (
     import_peoc_bundle,
 )
 from promptcontrollab.plugin_installer import install_plugin
+from promptcontrollab.posttrain_export import export_posttrain_pilot
 from promptcontrollab.posttrain_gate import run_posttrain_gate
 from promptcontrollab.posttrain_pilot import (
     PilotInputs,
@@ -1443,6 +1444,14 @@ def build_parser() -> argparse.ArgumentParser:
         help="Global pilot lock. Defaults to <runtime-root>/locks/sft-pilot.lock.",
     )
     pilot_parser.set_defaults(func=_cmd_posttrain_pilot)
+
+    pilot_export_parser = subcommands.add_parser(
+        "posttrain-pilot-export",
+        help="Export a completed pilot as a portable aggregate-only evidence case.",
+    )
+    pilot_export_parser.add_argument("--run", type=Path, required=True)
+    pilot_export_parser.add_argument("--out", type=Path, required=True)
+    pilot_export_parser.set_defaults(func=_cmd_posttrain_pilot_export)
 
     model_provenance_parser = subcommands.add_parser(
         "posttrain-model-provenance",
@@ -3305,6 +3314,11 @@ def _cmd_posttrain_pilot(args: argparse.Namespace) -> None:
     )
     protocol_path = args.out / "pilot_protocol.json"
     print(json.dumps({"status": "complete", "protocol": str(protocol_path)}, indent=2))
+
+
+def _cmd_posttrain_pilot_export(args: argparse.Namespace) -> None:
+    payload = export_posttrain_pilot(run_dir=args.run, out_dir=args.out)
+    print(json.dumps(payload, indent=2, ensure_ascii=False, sort_keys=True))
 
 
 def _cmd_posttrain_model_provenance(args: argparse.Namespace) -> None:

@@ -116,4 +116,10 @@ pilot 中的 `trajectory` 指最终 hidden layer 里相邻 prompt token 的表�
 执行区分大小写的严格字符串匹配。如果输出用满 generation budget 仍没有 EOS，工具会记录 saturation；
 默认 policy 会把任何 saturation 视为评分依据不足，而不会把解码预算限制静默算成 checkpoint 失败。
 
-受控协议固定 seeds `0,1,2` 和 `initial/mid/final` 三个 checkpoint 阶段。完整运行会生成九个 checkpoint 目录、六个 initial-to-mid/final 门禁、保守的跨 seed `pilot_summary.json/html` 和 `decision_trace.json`。在这些 artifact 真正出现前，资源预检只能说明准备状态，不能写成 checkpoint 性能证据。
+受控协议固定 seeds `0,1,2` 和 `initial/mid/final` 三个 checkpoint 阶段。完整运行会生成九个 checkpoint 目录、六个 initial-to-mid/final 门禁、保守的跨 seed `pilot_summary.json/html` 和 `decision_trace.json`。
+
+仓库现在包含一个[已完成且可公开的三 seed 案例](case_studies/sft_checkpoint_pilot/README.zh.md)。它同时记录了 withheld 分数提高和 token 用量下降。Trajectory/prompt stability 与 generation mismatch/readout 检查触发了保守 `hold`，routing 证据仍不足；格式 slice 保持不变是另一项独立观察。如需导出另一个不含原始样本和私有路径的完整 run：
+
+```bash
+pcl posttrain-pilot-export --run runs/sft-pilot-combined --out public/checkpoint-case
+```

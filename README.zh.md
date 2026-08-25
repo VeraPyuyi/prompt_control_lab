@@ -2,7 +2,7 @@
 
 **Prompt、Checkpoint 与 AI Agent 的本地证据、诊断和控制闭环。**
 
-> Alpha 包候选版本：`promptcontrollab 0.2.0a1`。只有真实三 seed checkpoint pilot 与真实 DeepSeek Harness session 都通过验收后，才发布公共预览版。
+> Alpha 包候选版本：`promptcontrollab 0.2.0a1`。真实三 seed checkpoint pilot 已完成；公共预览版目前仍等待真实 DeepSeek Harness session 验收。
 
 PromptControlLab 是一个开源、本地优先的框架，用来解释结果为什么变化、比较是否有效、观察到的行为是否稳定，以及 Prompt、checkpoint 或 Agent run 是否值得继续。它把执行前控制与 trajectory、soft-hard、generation mismatch、selective-risk 和拟合 surrogate 证据连接起来。英文：[README.md](README.md)。
 
@@ -24,7 +24,9 @@ pcl evidence import --manifest manifest.json --out runs/prompt-reach-v2 --portab
 pcl posttrain-gate --baseline runs/checkpoint-000 --candidate runs/checkpoint-500 --policy examples/posttrain.policy.yaml --out runs/posttrain-gate
 ```
 
-这三步把分散的实验 artifact 归入 Prompt 可达性、读出对齐、路由、投影和稳定性五类证据。公开安全的 [371 项 prompt-reach-v2 案例](docs/case_studies/prompt_reach_v2/README.zh.md)中有四类已观测、一类需要重新分析；它不声称普遍提升。参见[证据导入说明](docs/server_evidence.zh.md)和[后训练门禁](docs/posttraining.zh.md)。
+这三步把分散的实验 artifact 归入 Prompt 可达性、读出对齐、路由、投影和稳定性五类证据。公开安全的 [371 项 prompt-reach-v2 案例](docs/case_studies/prompt_reach_v2/README.zh.md)中有四类已观测、一类需要重新分析。
+
+真实的[三 seed SFT checkpoint 案例](docs/case_studies/sft_checkpoint_pilot/README.zh.md)包含 9 个 checkpoint 和 6 个配对 gate。平均分数从 0.0885 提高到 0.1944，平均生成 token 减少 27.2%。格式 slice 独立地保持为 0；真正触发 `hold` 的是 trajectory/prompt stability 与 generation mismatch/readout 检查，routing 证据则仍然不足。这是有边界的真实工作流结果，不是普遍提升声明。参见[证据导入说明](docs/server_evidence.zh.md)和[后训练门禁](docs/posttraining.zh.md)。
 
 ## 旗舰集成：DeepSeek Harness
 

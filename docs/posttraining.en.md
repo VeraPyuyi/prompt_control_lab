@@ -123,4 +123,10 @@ equality for format fixtures. Outputs that consume the full generation budget wi
 counted as saturated; the default policy treats any saturation as insufficient scoring evidence
 rather than silently converting a decode-budget limit into checkpoint failure.
 
-The controlled protocol fixes seeds `0,1,2` and checkpoints `initial/mid/final`. A completed run creates nine checkpoint directories, six initial-to-mid/final gates, a conservative cross-seed `pilot_summary.json/html`, and `decision_trace.json`. Until those artifacts exist, a resource-preflight record is readiness evidence only and must not be presented as checkpoint performance.
+The controlled protocol fixes seeds `0,1,2` and checkpoints `initial/mid/final`. A completed run creates nine checkpoint directories, six initial-to-mid/final gates, a conservative cross-seed `pilot_summary.json/html`, and `decision_trace.json`.
+
+The repository now includes a [completed public-safe three-seed case](case_studies/sft_checkpoint_pilot/README.md). It records improved held-out score and lower token use. Trajectory/prompt-stability and generation-mismatch/readout checks triggered the conservative `hold`; routing evidence remained insufficient, while the unchanged format slice is reported as a separate observation. Export another complete run without raw examples or private paths with:
+
+```bash
+pcl posttrain-pilot-export --run runs/sft-pilot-combined --out public/checkpoint-case
+```

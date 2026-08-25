@@ -1,2 +1,5 @@
 docs/case_studies/prompt_reach_v2/public/*.json text eol=lf
 docs/case_studies/prompt_reach_v2/public/*.html text eol=lf
+docs/case_studies/sft_checkpoint_pilot/*.json text eol=lf
+docs/case_studies/sft_checkpoint_pilot/*.csv text eol=lf
+docs/case_studies/sft_checkpoint_pilot/report.md text eol=lf

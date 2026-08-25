@@ -34,23 +34,22 @@ def test_alpha_quickstarts_and_pilot_prepare_match_real_cli() -> None:
     assert "datasets>=2.19" in (ROOT / "pyproject.toml").read_text(encoding="utf-8")
 
 
-def test_pilot_status_is_a_bounded_preflight_not_performance_evidence() -> None:
+def test_pilot_status_records_completed_bounded_checkpoint_evidence() -> None:
     path = ROOT / "docs/case_studies/server_evidence/sft_pilot_status.json"
     payload = json.loads(path.read_text(encoding="utf-8"))
 
-    assert payload["execution_status"] == "blocked_existing_gpu_work"
-    assert payload["gpu_work_started"] is False
-    assert payload["planned_seeds"] == [0, 1, 2]
-    assert payload["planned_checkpoint_runs"] == 9
+    assert payload["execution_status"] == "complete"
+    assert payload["gpu_work_started"] is True
+    assert payload["seeds"] == [0, 1, 2]
+    assert payload["checkpoint_runs"] == 9
+    assert payload["gate_count"] == 6
+    assert payload["decision"] == "hold"
     assert payload["model_revision"] == "7ae557604adf67be50417f59c2c2f167def9a775"
     assert payload["dataset_revision"] == "740312add88f781978c0658806c59bc2815b9866"
-    assert "not checkpoint performance evidence" in payload["claim_boundary"]
-    assert payload["resource_snapshot"]["queue_clear"] is False
-    active_work = (
-        payload["resource_snapshot"]["queue_running_jobs"]
-        + payload["resource_snapshot"]["queue_pending_jobs"]
-    )
-    assert active_work > 0
+    assert "does not establish" in payload["claim_boundary"]
+    assert payload["public_case"] == "../sft_checkpoint_pilot/README.md"
+    assert payload["observed"]["initial_mean_score"] == 0.088541666667
+    assert payload["observed"]["final_mean_score"] == 0.194444444444
 
 
 def test_harness_status_separates_integration_wiring_from_live_acceptance() -> None:

@@ -2,7 +2,7 @@
 
 **The local evidence, diagnosis, and control loop for prompts, checkpoints, and AI agents.**
 
-> Alpha package candidate: `promptcontrollab 0.2.0a1`. Public pre-release remains gated on a real three-seed checkpoint pilot and a real DeepSeek Harness session.
+> Alpha package candidate: `promptcontrollab 0.2.0a1`. The real three-seed checkpoint pilot is complete; public pre-release remains gated on a real DeepSeek Harness session.
 
 PromptControlLab is an open-source, local-first framework for explaining where a result changed, whether the comparison is valid, how stable the observed behavior is, and whether a prompt, checkpoint, or agent run should continue. It combines preflight control with trajectory, soft-hard, generation-mismatch, selective-risk, and fitted-surrogate evidence. Chinese: [README.zh.md](README.zh.md).
 
@@ -24,7 +24,9 @@ pcl evidence import --manifest manifest.json --out runs/prompt-reach-v2 --portab
 pcl posttrain-gate --baseline runs/checkpoint-000 --candidate runs/checkpoint-500 --policy examples/posttrain.policy.yaml --out runs/posttrain-gate
 ```
 
-These commands connect dispersed experiment artifacts to prompt reachability, readout alignment, routing, projection, and stability evidence. The public-safe [371-source prompt-reach-v2 case](docs/case_studies/prompt_reach_v2/README.md) reports four observed dimensions and one dimension that requires reanalysis; it does not claim universal improvement. See the [evidence import guide](docs/server_evidence.en.md) and [post-training gate](docs/posttraining.en.md).
+These commands connect dispersed experiment artifacts to prompt reachability, readout alignment, routing, projection, and stability evidence. The public-safe [371-source prompt-reach-v2 case](docs/case_studies/prompt_reach_v2/README.md) reports four observed dimensions and one dimension that requires reanalysis.
+
+The real [three-seed SFT checkpoint case](docs/case_studies/sft_checkpoint_pilot/README.md) records 9 checkpoints and 6 paired gates. Mean score rose from 0.0885 to 0.1944 and mean generated tokens fell 27.2%. The format slice independently remained at 0; the `hold` was triggered by trajectory/prompt-stability and generation-mismatch/readout checks, while routing evidence remained insufficient. This is an observed, bounded workflow result, not a universal improvement claim. See the [evidence import guide](docs/server_evidence.en.md) and [post-training gate](docs/posttraining.en.md).
 
 ## Flagship Integration: DeepSeek Harness
 

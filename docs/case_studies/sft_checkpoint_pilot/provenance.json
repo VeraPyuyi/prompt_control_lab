@@ -1,0 +1,60 @@
+{
+  "claim_boundary": "Recorded execution provenance does not establish a causal model mechanism.",
+  "execution_source_commit": "d12f942bfe6c8ad8938c7af7646c6a5f5d3b2086",
+  "execution_wheel_sha256": "sha256:c357d4a7aa2b617c5dd839bf893487b80d206be85a06d3e0b992a14065908bd3",
+  "gate_reporting_source_commit": "708488514e7aa94fe619834864d86a8eb10c3f9a",
+  "gate_reporting_wheel_sha256": "sha256:893c7ca1f1e2084517fd849590484b2d87de35f4672b48833a76c7d31e8ca767",
+  "model": {
+    "id": "Qwen/Qwen2.5-0.5B-Instruct",
+    "revision": "7ae557604adf67be50417f59c2c2f167def9a775",
+    "snapshot_sha256": "sha256:c1c9aa0607fa7d45da6dafb1ce4eda469e18c285ad13c50cd1e4ed4caf1817a4"
+  },
+  "preserved_attempts": [
+    {
+      "reason": "accelerate_dependency_mismatch"
+    },
+    {
+      "reason": "operator_authorized_parallel_relaunch"
+    },
+    {
+      "reason": "transient_cuda_oom_root_cause_not_proven"
+    },
+    {
+      "reason": "pre_classification_fix_gate_reports"
+    }
+  ],
+  "runtime_versions": {
+    "accelerate": "1.10.1",
+    "datasets": "2.19.2",
+    "numpy": "1.26.4",
+    "peft": "0.17.1",
+    "promptcontrollab": "0.2.0a1",
+    "scipy": "1.13.1",
+    "torch": "2.4.1+cu121",
+    "transformers": "4.55.4"
+  },
+  "schema": "prompt_control_lab.public_posttrain_provenance.v1",
+  "seed_2_gpu_telemetry": {
+    "first_observed_at": "2026-08-25T04:44:28Z",
+    "last_observed_at": "2026-08-25T06:02:09Z",
+    "mean_utilization_percent": 68.975341,
+    "peak_memory_used_mib": 20220.0,
+    "sample_count": 2271.0
+  },
+  "seed_gpu_assignments": [
+    {
+      "gpu": 1,
+      "seed": 0
+    },
+    {
+      "gpu": 2,
+      "seed": 1
+    },
+    {
+      "gpu": 2,
+      "seed": 2
+    }
+  ],
+  "source_snapshot_sha256": "sha256:056607068849b896105c209ea766c576432dc2479a0a7aa1d07bc5f48fdfe898",
+  "split_sha256": "sha256:664cb24ac6d779378bf256c49f1369f910f49a788594d8813af51655af7bd4b4"
+}

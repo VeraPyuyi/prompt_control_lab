@@ -372,9 +372,11 @@ def test_public_server_case_is_derived_and_path_free() -> None:
     serialized = json.dumps([matrix, report, claim], ensure_ascii=False)
     assert "/root/" not in serialized
     assert claim["universal_improvement_supported"] is False
-    assert pilot["execution_status"] == "blocked_existing_gpu_work"
-    assert pilot["gpu_work_started"] is False
-    assert pilot["resource_snapshot"]["queue_clear"] is False
+    assert pilot["execution_status"] == "complete"
+    assert pilot["gpu_work_started"] is True
+    assert pilot["checkpoint_runs"] == 9
+    assert pilot["gate_count"] == 6
+    assert pilot["decision"] == "hold"
 
 
 def test_evidence_import_normalizes_non_finite_metrics_to_null(tmp_path: Path) -> None:
