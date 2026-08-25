@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="720" viewBox="0 0 1600 720" role="img" aria-labelledby="title desc">
+  <title id="title">PromptControlLab Quickstart 报告快照</title>
+  <desc id="desc">合成 Quickstart 报告。分数有所提高，但统计证据仍不确定，Prompt 身份记录也不完整，因此建议人工复核。</desc>
+  <rect width="1600" height="720" fill="#f7f9fc"/>
+  <text x="80" y="72" font-family="Microsoft YaHei, Segoe UI, Arial, sans-serif" font-size="42" font-weight="700" fill="#172b4d">Quickstart 报告快照</text>
+  <text x="80" y="112" font-family="Microsoft YaHei, Segoe UI, Arial, sans-serif" font-size="22" fill="#526581">固定合成样例 · promptcontrollab 0.2.0a1 · exact_match · 4 条样本</text>
+
+  <g font-family="Microsoft YaHei, Segoe UI, Arial, sans-serif">
+    <rect x="80" y="158" width="330" height="126" rx="8" fill="#fffaf0" stroke="#e6b85c" stroke-width="2"/>
+    <text x="110" y="198" font-size="18" fill="#526581">最终决策</text>
+    <text x="110" y="248" font-size="31" font-weight="700" fill="#8a4b08">needs_review</text>
+
+    <rect x="450" y="158" width="330" height="126" rx="8" fill="#ffffff" stroke="#cbd5e1" stroke-width="2"/>
+    <text x="480" y="198" font-size="18" fill="#526581">Candidate 分数</text>
+    <text x="480" y="248" font-size="34" font-weight="700" fill="#1f4b7a">1.00</text>
+
+    <rect x="820" y="158" width="330" height="126" rx="8" fill="#ffffff" stroke="#cbd5e1" stroke-width="2"/>
+    <text x="850" y="198" font-size="18" fill="#526581">平均差异</text>
+    <text x="850" y="248" font-size="34" font-weight="700" fill="#276749">+0.25</text>
+
+    <rect x="1190" y="158" width="330" height="126" rx="8" fill="#ffffff" stroke="#cbd5e1" stroke-width="2"/>
+    <text x="1220" y="198" font-size="18" fill="#526581">Bootstrap CI</text>
+    <text x="1220" y="248" font-size="31" font-weight="700" fill="#172b4d">[0.00, 0.75]</text>
+  </g>
+
+  <rect x="80" y="326" width="700" height="270" rx="8" fill="#ffffff" stroke="#cbd5e1" stroke-width="2"/>
+  <text x="118" y="376" font-family="Microsoft YaHei, Segoe UI, Arial, sans-serif" font-size="27" font-weight="700" fill="#1f4b7a">观察到了什么</text>
+  <g font-family="Microsoft YaHei, Segoe UI, Arial, sans-serif" font-size="21" fill="#243b53">
+    <circle cx="126" cy="424" r="7" fill="#2d9d65"/><text x="148" y="432">修复了 1 条算术样本，没有新增错误样本。</text>
+    <circle cx="126" cy="473" r="7" fill="#2d9d65"/><text x="148" y="481">Train、validation、withheld 之间没有数据泄漏。</text>
+    <circle cx="126" cy="522" r="7" fill="#2f6fed"/><text x="148" y="530">Baseline 与 candidate 记录了相同的公开模型 ID。</text>
+    <circle cx="126" cy="571" r="7" fill="#2f6fed"/><text x="148" y="579">Candidate 在这个固定样例上的均值更高。</text>
+  </g>
+
+  <rect x="820" y="326" width="700" height="270" rx="8" fill="#fffaf0" stroke="#e6b85c" stroke-width="2"/>
+  <text x="858" y="376" font-family="Microsoft YaHei, Segoe UI, Arial, sans-serif" font-size="27" font-weight="700" fill="#8a4b08">为什么仍需人工复核</text>
+  <g font-family="Microsoft YaHei, Segoe UI, Arial, sans-serif" font-size="21" fill="#243b53">
+    <circle cx="866" cy="424" r="7" fill="#d97706"/><text x="888" y="432">置信区间跨 0，p-value 为 1.00。</text>
+    <circle cx="866" cy="473" r="7" fill="#d97706"/><text x="888" y="481">Prompt 身份缺失，不能直接称为纯 Prompt 对比。</text>
+    <circle cx="866" cy="522" r="7" fill="#d97706"/><text x="888" y="530">模型 ID 是 alias，并非锁定日期的模型版本。</text>
+    <circle cx="866" cy="571" r="7" fill="#d97706"/><text x="888" y="579">下一步：检查证据后再决定是否保留改动。</text>
+  </g>
+
+  <rect x="80" y="630" width="1440" height="58" rx="8" fill="#172b4d"/>
+  <text x="800" y="667" text-anchor="middle" font-family="Microsoft YaHei, Segoe UI, Arial, sans-serif" font-size="19" fill="#ffffff">这是合成流程检查，不是 Prompt 普遍提升的证据。</text>
+</svg>

@@ -1,0 +1,17 @@
+{
+  "allowed_claims": [
+    "Recorded diagnostics can characterize mechanisms, stability, uncertainty, and scope.",
+    "Decision artifacts can explain why a run passed, required review, or stopped."
+  ],
+  "decision_evidence_available": false,
+  "disallowed_claims": [
+    "The imported evidence proves universal prompt or checkpoint improvement.",
+    "A fitted surrogate proves global stability of the operational language model."
+  ],
+  "mechanism_interpretation_available": true,
+  "observed_diagnostic_count": 4,
+  "requires_reanalysis_count": 1,
+  "schema": "prompt_control_lab.interpretability_claim_check.v1",
+  "status": "bounded_interpretation_available",
+  "universal_improvement_supported": false
+}

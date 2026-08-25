@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="900" viewBox="0 0 1600 900" role="img" aria-labelledby="title desc">
+  <title id="title">Controlled SFT checkpoint pilot decision</title>
+  <desc id="desc">Scores and token use improved. Stability, generation mismatch, and readout-alignment checks produced a hold decision; format performance remained unchanged as a separate observation.</desc>
+  <rect width="1600" height="900" fill="#f7f9fc"/>
+  <text x="80" y="76" font-family="Arial, sans-serif" font-size="42" font-weight="700" fill="#172b4d">Controlled SFT checkpoint pilot</text>
+  <text x="80" y="120" font-family="Arial, sans-serif" font-size="23" fill="#526581">3 seeds · 9 checkpoints · 6 paired gates · pinned model and split</text>
+  <rect x="80" y="170" width="440" height="390" rx="8" fill="#fff" stroke="#cbd5e1" stroke-width="2"/>
+  <text x="115" y="220" font-family="Arial, sans-serif" font-size="27" font-weight="700" fill="#1f4b7a">Held-out mean score</text>
+  <line x1="150" y1="450" x2="455" y2="450" stroke="#d7e1ec" stroke-width="3"/>
+  <line x1="150" y1="280" x2="150" y2="450" stroke="#d7e1ec" stroke-width="3"/>
+  <polyline points="165,416 303,340 440,327" fill="none" stroke="#2f6fed" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="165" cy="416" r="13" fill="#2f6fed"/><circle cx="303" cy="340" r="13" fill="#2f6fed"/><circle cx="440" cy="327" r="13" fill="#2f6fed"/>
+  <g font-family="Arial, sans-serif" text-anchor="middle" fill="#172b4d" font-size="22" font-weight="700">
+    <text x="165" y="392">0.0885</text><text x="303" y="316">0.1788</text><text x="440" y="303">0.1944</text>
+  </g>
+  <g font-family="Arial, sans-serif" text-anchor="middle" fill="#526581" font-size="20">
+    <text x="165" y="492">Initial</text><text x="303" y="492">Mid</text><text x="440" y="492">Final</text>
+  </g>
+  <text x="115" y="535" font-family="Arial, sans-serif" font-size="20" fill="#276749">Observed delta: +0.1059</text>
+  <rect x="580" y="170" width="440" height="390" rx="8" fill="#fff" stroke="#cbd5e1" stroke-width="2"/>
+  <text x="615" y="220" font-family="Arial, sans-serif" font-size="27" font-weight="700" fill="#276749">Token and latency efficiency</text>
+  <text x="615" y="285" font-family="Arial, sans-serif" font-size="21" fill="#526581">Mean generated tokens</text>
+  <rect x="615" y="310" width="320" height="42" rx="4" fill="#d9e8ff"/><rect x="615" y="310" width="233" height="42" rx="4" fill="#2f6fed"/>
+  <text x="950" y="339" font-family="Arial, sans-serif" font-size="21" text-anchor="end" fill="#172b4d">147.34 → 107.34</text>
+  <text x="615" y="395" font-family="Arial, sans-serif" font-size="21" fill="#526581">Mean latency</text>
+  <rect x="615" y="420" width="320" height="42" rx="4" fill="#d9f2e3"/><rect x="615" y="420" width="239" height="42" rx="4" fill="#2d9d65"/>
+  <text x="950" y="449" font-family="Arial, sans-serif" font-size="21" text-anchor="end" fill="#172b4d">8964 → 6692 ms</text>
+  <text x="615" y="515" font-family="Arial, sans-serif" font-size="20" fill="#276749">Tokens -27.2% · latency -25.4%</text>
+  <rect x="1080" y="170" width="440" height="390" rx="8" fill="#fffaf0" stroke="#e6b85c" stroke-width="3"/>
+  <text x="1115" y="220" font-family="Arial, sans-serif" font-size="27" font-weight="700" fill="#8a4b08">Decision: HOLD</text>
+  <text x="1115" y="267" font-family="Arial, sans-serif" font-size="20" fill="#526581">Performance improved, but promotion</text>
+  <text x="1115" y="296" font-family="Arial, sans-serif" font-size="20" fill="#526581">readiness did not pass the policy.</text>
+  <g font-family="Arial, sans-serif" font-size="20" fill="#243b53">
+    <circle cx="1125" cy="350" r="7" fill="#d97706"/><text x="1145" y="357">Trajectory / prompt stability: hold</text>
+    <circle cx="1125" cy="401" r="7" fill="#d97706"/><text x="1145" y="408">Mismatch / readout alignment: hold</text>
+    <circle cx="1125" cy="452" r="7" fill="#d97706"/><text x="1145" y="459">Selective risk / reachability: review</text>
+    <circle cx="1125" cy="503" r="7" fill="#d97706"/><text x="1145" y="510">Routing evidence: insufficient</text>
+  </g>
+  <rect x="80" y="620" width="1440" height="190" rx="8" fill="#172b4d"/>
+  <g font-family="Arial, sans-serif">
+    <text x="120" y="672" font-size="23" font-weight="700" fill="#8fb8ff">OBSERVED</text><text x="120" y="710" font-size="18" fill="#fff">Score up; cost down; format unchanged.</text>
+    <text x="475" y="672" font-size="23" font-weight="700" fill="#8fe0b4">EXPLAINS</text><text x="475" y="710" font-size="18" fill="#fff">Performance, efficiency, and risk changed.</text>
+    <text x="870" y="672" font-size="23" font-weight="700" fill="#f5c96b">DOES NOT PROVE</text><text x="870" y="710" font-size="18" fill="#fff">Universal or causal model improvement.</text>
+    <text x="120" y="770" font-size="23" font-weight="700" fill="#f5c96b">NEXT</text><text x="220" y="770" font-size="18" fill="#fff">Repair format behavior, justify drift, and collect routing interventions before promotion.</text>
+  </g>
+</svg>

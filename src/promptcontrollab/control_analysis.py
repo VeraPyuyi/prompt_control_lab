@@ -244,6 +244,19 @@ def make_control_decision(
             reasons=[preflight_summary or "The preflight risk level is medium."],
         )
 
+    external_outcome = _failed_external_outcome(normalized_events)
+    if external_outcome is not None:
+        return ControlDecision(
+            run_id=run_id,
+            decision="needs_review",
+            next_action=(
+                "Inspect the external process failure and recorded artifacts before rerunning."
+            ),
+            reasons=[
+                f"The external Harness process ended with outcome `{external_outcome}`."
+            ],
+        )
+
     state = _lower_string(stability_data.get("state")) or "insufficient_evidence"
     stability_signals = _as_dict(stability_data.get("signals"))
     stability_confidence = _lower_string(stability_signals.get("confidence"))
@@ -376,6 +389,17 @@ def _normalize_events(events: object) -> list[JsonDict]:
             )
         )
     return [item[2] for item in sorted(normalized, key=lambda item: (item[0], item[1]))]
+
+
+def _failed_external_outcome(events: list[JsonDict]) -> str | None:
+    for event in reversed(events):
+        if event.get("event_type") != "harness/process-exit":
+            continue
+        payload = _as_dict(event.get("payload"))
+        outcome = _lower_string(payload.get("outcome"))
+        if outcome in {"failed", "cancelled"}:
+            return outcome
+    return None
 
 
 def _baseline_dict(
@@ -790,6 +814,10 @@ def _test_outcomes(events: list[JsonDict]) -> list[str]:
     for event in events:
         event_type = cast(str, event["event_type"]).lower()
         payload = cast(JsonDict, event["payload"])
+        harness_outcome = _harness_test_result_outcome(event_type, payload)
+        if harness_outcome is not None:
+            outcomes.append(harness_outcome)
+            continue
         tool = _tool_name(payload).lower()
         if "test" not in event_type and not any(name in tool for name in ("pytest", "test")):
             continue
@@ -803,6 +831,24 @@ def _test_outcomes(events: list[JsonDict]) -> list[str]:
         elif status in {"fail", "failed", "failure", "error"}:
             outcomes.append("fail")
     return outcomes
+
+
+def _harness_test_result_outcome(event_type: str, payload: JsonDict) -> str | None:
+    if not event_type.endswith(("tool/result", "tools/result")):
+        return None
+    tool = payload.get("tool")
+    result = payload.get("result")
+    if not isinstance(tool, Mapping) or not isinstance(result, Mapping):
+        return None
+    if tool.get("operation_category") != "test_execution":
+        return None
+    is_error = result.get("is_error")
+    if is_error is True:
+        return "fail"
+    exit_code = result.get("exit_code")
+    if is_error is False and isinstance(exit_code, int) and not isinstance(exit_code, bool):
+        return "pass" if exit_code == 0 else "fail"
+    return None
 
 
 def _numeric_series(events: list[JsonDict], keys: tuple[str, ...]) -> list[float]:
@@ -866,6 +912,8 @@ def _latest_completion_sequence(events: list[JsonDict]) -> int | None:
             marker in event_type
             for marker in ("step/completed", "task/completed", "session/finalized")
         ) or status in {"completed", "done", "succeeded"}
+        if not completed:
+            completed = _harness_test_result_outcome(event_type, payload) == "pass"
         if not completed and "test" in event_type:
             passed = payload.get("passed", payload.get("tests_passed"))
             outcome = _lower_string(payload.get("status", payload.get("outcome")))

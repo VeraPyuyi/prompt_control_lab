@@ -2,7 +2,7 @@
 
 Chinese: [deepseek_harness.zh.md](deepseek_harness.zh.md)
 
-DeepSeek Harness is PromptControlLab 2.0's flagship agent integration. It is a native Cordis plugin, not a log scraper or a second agent loop. The plugin uses Harness interception points before model and tool execution, then sends bounded, redacted observations to one persistent local Python bridge.
+DeepSeek Harness is the flagship agent integration in the PromptControlLab 0.2 alpha framework direction. It is a native Cordis plugin, not a log scraper or a second agent loop. The plugin uses Harness interception points before model and tool execution, then sends bounded, redacted observations to one persistent local Python bridge.
 
 This integration is a community-maintained PromptControlLab component. Its existence does not claim endorsement, support, or inclusion by DeepSeek Harness maintainers.
 
@@ -96,6 +96,12 @@ pcl harness doctor --project . --json
 
 Doctor is offline. It checks the local config schema, redacted capture, compatibility lock, Python bridge health, Node version, and packaged plugin files. A passing result does not prove that the active Harness profile loaded the row, that a provider credential works, or that a live session emitted events. Verify those separately with a bounded Harness run.
 
+A completed live acceptance additionally requires `session_origin=live_cordis`, the persistent
+stdio transport, the pinned Harness version/commit, and lifecycle events carrying bridge source
+sequence and timestamp fields. Replay data and events appended directly by fixtures cannot satisfy
+this acceptance. These checks establish the captured native lifecycle path; they still do not prove
+a provider's hidden model weights or the semantic safety of every action.
+
 ## Exact Event Mapping
 
 Harness distinguishes live Cordis events from durable session events. `turn/*`, `step/*`, `tool/call`, `tool/result`, and `compaction/*` arrive through the Cordis `session/event` listener; they are not same-named Cordis events.
@@ -145,10 +151,10 @@ Only `capture: redacted` is supported by the native reference integration.
 |---|---|
 | Raw prompt | Crosses local stdio only for synchronous `harness_pre_step`; persists as SHA-256 identity, findings, and decision, never as the raw prompt body. |
 | Tool arguments | SHA-256 over a stable projection plus sorted top-level argument keys. |
-| Tool results | Error flag, bounded error name/code, turn-conclusion flag, and content-block count. |
+| Tool results | Error flag, integer shell exit code when exposed, bounded error name/code, turn-conclusion flag, and content-block count. Raw stdout and stderr are not retained. |
 | Assistant content | Never copied into PromptControlLab events; `assistant/chunk` is skipped. |
 | Hidden reasoning | Hidden reasoning, chain-of-thought, thinking fields, and reasoning content are not persisted. |
-| API keys | API keys, authorization headers, tokens, and credential-shaped values are not persisted. |
+| API keys | Recognized credential fields and credential-shaped values are dropped before persistence. Public evidence still requires a scoped artifact scan; this is not a claim about unscanned external systems. |
 | Paths | Replay sanitization hashes workspace/repository paths instead of retaining them. |
 
 Redaction reduces retained content; it is not a guarantee that arbitrary user-supplied metadata is harmless. Review policies and artifacts before sharing them.
@@ -177,6 +183,14 @@ pcl harness replay --session <session.jsonl> --out runs/harness-replay --json
 ```
 
 Replay requires at least one user prompt so it can perform an honest preflight. It hashes content, removes hidden reasoning and raw content from persisted events, records the source-session hash, and does not rerun the agent.
+
+If the external Harness process exits before plugin teardown runs, close the local run explicitly:
+
+```bash
+pcl harness finalize --runs .promptcontrol/runs --session <session-or-run-id> --outcome failed --exit-code 1 --json
+```
+
+This command does not invent missing activity. If no preflight was observed, it records an incomplete run with `insufficient_evidence` and states that no model request, tool execution, or code change was proven.
 
 Resolve a local report by Harness session id or PromptControlLab run id:
 

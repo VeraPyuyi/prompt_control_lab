@@ -373,6 +373,88 @@ def test_analysis_accepts_event_objects_and_sorts_by_sequence() -> None:
     assert report.signals["progress"]["completed_markers"] >= 1
 
 
+def test_stability_recognizes_successful_redacted_harness_test_result() -> None:
+    from promptcontrollab.control_analysis import analyze_stability
+
+    events = [
+        _event(1, "agent/request", usage={"input_tokens": 120}),
+        _event(
+            2,
+            "tools/pre-execute",
+            tool={"name": "pwsh", "operation_category": "test_execution"},
+        ),
+        _event(
+            3,
+            "tools/result",
+            tool={"name": "pwsh", "operation_category": "test_execution"},
+            result={"is_error": False, "exit_code": 0},
+        ),
+    ]
+
+    report = analyze_stability({"run_id": "redacted-test-pass"}, events)
+
+    assert report.signals["test_trend"] == {
+        "outcomes": ["pass"],
+        "transitions": 0,
+        "final": "pass",
+    }
+    assert report.signals["progress"]["latest_completion_sequence"] == 3
+    assert report.signals["progress"]["completion_is_current"] is True
+    assert report.state == "converging"
+
+
+def test_stability_recognizes_failed_redacted_harness_test_result_once() -> None:
+    from promptcontrollab.control_analysis import analyze_stability
+
+    events = [
+        _event(1, "agent/request", usage={"input_tokens": 120}),
+        _event(
+            2,
+            "tools/post-execute",
+            tool={"name": "pwsh", "operation_category": "test_execution"},
+            result={"is_error": True},
+        ),
+        _event(
+            3,
+            "tools/result",
+            tool={"name": "pwsh", "operation_category": "test_execution"},
+            result={"is_error": False, "exit_code": 1},
+        ),
+    ]
+
+    report = analyze_stability({"run_id": "redacted-test-fail"}, events)
+
+    assert report.signals["test_trend"] == {
+        "outcomes": ["fail"],
+        "transitions": 0,
+        "final": "fail",
+    }
+    assert report.signals["progress"]["latest_completion_sequence"] is None
+    assert report.state == "stalled"
+
+
+def test_stability_keeps_redacted_test_result_unknown_without_exit_code() -> None:
+    from promptcontrollab.control_analysis import analyze_stability
+
+    report = analyze_stability(
+        {"run_id": "redacted-test-unknown"},
+        [
+            _event(1, "agent/request", usage={"input_tokens": 120}),
+            _event(
+                2,
+                "tools/result",
+                tool={"name": "pwsh", "operation_category": "test_execution"},
+                result={"is_error": False},
+            ),
+            _event(3, "agent/request", usage={"input_tokens": 125}),
+        ],
+    )
+
+    assert report.signals["test_trend"]["final"] == "unknown"
+    assert report.signals["progress"]["latest_completion_sequence"] is None
+    assert report.state == "stalled"
+
+
 def test_stability_returns_insufficient_evidence_for_missing_or_malformed_events() -> None:
     from promptcontrollab.control_analysis import analyze_stability
 
@@ -806,6 +888,32 @@ def test_control_decision_handles_divergence_and_lower_risk_states_conservativel
     assert unsafe.decision == "block"
     assert stalled.decision == "suggest"
     assert converging.decision == "allow"
+
+
+def test_control_decision_never_allows_a_failed_external_harness_process() -> None:
+    from promptcontrollab.control_analysis import make_control_decision
+
+    run = _fully_observed_run("failed-harness")
+    preflight, attribution, stability, events = _complete_safe_control_evidence(run)
+    events.append(
+        _event(
+            len(events) + 1,
+            "harness/process-exit",
+            outcome="failed",
+            exit_code=1,
+        )
+    )
+
+    decision = make_control_decision(
+        run,
+        preflight=preflight,
+        attribution=attribution,
+        stability=stability,
+        events=events,
+    )
+
+    assert decision.decision == "needs_review"
+    assert "failed" in decision.reasons[0].lower()
 
 
 def test_control_decision_never_allows_incomplete_or_unsafe_evidence() -> None:

@@ -27,7 +27,8 @@ python -m build
 预期结果：`dist/` 中出现类似下面的 wheel：
 
 ```text
-promptcontrollab-0.1.0-py3-none-any.whl
+promptcontrollab-0.2.0a1-py3-none-any.whl
+promptcontrollab-0.2.0a1.tar.gz
 ```
 
 除非正式 release 流程明确要求，不要把 `dist/` 产物提交进仓库。
@@ -42,12 +43,16 @@ python -m build --wheel --no-isolation
 这个 fallback 用来验证项目包结构；它适合区分“网络或代理导致拿不到构建依赖”和
 “项目本身无法打包”这两类问题。
 
+公开前还需要对 wheel 和 sdist 运行 `twine check`，并检查 sdist 文件列表。源码包中
+不能包含 `.git`、虚拟环境、`build`、`dist`、`runs`、`node_modules`、凭据文件或大型
+Demo MP4。只在最后一次构建完成后生成发布包校验值。
+
 ## wheel 冒烟测试
 
 可以创建临时环境，或用 `pipx`：
 
 ```bash
-pipx install dist/promptcontrollab-0.1.0-py3-none-any.whl
+pipx install dist/promptcontrollab-0.2.0a1-py3-none-any.whl
 pcl --help
 pcl doctor
 pcl install-plugin all --target ./tmp-pcl-templates --dry-run
@@ -60,10 +65,10 @@ pcl scaffold-check --run ./tmp-pcl-prompt-optimizer
 Claude Code 和 GitHub Action 模板。prompt-optimizer 桥接也能通过 wheel 安装后的包写出
 `eval_scaffold/scaffold_check.json` 和 `.html`。
 
-如果当前环境已经安装了 `research` extra，也要用构建出的 wheel 验证论文研究流程：
+如果当前环境已经安装了 `research` extra，也要用构建出的 wheel 验证高级诊断流程：
 
 ```bash
-python -m pip install --force-reinstall --no-deps dist/promptcontrollab-0.1.0-py3-none-any.whl
+python -m pip install --force-reinstall --no-deps dist/promptcontrollab-0.2.0a1-py3-none-any.whl
 pcl research-quickstart --out ./tmp-pcl-research-demo --language zh --open-report
 ```
 
@@ -92,6 +97,7 @@ pcl install-plugin codex --target ./tmp-pcl-codex
 pcl install-plugin cursor --target ./tmp-pcl-cursor
 pcl install-plugin claude-code --target ./tmp-pcl-claude
 pcl install-plugin github-action --target ./tmp-pcl-action
+pcl install-plugin deepseek-harness --target ./tmp-pcl-deepseek-harness
 ```
 
 先用 `--dry-run` 预览将写入的文件。默认不会覆盖已有文件；只有传入 `--force`

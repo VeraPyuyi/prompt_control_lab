@@ -1,0 +1,160 @@
+{
+  "adapter": "prompt_projection",
+  "claim_boundary": "Nearest-token projection is an open-loop deployment approximation, not an optimal feedback equivalence.",
+  "confidence": "medium",
+  "explanation": "These metrics quantify how a learned continuous prompt changes under hard-token projection.",
+  "id": "prompt_projection",
+  "interpretation_role": "boundary",
+  "metrics": {
+    "cosine_to_projection": {
+      "count": 1152,
+      "max": 0.649341344833374,
+      "mean": 0.16611774192683193,
+      "min": 0.0585695281624794
+    },
+    "embedding_norm": {
+      "count": 1152,
+      "max": 2.451180934906006,
+      "mean": 0.7895662672932909,
+      "min": 0.0023863008245825768
+    },
+    "latent_norm": {
+      "count": 1152,
+      "max": 19.624879837036133,
+      "mean": 9.009750963072293,
+      "min": 0.17230065166950226
+    },
+    "magnitude_ratio": {
+      "count": 1152,
+      "max": 6509.281555307772,
+      "mean": 195.8670891068181,
+      "min": 0.17953028835267448
+    },
+    "relative_gap": {
+      "count": 1152,
+      "max": 5.491197062052161,
+      "mean": 1.0263063007485824,
+      "min": 0.9691775753805421
+    }
+  },
+  "next_action": "Measure paired soft and deployed hard behavior before release.",
+  "observation": "Observed 5 allowlisted numeric metric(s) across 4 structured source(s).",
+  "quality_flags": [],
+  "raw_statistics": [],
+  "scope": "The recorded soft prompt, tokenizer, embedding table, and projection rule.",
+  "source_comparison": {
+    "primary_metrics": {
+      "cosine_to_projection": {
+        "count": 1152,
+        "max": 0.649341344833374,
+        "mean": 0.16611774192683193,
+        "min": 0.0585695281624794
+      },
+      "embedding_norm": {
+        "count": 1152,
+        "max": 2.451180934906006,
+        "mean": 0.7895662672932909,
+        "min": 0.0023863008245825768
+      },
+      "latent_norm": {
+        "count": 1152,
+        "max": 19.624879837036133,
+        "mean": 9.009750963072293,
+        "min": 0.17230065166950226
+      },
+      "magnitude_ratio": {
+        "count": 1152,
+        "max": 6509.281555307772,
+        "mean": 195.8670891068181,
+        "min": 0.17953028835267448
+      },
+      "relative_gap": {
+        "count": 1152,
+        "max": 5.491197062052161,
+        "mean": 1.0263063007485824,
+        "min": 0.9691775753805421
+      }
+    },
+    "primary_support_status": "observed",
+    "secondary_metrics": {
+      "cosine_to_projection": {
+        "count": 1152,
+        "max": 0.649341344833374,
+        "mean": 0.16611774192683193,
+        "min": 0.0585695281624794
+      },
+      "embedding_norm": {
+        "count": 1152,
+        "max": 2.451180934906006,
+        "mean": 0.7895662672932909,
+        "min": 0.0023863008245825768
+      },
+      "latent_norm": {
+        "count": 1152,
+        "max": 19.624879837036133,
+        "mean": 9.009750963072293,
+        "min": 0.17230065166950226
+      },
+      "magnitude_ratio": {
+        "count": 1152,
+        "max": 6509.281555307772,
+        "mean": 195.8670891068178,
+        "min": 0.17953028835267448
+      },
+      "relative_gap": {
+        "count": 1152,
+        "max": 5.491197062052161,
+        "mean": 1.0263063007485822,
+        "min": 0.9691775753805421
+      }
+    },
+    "secondary_support_status": "observed"
+  },
+  "source_evidence": [
+    {
+      "adapter": "prompt_projection",
+      "bytes": 131863,
+      "canonical_sha256": "sha256:17d04213aff40539e799967d6e4ea568523adc5bd7a1bb595e5604b9b3fdd97e",
+      "load_policy": "structured_read",
+      "media_type": "application/json",
+      "reconciliation_status": "canonical_equivalent",
+      "role": "numeric_diagnostic",
+      "sha256": "sha256:e26b2e40a96ebc487882d72ff85761f8e7175f39abd305ea44b86c2e8865eacf",
+      "source_path_sha256": "sha256:650f704532d506222cb64acbe2a4ef72135acef6f20ef573a71f5338c297911d"
+    },
+    {
+      "adapter": "prompt_projection",
+      "bytes": 132727,
+      "canonical_sha256": "sha256:66123175f3d833006fb87d63b18e19f8c226e943a86dd715c10bfb6c70759128",
+      "load_policy": "structured_read",
+      "media_type": "application/json",
+      "reconciliation_status": "canonical_equivalent",
+      "role": "numeric_diagnostic",
+      "sha256": "sha256:6c9f449c11e26f8f985a684dac3f60bee742288bc0f610264490d45597ca96be",
+      "source_path_sha256": "sha256:8652b52c38c00a0c5e8eea8787460877f589071362337b04323ccf5f43dbc041"
+    },
+    {
+      "adapter": "prompt_projection",
+      "bytes": 132195,
+      "canonical_sha256": "sha256:1fcd1958bf8c4806047237bd6142dc4681ce416ad338ec10a1d2ecaa16434b76",
+      "load_policy": "structured_read",
+      "media_type": "application/json",
+      "reconciliation_status": "canonical_equivalent",
+      "role": "numeric_diagnostic",
+      "sha256": "sha256:a12d4e321f38d95e84a352eeb59275e132c00ba0840e3f419391560e1fbbaf3f",
+      "source_path_sha256": "sha256:9f11ce3ac63437474e5b76c6e1581f860d452ee03dcec6ab94c90b45423ae8f4"
+    },
+    {
+      "adapter": "prompt_projection",
+      "bytes": 131904,
+      "canonical_sha256": "sha256:19aeece82ab3be46c3cd66c55035a8f87d8bdcc947c85b7b7b255f62bcf25a9e",
+      "load_policy": "structured_read",
+      "media_type": "application/json",
+      "reconciliation_status": "canonical_equivalent",
+      "role": "numeric_diagnostic",
+      "sha256": "sha256:e70d8bdbf700d003902b6ffcf51b302e52fd39070ca191097194655e04c75b9b",
+      "source_path_sha256": "sha256:c4490c8860b4bd96514f311b61c5b4cfc656fae06530d46a47c29496e7cc2134"
+    }
+  ],
+  "support_status": "observed"
+}

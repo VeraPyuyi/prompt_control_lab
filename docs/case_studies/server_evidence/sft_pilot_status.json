@@ -1,17 +1,52 @@
 {
-  "checked_at": "2026-08-24T03:59:04Z",
-  "execution_status": "not_started_resource_gate",
-  "gpu_work_started": false,
-  "planned_model": "Qwen2.5-0.5B",
-  "planned_seeds": [0, 1, 2],
-  "reasons": [
-    "Two queued handoff processes were waiting for GPU resources.",
-    "The required cached Qwen2.5-0.5B model was not present in the checked Hugging Face and ModelScope cache locations."
+  "checked_at": "2026-08-25T06:07:56Z",
+  "execution_status": "complete",
+  "gpu_work_started": true,
+  "package_version": "0.2.0a1",
+  "execution_source_commit": "d12f942bfe6c8ad8938c7af7646c6a5f5d3b2086",
+  "gate_reporting_source_commit": "708488514e7aa94fe619834864d86a8eb10c3f9a",
+  "execution_wheel_sha256": "sha256:c357d4a7aa2b617c5dd839bf893487b80d206be85a06d3e0b992a14065908bd3",
+  "gate_reporting_wheel_sha256": "sha256:893c7ca1f1e2084517fd849590484b2d87de35f4672b48833a76c7d31e8ca767",
+  "model": "Qwen/Qwen2.5-0.5B-Instruct",
+  "model_revision": "7ae557604adf67be50417f59c2c2f167def9a775",
+  "model_snapshot_sha256": "sha256:c1c9aa0607fa7d45da6dafb1ce4eda469e18c285ad13c50cd1e4ed4caf1817a4",
+  "dataset_revision": "740312add88f781978c0658806c59bc2815b9866",
+  "split_sha256": "sha256:664cb24ac6d779378bf256c49f1369f910f49a788594d8813af51655af7bd4b4",
+  "seeds": [0, 1, 2],
+  "checkpoint_runs": 9,
+  "gate_count": 6,
+  "decision": "hold",
+  "stage_decisions": {
+    "mid": "hold",
+    "final": "hold"
+  },
+  "gpu_assignments": [
+    {"seed": 0, "gpu": 1},
+    {"seed": 1, "gpu": 2},
+    {"seed": 2, "gpu": 2}
   ],
-  "required_before_launch": [
-    "An expiring operator approval with queue_clear=true.",
-    "A confirmed local model path and fixed train/validation/withheld inputs.",
-    "An idle selected GPU and an exclusive flock acquired immediately before launch."
+  "observed": {
+    "initial_mean_score": 0.088541666667,
+    "mid_mean_score": 0.178819444444,
+    "final_mean_score": 0.194444444444,
+    "initial_mean_tokens": 147.338541666667,
+    "final_mean_tokens": 107.335069444444,
+    "initial_generation_mismatch": 0.572916666667,
+    "final_generation_mismatch": 0.467013888889,
+    "initial_selective_aurc": 0.871227659274,
+    "final_selective_aurc": 0.667432288825,
+    "initial_trajectory_drift": 8.395504777982,
+    "final_trajectory_drift": 8.825874485396,
+    "format_following_score": 0.0
+  },
+  "preserved_attempts": [
+    "accelerate_dependency_mismatch",
+    "operator_authorized_parallel_relaunch",
+    "transient_cuda_oom_root_cause_not_proven",
+    "pre_classification_fix_gate_reports"
   ],
+  "public_case": "../sft_checkpoint_pilot/README.md",
+  "source_snapshot_sha256": "sha256:056607068849b896105c209ea766c576432dc2479a0a7aa1d07bc5f48fdfe898",
+  "claim_boundary": "This completed controlled pilot records observed checkpoint associations and a conservative hold decision. It does not establish a hidden causal training mechanism, universal improvement, or deployment readiness.",
   "schema": "prompt_control_lab.posttrain_sft_pilot_status.v1"
 }

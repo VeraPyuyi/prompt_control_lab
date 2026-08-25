@@ -1,0 +1,344 @@
+{
+  "adapter": "prompt_routing",
+  "claim_boundary": "Observed routing shares do not establish a universal pathway for all prompts.",
+  "confidence": "medium",
+  "explanation": "These metrics separate measured direct and indirect pathways by which prompt information reaches downstream positions.",
+  "id": "prompt_routing",
+  "interpretation_role": "mechanism",
+  "metrics": {
+    "causal_mask_error": {
+      "count": 16,
+      "max": 0.0,
+      "mean": 0.0,
+      "min": 0.0
+    },
+    "norm_ratio": {
+      "count": 432,
+      "max": 1.1444487571716309,
+      "mean": 0.8455323261829714,
+      "min": 0.47734761238098145
+    },
+    "top_head_share": {
+      "count": 72,
+      "max": 0.11079576153618594,
+      "mean": 0.0770238768618583,
+      "min": 0.04843162749117861
+    }
+  },
+  "next_action": "Repeat matched interventions across positions, layers, and prompt classes.",
+  "observation": "Observed 3 allowlisted numeric metric(s) across 24 structured source(s).",
+  "quality_flags": [],
+  "raw_statistics": [],
+  "scope": "The studied prompt class, attention blocks, positions, and intervention design.",
+  "source_comparison": {
+    "primary_metrics": {
+      "causal_mask_error": {
+        "count": 16,
+        "max": 0.0,
+        "mean": 0.0,
+        "min": 0.0
+      },
+      "norm_ratio": {
+        "count": 432,
+        "max": 1.1444487571716309,
+        "mean": 0.8455323261829714,
+        "min": 0.47734761238098145
+      },
+      "top_head_share": {
+        "count": 72,
+        "max": 0.11079576153618594,
+        "mean": 0.0770238768618583,
+        "min": 0.04843162749117861
+      }
+    },
+    "primary_support_status": "observed",
+    "secondary_metrics": {
+      "causal_mask_error": {
+        "count": 16,
+        "max": 0.0,
+        "mean": 0.0,
+        "min": 0.0
+      },
+      "norm_ratio": {
+        "count": 432,
+        "max": 1.1444487571716309,
+        "mean": 0.8455323261829714,
+        "min": 0.47734761238098145
+      },
+      "top_head_share": {
+        "count": 72,
+        "max": 0.11079576153618594,
+        "mean": 0.0770238768618583,
+        "min": 0.04843162749117861
+      }
+    },
+    "secondary_support_status": "observed"
+  },
+  "source_evidence": [
+    {
+      "adapter": "prompt_routing",
+      "bytes": 12404,
+      "canonical_sha256": "sha256:e3f670afbab7125d8a40302c52ba19440bc287de65068268e166dfa6c853d2d6",
+      "load_policy": "structured_read",
+      "media_type": "application/json",
+      "reconciliation_status": "canonical_equivalent",
+      "role": "numeric_diagnostic",
+      "sha256": "sha256:f2c62d0a4bed660c7b3133331000d20b0eb7a144dd0b6e5ebbd8aa686b42297e",
+      "source_path_sha256": "sha256:1fe018a9d2967e8f88d6ac7c0be80699c9d0303c22b130a30bc426e7add64253"
+    },
+    {
+      "adapter": "prompt_routing",
+      "bytes": 12419,
+      "canonical_sha256": "sha256:abe9c7bf8532512041f873d6090f4073b7fe282c4934dc04272409de51b30192",
+      "load_policy": "structured_read",
+      "media_type": "application/json",
+      "reconciliation_status": "canonical_equivalent",
+      "role": "numeric_diagnostic",
+      "sha256": "sha256:a2bced097334fa6c4bffb6e08151be8371f619082425bbcdd1c2e31523b66dc8",
+      "source_path_sha256": "sha256:21d86b4e2d4ecc260795c8d5194b5f9b3250e22e738cb95ed6221e2cb3299d66"
+    },
+    {
+      "adapter": "prompt_routing",
+      "bytes": 6241,
+      "canonical_sha256": "sha256:5f0ced873d23c828360edda7a5526ab43eb3a9df09bdb30cd3490b52e34a01d8",
+      "load_policy": "structured_read",
+      "media_type": "application/json",
+      "reconciliation_status": "canonical_equivalent",
+      "role": "numeric_diagnostic",
+      "sha256": "sha256:ae2e38d8f872bdb5d3bff8ddbd0ccb44142ed80cb76371b714bc9fc7997df957",
+      "source_path_sha256": "sha256:309cbec7f231f2603fc21feb159bd47e8319c1542fa23a6a9d1be04c5982a7ea"
+    },
+    {
+      "adapter": "prompt_routing",
+      "bytes": 6236,
+      "canonical_sha256": "sha256:dadf697bf209e9d6a26335cbd1d0d3a644a72f49a06c8b50765707591675e9ae",
+      "load_policy": "structured_read",
+      "media_type": "application/json",
+      "reconciliation_status": "canonical_equivalent",
+      "role": "numeric_diagnostic",
+      "sha256": "sha256:15734450cc86e0cb81316457ea085e95bd139388060f9a5160688c7bf194afc4",
+      "source_path_sha256": "sha256:388fc8b477894088d3893cc71c60e77b10e858004d27838a06054851f788fc9b"
+    },
+    {
+      "adapter": "prompt_routing",
+      "bytes": 12429,
+      "canonical_sha256": "sha256:202a6c10f23d6bcc39194581cbfadd6390163ceed634f548149e06b3c9d34902",
+      "load_policy": "structured_read",
+      "media_type": "application/json",
+      "reconciliation_status": "canonical_equivalent",
+      "role": "numeric_diagnostic",
+      "sha256": "sha256:213e620fdd44b62c44e333edc0d9ffe7cbf55c92f1ceb6078a45c0948cd4aef5",
+      "source_path_sha256": "sha256:3ac0e3e0ebbfdf435f8286d1bba778e62c9d91b64d99771af8b2c8b5ee03cd96"
+    },
+    {
+      "adapter": "prompt_routing",
+      "bytes": 2233,
+      "canonical_sha256": "sha256:8288d02723a443625cca6434e228ff785a081b8096ddc4211dc912d69e4fbcad",
+      "load_policy": "structured_read",
+      "media_type": "application/json",
+      "reconciliation_status": "canonical_equivalent",
+      "role": "numeric_diagnostic",
+      "sha256": "sha256:bc269b2461acf771797e13a97f0b02d2c01366742bfdeb53455f4a7ddf64a9df",
+      "source_path_sha256": "sha256:4256debbda13d0cdd5df9913068c5a089a95cc0343af92fb72f566450db1467c"
+    },
+    {
+      "adapter": "prompt_routing",
+      "bytes": 2236,
+      "canonical_sha256": "sha256:a670a03a9ca14dfebcc5a786231c70f2cb75b0719aef9baaba1642dedf3849fa",
+      "load_policy": "structured_read",
+      "media_type": "application/json",
+      "reconciliation_status": "canonical_equivalent",
+      "role": "numeric_diagnostic",
+      "sha256": "sha256:9ba8e53c290ac4de727b11bdf23078861f7cf265539392c4efbcedc9bb0c44e9",
+      "source_path_sha256": "sha256:59b759b3a26c93dd65b18ea6751615d5e5ca6f0b7abd3e66355a8c700efe5737"
+    },
+    {
+      "adapter": "prompt_routing",
+      "bytes": 12421,
+      "canonical_sha256": "sha256:485ca91ff5ecf5ace02f12d8d6973b57935bf61881f6b887d00ea7abdf759b44",
+      "load_policy": "structured_read",
+      "media_type": "application/json",
+      "reconciliation_status": "canonical_equivalent",
+      "role": "numeric_diagnostic",
+      "sha256": "sha256:6c8a2b7851768c0c71b84eab4fef1dcf9dbc64eb42ca9cb7197d6138619c8d36",
+      "source_path_sha256": "sha256:624c40052b70079ab72335c8757edac199833019a790d8ae4fa296393be5150f"
+    },
+    {
+      "adapter": "prompt_routing",
+      "bytes": 6244,
+      "canonical_sha256": "sha256:1e3054a9bcb263dd0c25beab1926623b1bc34c65130e933d4e276da4f8a1c625",
+      "load_policy": "structured_read",
+      "media_type": "application/json",
+      "reconciliation_status": "canonical_equivalent",
+      "role": "numeric_diagnostic",
+      "sha256": "sha256:4f8a503c10aec0f768ef13d5cafa28b6a0fee3c554d7b66c2edfa66386a22593",
+      "source_path_sha256": "sha256:68a83285e7fa0d8d57acadd8981b0ebf195f5edbd5e632d1413f29737e959849"
+    },
+    {
+      "adapter": "prompt_routing",
+      "bytes": 6257,
+      "canonical_sha256": "sha256:0bc5c259f9fd6d2eec7f31c123c615c0e7b4dcf6166d8dbb5f3267e6812c1dab",
+      "load_policy": "structured_read",
+      "media_type": "application/json",
+      "reconciliation_status": "canonical_equivalent",
+      "role": "numeric_diagnostic",
+      "sha256": "sha256:a3642c0230b71078ad075ff921baf74d24d3da9051877509d36e1678d87a5b73",
+      "source_path_sha256": "sha256:6f6bb918cf3ec74ae30c94f7e0a7a7e56db645f05309cc71ab1b19dfa94327e1"
+    },
+    {
+      "adapter": "prompt_routing",
+      "bytes": 6246,
+      "canonical_sha256": "sha256:5a172693e24d9f710a306435d30b0490a99907c51f9db0d545f27bd78c5e1bf2",
+      "load_policy": "structured_read",
+      "media_type": "application/json",
+      "reconciliation_status": "canonical_equivalent",
+      "role": "numeric_diagnostic",
+      "sha256": "sha256:7af217780d2fb0213ecba9d74590fdf52d05750845877267c07a23fbf7fc7d55",
+      "source_path_sha256": "sha256:79d44ea303651f9915fa5d09fae91f3663f5baba8b151d66d45ac73b8a963029"
+    },
+    {
+      "adapter": "prompt_routing",
+      "bytes": 2243,
+      "canonical_sha256": "sha256:edde87e9d91537579024098a0915b0436b38462adfe95d60bab41ea2f4343fe1",
+      "load_policy": "structured_read",
+      "media_type": "application/json",
+      "reconciliation_status": "canonical_equivalent",
+      "role": "numeric_diagnostic",
+      "sha256": "sha256:d63bcd16858b82a60e930ca84142f1cd944df888db9b39dc4976b937b0c5e09e",
+      "source_path_sha256": "sha256:8fc0505d77a2a264c0331dc9e291b04ce5ecbca9fb321024493024b2e0f84629"
+    },
+    {
+      "adapter": "prompt_routing",
+      "bytes": 2233,
+      "canonical_sha256": "sha256:0321f9acd967f9da0391c4723255057afd5565dcfc885495781d912c08e44467",
+      "load_policy": "structured_read",
+      "media_type": "application/json",
+      "reconciliation_status": "canonical_equivalent",
+      "role": "numeric_diagnostic",
+      "sha256": "sha256:0c88818902293d602fde6d3ea6ad65c323909201f59bc9232f11d049edaba2a1",
+      "source_path_sha256": "sha256:93116f8e7cfc8bc8b52029453273cef9b2e734b521e7203f8839d7cca54a27af"
+    },
+    {
+      "adapter": "prompt_routing",
+      "bytes": 12392,
+      "canonical_sha256": "sha256:d7c8f15de1548aceb5a7ad648d3670ea87e99a9807c30df87f56bbc842defc99",
+      "load_policy": "structured_read",
+      "media_type": "application/json",
+      "reconciliation_status": "canonical_equivalent",
+      "role": "numeric_diagnostic",
+      "sha256": "sha256:3f661ce82c37af294bba22208d0cdaaf88e84f1394ec0ae1524b02006ad53f16",
+      "source_path_sha256": "sha256:9f1699fb09830215b905742979fac97a6894105d39df99f5714dbb63dab99038"
+    },
+    {
+      "adapter": "prompt_routing",
+      "bytes": 6242,
+      "canonical_sha256": "sha256:63ffdec3ccdfd8e23d5b38ec18961d556096beeaa86171891afaa5073b679377",
+      "load_policy": "structured_read",
+      "media_type": "application/json",
+      "reconciliation_status": "canonical_equivalent",
+      "role": "numeric_diagnostic",
+      "sha256": "sha256:639ac1d852970a2ba4c2b31ebe2c941eaa1a55222dabebef3e76397e5e52d896",
+      "source_path_sha256": "sha256:aeed68e3dfe60615508e98557565b943de1a23c37f24cb13a7ca7fc08d5571c3"
+    },
+    {
+      "adapter": "prompt_routing",
+      "bytes": 12402,
+      "canonical_sha256": "sha256:096bac377bea24958008246993b60b78c95591cf8ee2af6ad7f297b7c68d8b82",
+      "load_policy": "structured_read",
+      "media_type": "application/json",
+      "reconciliation_status": "canonical_equivalent",
+      "role": "numeric_diagnostic",
+      "sha256": "sha256:69e5e309d6fa4a486c5fba44d75a9a8df174ac7121c349b188d2539e67c18b4b",
+      "source_path_sha256": "sha256:b70b32242d1a162b0634d7ada20455b13771d45bbcc7862017719ad40b3f0e09"
+    },
+    {
+      "adapter": "prompt_routing",
+      "bytes": 2244,
+      "canonical_sha256": "sha256:0f9e83b9fdc7cb7217e24e13465cace55e9678c8b7e81652829560b6db20407f",
+      "load_policy": "structured_read",
+      "media_type": "application/json",
+      "reconciliation_status": "canonical_equivalent",
+      "role": "numeric_diagnostic",
+      "sha256": "sha256:b28feeb8e1edbccea9d2a24eac235e4f05daaf1b94b0200b6724b01488608d36",
+      "source_path_sha256": "sha256:b731bddf6efcdcd6aa5c6dbd3aff0ce6bb1118087cc59f0c0efe309d23c4a36c"
+    },
+    {
+      "adapter": "prompt_routing",
+      "bytes": 2238,
+      "canonical_sha256": "sha256:69570ae0aa6443391a1698ce406461356e1ba97526780b6f748ae61ea8c33f2c",
+      "load_policy": "structured_read",
+      "media_type": "application/json",
+      "reconciliation_status": "canonical_equivalent",
+      "role": "numeric_diagnostic",
+      "sha256": "sha256:131205d32af6c1e97777a22094c449a42176bb528e2f79811a4bb988287750b0",
+      "source_path_sha256": "sha256:b90360a3ec2067427525d96fd1058795933fcad1a0d8315567c255d034db89be"
+    },
+    {
+      "adapter": "prompt_routing",
+      "bytes": 2244,
+      "canonical_sha256": "sha256:db781fc321314606767c8f78eb147457b873f7e3ee66488602e0314845f03e58",
+      "load_policy": "structured_read",
+      "media_type": "application/json",
+      "reconciliation_status": "canonical_equivalent",
+      "role": "numeric_diagnostic",
+      "sha256": "sha256:0332f9588aea137268461d5c1336da7165732c314e9c2fd67b57666692127da4",
+      "source_path_sha256": "sha256:c30ecf947b8f1e159168376d31d80481b816131cfb95741690b349ab0e8558f0"
+    },
+    {
+      "adapter": "prompt_routing",
+      "bytes": 6248,
+      "canonical_sha256": "sha256:b4ce193dc2269b985505e01b954926eabab6d7554f940c645979552198c38e74",
+      "load_policy": "structured_read",
+      "media_type": "application/json",
+      "reconciliation_status": "canonical_equivalent",
+      "role": "numeric_diagnostic",
+      "sha256": "sha256:6c16e68fe1188dc16dc9c439597694d666f8c78a39d611096976c73f29a551ec",
+      "source_path_sha256": "sha256:c835e80a8b1ddd2eb7aa350a96a89a3d0ae6322b81b727eadd4fb56333134ae5"
+    },
+    {
+      "adapter": "prompt_routing",
+      "bytes": 6256,
+      "canonical_sha256": "sha256:6a1c430200e2fbe0f41d13560a1d0233b09535b7d856ba1d45f1f0150b2b71a2",
+      "load_policy": "structured_read",
+      "media_type": "application/json",
+      "reconciliation_status": "canonical_equivalent",
+      "role": "numeric_diagnostic",
+      "sha256": "sha256:c0b195feb95844bba7884435913252a46049b81188c9c8230bf7c9814e4fdcfd",
+      "source_path_sha256": "sha256:ddfd8a1828700c82bf2421327ddba7561359c228d7634dabfea94f3a3f4a5a19"
+    },
+    {
+      "adapter": "prompt_routing",
+      "bytes": 12383,
+      "canonical_sha256": "sha256:70fbaef19bd4f82549aa1c6e1d4119573d4ee761d80eb8f1216375bea8597a94",
+      "load_policy": "structured_read",
+      "media_type": "application/json",
+      "reconciliation_status": "canonical_equivalent",
+      "role": "numeric_diagnostic",
+      "sha256": "sha256:7b23fd3bc9ffa56d651a9d35299159514d702279955aa0f73c2896ebf8a52f54",
+      "source_path_sha256": "sha256:e3b87610dc6ecc75c55b391bc9ec90204d4027d99cae68a1887ab5ca2472ffc7"
+    },
+    {
+      "adapter": "prompt_routing",
+      "bytes": 2242,
+      "canonical_sha256": "sha256:c91326f181b6b72b0b8dbfc91d9b299e6d83511575b1f787bc32524a0df92436",
+      "load_policy": "structured_read",
+      "media_type": "application/json",
+      "reconciliation_status": "canonical_equivalent",
+      "role": "numeric_diagnostic",
+      "sha256": "sha256:083503d256d986b940caadfaec102af2730a143b7b3a91f4fe939f089e8035cc",
+      "source_path_sha256": "sha256:f6f6dd90509c91d1bc593e9a9eaf5e37f2df8b0f119e47c3cd214e05f83a397c"
+    },
+    {
+      "adapter": "prompt_routing",
+      "bytes": 12421,
+      "canonical_sha256": "sha256:a6c02f79533e30b1764d9b9ea5dd3cd92499b60faeb56e37ee50d84b6ada72ed",
+      "load_policy": "structured_read",
+      "media_type": "application/json",
+      "reconciliation_status": "canonical_equivalent",
+      "role": "numeric_diagnostic",
+      "sha256": "sha256:90f1d72bdcdf4270cda269a1df227f49cf1f8f5ec2124df673b740d260a4aea5",
+      "source_path_sha256": "sha256:fbaf5b002101fbb6c20c14568a7385f36973644ec341c22d86c50abad4faf1b7"
+    }
+  ],
+  "support_status": "observed"
+}

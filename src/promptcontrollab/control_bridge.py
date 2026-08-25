@@ -164,6 +164,10 @@ class ControlBridge:
         self._validate_run_binding(run_id, run_dir)
         provider = _optional_string(params.get("provider"), "provider")
         model = _optional_string(params.get("model"), "model")
+        session_origin = _optional_string(params.get("session_origin"), "session_origin")
+        bridge_transport = _optional_string(
+            params.get("bridge_transport"), "bridge_transport"
+        )
         extra_metadata: JsonDict = {
             "harness_session_id": session_id,
             "harness_source": source,
@@ -177,6 +181,8 @@ class ControlBridge:
             "harness_auto_recover_policy": auto_recover_policy,
             "harness_auto_recover": auto_recover,
             "harness_max_auto_recoveries": max_auto_recoveries,
+            "harness_session_origin": session_origin or "unverified",
+            "harness_bridge_transport": bridge_transport or "unverified",
         }
         if (run_dir / "control_run.json").exists():
             session = load_control_session(run_dir)
@@ -400,10 +406,17 @@ class ControlBridge:
         }
 
     def _harness_finalize(self, params: JsonDict) -> JsonDict:
+        from promptcontrollab.harness_integration import finalize_harness_run
+
         run_id = _required_string(params, "run_id")
         session_id = _required_string(params, "session_id")
         context = self._harness_context(run_id, session_id)
-        status = finalize_control_session(context.session)
+        status = finalize_harness_run(
+            self.runs_root,
+            run_id,
+            outcome="completed",
+            exit_code=0,
+        )
         self._index.index_run(context.session.run_dir)
         report_path = context.session.run_dir / "report.md"
         return {

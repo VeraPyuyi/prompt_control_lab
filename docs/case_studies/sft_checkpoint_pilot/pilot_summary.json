@@ -1,0 +1,239 @@
+{
+  "checkpoint_metrics_by_stage": {
+    "final": {
+      "generation_mismatch": {
+        "count": 3,
+        "max": 0.47395833333333337,
+        "mean": 0.467013888889,
+        "min": 0.453125
+      },
+      "generation_saturation_rate": {
+        "count": 3,
+        "max": 0.4635416666666667,
+        "mean": 0.432291666667,
+        "min": 0.4114583333333333
+      },
+      "mean_latency_ms": {
+        "count": 3,
+        "max": 7038.9576111726155,
+        "mean": 6691.539235561828,
+        "min": 6428.668268257752
+      },
+      "mean_score": {
+        "count": 3,
+        "max": 0.20833333333333334,
+        "mean": 0.194444444444,
+        "min": 0.1875
+      },
+      "mean_tokens": {
+        "count": 3,
+        "max": 108.91145833333333,
+        "mean": 107.335069444444,
+        "min": 106.546875
+      },
+      "projection_status_counts": {
+        "not_applicable": 3
+      },
+      "prompt_stability_drift": {
+        "count": 3,
+        "max": 8.833958673456914,
+        "mean": 8.825874485396,
+        "min": 8.817407686890217
+      },
+      "reachability_shift": {
+        "count": 3,
+        "max": 2.355936393206073,
+        "mean": 2.336863999946,
+        "min": 2.3136754482741977
+      },
+      "readout_alignment_gap": {
+        "count": 3,
+        "max": 0.47395833333333337,
+        "mean": 0.467013888889,
+        "min": 0.453125
+      },
+      "routing_status_counts": {
+        "insufficient_evidence": 3
+      },
+      "selective_aurc": {
+        "count": 3,
+        "max": 0.7039366323294587,
+        "mean": 0.667432288825,
+        "min": 0.6350866745993844
+      },
+      "trajectory_drift": {
+        "count": 3,
+        "max": 8.833958673456914,
+        "mean": 8.825874485396,
+        "min": 8.817407686890217
+      }
+    },
+    "initial": {
+      "generation_mismatch": {
+        "count": 3,
+        "max": 0.5729166666666667,
+        "mean": 0.572916666667,
+        "min": 0.5729166666666667
+      },
+      "generation_saturation_rate": {
+        "count": 3,
+        "max": 0.9270833333333334,
+        "mean": 0.927083333333,
+        "min": 0.9270833333333334
+      },
+      "mean_latency_ms": {
+        "count": 3,
+        "max": 9027.29445140964,
+        "mean": 8963.940084239262,
+        "min": 8875.441511704897
+      },
+      "mean_score": {
+        "count": 3,
+        "max": 0.08854166666666667,
+        "mean": 0.088541666667,
+        "min": 0.08854166666666667
+      },
+      "mean_tokens": {
+        "count": 3,
+        "max": 147.33854166666666,
+        "mean": 147.338541666667,
+        "min": 147.33854166666666
+      },
+      "projection_status_counts": {
+        "not_applicable": 3
+      },
+      "prompt_stability_drift": {
+        "count": 3,
+        "max": 8.395504777981575,
+        "mean": 8.395504777982,
+        "min": 8.395504777981575
+      },
+      "reachability_shift": {
+        "count": 3,
+        "max": 0.0,
+        "mean": 0.0,
+        "min": 0.0
+      },
+      "readout_alignment_gap": {
+        "count": 3,
+        "max": 0.5729166666666667,
+        "mean": 0.572916666667,
+        "min": 0.5729166666666667
+      },
+      "routing_status_counts": {
+        "insufficient_evidence": 3
+      },
+      "selective_aurc": {
+        "count": 3,
+        "max": 0.8712276592736571,
+        "mean": 0.871227659274,
+        "min": 0.8712276592736571
+      },
+      "trajectory_drift": {
+        "count": 3,
+        "max": 8.395504777981575,
+        "mean": 8.395504777982,
+        "min": 8.395504777981575
+      }
+    },
+    "mid": {
+      "generation_mismatch": {
+        "count": 3,
+        "max": 0.5052083333333334,
+        "mean": 0.482638888889,
+        "min": 0.45833333333333337
+      },
+      "generation_saturation_rate": {
+        "count": 3,
+        "max": 0.4375,
+        "mean": 0.421875,
+        "min": 0.4114583333333333
+      },
+      "mean_latency_ms": {
+        "count": 3,
+        "max": 6399.008143926039,
+        "mean": 6389.035940383716,
+        "min": 6381.212555570528
+      },
+      "mean_score": {
+        "count": 3,
+        "max": 0.203125,
+        "mean": 0.178819444444,
+        "min": 0.15625
+      },
+      "mean_tokens": {
+        "count": 3,
+        "max": 106.953125,
+        "mean": 106.336805555556,
+        "min": 105.53645833333333
+      },
+      "projection_status_counts": {
+        "not_applicable": 3
+      },
+      "prompt_stability_drift": {
+        "count": 3,
+        "max": 8.780186665526992,
+        "mean": 8.767376717418,
+        "min": 8.747230865879198
+      },
+      "reachability_shift": {
+        "count": 3,
+        "max": 2.293188976679468,
+        "mean": 2.174518825466,
+        "min": 1.9973620190466934
+      },
+      "readout_alignment_gap": {
+        "count": 3,
+        "max": 0.5052083333333334,
+        "mean": 0.482638888889,
+        "min": 0.45833333333333337
+      },
+      "routing_status_counts": {
+        "insufficient_evidence": 3
+      },
+      "selective_aurc": {
+        "count": 3,
+        "max": 0.7351434668648764,
+        "mean": 0.7070760422,
+        "min": 0.6689453791063021
+      },
+      "trajectory_drift": {
+        "count": 3,
+        "max": 8.780186665526992,
+        "mean": 8.767376717418,
+        "min": 8.747230865879198
+      }
+    }
+  },
+  "checkpoint_run_count": 9,
+  "claim_boundary": "This summary conservatively aggregates observed checkpoint evidence across seeds. It does not establish a causal training mechanism.",
+  "decision": "hold",
+  "gate_count": 6,
+  "missing_checkpoints": [],
+  "missing_gates": [],
+  "planned_checkpoint_run_count": 9,
+  "schema": "prompt_control_lab.public_posttrain_pilot_summary.v1",
+  "score_delta_by_stage": {
+    "final": {
+      "count": 3,
+      "max": 0.119791666667,
+      "mean": 0.105902777778,
+      "min": 0.098958333333
+    },
+    "mid": {
+      "count": 3,
+      "max": 0.114583333333,
+      "mean": 0.090277777778,
+      "min": 0.067708333333
+    }
+  },
+  "seeds": [
+    0,
+    1,
+    2
+  ],
+  "stage_decisions": {
+    "final": "hold",
+    "mid": "hold"
+  }
+}

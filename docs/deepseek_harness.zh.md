@@ -2,7 +2,7 @@
 
 English: [deepseek_harness.en.md](deepseek_harness.en.md)
 
-DeepSeek Harness 是 PromptControlLab 2.0 的旗舰 Agent 集成。它是原生 Cordis 插件，不是日志抓取器，也不是第二套 Agent loop。插件利用 Harness 在模型请求与工具执行前的拦截点，再通过一个持久本地 Python bridge 传递有界、脱敏的观察事件。
+DeepSeek Harness 是 PromptControlLab 0.2 alpha 框架方向中的旗舰 Agent 集成。它是原生 Cordis 插件，不是日志抓取器，也不是第二套 Agent loop。插件利用 Harness 在模型请求与工具执行前的拦截点，再通过一个持久本地 Python bridge 传递有界、脱敏的观察事件。
 
 该集成由 PromptControlLab 社区维护。它的存在不代表 DeepSeek Harness 维护者已经背书、支持或收录。
 
@@ -96,6 +96,11 @@ pcl harness doctor --project . --json
 
 Doctor 完全离线。它检查本地 config schema、redacted capture、compatibility lock、Python bridge health、Node version 和 packaged plugin 文件。通过不代表 active Harness profile 已加载该 row，也不代表 provider credential 可用或 live session 已发出事件；这些状态需要用有界 Harness run 单独验证。
 
+真实完成验收还要求 `session_origin=live_cordis`、持久 stdio transport、锁定的 Harness
+版本/commit，以及带 bridge 来源序号和时间戳的生命周期事件。replay 数据和测试 fixture
+直接追加的事件不能满足该验收。这些检查只能确认原生生命周期采集链路，仍不能证明 provider
+隐藏权重身份，也不能证明每个 Agent 动作在语义上都安全。
+
 ## 精确 Event Mapping
 
 Harness 会区分 live Cordis event 与 durable session event。`turn/*`、`step/*`、`tool/call`、`tool/result`、`compaction/*` 都通过 Cordis `session/event` listener 到达；它们不是同名 Cordis event。
@@ -145,10 +150,10 @@ Harness 会区分 live Cordis event 与 durable session event。`turn/*`、`step
 |---|---|
 | 原始 Prompt | 只为同步 `harness_pre_step` 穿过本地 stdio；持久化为 SHA-256 identity、发现与决策，不保存原始 prompt 正文。 |
 | 工具参数 | 稳定投影的 SHA-256 与排序后的顶层 argument key。 |
-| 工具结果 | Error flag、有界 error name/code、是否结束 turn、content block 数。 |
+| 工具结果 | Error flag、Harness 可提供时的整数 shell 退出码、有界 error name/code、是否结束 turn和 content block 数；不保留原始 stdout/stderr。 |
 | Assistant 内容 | 不复制到 PromptControlLab event；跳过 `assistant/chunk`。 |
 | 隐藏推理 | Hidden reasoning、chain-of-thought、thinking field 与 reasoning content 都不持久化。 |
-| API keys | API key、authorization header、token 和 credential-shaped value 都不持久化。 |
+| API keys | 已识别的凭据字段和 credential-shaped value 会在持久化前被丢弃。公开证据仍需执行有明确范围的 artifact 扫描；这不代表对未扫描外部系统作出保证。 |
 | 路径 | Replay sanitization 会哈希 workspace/repository path，而不是保留原路径。 |
 
 脱敏会减少保留内容，但不保证任意用户元数据都无害。共享前仍应检查 policy 与 artifact。
@@ -177,6 +182,14 @@ pcl harness replay --session <session.jsonl> --out runs/harness-replay --json
 ```
 
 Replay 至少需要一条 user Prompt，才能执行诚实的 preflight。它会哈希 content，从持久 event 中删除隐藏推理与原始内容，记录 source-session hash，但不会重新运行 Agent。
+
+如果外部 Harness 进程在插件 teardown 运行前退出，可显式收口本地 run：
+
+```bash
+pcl harness finalize --runs .promptcontrol/runs --session <session-or-run-id> --outcome failed --exit-code 1 --json
+```
+
+该命令不会编造缺失活动。如果没有观察到 preflight，它会把这次运行记录为 `insufficient_evidence`，并明确说明没有证据证明发生过模型请求、工具执行或代码修改。
 
 按 Harness session id 或 PromptControlLab run id 查找本地报告：
 

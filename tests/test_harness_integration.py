@@ -10,6 +10,7 @@ from promptcontrollab import harness_integration
 from promptcontrollab.harness_integration import (
     HARNESS_COMMIT,
     HARNESS_VERSION,
+    finalize_harness_run,
     initialize_harness_project,
     inspect_harness_session,
     replay_harness_session,
@@ -23,6 +24,47 @@ def _write_jsonl(path: Path, records: list[dict[str, object]]) -> None:
         "".join(json.dumps(record, ensure_ascii=False) + "\n" for record in records),
         encoding="utf-8",
     )
+
+
+def _accepted_harness_events() -> list[tuple[str, dict[str, object]]]:
+    return [
+        (
+            "agent/request",
+            {
+                "turn": 1,
+                "step": 1,
+                "request_id": "pcl-request-1",
+                "request_id_source": "prompt_control_lab",
+                "provider": "deepseek",
+                "model": "deepseek-chat",
+            },
+        ),
+        (
+            "session/assistant/message",
+            {
+                "turn": 1,
+                "step": 1,
+                "response_id": "assistant-message-1",
+                "provider": "deepseek",
+                "model": "deepseek-chat",
+            },
+        ),
+        (
+            "tools/result",
+            {"tool": {"operation_category": "file_read"}, "result": {"is_error": False}},
+        ),
+        (
+            "tools/result",
+            {"tool": {"operation_category": "file_write"}, "result": {"is_error": False}},
+        ),
+        (
+            "tools/result",
+            {
+                "tool": {"operation_category": "test_execution"},
+                "result": {"is_error": False, "exit_code": 0},
+            },
+        ),
+    ]
 
 
 def test_harness_init_writes_reviewable_project_files_without_overwrite(
@@ -40,6 +82,11 @@ def test_harness_init_writes_reviewable_project_files_without_overwrite(
     assert payload["capture"] == "redacted"
     assert payload["autoRecover"] is False
     assert payload["bridgeFailure"] == "warn"
+    snippet_text = snippet.read_text(encoding="utf-8")
+    assert snippet_text.startswith("- insert:\n")
+    assert "    - id: prompt-control-lab" in snippet_text
+    assert "      name: '@prompt-control-lab/deepseek-harness'" in snippet_text
+    assert "      runsRoot: .promptcontrol/runs" in snippet_text
     contract = json.loads(compatibility.read_text(encoding="utf-8"))
     assert contract["deepseek_harness"]["version"] == HARNESS_VERSION
     assert contract["deepseek_harness"]["commit"] == HARNESS_COMMIT
@@ -295,6 +342,335 @@ def test_replay_builds_redacted_control_run_and_report(tmp_path: Path) -> None:
     report = resolve_harness_report(tmp_path / "runs", "dsh-session-1")
     assert report["run_dir"] == str(run_dir.resolve())
     assert report["report_md"] == str((run_dir / "report.md").resolve())
+
+
+def test_harness_finalize_closes_preflightless_external_failure_honestly(
+    tmp_path: Path,
+) -> None:
+    from promptcontrollab.control_bridge import ControlBridge
+
+    runs_root = tmp_path / "runs"
+    bridge = ControlBridge(runs_root)
+    started = bridge.dispatch(
+        "harness_session_start",
+        {
+            "session_id": "credential-failure-session",
+            "source": "startup",
+            "mode": "gate",
+            "authorization": "agent-scoped",
+            "policy_path": None,
+            "capture": "redacted",
+            "provider": "deepseek-official",
+            "model": "deepseek-v4-flash",
+            "runs_root": str(runs_root),
+            "harness_version": HARNESS_VERSION,
+            "harness_commit": HARNESS_COMMIT,
+            "session_origin": "live_cordis",
+            "bridge_transport": "persistent_stdio",
+        },
+    )
+
+
+    result = finalize_harness_run(
+        runs_root,
+        "credential-failure-session",
+        outcome="failed",
+        exit_code=1,
+    )
+
+    run_dir = runs_root / str(started["run_id"])
+    assert result["status"] == "finalized"
+    assert result["termination"]["outcome"] == "failed"
+    assert result["termination"]["preflight_observed"] is False
+    assert not (run_dir / "preflight.json").exists()
+    decision = json.loads((run_dir / "decision.json").read_text(encoding="utf-8"))
+    assert decision["decision"] == "insufficient_evidence"
+    assert "preflight" in decision["reasons"][0].lower()
+    report = (run_dir / "report.md").read_text(encoding="utf-8")
+    assert "not_observed" in report
+    persisted = (run_dir / "harness_termination.json").read_text(encoding="utf-8")
+    assert "credential" not in persisted.lower()
+
+    repeated = finalize_harness_run(
+        runs_root,
+        str(started["run_id"]),
+        outcome="failed",
+        exit_code=1,
+    )
+    assert repeated["status"] == "finalized"
+    assert repeated["event_count"] == result["event_count"]
+
+
+def test_completed_harness_run_requires_a_real_model_tool_and_test_chain(
+    tmp_path: Path,
+) -> None:
+    from promptcontrollab.control_bridge import ControlBridge
+    from promptcontrollab.files import stable_digest
+
+    runs_root = tmp_path / "runs"
+    bridge = ControlBridge(runs_root)
+    started = bridge.dispatch(
+        "harness_session_start",
+        {
+            "session_id": "incomplete-live-session",
+            "source": "runtime",
+            "mode": "suggest",
+            "authorization": "agent-scoped",
+            "policy_path": None,
+            "capture": "redacted",
+            "provider": "deepseek",
+            "model": "deepseek-chat",
+            "runs_root": str(runs_root),
+            "harness_version": HARNESS_VERSION,
+            "harness_commit": HARNESS_COMMIT,
+            "session_origin": "live_cordis",
+            "bridge_transport": "persistent_stdio",
+        },
+    )
+    prompt = "Update one fixture and run its test."
+    bridge.dispatch(
+        "harness_pre_step",
+        {
+            "run_id": started["run_id"],
+            "session_id": "incomplete-live-session",
+            "turn": 1,
+            "step": 1,
+            "prompt": prompt,
+            "prompt_hash": "sha256:" + stable_digest(prompt),
+            "policy_path": None,
+            "feedback_max_chars": 600,
+        },
+    )
+
+    with pytest.raises(
+        ValueError,
+        match="model response, file read, file modification, successful test execution",
+    ):
+        finalize_harness_run(
+            runs_root,
+            "incomplete-live-session",
+            outcome="completed",
+            exit_code=0,
+        )
+
+    run_dir = runs_root / str(started["run_id"])
+    acceptance = json.loads((run_dir / "harness_acceptance.json").read_text(encoding="utf-8"))
+    assert acceptance["accepted"] is False
+    assert acceptance["checks"]["preflight"]["passed"] is True
+    assert acceptance["checks"]["model_response"]["passed"] is False
+    assert json.loads((run_dir / "control_run.json").read_text())["status"] != "finalized"
+
+
+def test_completed_harness_run_writes_machine_verified_acceptance(tmp_path: Path) -> None:
+    from promptcontrollab.control_bridge import ControlBridge
+    from promptcontrollab.files import stable_digest
+
+    runs_root = tmp_path / "runs"
+    bridge = ControlBridge(runs_root)
+    started = bridge.dispatch(
+        "harness_session_start",
+        {
+            "session_id": "accepted-live-session",
+            "source": "runtime",
+            "mode": "suggest",
+            "authorization": "agent-scoped",
+            "policy_path": None,
+            "capture": "redacted",
+            "provider": "deepseek",
+            "model": "deepseek-chat",
+            "runs_root": str(runs_root),
+            "harness_version": HARNESS_VERSION,
+            "harness_commit": HARNESS_COMMIT,
+            "session_origin": "live_cordis",
+            "bridge_transport": "persistent_stdio",
+        },
+    )
+    prompt = "Update one fixture and run its test."
+    bridge.dispatch(
+        "harness_pre_step",
+        {
+            "run_id": started["run_id"],
+            "session_id": "accepted-live-session",
+            "turn": 1,
+            "step": 1,
+            "prompt": prompt,
+            "prompt_hash": "sha256:" + stable_digest(prompt),
+            "policy_path": None,
+            "feedback_max_chars": 600,
+        },
+    )
+    run_dir = runs_root / str(started["run_id"])
+    events = _accepted_harness_events()
+    for index, (event_type, payload) in enumerate(events, 1):
+        bridge.dispatch(
+            "harness_event",
+            {
+                "run_id": started["run_id"],
+                "session_id": "accepted-live-session",
+                "idempotency_key": f"acceptance-{index}",
+                "event_type": event_type,
+                "sequence": index,
+                "timestamp": "2026-08-24T00:00:00Z",
+                "payload": payload,
+            },
+        )
+
+    result = finalize_harness_run(
+        runs_root,
+        "accepted-live-session",
+        outcome="completed",
+        exit_code=0,
+    )
+
+    assert result["status"] == "finalized"
+    assert result["acceptance"]["accepted"] is True
+    acceptance = json.loads((run_dir / "harness_acceptance.json").read_text(encoding="utf-8"))
+    assert all(check["passed"] for check in acceptance["checks"].values())
+
+
+@pytest.mark.parametrize(
+    "test_result",
+    [
+        {"is_error": False, "exit_code": 1},
+        {"is_error": False},
+    ],
+    ids=["nonzero-exit", "missing-exit"],
+)
+def test_completed_harness_run_rejects_unverified_test_result(
+    tmp_path: Path,
+    test_result: dict[str, object],
+) -> None:
+    from promptcontrollab.control_bridge import ControlBridge
+    from promptcontrollab.files import stable_digest
+
+    runs_root = tmp_path / "runs"
+    bridge = ControlBridge(runs_root)
+    started = bridge.dispatch(
+        "harness_session_start",
+        {
+            "session_id": "failed-test-live-session",
+            "source": "runtime",
+            "mode": "suggest",
+            "authorization": "agent-scoped",
+            "policy_path": None,
+            "capture": "redacted",
+            "provider": "deepseek",
+            "model": "deepseek-chat",
+            "runs_root": str(runs_root),
+            "harness_version": HARNESS_VERSION,
+            "harness_commit": HARNESS_COMMIT,
+            "session_origin": "live_cordis",
+            "bridge_transport": "persistent_stdio",
+        },
+    )
+    prompt = "Update one fixture and run its test."
+    bridge.dispatch(
+        "harness_pre_step",
+        {
+            "run_id": started["run_id"],
+            "session_id": "failed-test-live-session",
+            "turn": 1,
+            "step": 1,
+            "prompt": prompt,
+            "prompt_hash": "sha256:" + stable_digest(prompt),
+            "policy_path": None,
+            "feedback_max_chars": 600,
+        },
+    )
+    events = _accepted_harness_events()
+    events[-1] = (
+        "tools/result",
+        {
+            "tool": {"operation_category": "test_execution"},
+            "result": test_result,
+        },
+    )
+    for index, (event_type, payload) in enumerate(events, 1):
+        bridge.dispatch(
+            "harness_event",
+            {
+                "run_id": started["run_id"],
+                "session_id": "failed-test-live-session",
+                "idempotency_key": f"failed-test-{index}",
+                "event_type": event_type,
+                "sequence": index,
+                "timestamp": "2026-08-25T00:00:00Z",
+                "payload": payload,
+            },
+        )
+
+    with pytest.raises(ValueError, match="successful test execution"):
+        finalize_harness_run(
+            runs_root,
+            "failed-test-live-session",
+            outcome="completed",
+            exit_code=0,
+        )
+
+    run_dir = runs_root / str(started["run_id"])
+    acceptance = json.loads((run_dir / "harness_acceptance.json").read_text())
+    assert acceptance["checks"]["test"]["passed"] is False
+
+
+def test_direct_fixture_events_cannot_satisfy_live_harness_acceptance(
+    tmp_path: Path,
+) -> None:
+    from promptcontrollab.control_bridge import ControlBridge
+    from promptcontrollab.control_workflow import append_control_event, load_control_session
+    from promptcontrollab.files import stable_digest
+
+    runs_root = tmp_path / "runs"
+    bridge = ControlBridge(runs_root)
+    started = bridge.dispatch(
+        "harness_session_start",
+        {
+            "session_id": "fixture-session",
+            "source": "fixture",
+            "mode": "suggest",
+            "authorization": "agent-scoped",
+            "policy_path": None,
+            "capture": "redacted",
+            "provider": "deepseek",
+            "model": "deepseek-chat",
+            "runs_root": str(runs_root),
+            "harness_version": HARNESS_VERSION,
+            "harness_commit": HARNESS_COMMIT,
+        },
+    )
+    prompt = "Update one fixture and run its test."
+    bridge.dispatch(
+        "harness_pre_step",
+        {
+            "run_id": started["run_id"],
+            "session_id": "fixture-session",
+            "turn": 1,
+            "step": 1,
+            "prompt": prompt,
+            "prompt_hash": "sha256:" + stable_digest(prompt),
+            "policy_path": None,
+            "feedback_max_chars": 600,
+        },
+    )
+    run_dir = runs_root / str(started["run_id"])
+    session = load_control_session(run_dir)
+    for index, (event_type, payload) in enumerate(_accepted_harness_events(), 1):
+        append_control_event(
+            session,
+            event_type=event_type,
+            payload=payload,
+            idempotency_key=f"fixture-{index}",
+        )
+
+    with pytest.raises(ValueError, match="matching preflight/request evidence"):
+        finalize_harness_run(
+            runs_root,
+            "fixture-session",
+            outcome="completed",
+            exit_code=0,
+        )
+    acceptance = json.loads((run_dir / "harness_acceptance.json").read_text())
+    assert acceptance["accepted"] is False
+    assert acceptance["checks"]["native_bridge"]["passed"] is False
 
 
 def test_bridge_capture_does_not_persist_private_event_content(tmp_path: Path) -> None:

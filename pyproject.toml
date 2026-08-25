@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "promptcontrollab"
-version = "0.1.0"
+version = "0.2.0a1"
 description = "Local control, attribution, and stability diagnostics for prompts and AI agents."
 readme = "README.md"
 requires-python = ">=3.10"
@@ -50,7 +50,8 @@ posttrain = [
   "torch>=2.1",
   "transformers>=4.40",
   "peft>=0.11",
-  "accelerate>=0.30"
+  "accelerate>=1.1.0",
+  "datasets>=2.19"
 ]
 ui = [
   "streamlit>=1.40",
@@ -77,10 +78,47 @@ pcl = "promptcontrollab.cli:main"
 
 [project.urls]
 Homepage = "https://github.com/VeraPyuyi/prompt_control_lab"
+Documentation = "https://github.com/VeraPyuyi/prompt_control_lab/tree/main/docs"
 Issues = "https://github.com/VeraPyuyi/prompt_control_lab/issues"
+Source = "https://github.com/VeraPyuyi/prompt_control_lab"
+Changelog = "https://github.com/VeraPyuyi/prompt_control_lab/blob/main/CHANGELOG.md"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/promptcontrollab"]
+
+[tool.hatch.build.targets.sdist]
+include = [
+  "/.github",
+  "/CHANGELOG.md",
+  "/CONTRIBUTING.md",
+  "/CONTRIBUTING.zh.md",
+  "/LICENSE",
+  "/README.md",
+  "/README.zh.md",
+  "/SECURITY.md",
+  "/docs",
+  "/examples",
+  "/plugins/deepseek-harness/COMPATIBILITY.md",
+  "/plugins/deepseek-harness/README.md",
+  "/plugins/deepseek-harness/README.zh.md",
+  "/plugins/deepseek-harness/compatibility.json",
+  "/plugins/deepseek-harness/cordis.patch.yml",
+  "/plugins/deepseek-harness/package-lock.json",
+  "/plugins/deepseek-harness/package.json",
+  "/plugins/deepseek-harness/src",
+  "/plugins/deepseek-harness/tests",
+  "/plugins/deepseek-harness/tsconfig.json",
+  "/promptcontrol.example.yaml",
+  "/pyproject.toml",
+  "/scripts",
+  "/src",
+  "/tests",
+]
+exclude = [
+  "/docs/assets/demo/*.mp4",
+  "**/__pycache__",
+  "**/*.pyc",
+]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

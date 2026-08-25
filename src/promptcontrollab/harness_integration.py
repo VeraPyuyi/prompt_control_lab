@@ -16,6 +16,8 @@ from promptcontrollab.control_workflow import (
     ControlSession,
     append_control_event,
     finalize_control_session,
+    finalize_incomplete_control_session,
+    load_control_session,
     perform_preflight,
     start_control_session,
 )
@@ -294,19 +296,11 @@ def initialize_harness_project(project: Path, *, force: bool = False) -> JsonDic
         "verified": False,
         "note": "Run `pcl harness doctor` after installing the native Cordis plugin.",
     }
-    snippet = "\n".join(
-        [
-            "# Review and merge this plugin entry into the project's Cordis configuration.",
-            "prompt-control-lab:",
-            "  $plugin: '@prompt-control-lab/deepseek-harness'",
-            "  mode: suggest",
-            "  policyPath: .promptcontrol/guard.policy.yaml",
-            "  capture: redacted",
-            "  feedback: summary",
-            "  autoRecover: false",
-            "  bridgeFailure: warn",
-            "",
-        ]
+    snippet = (
+        resources.files("promptcontrollab.template_data")
+        .joinpath("deepseek_harness")
+        .joinpath("cordis.patch.yml")
+        .read_text(encoding="utf-8")
     )
     write_json(config_path, config)
     snippet_path.write_text(snippet, encoding="utf-8")
@@ -461,24 +455,237 @@ def replay_harness_session(
 def resolve_harness_report(runs_root: Path, session_or_run_id: str) -> JsonDict:
     """Find a control report by Harness session id or local run id."""
 
+    run_dir, payload, harness_session = _resolve_harness_run(runs_root, session_or_run_id)
+    return {
+        "run_id": payload.get("run_id"),
+        "harness_session_id": harness_session,
+        "run_dir": str(run_dir),
+        "status": payload.get("status"),
+        "report_md": _existing_path(run_dir / "report.md"),
+        "report_html": _existing_path(run_dir / "report.html"),
+        "decision": _existing_path(run_dir / "decision.json"),
+        "termination": _existing_path(run_dir / "harness_termination.json"),
+    }
+
+
+def finalize_harness_run(
+    runs_root: Path,
+    session_or_run_id: str,
+    *,
+    outcome: str = "completed",
+    exit_code: int | None = None,
+) -> JsonDict:
+    """Explicitly close a Harness run after its external process has ended."""
+
+    if outcome not in {"completed", "failed", "cancelled"}:
+        msg = "Harness outcome must be one of: completed, failed, cancelled"
+        raise ValueError(msg)
+    run_dir, payload, harness_session = _resolve_harness_run(runs_root, session_or_run_id)
+    session = load_control_session(run_dir)
+    acceptance = assess_harness_run_acceptance(run_dir)
+    write_json(run_dir / "harness_acceptance.json", acceptance)
+    if outcome == "completed" and acceptance["accepted"] is not True:
+        msg = (
+            "Cannot mark a Harness run completed without a model response, file read, "
+            "file modification, successful test execution, and matching "
+            "preflight/request evidence"
+        )
+        raise ValueError(msg)
+    if session.run.status == "finalized":
+        status = finalize_control_session(session)
+    else:
+        preflight_observed = (run_dir / "preflight.json").exists()
+        if not preflight_observed and outcome == "completed":
+            msg = "Cannot mark a Harness run completed before preflight was observed"
+            raise ValueError(msg)
+        termination: JsonDict = {
+            "schema": "prompt_control_lab.harness_termination.v1",
+            "outcome": outcome,
+            "exit_code": exit_code,
+            "preflight_observed": preflight_observed,
+            "evidence_status": "observed" if acceptance["accepted"] else "insufficient_evidence",
+        }
+        write_json(run_dir / "harness_termination.json", termination)
+        if preflight_observed:
+            append_control_event(
+                session,
+                event_type="harness/process-exit",
+                payload={"outcome": outcome, "exit_code": exit_code},
+                idempotency_key="harness-process-exit",
+            )
+            status = finalize_control_session(session)
+        else:
+            status = finalize_incomplete_control_session(
+                session,
+                outcome=outcome,
+                exit_code=exit_code,
+            )
+    termination_payload = (
+        read_json(run_dir / "harness_termination.json")
+        if (run_dir / "harness_termination.json").exists()
+        else {}
+    )
+    return {
+        **status,
+        "harness_session_id": harness_session,
+        "acceptance": acceptance,
+        "termination": termination_payload,
+        "report": resolve_harness_report(runs_root, str(payload.get("run_id"))),
+    }
+
+
+def assess_harness_run_acceptance(run_dir: Path) -> JsonDict:
+    """Verify the minimum redacted evidence required for a real completed session."""
+
+    run = read_json(run_dir / "control_run.json")
+    metadata = run.get("metadata")
+    safe_metadata = cast(JsonDict, metadata) if isinstance(metadata, dict) else {}
+    native_bridge = (
+        safe_metadata.get("harness_session_origin") == "live_cordis"
+        and safe_metadata.get("harness_bridge_transport") == "persistent_stdio"
+        and safe_metadata.get("harness_version") == HARNESS_VERSION
+        and safe_metadata.get("harness_commit") == HARNESS_COMMIT
+    )
+    events_path = run_dir / "events.jsonl"
+    events = read_jsonl(events_path) if events_path.is_file() else []
+    requests: dict[tuple[object, object], JsonDict] = {}
+    responses: list[JsonDict] = []
+    successful_categories: dict[str, int] = {
+        "file_read": 0,
+        "file_write": 0,
+        "test_execution": 0,
+    }
+    for event in events:
+        event_type = str(event.get("event_type", ""))
+        payload = event.get("payload")
+        if not isinstance(payload, dict):
+            continue
+        safe_payload = cast(JsonDict, payload)
+        if event_type in {
+            "agent/request",
+            "session/assistant/message",
+            "tools/post-execute",
+            "tools/result",
+        } and not _is_native_bridge_event(safe_payload):
+            continue
+        if event_type == "agent/request":
+            if all(
+                str(safe_payload.get(key, "")).strip()
+                for key in ("request_id", "provider", "model")
+            ):
+                requests[(safe_payload.get("turn"), safe_payload.get("step"))] = safe_payload
+        elif event_type == "session/assistant/message":
+            if all(
+                str(safe_payload.get(key, "")).strip()
+                for key in ("response_id", "provider", "model")
+            ):
+                responses.append(safe_payload)
+        elif event_type == "tools/result":
+            tool = safe_payload.get("tool")
+            result = safe_payload.get("result")
+            if not isinstance(tool, dict) or not isinstance(result, dict):
+                continue
+            category = str(tool.get("operation_category", ""))
+            if category in {"file_read", "file_write"} and result.get("is_error") is False:
+                successful_categories[category] += 1
+            elif category == "test_execution":
+                exit_code = result.get("exit_code")
+                if (
+                    result.get("is_error") is False
+                    and isinstance(exit_code, int)
+                    and not isinstance(exit_code, bool)
+                    and exit_code == 0
+                ):
+                    successful_categories[category] += 1
+
+    matched_responses = 0
+    matched_models: set[str] = set()
+    for response in responses:
+        request = requests.get((response.get("turn"), response.get("step")))
+        if request is None:
+            continue
+        if (
+            response.get("provider") == request.get("provider")
+            and response.get("model") == request.get("model")
+        ):
+            matched_responses += 1
+            matched_models.add(f"{response.get('provider')}/{response.get('model')}")
+
+    checks: JsonDict = {
+        "native_bridge": {
+            "passed": native_bridge,
+            "session_origin": safe_metadata.get("harness_session_origin", "unknown"),
+            "transport": safe_metadata.get("harness_bridge_transport", "unknown"),
+            "harness_version": safe_metadata.get("harness_version"),
+            "harness_commit": safe_metadata.get("harness_commit"),
+        },
+        "preflight": {
+            "passed": (run_dir / "preflight.json").is_file(),
+            "evidence": ["preflight.json"] if (run_dir / "preflight.json").is_file() else [],
+        },
+        "model_response": {
+            "passed": matched_responses > 0,
+            "matched_request_response_count": matched_responses,
+            "models": sorted(matched_models),
+            "request_id_scope": "prompt_control_lab",
+            "provider_request_id_recorded": False,
+        },
+        "file_read": {
+            "passed": successful_categories["file_read"] > 0,
+            "successful_event_count": successful_categories["file_read"],
+        },
+        "file_modification": {
+            "passed": successful_categories["file_write"] > 0,
+            "successful_event_count": successful_categories["file_write"],
+        },
+        "test": {
+            "passed": successful_categories["test_execution"] > 0,
+            "successful_event_count": successful_categories["test_execution"],
+        },
+    }
+    accepted = all(
+        isinstance(check, dict) and check.get("passed") is True for check in checks.values()
+    )
+    return {
+        "schema": "prompt_control_lab.harness_acceptance.v1",
+        "accepted": accepted,
+        "checks": checks,
+        "claim_boundary": (
+            "Acceptance verifies captured lifecycle evidence, not hidden model identity, "
+            "semantic correctness, or safety of every agent action. The request identifier is "
+            "PromptControlLab-generated unless provider metadata explicitly records another source."
+        ),
+    }
+
+
+def _is_native_bridge_event(payload: JsonDict) -> bool:
+    sequence = payload.get("source_sequence")
+    timestamp = payload.get("source_timestamp")
+    return (
+        isinstance(sequence, int)
+        and not isinstance(sequence, bool)
+        and sequence > 0
+        and isinstance(timestamp, str)
+        and bool(timestamp.strip())
+    )
+
+
+def _resolve_harness_run(
+    runs_root: Path,
+    session_or_run_id: str,
+) -> tuple[Path, JsonDict, str | None]:
     if not runs_root.exists():
         msg = f"Runs directory does not exist: {runs_root}"
         raise ValueError(msg)
     for path in sorted(runs_root.rglob("control_run.json")):
         payload = read_json(path)
         metadata = payload.get("metadata")
-        harness_session = metadata.get("harness_session_id") if isinstance(metadata, dict) else None
-        if payload.get("run_id") != session_or_run_id and harness_session != session_or_run_id:
-            continue
-        run_dir = path.parent.resolve()
-        return {
-            "run_id": payload.get("run_id"),
-            "harness_session_id": harness_session,
-            "run_dir": str(run_dir),
-            "report_md": _existing_path(run_dir / "report.md"),
-            "report_html": _existing_path(run_dir / "report.html"),
-            "decision": _existing_path(run_dir / "decision.json"),
-        }
+        raw_harness_session = (
+            metadata.get("harness_session_id") if isinstance(metadata, dict) else None
+        )
+        harness_session = raw_harness_session if isinstance(raw_harness_session, str) else None
+        if payload.get("run_id") == session_or_run_id or harness_session == session_or_run_id:
+            return path.parent.resolve(), payload, harness_session
     msg = f"No Harness control run matched `{session_or_run_id}` under {runs_root}"
     raise ValueError(msg)
 
@@ -488,6 +695,9 @@ def _sanitize_mapping(value: JsonDict) -> JsonDict:
     for raw_key, raw_value in value.items():
         key = str(raw_key)
         normalized = _normalize_key(key)
+        if normalized == "result" and isinstance(raw_value, dict):
+            result[key] = _sanitize_mapping(cast(JsonDict, raw_value))
+            continue
         if _is_hidden_key(normalized) or _is_content_key(normalized):
             continue
         if normalized in _PATH_KEYS and isinstance(raw_value, str):
@@ -606,6 +816,7 @@ __all__ = [
     "HARNESS_COMMIT",
     "HARNESS_VERSION",
     "doctor_harness",
+    "finalize_harness_run",
     "initialize_harness_project",
     "inspect_harness_session",
     "replay_harness_session",

@@ -1,0 +1,52 @@
+name: Bug report
+description: Report reproducible incorrect behavior in PromptControlLab.
+title: "[Bug]: "
+labels:
+  - bug
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for the report. Do not include API keys, private prompts, private datasets, or hidden reasoning. Use GitHub Private Vulnerability Reporting for security issues.
+  - type: textarea
+    id: problem
+    attributes:
+      label: What happened?
+      description: Describe the observed behavior and why it is incorrect.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Minimal reproduction
+      description: Provide the smallest safe command, fixture, or artifact structure that reproduces the problem.
+      render: shell
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: PromptControlLab version or commit
+      placeholder: 0.2.0a1 or git commit
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: Operating system, Python version, installation method, and relevant optional extras.
+  - type: checkboxes
+    id: safety
+    attributes:
+      label: Privacy check
+      options:
+        - label: I removed credentials, private prompts, hidden reasoning, private data, and machine-specific paths.
+          required: true
+        - label: This is not a security vulnerability that should use Private Vulnerability Reporting.
+          required: true

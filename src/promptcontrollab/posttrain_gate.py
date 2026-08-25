@@ -6,7 +6,7 @@ import html
 import math
 from importlib import resources
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 from promptcontrollab.config import read_simple_yaml
 from promptcontrollab.files import JsonDict, ensure_dir, read_json, write_json
@@ -18,8 +18,19 @@ _REQUIRED_ARTIFACTS = (
     "diagnostics/soft_hard.json",
     "diagnostics/generation_mismatch.json",
     "diagnostics/selective_risk.json",
+    "diagnostics/prompt_reachability.json",
+    "diagnostics/readout_alignment.json",
+    "diagnostics/prompt_routing.json",
+    "diagnostics/prompt_projection.json",
+    "diagnostics/prompt_stability.json",
 )
 _CANDIDATE_REQUIRED_ARTIFACTS = ("stats.json",)
+_BLACK_BOX_REQUIRED_ARTIFACTS = ("manifest.json", "metrics.json")
+_BLACK_BOX_CANDIDATE_ARTIFACTS = (
+    "stats.json",
+    "diagnostics/selective_risk.json",
+)
+_CAPABILITY_PROFILES = {"auto", "full-open-model", "black-box"}
 
 
 def run_posttrain_gate(
@@ -28,29 +39,48 @@ def run_posttrain_gate(
     candidate_dir: Path,
     policy_path: Path | None,
     out_dir: Path,
+    capability: str = "auto",
 ) -> JsonDict:
     """Compare checkpoint evidence and write a bounded deployment decision."""
 
     baseline = baseline_dir.resolve()
     candidate = candidate_dir.resolve()
+    capability_profile = _resolve_capability_profile(baseline, candidate, capability)
     policy, policy_label = _load_policy(policy_path)
-    missing = _missing_artifacts(baseline, candidate)
+    missing = _missing_artifacts(baseline, candidate, capability_profile)
     comparison = _build_comparison(baseline, candidate)
-    invalid = _invalid_evidence(comparison)
+    invalid = _invalid_evidence(comparison, capability_profile, policy)
     evidence_gaps = [*missing, *invalid]
-    checks = _build_checks(comparison, policy, missing=evidence_gaps)
+    checks = _build_checks(
+        comparison,
+        policy,
+        missing=missing,
+        invalid=invalid,
+        capability_profile=capability_profile,
+    )
     decision = _decision(checks, missing=evidence_gaps)
     attribution = _build_attribution(comparison, checks)
+    decision_trace = _build_decision_trace(
+        checks,
+        decision=decision,
+        capability_profile=capability_profile,
+    )
     payload: JsonDict = {
         "schema": "prompt_control_lab.posttrain_gate.v1",
         "decision": decision,
+        "capability_profile": capability_profile,
         "baseline": str(baseline),
         "candidate": str(candidate),
         "policy_path": policy_label,
         "missing_artifacts": missing,
         "invalid_evidence": invalid,
         "checks": checks,
-        "plain_summary": _plain_summary(decision, checks),
+        "plain_summary": _plain_summary(
+            decision,
+            checks,
+            missing=missing,
+            invalid=invalid,
+        ),
         "claim_boundary": (
             "This gate combines recorded checkpoint diagnostics. It supports selection and review, "
             "but does not prove that training caused a hidden-model mechanism."
@@ -60,6 +90,7 @@ def run_posttrain_gate(
     write_json(out_dir / "posttrain_gate.json", payload)
     write_json(out_dir / "checkpoint_comparison.json", comparison)
     write_json(out_dir / "mechanism_attribution.json", attribution)
+    write_json(out_dir / "decision_trace.json", decision_trace)
     markdown = render_posttrain_markdown(payload, comparison, attribution)
     (out_dir / "report.md").write_text(markdown, encoding="utf-8")
     (out_dir / "report.html").write_text(
@@ -157,8 +188,25 @@ p{{line-height:1.5;overflow-wrap:anywhere}}</style></head><body><main>
 </main></body></html>"""
 
 
-def _missing_artifacts(baseline: Path, candidate: Path) -> list[str]:
+def _missing_artifacts(
+    baseline: Path,
+    candidate: Path,
+    capability_profile: str,
+) -> list[str]:
     missing: list[str] = []
+    if capability_profile == "black-box":
+        for label, root in (("baseline", baseline), ("candidate", candidate)):
+            missing.extend(
+                f"{label}:{relative}"
+                for relative in _BLACK_BOX_REQUIRED_ARTIFACTS
+                if not (root / relative).is_file()
+            )
+        missing.extend(
+            f"candidate:{relative}"
+            for relative in _BLACK_BOX_CANDIDATE_ARTIFACTS
+            if not (candidate / relative).is_file()
+        )
+        return missing
     for label, root in [("baseline", baseline), ("candidate", candidate)]:
         missing.extend(
             f"{label}:{relative}"
@@ -171,6 +219,135 @@ def _missing_artifacts(baseline: Path, candidate: Path) -> list[str]:
         if not (candidate / relative).is_file()
     )
     return missing
+
+
+def _resolve_capability_profile(
+    baseline: Path,
+    candidate: Path,
+    requested: str,
+) -> str:
+    if requested not in _CAPABILITY_PROFILES:
+        supported = ", ".join(sorted(_CAPABILITY_PROFILES))
+        raise ValueError(f"Unsupported post-training capability `{requested}`; use {supported}")
+    if requested != "auto":
+        return requested
+    manifests = [
+        _optional_json(baseline / "manifest.json"),
+        _optional_json(candidate / "manifest.json"),
+    ]
+    hidden_state_flags: list[bool] = []
+    for manifest in manifests:
+        capabilities = _dict(_checkpoint(manifest).get("capabilities"))
+        hidden_state = capabilities.get("hidden_states")
+        if isinstance(hidden_state, bool):
+            hidden_state_flags.append(hidden_state)
+    if hidden_state_flags and not all(hidden_state_flags):
+        return "black-box"
+    trajectory_available = all(
+        (root / "diagnostics/trajectory.json").is_file() for root in (baseline, candidate)
+    )
+    return "full-open-model" if trajectory_available else "black-box"
+
+
+def _not_applicable_check(message: str) -> JsonDict:
+    return {
+        "passed": None,
+        "applicable": False,
+        "severity": "info",
+        "observed": "not_applicable",
+        "evidence_status": "not_applicable",
+        "message": message,
+    }
+
+
+def _build_decision_trace(
+    checks: JsonDict,
+    *,
+    decision: str,
+    capability_profile: str,
+) -> JsonDict:
+    evidence_map = {
+        "artifact_completeness": ["manifest.json", "metrics.json", "stats.json"],
+        "evidence_validity": ["checkpoint_comparison.json"],
+        "provenance": ["checkpoint_comparison.json"],
+        "task_score": ["checkpoint_comparison.json"],
+        "paired_uncertainty": ["checkpoint_comparison.json"],
+        "slice_regression": ["checkpoint_comparison.json"],
+        "resource_cost": ["checkpoint_comparison.json"],
+        "trajectory_stability": ["diagnostics/trajectory.json"],
+        "soft_hard_deployment": ["diagnostics/soft_hard.json"],
+        "generation_mismatch": ["diagnostics/generation_mismatch.json"],
+        "selective_risk": ["diagnostics/selective_risk.json"],
+        "prompt_reachability": ["diagnostics/prompt_reachability.json"],
+        "readout_alignment": ["diagnostics/readout_alignment.json"],
+        "prompt_routing": ["diagnostics/prompt_routing.json"],
+        "prompt_projection": ["diagnostics/prompt_projection.json"],
+        "prompt_stability": ["diagnostics/prompt_stability.json"],
+    }
+    rows: list[JsonDict] = []
+    for name, raw in checks.items():
+        if not isinstance(raw, dict):
+            continue
+        check = _dict(raw)
+        applicable = check.get("applicable") is not False
+        passed = check.get("passed") is True
+        severity = str(check.get("severity", "info"))
+        if not applicable:
+            status = "not_applicable"
+            impact = "none"
+        elif passed:
+            status = "passed"
+            impact = "none"
+        else:
+            status = "triggered"
+            impact = {
+                "fail": "hold",
+                "review": "needs_review",
+                "insufficient": "insufficient_evidence",
+            }.get(severity, "needs_review")
+        observed = next(
+            (
+                check[key]
+                for key in (
+                    "observed",
+                    "increase",
+                    "bootstrap_ci",
+                    "regressed_slices",
+                    "violations",
+                    "missing",
+                    "invalid",
+                )
+                if key in check
+            ),
+            check.get("message"),
+        )
+        threshold = check.get("threshold")
+        if threshold is None and name == "resource_cost":
+            threshold = {
+                "max_token_increase_ratio": check.get("max_token_increase_ratio"),
+                "max_latency_increase_ratio": check.get("max_latency_increase_ratio"),
+            }
+        rows.append(
+            {
+                "check": name,
+                "observed": observed,
+                "threshold": threshold,
+                "status": status,
+                "impact": impact,
+                "evidence": evidence_map.get(name, ["posttrain_gate.json"]),
+                "next_action": _next_action(name, passed or not applicable),
+            }
+        )
+    return {
+        "schema": "prompt_control_lab.posttrain_decision_trace.v1",
+        "decision": decision,
+        "capability_profile": capability_profile,
+        "checks": rows,
+        "claim_boundary": (
+            "The trace records how configured evidence checks produced the gate decision; it is "
+            "not a causal proof of model behavior."
+        ),
+    }
 
 
 def _load_policy(path: Path | None) -> tuple[JsonDict, str]:
@@ -220,7 +397,11 @@ def _build_comparison(baseline: Path, candidate: Path) -> JsonDict:
     }
 
 
-def _invalid_evidence(comparison: JsonDict) -> list[str]:
+def _invalid_evidence(
+    comparison: JsonDict,
+    capability_profile: str,
+    policy: JsonDict,
+) -> list[str]:
     invalid: list[str] = []
     if not str(comparison.get("baseline_checkpoint") or "").strip():
         invalid.append("baseline:manifest.checkpoint.id")
@@ -233,12 +414,26 @@ def _invalid_evidence(comparison: JsonDict) -> list[str]:
     diagnostics = _dict(comparison.get("diagnostics"))
     baseline = _dict(diagnostics.get("baseline"))
     candidate = _dict(diagnostics.get("candidate"))
-    if _diagnostic_number(baseline, "trajectory", "mean_step_drift") is None:
-        invalid.append("baseline:diagnostics.trajectory.mean_step_drift")
-    if _diagnostic_number(candidate, "trajectory", "mean_step_drift") is None:
-        invalid.append("candidate:diagnostics.trajectory.mean_step_drift")
-    if _diagnostic_number(candidate, "generation_mismatch", "gap") is None:
-        invalid.append("candidate:diagnostics.generation_mismatch.gap")
+    if capability_profile == "full-open-model":
+        if _diagnostic_number(baseline, "trajectory", "mean_step_drift") is None:
+            invalid.append("baseline:diagnostics.trajectory.mean_step_drift")
+        if _diagnostic_number(candidate, "trajectory", "mean_step_drift") is None:
+            invalid.append("candidate:diagnostics.trajectory.mean_step_drift")
+        if _diagnostic_number(candidate, "generation_mismatch", "gap") is None:
+            invalid.append("candidate:diagnostics.generation_mismatch.gap")
+        saturation = _diagnostic_number(
+            candidate,
+            "generation_mismatch",
+            "generation_saturation_rate",
+        )
+        if saturation is not None and saturation > _number(
+            policy,
+            "max_generation_saturation_rate",
+            0.0,
+        ):
+            invalid.append(
+                "candidate:diagnostics.generation_mismatch.generation_saturation_rate"
+            )
     if _diagnostic_number(candidate, "selective_risk", "observed_aurc") is None:
         invalid.append("candidate:diagnostics.selective_risk.observed_aurc")
     paired = _dict(comparison.get("paired_statistics"))
@@ -264,6 +459,23 @@ def _invalid_evidence(comparison: JsonDict) -> list[str]:
     provenance = _dict(comparison.get("provenance"))
     baseline_provenance = _dict(provenance.get("baseline"))
     candidate_provenance = _dict(provenance.get("candidate"))
+    if capability_profile == "full-open-model":
+        for label, checkpoint in (
+            ("baseline", baseline_provenance),
+            ("candidate", candidate_provenance),
+        ):
+            for field in (
+                "provider",
+                "model_id",
+                "model_revision",
+                "model_snapshot_sha256",
+                "training_method",
+            ):
+                if not str(checkpoint.get(field) or "").strip():
+                    invalid.append(f"{label}:manifest.checkpoint.{field}")
+            seed = checkpoint.get("seed")
+            if not isinstance(seed, int) or isinstance(seed, bool):
+                invalid.append(f"{label}:manifest.checkpoint.seed")
     if paired.get("baseline_split_hash") != baseline_provenance.get("split_hash"):
         invalid.append("candidate:stats.baseline_split_hash")
     if paired.get("candidate_split_hash") != candidate_provenance.get("split_hash"):
@@ -310,14 +522,54 @@ def _invalid_evidence(comparison: JsonDict) -> list[str]:
     for key in resource_fields:
         if _optional_float(resources.get(key)) is None:
             invalid.append(f"metrics:{key}")
-    soft_hard = _dict(candidate.get("soft_hard"))
-    not_applicable = str(soft_hard.get("applicability", "")).lower() == "not_applicable"
-    if not not_applicable and str(soft_hard.get("risk", "")) not in {"low", "medium", "high"}:
-        invalid.append("candidate:diagnostics.soft_hard.risk")
+    if capability_profile == "full-open-model":
+        soft_hard = _dict(candidate.get("soft_hard"))
+        not_applicable = str(soft_hard.get("applicability", "")).lower() == "not_applicable"
+        if not not_applicable and str(soft_hard.get("risk", "")) not in {
+            "low",
+            "medium",
+            "high",
+        }:
+            invalid.append("candidate:diagnostics.soft_hard.risk")
+        reachability = _dict(candidate.get("prompt_reachability"))
+        if _optional_float(
+            reachability.get("representation_shift_l2_normalized")
+        ) is None:
+            invalid.append(
+                "candidate:diagnostics.prompt_reachability."
+                "representation_shift_l2_normalized"
+            )
+        readout = _dict(candidate.get("readout_alignment"))
+        if _optional_float(readout.get("alignment_gap")) is None:
+            invalid.append("candidate:diagnostics.readout_alignment.alignment_gap")
+        routing = _dict(candidate.get("prompt_routing"))
+        if not str(routing.get("evidence_status") or "").strip():
+            invalid.append("candidate:diagnostics.prompt_routing.evidence_status")
+        projection = _dict(candidate.get("prompt_projection"))
+        projection_not_applicable = (
+            str(projection.get("applicability", "")).lower() == "not_applicable"
+        )
+        if not projection_not_applicable and _optional_float(
+            projection.get("projection_gap", projection.get("mean_projection_distance"))
+        ) is None:
+            invalid.append("candidate:diagnostics.prompt_projection.projection_gap")
+        baseline_stability = _dict(baseline.get("prompt_stability"))
+        candidate_stability = _dict(candidate.get("prompt_stability"))
+        if _optional_float(baseline_stability.get("mean_step_drift")) is None:
+            invalid.append("baseline:diagnostics.prompt_stability.mean_step_drift")
+        if _optional_float(candidate_stability.get("mean_step_drift")) is None:
+            invalid.append("candidate:diagnostics.prompt_stability.mean_step_drift")
     return invalid
 
 
-def _build_checks(comparison: JsonDict, policy: JsonDict, *, missing: list[str]) -> JsonDict:
+def _build_checks(
+    comparison: JsonDict,
+    policy: JsonDict,
+    *,
+    missing: list[str],
+    invalid: list[str],
+    capability_profile: str,
+) -> JsonDict:
     diagnostics = comparison.get("diagnostics", {})
     diagnostic_dict = diagnostics if isinstance(diagnostics, dict) else {}
     baseline = _dict(diagnostic_dict.get("baseline"))
@@ -333,15 +585,62 @@ def _build_checks(comparison: JsonDict, policy: JsonDict, *, missing: list[str])
                 else "Evidence is missing."
             ),
         },
+        "evidence_validity": {
+            "passed": not invalid,
+            "severity": "insufficient",
+            "invalid": invalid,
+            "message": (
+                "Recorded checkpoint evidence passes validity checks."
+                if not invalid
+                else "Recorded evidence is invalid or outside configured validity bounds."
+            ),
+        },
         "provenance": _provenance_check(comparison, policy),
         "task_score": _minimum_delta_check(comparison, policy),
         "paired_uncertainty": _paired_uncertainty_check(comparison, policy),
         "slice_regression": _slice_check(comparison, policy),
         "resource_cost": _resource_check(comparison, policy),
-        "trajectory_stability": _trajectory_check(baseline, candidate, policy),
-        "soft_hard_deployment": _soft_hard_check(candidate, policy),
-        "generation_mismatch": _generation_check(candidate, policy),
+        "trajectory_stability": (
+            _trajectory_check(baseline, candidate, policy)
+            if capability_profile == "full-open-model"
+            else _not_applicable_check("Hidden-state trajectory access was not recorded.")
+        ),
+        "soft_hard_deployment": (
+            _soft_hard_check(candidate, policy)
+            if capability_profile == "full-open-model"
+            else _not_applicable_check("Soft-prompt projection evidence was not requested.")
+        ),
+        "generation_mismatch": (
+            _generation_check(candidate, policy)
+            if capability_profile == "full-open-model"
+            else _not_applicable_check("Teacher-forced logits were not available.")
+        ),
         "selective_risk": _selective_check(candidate, policy),
+        "prompt_reachability": (
+            _prompt_reachability_check(candidate, policy)
+            if capability_profile == "full-open-model"
+            else _not_applicable_check("Checkpoint representation access was not recorded.")
+        ),
+        "readout_alignment": (
+            _readout_alignment_check(candidate, policy)
+            if capability_profile == "full-open-model"
+            else _not_applicable_check("Output-head alignment evidence was not available.")
+        ),
+        "prompt_routing": (
+            _prompt_routing_check(candidate, policy)
+            if capability_profile == "full-open-model"
+            else _not_applicable_check("Prompt-routing interventions were not available.")
+        ),
+        "prompt_projection": (
+            _prompt_projection_check(candidate, policy)
+            if capability_profile == "full-open-model"
+            else _not_applicable_check("Prompt projection was not used by this checkpoint.")
+        ),
+        "prompt_stability": (
+            _prompt_stability_check(baseline, candidate, policy)
+            if capability_profile == "full-open-model"
+            else _not_applicable_check("Checkpoint representation access was not recorded.")
+        ),
     }
 
 
@@ -352,11 +651,22 @@ def _provenance_check(comparison: JsonDict, policy: JsonDict) -> JsonDict:
     split_match = baseline.get("split_hash") == candidate.get("split_hash") and bool(
         baseline.get("split_hash")
     )
-    model_match = _model_key(baseline) == _model_key(candidate) and _model_key(baseline) != (
-        "",
-        "",
+    baseline_model = _model_key(baseline)
+    candidate_model = _model_key(candidate)
+    model_complete = all(baseline_model) and all(candidate_model)
+    model_match = model_complete and baseline_model == candidate_model
+    training_method_match = bool(baseline.get("training_method")) and (
+        baseline.get("training_method") == candidate.get("training_method")
     )
+    baseline_seed = baseline.get("seed")
+    candidate_seed = candidate.get("seed")
+    seed_complete = all(
+        isinstance(value, int) and not isinstance(value, bool)
+        for value in (baseline_seed, candidate_seed)
+    )
+    seed_match = seed_complete and baseline_seed == candidate_seed
     violations: list[str] = []
+    missing_identity: list[str] = []
     if _bool(
         policy.get("require_split_hash_match"),
         key="require_split_hash_match",
@@ -367,16 +677,46 @@ def _provenance_check(comparison: JsonDict, policy: JsonDict) -> JsonDict:
         policy.get("require_model_match"),
         key="require_model_match",
         default=True,
-    ) and not model_match:
-        violations.append("model_mismatch")
+    ):
+        if not model_complete:
+            missing_identity.append("model_snapshot_identity")
+        elif not model_match:
+            violations.append("model_mismatch")
+    if _bool(
+        policy.get("require_training_method_match"),
+        key="require_training_method_match",
+        default=True,
+    ):
+        if not baseline.get("training_method") or not candidate.get("training_method"):
+            missing_identity.append("training_method")
+        elif not training_method_match:
+            violations.append("training_method_mismatch")
+    if _bool(
+        policy.get("require_seed_match"),
+        key="require_seed_match",
+        default=True,
+    ):
+        if not seed_complete:
+            missing_identity.append("seed")
+        elif not seed_match:
+            violations.append("seed_mismatch")
     return {
-        "passed": not violations,
-        "severity": "fail",
+        "passed": not violations and not missing_identity,
+        "severity": "fail" if violations else "insufficient" if missing_identity else "info",
         "violations": violations,
+        "missing_identity": missing_identity,
         "split_match": split_match,
         "model_match": model_match,
+        "training_method_match": training_method_match,
+        "seed_match": seed_match,
+        "model_identity": {
+            "baseline": baseline_model,
+            "candidate": candidate_model,
+        },
         "message": (
-            "Checkpoint provenance is comparable." if not violations else "Provenance differs."
+            "Checkpoint provenance is comparable."
+            if not violations and not missing_identity
+            else "Checkpoint provenance differs or is incomplete."
         ),
     }
 
@@ -491,19 +831,16 @@ def _soft_hard_check(candidate: JsonDict, policy: JsonDict) -> JsonDict:
         raise ValueError(msg)
     diagnostic = _dict(candidate.get("soft_hard"))
     if str(diagnostic.get("applicability", "")).lower() == "not_applicable":
-        return {
-            "passed": True,
-            "applicable": False,
-            "severity": "info",
-            "observed": "not_applicable",
-            "threshold": threshold,
-            "message": str(
+        result = _not_applicable_check(
+            str(
                 diagnostic.get(
                     "reason",
                     "Soft-to-hard deployment is not applicable to this checkpoint.",
                 )
-            ),
-        }
+            )
+        )
+        result["threshold"] = threshold
+        return result
     observed = str(diagnostic.get("risk", "unknown"))
     passed = _risk_rank(observed) <= _risk_rank(threshold)
     return {
@@ -548,15 +885,183 @@ def _selective_check(candidate: JsonDict, policy: JsonDict) -> JsonDict:
     }
 
 
+def _prompt_reachability_check(candidate: JsonDict, policy: JsonDict) -> JsonDict:
+    diagnostic = _dict(candidate.get("prompt_reachability"))
+    if not diagnostic:
+        return _not_applicable_check("Prompt reachability evidence was not recorded.")
+    threshold = _number(policy, "max_prompt_reachability_shift", 0.5)
+    observed = _optional_float(diagnostic.get("representation_shift_l2_normalized"))
+    passed = observed is not None and observed <= threshold
+    return {
+        "passed": passed,
+        "applicable": True,
+        "severity": "review" if observed is not None else "insufficient",
+        "observed": observed,
+        "threshold": threshold,
+        "message": (
+            "Checkpoint representation shift remains within the review boundary."
+            if passed
+            else "Checkpoint representation shift needs inspection."
+        ),
+    }
+
+
+def _readout_alignment_check(candidate: JsonDict, policy: JsonDict) -> JsonDict:
+    diagnostic = _dict(candidate.get("readout_alignment"))
+    if not diagnostic:
+        return _not_applicable_check("Readout alignment evidence was not recorded.")
+    threshold = _number(policy, "max_readout_alignment_gap", 0.1)
+    observed = _optional_float(diagnostic.get("alignment_gap"))
+    passed = observed is not None and observed <= threshold
+    return {
+        "passed": passed,
+        "applicable": True,
+        "severity": "fail" if observed is not None else "insufficient",
+        "observed": observed,
+        "threshold": threshold,
+        "message": (
+            "Readout alignment meets policy."
+            if passed
+            else "Teacher-forced and generated answers are not sufficiently aligned."
+        ),
+    }
+
+
+def _prompt_routing_check(candidate: JsonDict, policy: JsonDict) -> JsonDict:
+    diagnostic = _dict(candidate.get("prompt_routing"))
+    if not diagnostic:
+        return _not_applicable_check("Prompt-routing evidence was not recorded.")
+    status = str(diagnostic.get("evidence_status", "unknown")).strip().lower()
+    observed = status in {"observed", "supported", "intervention_observed"}
+    require_evidence = _bool(
+        policy.get("require_prompt_routing_evidence"),
+        key="require_prompt_routing_evidence",
+        default=False,
+    )
+    if not observed and not require_evidence:
+        return {
+            "passed": False,
+            "applicable": True,
+            "severity": "insufficient",
+            "observed": status,
+            "evidence_status": "insufficient_evidence",
+            "threshold": "observed intervention evidence",
+            "message": (
+                "Prompt routing remains insufficient because no routing intervention was "
+                "available."
+            ),
+        }
+    return {
+        "passed": observed,
+        "applicable": True,
+        "severity": "insufficient",
+        "observed": status,
+        "evidence_status": "observed" if observed else "insufficient_evidence",
+        "threshold": "observed intervention evidence",
+        "message": (
+            "Prompt-routing intervention evidence was recorded."
+            if observed
+            else "Required prompt-routing intervention evidence is missing."
+        ),
+    }
+
+
+def _prompt_projection_check(candidate: JsonDict, policy: JsonDict) -> JsonDict:
+    diagnostic = _dict(candidate.get("prompt_projection"))
+    if not diagnostic:
+        return _not_applicable_check("Prompt projection evidence was not recorded.")
+    if str(diagnostic.get("applicability", "")).lower() == "not_applicable":
+        return _not_applicable_check(
+            str(
+                diagnostic.get(
+                    "reason",
+                    "This checkpoint does not deploy a learned prompt projection.",
+                )
+            )
+        )
+    threshold = _number(policy, "max_prompt_projection_gap", 0.5)
+    observed = _optional_float(
+        diagnostic.get("projection_gap", diagnostic.get("mean_projection_distance"))
+    )
+    passed = observed is not None and observed <= threshold
+    return {
+        "passed": passed,
+        "applicable": True,
+        "severity": "fail" if observed is not None else "insufficient",
+        "observed": observed,
+        "threshold": threshold,
+        "message": (
+            "Prompt projection gap meets policy."
+            if passed
+            else "Prompt projection evidence is missing or exceeds policy."
+        ),
+    }
+
+
+def _prompt_stability_check(
+    baseline: JsonDict,
+    candidate: JsonDict,
+    policy: JsonDict,
+) -> JsonDict:
+    baseline_diagnostic = _dict(baseline.get("prompt_stability"))
+    candidate_diagnostic = _dict(candidate.get("prompt_stability"))
+    if not baseline_diagnostic and not candidate_diagnostic:
+        return _not_applicable_check("Prompt stability evidence was not recorded.")
+    threshold = _number(policy, "max_prompt_stability_drift_increase", 0.05)
+    baseline_value = _optional_float(baseline_diagnostic.get("mean_step_drift"))
+    candidate_value = _optional_float(candidate_diagnostic.get("mean_step_drift"))
+    increase = _delta(candidate_value, baseline_value)
+    passed = increase is not None and increase <= threshold
+    return {
+        "passed": passed,
+        "applicable": True,
+        "severity": "fail" if increase is not None else "insufficient",
+        "baseline": baseline_value,
+        "candidate": candidate_value,
+        "increase": increase,
+        "threshold": threshold,
+        "message": (
+            "Prompt stability drift remains within policy."
+            if passed
+            else "Prompt stability drift increased or could not be compared."
+        ),
+    }
+
+
 def _decision(checks: JsonDict, *, missing: list[str]) -> str:
+    values = [value for value in checks.values() if isinstance(value, dict)]
+    if any(_is_observed_hold_failure(cast(JsonDict, value)) for value in values):
+        return "hold"
     if missing:
         return "insufficient_evidence"
-    values = [value for value in checks.values() if isinstance(value, dict)]
-    if any(value.get("severity") == "fail" and value.get("passed") is False for value in values):
-        return "hold"
+    if any(
+        value.get("severity") == "insufficient" and value.get("passed") is False
+        for value in values
+    ):
+        return "insufficient_evidence"
     if any(value.get("severity") == "review" and value.get("passed") is False for value in values):
         return "needs_review"
     return "pass"
+
+
+def _is_observed_hold_failure(check: JsonDict) -> bool:
+    if check.get("severity") != "fail" or check.get("passed") is not False:
+        return False
+    violations = check.get("violations")
+    if isinstance(violations, list) and bool(violations):
+        return True
+    for key in ("observed", "increase"):
+        value = check.get(key)
+        if _optional_float(value) is not None:
+            return True
+        if isinstance(value, str) and value.strip().lower() not in {
+            "",
+            "unknown",
+            "unavailable",
+            "not_applicable",
+        }:
+            return True
+    return False
 
 
 def _build_attribution(comparison: JsonDict, checks: JsonDict) -> JsonDict:
@@ -568,6 +1073,31 @@ def _build_attribution(comparison: JsonDict, checks: JsonDict) -> JsonDict:
         ("soft_hard_deployment", "boundary", "Deployment projection risk was recorded."),
         ("generation_mismatch", "boundary", "Teacher-forced and free-generation behavior differ."),
         ("selective_risk", "uncertainty", "Risk-coverage behavior was measured."),
+        (
+            "prompt_reachability",
+            "mechanism",
+            "Checkpoint training moved the recorded prompt-conditioned representation.",
+        ),
+        (
+            "readout_alignment",
+            "mechanism",
+            "Answer-space alignment was compared between training-time and generated behavior.",
+        ),
+        (
+            "prompt_routing",
+            "boundary",
+            "Routing evidence records whether a controlled prompt-path intervention was available.",
+        ),
+        (
+            "prompt_projection",
+            "boundary",
+            "Projection evidence records deployment loss when a learned prompt is discretized.",
+        ),
+        (
+            "prompt_stability",
+            "stability",
+            "Prompt-conditioned trajectory drift was compared across checkpoints.",
+        ),
     ]
     findings: list[JsonDict] = []
     for name, role, explanation in dimensions:
@@ -578,7 +1108,7 @@ def _build_attribution(comparison: JsonDict, checks: JsonDict) -> JsonDict:
                 "interpretation_role": role,
                 "observation": check.get("message", "No recorded observation."),
                 "explanation": explanation,
-                "confidence": "medium" if check.get("passed") is not None else "unknown",
+                "confidence": _check_confidence(check),
                 "scope": "The matched baseline/candidate checkpoint artifacts.",
                 "claim_boundary": (
                     "This association does not isolate training as a causal mechanism without a "
@@ -595,14 +1125,33 @@ def _build_attribution(comparison: JsonDict, checks: JsonDict) -> JsonDict:
     }
 
 
-def _plain_summary(decision: str, checks: JsonDict) -> str:
+def _plain_summary(
+    decision: str,
+    checks: JsonDict,
+    *,
+    missing: list[str],
+    invalid: list[str],
+) -> str:
     task_passed = _dict(checks.get("task_score")).get("passed") is True
     if decision == "pass":
         return "The candidate checkpoint meets the recorded performance and diagnostic policy."
     if decision == "insufficient_evidence":
-        return (
-            "The checkpoint decision is incomplete because required diagnostic evidence is missing."
-        )
+        if missing and invalid:
+            return (
+                "The checkpoint decision is incomplete because required evidence is missing and "
+                "recorded evidence failed validity checks."
+            )
+        if missing:
+            return (
+                "The checkpoint decision is incomplete because required diagnostic evidence is "
+                "missing."
+            )
+        if invalid:
+            return (
+                "The checkpoint decision is incomplete because recorded evidence is invalid or "
+                "outside configured validity bounds."
+            )
+        return "The checkpoint decision is incomplete because evidence is insufficient."
     if decision == "needs_review":
         return "No hard hold was triggered, but slice or uncertainty evidence needs review."
     if task_passed:
@@ -616,6 +1165,19 @@ def _next_action(dimension: str, passed: bool) -> str:
     if passed:
         return f"Retain the `{dimension}` evidence with the checkpoint decision."
     return f"Inspect and rerun the `{dimension}` diagnostic before promotion."
+
+
+def _check_confidence(check: JsonDict) -> str:
+    if check.get("applicable") is False:
+        return "not_applicable"
+    if check.get("severity") == "insufficient" or check.get("evidence_status") in {
+        "insufficient_evidence",
+        "unknown",
+    }:
+        return "low"
+    if check.get("passed") in {True, False}:
+        return "medium"
+    return "unknown"
 
 
 def _diagnostics(root: Path) -> JsonDict:
@@ -634,8 +1196,13 @@ def _checkpoint_identity(manifest: JsonDict) -> str:
     return str(checkpoint.get("id") or "").strip()
 
 
-def _model_key(checkpoint: JsonDict) -> tuple[str, str]:
-    return (str(checkpoint.get("provider") or ""), str(checkpoint.get("model_id") or ""))
+def _model_key(checkpoint: JsonDict) -> tuple[str, str, str, str]:
+    return (
+        str(checkpoint.get("provider") or ""),
+        str(checkpoint.get("model_id") or ""),
+        str(checkpoint.get("model_revision") or ""),
+        str(checkpoint.get("model_snapshot_sha256") or ""),
+    )
 
 
 def _slice_comparison(baseline: JsonDict, candidate: JsonDict) -> tuple[JsonDict, JsonDict]:

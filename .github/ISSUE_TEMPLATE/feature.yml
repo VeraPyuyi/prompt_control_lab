@@ -1,0 +1,40 @@
+name: Feature request
+description: Propose a focused capability, adapter, diagnostic, or workflow improvement.
+title: "[Feature]: "
+labels:
+  - enhancement
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: User problem
+      description: What concrete workflow or evidence gap should this solve?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed interface
+      description: Show the intended CLI, artifact, adapter, UI, or protocol behavior.
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Evidence and claim boundary
+      description: What evidence would validate the feature, and what should it not claim?
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+  - type: checkboxes
+    id: scope
+    attributes:
+      label: Scope check
+      options:
+        - label: This proposal is reusable beyond a single private experiment or paper reproduction.
+          required: true
+        - label: I have not included credentials, private prompts, hidden reasoning, or private data.
+          required: true

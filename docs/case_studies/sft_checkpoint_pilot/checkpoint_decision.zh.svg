@@ -1,0 +1,44 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="900" viewBox="0 0 1600 900" role="img" aria-labelledby="title desc">
+  <title id="title">受控 SFT Checkpoint 试点决策</title>
+  <desc id="desc">三 seed SFT 的分数和 token 效率有所改善。稳定性、生成错配和 readout 对齐检查给出 hold 决策；格式表现未变化是独立观察。</desc>
+  <rect width="1600" height="900" fill="#f7f9fc"/>
+  <text x="80" y="76" font-family="Microsoft YaHei, Arial, sans-serif" font-size="42" font-weight="700" fill="#172b4d">受控 SFT Checkpoint 试点</text>
+  <text x="80" y="120" font-family="Microsoft YaHei, Arial, sans-serif" font-size="23" fill="#526581">3 个 seed · 9 个 checkpoint · 6 个配对 gate · 模型与 split 均已锁定</text>
+  <rect x="80" y="170" width="440" height="390" rx="8" fill="#fff" stroke="#cbd5e1" stroke-width="2"/>
+  <text x="115" y="220" font-family="Microsoft YaHei, Arial, sans-serif" font-size="27" font-weight="700" fill="#1f4b7a">Withheld 平均分数</text>
+  <line x1="150" y1="450" x2="455" y2="450" stroke="#d7e1ec" stroke-width="3"/><line x1="150" y1="280" x2="150" y2="450" stroke="#d7e1ec" stroke-width="3"/>
+  <polyline points="165,416 303,340 440,327" fill="none" stroke="#2f6fed" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="165" cy="416" r="13" fill="#2f6fed"/><circle cx="303" cy="340" r="13" fill="#2f6fed"/><circle cx="440" cy="327" r="13" fill="#2f6fed"/>
+  <g font-family="Arial, sans-serif" text-anchor="middle" fill="#172b4d" font-size="22" font-weight="700">
+    <text x="165" y="392">0.0885</text><text x="303" y="316">0.1788</text><text x="440" y="303">0.1944</text>
+  </g>
+  <g font-family="Microsoft YaHei, Arial, sans-serif" text-anchor="middle" fill="#526581" font-size="20">
+    <text x="165" y="492">初始</text><text x="303" y="492">中间</text><text x="440" y="492">最终</text>
+  </g>
+  <text x="115" y="535" font-family="Microsoft YaHei, Arial, sans-serif" font-size="20" fill="#276749">观测增量：+0.1059</text>
+  <rect x="580" y="170" width="440" height="390" rx="8" fill="#fff" stroke="#cbd5e1" stroke-width="2"/>
+  <text x="615" y="220" font-family="Microsoft YaHei, Arial, sans-serif" font-size="27" font-weight="700" fill="#276749">Token 与延迟效率</text>
+  <text x="615" y="285" font-family="Microsoft YaHei, Arial, sans-serif" font-size="21" fill="#526581">平均生成 Token</text>
+  <rect x="615" y="310" width="320" height="42" rx="4" fill="#d9e8ff"/><rect x="615" y="310" width="233" height="42" rx="4" fill="#2f6fed"/>
+  <text x="950" y="339" font-family="Arial, sans-serif" font-size="21" text-anchor="end" fill="#172b4d">147.34 → 107.34</text>
+  <text x="615" y="395" font-family="Microsoft YaHei, Arial, sans-serif" font-size="21" fill="#526581">平均延迟</text>
+  <rect x="615" y="420" width="320" height="42" rx="4" fill="#d9f2e3"/><rect x="615" y="420" width="239" height="42" rx="4" fill="#2d9d65"/>
+  <text x="950" y="449" font-family="Arial, sans-serif" font-size="21" text-anchor="end" fill="#172b4d">8964 → 6692 ms</text>
+  <text x="615" y="515" font-family="Microsoft YaHei, Arial, sans-serif" font-size="20" fill="#276749">Token -27.2% · 延迟 -25.4%</text>
+  <rect x="1080" y="170" width="440" height="390" rx="8" fill="#fffaf0" stroke="#e6b85c" stroke-width="3"/>
+  <text x="1115" y="220" font-family="Microsoft YaHei, Arial, sans-serif" font-size="27" font-weight="700" fill="#8a4b08">决策：HOLD</text>
+  <text x="1115" y="267" font-family="Microsoft YaHei, Arial, sans-serif" font-size="20" fill="#526581">性能已经改善，但按照当前 policy，</text><text x="1115" y="296" font-family="Microsoft YaHei, Arial, sans-serif" font-size="20" fill="#526581">仍不满足 checkpoint 晋级条件。</text>
+  <g font-family="Microsoft YaHei, Arial, sans-serif" font-size="20" fill="#243b53">
+    <circle cx="1125" cy="350" r="7" fill="#d97706"/><text x="1145" y="357">Trajectory / Prompt 稳定性：hold</text>
+    <circle cx="1125" cy="401" r="7" fill="#d97706"/><text x="1145" y="408">生成错配 / Readout 对齐：hold</text>
+    <circle cx="1125" cy="452" r="7" fill="#d97706"/><text x="1145" y="459">Selective risk / 可达性：复核</text>
+    <circle cx="1125" cy="503" r="7" fill="#d97706"/><text x="1145" y="510">Routing 证据：不足</text>
+  </g>
+  <rect x="80" y="620" width="1440" height="190" rx="8" fill="#172b4d"/>
+  <g font-family="Microsoft YaHei, Arial, sans-serif">
+    <text x="120" y="672" font-size="23" font-weight="700" fill="#8fb8ff">观察到了什么</text><text x="120" y="710" font-size="18" fill="#fff">分数提高，成本下降，格式未改善。</text>
+    <text x="475" y="672" font-size="23" font-weight="700" fill="#8fe0b4">可以解释什么</text><text x="475" y="710" font-size="18" fill="#fff">性能、效率和风险画像发生变化。</text>
+    <text x="870" y="672" font-size="23" font-weight="700" fill="#f5c96b">不能证明什么</text><text x="870" y="710" font-size="18" fill="#fff">不能证明普遍提升或隐藏因果机制。</text>
+    <text x="120" y="770" font-size="23" font-weight="700" fill="#f5c96b">下一步</text><text x="220" y="770" font-size="18" fill="#fff">修复格式行为，解释漂移，并在晋级前补充 routing 干预证据。</text>
+  </g>
+</svg>

@@ -157,6 +157,56 @@ def test_import_rejects_tampered_manifest_identity(tmp_path: Path) -> None:
         )
 
 
+def test_legacy_evidence_overwrite_refuses_current_or_unowned_output(
+    tmp_path: Path,
+) -> None:
+    root = tmp_path / "projects"
+    _write_server_fixture(root)
+    manifest_path = tmp_path / "manifest.json"
+    manifest_path.write_text(
+        json.dumps(scan_evidence_root(root=root, profile="peoc-server")),
+        encoding="utf-8",
+    )
+    out_dir = tmp_path / "user-owned"
+    out_dir.mkdir()
+    marker = out_dir / "keep.txt"
+    marker.write_text("keep", encoding="utf-8")
+
+    with pytest.raises(ValueError, match="not a PromptControlLab evidence run"):
+        import_evidence_manifest(
+            EvidenceImportOptions(
+                manifest_path=manifest_path,
+                out_dir=out_dir,
+                overwrite=True,
+            )
+        )
+
+    assert marker.read_text(encoding="utf-8") == "keep"
+
+
+def test_evidence_scan_cli_rejects_writing_inside_the_source_root(
+    tmp_path: Path,
+) -> None:
+    root = tmp_path / "projects"
+    _write_server_fixture(root)
+
+    result = main(
+        [
+            "evidence",
+            "scan",
+            "--root",
+            str(root),
+            "--profile",
+            "peoc-server",
+            "--out",
+            str(root / "manifest.json"),
+        ]
+    )
+
+    assert result == 2
+    assert not (root / "manifest.json").exists()
+
+
 def test_import_evidence_manifest_builds_interpretability_outputs_without_copying_pt(
     tmp_path: Path,
 ) -> None:
@@ -322,8 +372,11 @@ def test_public_server_case_is_derived_and_path_free() -> None:
     serialized = json.dumps([matrix, report, claim], ensure_ascii=False)
     assert "/root/" not in serialized
     assert claim["universal_improvement_supported"] is False
-    assert pilot["execution_status"] == "not_started_resource_gate"
-    assert pilot["gpu_work_started"] is False
+    assert pilot["execution_status"] == "complete"
+    assert pilot["gpu_work_started"] is True
+    assert pilot["checkpoint_runs"] == 9
+    assert pilot["gate_count"] == 6
+    assert pilot["decision"] == "hold"
 
 
 def test_evidence_import_normalizes_non_finite_metrics_to_null(tmp_path: Path) -> None:

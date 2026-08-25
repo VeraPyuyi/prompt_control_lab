@@ -21,6 +21,11 @@ export function sha256(value: string): string {
   return `sha256:${createHash('sha256').update(value, 'utf8').digest('hex')}`
 }
 
+/** Match Python stable_digest for the string-valued Harness prompt path. */
+export function stableJsonDigest(value: string): string {
+  return sha256(JSON.stringify(toStableJson(value)))
+}
+
 export function boundedText(value: unknown, maxChars: number): string {
   const text = typeof value === 'string' ? value : ''
   if (text.length <= maxChars) return text
@@ -54,6 +59,7 @@ export function safeToolMetadata(exec: unknown): JsonObject {
     call_id: stringValue(exec.callId),
     root_call_id: stringValue(exec.rootCallId),
     name: stringValue(exec.name),
+    operation_category: classifyToolOperation(exec.name, exec.arguments),
     argument_hash: sha256(JSON.stringify(argumentsValue)),
     argument_keys: keys,
   })
@@ -64,8 +70,10 @@ export function safeToolResult(result: unknown): JsonObject {
   const error = isRecord(result.error)
     ? compact({ name: stringValue(result.error.name), code: stringValue(result.error.code) })
     : null
+  const value = isRecord(result.value) ? result.value : {}
   return compact({
     is_error: result.isError === true,
+    exit_code: integerValue(value.exitCode),
     error,
     concludes_turn: result.concludesTurn === true,
     content_block_count: Array.isArray(result.content) ? result.content.length : 0,
@@ -107,6 +115,13 @@ export function safeSessionEvent(event: unknown): JsonObject {
       })
     }
   } else if (eventType === 'assistant/message') {
+    const message = isRecord(data.message) ? data.message : {}
+    const source = isRecord(message.source) ? message.source : {}
+    Object.assign(payload, compact({
+      response_id: stringValue(message.id),
+      provider: stringValue(source.provider),
+      model: stringValue(source.model),
+    }))
     payload.usage = safeUsage(data.usage)
     payload.interrupted = data.interrupted === true
   } else if (eventType === 'user/message' && isRecord(data.source)) {
@@ -120,6 +135,25 @@ export function safeSessionEvent(event: unknown): JsonObject {
   const signals = guardSignals(eventType, data)
   if (signals.length > 0) payload.harness_guard_signals = signals
   return payload
+}
+
+function classifyToolOperation(nameValue: unknown, argumentsValue: unknown): string {
+  const name = (stringValue(nameValue) ?? '').toLowerCase()
+  const argumentText = collectStringValues(argumentsValue).join(' ').toLowerCase()
+  const combined = `${name} ${argumentText}`
+  if (/\b(pytest|unittest|jest|vitest|cargo test|go test|npm test|pnpm test|yarn test)\b/.test(combined)) {
+    return 'test_execution'
+  }
+  if (/(apply[_-]?patch|edit|replace|write|create[_-]?file)/.test(name)) return 'file_write'
+  if (/(read|view|open[_-]?file|cat)/.test(name)) return 'file_read'
+  return 'other'
+}
+
+function collectStringValues(value: unknown): string[] {
+  if (typeof value === 'string') return [value]
+  if (Array.isArray(value)) return value.flatMap(collectStringValues)
+  if (isRecord(value)) return Object.values(value).flatMap(collectStringValues)
+  return []
 }
 
 export function stableEventKey(sessionId: string, eventType: string, identity: unknown): string {
@@ -184,6 +218,10 @@ function stringValue(value: unknown): string | undefined {
 
 function numberValue(value: unknown): number | undefined {
   return typeof value === 'number' && Number.isFinite(value) ? value : undefined
+}
+
+function integerValue(value: unknown): number | undefined {
+  return typeof value === 'number' && Number.isInteger(value) ? value : undefined
 }
 
 function booleanValue(value: unknown): boolean | undefined {

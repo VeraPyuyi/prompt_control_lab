@@ -1,0 +1,416 @@
+{
+  "claim_boundary": "These rows preserve configured gate observations and decisions. They do not prove a hidden causal training mechanism or universal checkpoint quality.",
+  "decision": "hold",
+  "gate_count": 6,
+  "gates": [
+    {
+      "decision": "hold",
+      "invalid_evidence_count": 1,
+      "missing_artifact_count": 0,
+      "score_delta": 0.088541666667,
+      "seed": 0,
+      "stage": "mid",
+      "triggered_checks": [
+        {
+          "check": "evidence_validity",
+          "impact": "insufficient_evidence",
+          "observed": {
+            "item_count": 1
+          },
+          "status": "triggered",
+          "threshold": null
+        },
+        {
+          "check": "trajectory_stability",
+          "impact": "hold",
+          "observed": 0.384681887545,
+          "status": "triggered",
+          "threshold": 0.05
+        },
+        {
+          "check": "generation_mismatch",
+          "impact": "hold",
+          "observed": 0.484375,
+          "status": "triggered",
+          "threshold": 0.1
+        },
+        {
+          "check": "selective_risk",
+          "impact": "needs_review",
+          "observed": 0.7171392806293712,
+          "status": "triggered",
+          "threshold": 0.4
+        },
+        {
+          "check": "prompt_reachability",
+          "impact": "needs_review",
+          "observed": 2.23300548067169,
+          "status": "triggered",
+          "threshold": 0.5
+        },
+        {
+          "check": "readout_alignment",
+          "impact": "hold",
+          "observed": 0.484375,
+          "status": "triggered",
+          "threshold": 0.1
+        },
+        {
+          "check": "prompt_routing",
+          "impact": "insufficient_evidence",
+          "observed": "insufficient_evidence",
+          "status": "triggered",
+          "threshold": "observed_intervention_required"
+        },
+        {
+          "check": "prompt_stability",
+          "impact": "hold",
+          "observed": 0.384681887545,
+          "status": "triggered",
+          "threshold": 0.05
+        }
+      ]
+    },
+    {
+      "decision": "hold",
+      "invalid_evidence_count": 1,
+      "missing_artifact_count": 0,
+      "score_delta": 0.098958333333,
+      "seed": 0,
+      "stage": "final",
+      "triggered_checks": [
+        {
+          "check": "evidence_validity",
+          "impact": "insufficient_evidence",
+          "observed": {
+            "item_count": 1
+          },
+          "status": "triggered",
+          "threshold": null
+        },
+        {
+          "check": "trajectory_stability",
+          "impact": "hold",
+          "observed": 0.438453895475,
+          "status": "triggered",
+          "threshold": 0.05
+        },
+        {
+          "check": "generation_mismatch",
+          "impact": "hold",
+          "observed": 0.47395833333333337,
+          "status": "triggered",
+          "threshold": 0.1
+        },
+        {
+          "check": "selective_risk",
+          "impact": "needs_review",
+          "observed": 0.7039366323294587,
+          "status": "triggered",
+          "threshold": 0.4
+        },
+        {
+          "check": "prompt_reachability",
+          "impact": "needs_review",
+          "observed": 2.3136754482741977,
+          "status": "triggered",
+          "threshold": 0.5
+        },
+        {
+          "check": "readout_alignment",
+          "impact": "hold",
+          "observed": 0.47395833333333337,
+          "status": "triggered",
+          "threshold": 0.1
+        },
+        {
+          "check": "prompt_routing",
+          "impact": "insufficient_evidence",
+          "observed": "insufficient_evidence",
+          "status": "triggered",
+          "threshold": "observed_intervention_required"
+        },
+        {
+          "check": "prompt_stability",
+          "impact": "hold",
+          "observed": 0.438453895475,
+          "status": "triggered",
+          "threshold": 0.05
+        }
+      ]
+    },
+    {
+      "decision": "hold",
+      "invalid_evidence_count": 1,
+      "missing_artifact_count": 0,
+      "score_delta": 0.067708333333,
+      "seed": 1,
+      "stage": "mid",
+      "triggered_checks": [
+        {
+          "check": "evidence_validity",
+          "impact": "insufficient_evidence",
+          "observed": {
+            "item_count": 1
+          },
+          "status": "triggered",
+          "threshold": null
+        },
+        {
+          "check": "trajectory_stability",
+          "impact": "hold",
+          "observed": 0.379207842867,
+          "status": "triggered",
+          "threshold": 0.05
+        },
+        {
+          "check": "generation_mismatch",
+          "impact": "hold",
+          "observed": 0.5052083333333334,
+          "status": "triggered",
+          "threshold": 0.1
+        },
+        {
+          "check": "selective_risk",
+          "impact": "needs_review",
+          "observed": 0.7351434668648764,
+          "status": "triggered",
+          "threshold": 0.4
+        },
+        {
+          "check": "prompt_reachability",
+          "impact": "needs_review",
+          "observed": 2.293188976679468,
+          "status": "triggered",
+          "threshold": 0.5
+        },
+        {
+          "check": "readout_alignment",
+          "impact": "hold",
+          "observed": 0.5052083333333334,
+          "status": "triggered",
+          "threshold": 0.1
+        },
+        {
+          "check": "prompt_routing",
+          "impact": "insufficient_evidence",
+          "observed": "insufficient_evidence",
+          "status": "triggered",
+          "threshold": "observed_intervention_required"
+        },
+        {
+          "check": "prompt_stability",
+          "impact": "hold",
+          "observed": 0.379207842867,
+          "status": "triggered",
+          "threshold": 0.05
+        }
+      ]
+    },
+    {
+      "decision": "hold",
+      "invalid_evidence_count": 1,
+      "missing_artifact_count": 0,
+      "score_delta": 0.098958333333,
+      "seed": 1,
+      "stage": "final",
+      "triggered_checks": [
+        {
+          "check": "evidence_validity",
+          "impact": "insufficient_evidence",
+          "observed": {
+            "item_count": 1
+          },
+          "status": "triggered",
+          "threshold": null
+        },
+        {
+          "check": "trajectory_stability",
+          "impact": "hold",
+          "observed": 0.421902908909,
+          "status": "triggered",
+          "threshold": 0.05
+        },
+        {
+          "check": "generation_mismatch",
+          "impact": "hold",
+          "observed": 0.47395833333333337,
+          "status": "triggered",
+          "threshold": 0.1
+        },
+        {
+          "check": "selective_risk",
+          "impact": "needs_review",
+          "observed": 0.6632735595475494,
+          "status": "triggered",
+          "threshold": 0.4
+        },
+        {
+          "check": "prompt_reachability",
+          "impact": "needs_review",
+          "observed": 2.355936393206073,
+          "status": "triggered",
+          "threshold": 0.5
+        },
+        {
+          "check": "readout_alignment",
+          "impact": "hold",
+          "observed": 0.47395833333333337,
+          "status": "triggered",
+          "threshold": 0.1
+        },
+        {
+          "check": "prompt_routing",
+          "impact": "insufficient_evidence",
+          "observed": "insufficient_evidence",
+          "status": "triggered",
+          "threshold": "observed_intervention_required"
+        },
+        {
+          "check": "prompt_stability",
+          "impact": "hold",
+          "observed": 0.421902908909,
+          "status": "triggered",
+          "threshold": 0.05
+        }
+      ]
+    },
+    {
+      "decision": "hold",
+      "invalid_evidence_count": 1,
+      "missing_artifact_count": 0,
+      "score_delta": 0.114583333333,
+      "seed": 2,
+      "stage": "mid",
+      "triggered_checks": [
+        {
+          "check": "evidence_validity",
+          "impact": "insufficient_evidence",
+          "observed": {
+            "item_count": 1
+          },
+          "status": "triggered",
+          "threshold": null
+        },
+        {
+          "check": "trajectory_stability",
+          "impact": "hold",
+          "observed": 0.351726087898,
+          "status": "triggered",
+          "threshold": 0.05
+        },
+        {
+          "check": "generation_mismatch",
+          "impact": "hold",
+          "observed": 0.45833333333333337,
+          "status": "triggered",
+          "threshold": 0.1
+        },
+        {
+          "check": "selective_risk",
+          "impact": "needs_review",
+          "observed": 0.6689453791063021,
+          "status": "triggered",
+          "threshold": 0.4
+        },
+        {
+          "check": "prompt_reachability",
+          "impact": "needs_review",
+          "observed": 1.9973620190466934,
+          "status": "triggered",
+          "threshold": 0.5
+        },
+        {
+          "check": "readout_alignment",
+          "impact": "hold",
+          "observed": 0.45833333333333337,
+          "status": "triggered",
+          "threshold": 0.1
+        },
+        {
+          "check": "prompt_routing",
+          "impact": "insufficient_evidence",
+          "observed": "insufficient_evidence",
+          "status": "triggered",
+          "threshold": "observed_intervention_required"
+        },
+        {
+          "check": "prompt_stability",
+          "impact": "hold",
+          "observed": 0.351726087898,
+          "status": "triggered",
+          "threshold": 0.05
+        }
+      ]
+    },
+    {
+      "decision": "hold",
+      "invalid_evidence_count": 1,
+      "missing_artifact_count": 0,
+      "score_delta": 0.119791666667,
+      "seed": 2,
+      "stage": "final",
+      "triggered_checks": [
+        {
+          "check": "evidence_validity",
+          "impact": "insufficient_evidence",
+          "observed": {
+            "item_count": 1
+          },
+          "status": "triggered",
+          "threshold": null
+        },
+        {
+          "check": "trajectory_stability",
+          "impact": "hold",
+          "observed": 0.430752317858,
+          "status": "triggered",
+          "threshold": 0.05
+        },
+        {
+          "check": "generation_mismatch",
+          "impact": "hold",
+          "observed": 0.453125,
+          "status": "triggered",
+          "threshold": 0.1
+        },
+        {
+          "check": "selective_risk",
+          "impact": "needs_review",
+          "observed": 0.6350866745993844,
+          "status": "triggered",
+          "threshold": 0.4
+        },
+        {
+          "check": "prompt_reachability",
+          "impact": "needs_review",
+          "observed": 2.3409801583576955,
+          "status": "triggered",
+          "threshold": 0.5
+        },
+        {
+          "check": "readout_alignment",
+          "impact": "hold",
+          "observed": 0.453125,
+          "status": "triggered",
+          "threshold": 0.1
+        },
+        {
+          "check": "prompt_routing",
+          "impact": "insufficient_evidence",
+          "observed": "insufficient_evidence",
+          "status": "triggered",
+          "threshold": "observed_intervention_required"
+        },
+        {
+          "check": "prompt_stability",
+          "impact": "hold",
+          "observed": 0.430752317858,
+          "status": "triggered",
+          "threshold": 0.05
+        }
+      ]
+    }
+  ],
+  "schema": "prompt_control_lab.public_posttrain_gate_decisions.v1"
+}
