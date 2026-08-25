@@ -16,6 +16,12 @@ pcl ui --runs runs --language zh
 
 `inspect` 只运行本地 preflight 并写出完整 control run，不调用模型，也不启动 Agent。
 
+## 先看示例结果
+<p><strong>Quickstart 报告。</strong> 固定合成样例给出 <code>needs_review</code>：分数更高，但置信区间跨 0、Prompt 身份不完整、模型 alias 未锁定。运行 <code>pcl quickstart --out demo --language zh --open-report</code> 即可生成；它验证报告链路，不是普遍提升证明。</p>
+<p><a href="docs/quickstart.zh.md"><img src="docs/assets/quickstart_result.zh.svg" alt="Quickstart 报告快照"></a></p>
+<p><strong>研究诊断。</strong> 真实三 seed SFT 试点中，平均分数提高、生成 Token 减少，但稳定性与生成错配/读出检查没有通过，因此 checkpoint gate 给出 <code>hold</code>。查看<a href="docs/case_studies/sft_checkpoint_pilot/README.zh.md">完整案例</a>，或运行 <code>pcl research-quickstart --out demo-research --language zh</code>。</p>
+<p><a href="docs/case_studies/sft_checkpoint_pilot/README.zh.md"><img src="docs/case_studies/sft_checkpoint_pilot/checkpoint_decision.zh.svg" alt="三 seed SFT checkpoint 决策"></a></p>
+
 ## 核心诊断闭环
 
 ```bash

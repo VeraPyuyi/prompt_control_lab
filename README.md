@@ -16,6 +16,12 @@ pcl ui --runs runs --language en
 
 `inspect` runs the local preflight and writes a complete control run without calling a model or launching an agent.
 
+## Preview The Outputs
+<p><strong>Quickstart report.</strong> The fixed synthetic fixture returns <code>needs_review</code>: the score is higher, but the CI crosses zero, prompt identity is incomplete, and the model alias is not pinned. Run <code>pcl quickstart --out demo --open-report</code>; this verifies the reporting path, not universal improvement.</p>
+<p><a href="https://github.com/VeraPyuyi/prompt_control_lab/blob/main/docs/quickstart.en.md"><img src="https://raw.githubusercontent.com/VeraPyuyi/prompt_control_lab/main/docs/assets/quickstart_result.en.svg" alt="Quickstart report snapshot"></a></p>
+<p><strong>Research diagnosis.</strong> The real three-seed SFT pilot improved mean score and reduced generated tokens, yet returned <code>hold</code> because stability and generation/readout checks did not pass. Open the <a href="https://github.com/VeraPyuyi/prompt_control_lab/blob/main/docs/case_studies/sft_checkpoint_pilot/report.md">full report</a>, or run <code>pcl research-quickstart --out demo-research</code>.</p>
+<p><a href="https://github.com/VeraPyuyi/prompt_control_lab/blob/main/docs/case_studies/sft_checkpoint_pilot/README.md"><img src="https://raw.githubusercontent.com/VeraPyuyi/prompt_control_lab/main/docs/case_studies/sft_checkpoint_pilot/checkpoint_decision.svg" alt="Three-seed SFT checkpoint decision"></a></p>
+
 ## Core Diagnostic Loop
 
 ```bash
