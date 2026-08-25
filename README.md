@@ -4,7 +4,7 @@
 
 > Alpha package candidate: `promptcontrollab 0.2.0a1`. The two real acceptance runs are complete; publication still requires credential rotation, candidate-commit CI, final maintainer inspection, and the fail-closed visibility/security transition.
 
-PromptControlLab is an open-source, local-first framework for explaining where a result changed, whether the comparison is valid, how stable the observed behavior is, and whether a prompt, checkpoint, or agent run should continue. It combines preflight control with trajectory, soft-hard, generation-mismatch, selective-risk, and fitted-surrogate evidence. Chinese: [README.zh.md](https://github.com/VeraPyuyi/prompt_control_lab/blob/main/README.zh.md).
+PromptControlLab is an open-source, local-first framework for explaining where a result changed, whether the comparison is valid, how stable the observed behavior is, and whether a prompt, checkpoint, or agent run should continue. It combines preflight control with trajectory, soft-hard, generation-mismatch, selective-risk, and fitted-surrogate evidence. 中文: [README.zh.md](https://github.com/VeraPyuyi/prompt_control_lab/blob/main/README.zh.md).
 
 ## 2-Minute Control Demo
 
