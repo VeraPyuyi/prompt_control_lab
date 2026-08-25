@@ -534,6 +534,20 @@ def test_posttrain_gate_marks_generation_saturation_as_insufficient_evidence(
     assert "candidate:diagnostics.generation_mismatch.generation_saturation_rate" in payload[
         "invalid_evidence"
     ]
+    assert payload["missing_artifacts"] == []
+    assert payload["checks"]["artifact_completeness"]["passed"] is True
+    validity = payload["checks"]["evidence_validity"]
+    assert validity["passed"] is False
+    assert validity["severity"] == "insufficient"
+    assert validity["invalid"] == payload["invalid_evidence"]
+    assert "invalid" in payload["plain_summary"].lower()
+    trace = read_json(tmp_path / "gate/decision_trace.json")
+    trace_row = next(
+        row for row in trace["checks"] if row["check"] == "evidence_validity"
+    )
+    assert trace_row["status"] == "triggered"
+    assert trace_row["impact"] == "insufficient_evidence"
+    assert trace_row["observed"] == payload["invalid_evidence"]
 
 
 def test_posttrain_gate_marks_non_finite_required_metric_insufficient(tmp_path: Path) -> None:

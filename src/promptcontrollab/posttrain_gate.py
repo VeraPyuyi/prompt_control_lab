@@ -54,7 +54,8 @@ def run_posttrain_gate(
     checks = _build_checks(
         comparison,
         policy,
-        missing=evidence_gaps,
+        missing=missing,
+        invalid=invalid,
         capability_profile=capability_profile,
     )
     decision = _decision(checks, missing=evidence_gaps)
@@ -74,7 +75,12 @@ def run_posttrain_gate(
         "missing_artifacts": missing,
         "invalid_evidence": invalid,
         "checks": checks,
-        "plain_summary": _plain_summary(decision, checks),
+        "plain_summary": _plain_summary(
+            decision,
+            checks,
+            missing=missing,
+            invalid=invalid,
+        ),
         "claim_boundary": (
             "This gate combines recorded checkpoint diagnostics. It supports selection and review, "
             "but does not prove that training caused a hidden-model mechanism."
@@ -262,6 +268,7 @@ def _build_decision_trace(
 ) -> JsonDict:
     evidence_map = {
         "artifact_completeness": ["manifest.json", "metrics.json", "stats.json"],
+        "evidence_validity": ["checkpoint_comparison.json"],
         "provenance": ["checkpoint_comparison.json"],
         "task_score": ["checkpoint_comparison.json"],
         "paired_uncertainty": ["checkpoint_comparison.json"],
@@ -308,6 +315,7 @@ def _build_decision_trace(
                     "regressed_slices",
                     "violations",
                     "missing",
+                    "invalid",
                 )
                 if key in check
             ),
@@ -559,6 +567,7 @@ def _build_checks(
     policy: JsonDict,
     *,
     missing: list[str],
+    invalid: list[str],
     capability_profile: str,
 ) -> JsonDict:
     diagnostics = comparison.get("diagnostics", {})
@@ -574,6 +583,16 @@ def _build_checks(
                 "Required checkpoint evidence is complete."
                 if not missing
                 else "Evidence is missing."
+            ),
+        },
+        "evidence_validity": {
+            "passed": not invalid,
+            "severity": "insufficient",
+            "invalid": invalid,
+            "message": (
+                "Recorded checkpoint evidence passes validity checks."
+                if not invalid
+                else "Recorded evidence is invalid or outside configured validity bounds."
             ),
         },
         "provenance": _provenance_check(comparison, policy),
@@ -1106,14 +1125,33 @@ def _build_attribution(comparison: JsonDict, checks: JsonDict) -> JsonDict:
     }
 
 
-def _plain_summary(decision: str, checks: JsonDict) -> str:
+def _plain_summary(
+    decision: str,
+    checks: JsonDict,
+    *,
+    missing: list[str],
+    invalid: list[str],
+) -> str:
     task_passed = _dict(checks.get("task_score")).get("passed") is True
     if decision == "pass":
         return "The candidate checkpoint meets the recorded performance and diagnostic policy."
     if decision == "insufficient_evidence":
-        return (
-            "The checkpoint decision is incomplete because required diagnostic evidence is missing."
-        )
+        if missing and invalid:
+            return (
+                "The checkpoint decision is incomplete because required evidence is missing and "
+                "recorded evidence failed validity checks."
+            )
+        if missing:
+            return (
+                "The checkpoint decision is incomplete because required diagnostic evidence is "
+                "missing."
+            )
+        if invalid:
+            return (
+                "The checkpoint decision is incomplete because recorded evidence is invalid or "
+                "outside configured validity bounds."
+            )
+        return "The checkpoint decision is incomplete because evidence is insufficient."
     if decision == "needs_review":
         return "No hard hold was triggered, but slice or uncertainty evidence needs review."
     if task_passed:
