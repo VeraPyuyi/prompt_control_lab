@@ -9,7 +9,18 @@ The alpha candidate adds:
 - portable `prompt-reach-v2` evidence scanning and reconciliation;
 - prompt reachability, readout alignment, routing, projection, and stability adapters;
 - capability-aware SFT/DPO/GRPO checkpoint gates;
-- a guarded three-seed SFT pilot protocol; and
+- a completed, guarded three-seed SFT checkpoint case;
+- one bounded, real DeepSeek Harness lifecycle case; and
 - a local dashboard organized around observation, explanation, claim boundary, and next action.
 
-The public pre-release must not be created until two real acceptance runs are complete: the controlled three-seed checkpoint pilot and a DeepSeek Harness session that captures a real model request, tool use, a bounded file edit, and a test result. Diagnostic associations remain evidence for review, not strict causal or safety proofs.
+The checkpoint case contains 9 checkpoint runs and 6 paired gates. Its aggregate score improved on
+the fixed protocol, but the configured stability and generation-mismatch checks produced the
+conservative decision `hold`. The Harness case contains four matched model request/response pairs,
+two file reads, one bounded edit, and one test process with exit code `0`; the final control decision
+remains `suggest`.
+
+These two acceptance runs establish that the bounded workflows executed and produced auditable,
+public-safe artifacts. Diagnostic associations remain evidence for review, not strict causal,
+universal-performance, hidden-weight-identity, or safety proofs. This candidate remains unpublished
+until the repository owner completes the final inspection in
+[`release_checklist_v0.2.0-alpha.1.md`](release_checklist_v0.2.0-alpha.1.md).

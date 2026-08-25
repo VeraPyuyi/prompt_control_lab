@@ -28,6 +28,7 @@ python -m build
 
 ```text
 promptcontrollab-0.2.0a1-py3-none-any.whl
+promptcontrollab-0.2.0a1.tar.gz
 ```
 
 除非正式 release 流程明确要求，不要把 `dist/` 产物提交进仓库。
@@ -41,6 +42,10 @@ python -m build --wheel --no-isolation
 
 这个 fallback 用来验证项目包结构；它适合区分“网络或代理导致拿不到构建依赖”和
 “项目本身无法打包”这两类问题。
+
+公开前还需要对 wheel 和 sdist 运行 `twine check`，并检查 sdist 文件列表。源码包中
+不能包含 `.git`、虚拟环境、`build`、`dist`、`runs`、`node_modules`、凭据文件或大型
+Demo MP4。只在最后一次构建完成后生成发布包校验值。
 
 ## wheel 冒烟测试
 
@@ -92,6 +97,7 @@ pcl install-plugin codex --target ./tmp-pcl-codex
 pcl install-plugin cursor --target ./tmp-pcl-cursor
 pcl install-plugin claude-code --target ./tmp-pcl-claude
 pcl install-plugin github-action --target ./tmp-pcl-action
+pcl install-plugin deepseek-harness --target ./tmp-pcl-deepseek-harness
 ```
 
 先用 `--dry-run` 预览将写入的文件。默认不会覆盖已有文件；只有传入 `--force`

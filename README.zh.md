@@ -2,7 +2,7 @@
 
 **Prompt、Checkpoint 与 AI Agent 的本地证据、诊断和控制闭环。**
 
-> Alpha 包候选版本：`promptcontrollab 0.2.0a1`。真实三 seed checkpoint pilot 与一次范围受限的 DeepSeek Harness 生命周期已完成；公共预览版仍等待最终审查与发布验证。
+> Alpha 包候选版本：`promptcontrollab 0.2.0a1`。两项真实验收已经完成；公开前仍需轮换凭据、验证候选 commit CI、完成维护者检查，并执行失败即回退的可见性与安全设置切换。
 
 PromptControlLab 是一个开源、本地优先的框架，用来解释结果为什么变化、比较是否有效、观察到的行为是否稳定，以及 Prompt、checkpoint 或 Agent run 是否值得继续。它把执行前控制与 trajectory、soft-hard、generation mismatch、selective-risk 和拟合 surrogate 证据连接起来。英文：[README.md](README.md)。
 
@@ -55,5 +55,8 @@ pcl posttrain-gate --baseline runs/checkpoint-000 --candidate runs/checkpoint-50
 ## 方法来源与结论边界
 
 PEOC 提供控制论框架和若干诊断方法；产品层将其推广到 Prompt、checkpoint 与 Agent 证据。`soft-hard`、`trajectory`、`riccati`、`tv-soft` 属于基于观测或拟合 surrogate 的解释，不能当作线上 LLM 的数学安全证明。参见[方法映射](docs/research_from_paper.zh.md)和 [PEOC 导入说明](docs/research_import_peoc.zh.md)。
+
+欢迎参与贡献：[中文贡献指南](CONTRIBUTING.zh.md)、[安全策略](SECURITY.md)和
+[v0.2.0-alpha.1 发布检查表](docs/release_checklist_v0.2.0-alpha.1.md)。
 
 Apache-2.0。见 [LICENSE](LICENSE)。

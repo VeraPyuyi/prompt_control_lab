@@ -30,6 +30,7 @@ Expected result: `dist/` contains a wheel named like:
 
 ```text
 promptcontrollab-0.2.0a1-py3-none-any.whl
+promptcontrollab-0.2.0a1.tar.gz
 ```
 
 Do not commit `dist/` artifacts unless a release process explicitly asks for
@@ -44,6 +45,11 @@ python -m build --wheel --no-isolation
 
 This fallback verifies the project package layout when the failure is caused by
 network or proxy access to build dependencies rather than by the project itself.
+
+Before publication, run `twine check` on the wheel and sdist, and inspect the
+sdist file list. It must not contain `.git`, virtual environments, `build`,
+`dist`, `runs`, `node_modules`, credentials, or the large demo MP4 files.
+Generate release checksums only after this final build.
 
 ## Wheel Smoke Test
 
@@ -98,6 +104,7 @@ pcl install-plugin codex --target ./tmp-pcl-codex
 pcl install-plugin cursor --target ./tmp-pcl-cursor
 pcl install-plugin claude-code --target ./tmp-pcl-claude
 pcl install-plugin github-action --target ./tmp-pcl-action
+pcl install-plugin deepseek-harness --target ./tmp-pcl-deepseek-harness
 ```
 
 Use `--dry-run` to preview target files before writing. Existing files are not

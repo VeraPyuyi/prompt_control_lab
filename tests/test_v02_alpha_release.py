@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import re
 from pathlib import Path
 
 from promptcontrollab.cli import build_parser
@@ -20,6 +21,77 @@ def test_v02_alpha_version_and_readmes_are_consistent() -> None:
     assert "promptcontrollab 0.2.0a1" in chinese
     assert "PromptControlLab 2.0" not in english
     assert "PromptControlLab 2.0" not in chinese
+
+
+def test_public_release_governance_files_are_present_and_private_by_default() -> None:
+    required = [
+        "CONTRIBUTING.md",
+        "CONTRIBUTING.zh.md",
+        "SECURITY.md",
+        ".github/ISSUE_TEMPLATE/bug.yml",
+        ".github/ISSUE_TEMPLATE/feature.yml",
+        ".github/ISSUE_TEMPLATE/config.yml",
+        ".github/PULL_REQUEST_TEMPLATE.md",
+        "docs/release_checklist_v0.2.0-alpha.1.md",
+    ]
+    for relative_path in required:
+        assert (ROOT / relative_path).is_file(), relative_path
+
+    security = (ROOT / "SECURITY.md").read_text(encoding="utf-8")
+    checklist = (ROOT / "docs/release_checklist_v0.2.0-alpha.1.md").read_text(
+        encoding="utf-8"
+    )
+    assert "GitHub Private Vulnerability Reporting" in security
+    assert "security-reporting email address is used" in security
+    assert "public issue" in security
+    assert "remain private" in checklist
+    assert "Rotate the credential" in checklist
+    assert "return the repository to Private" in checklist
+
+
+def test_release_notes_record_completed_acceptance_without_overclaiming() -> None:
+    changelog = (ROOT / "CHANGELOG.md").read_text(encoding="utf-8")
+    notes = (ROOT / "docs/release_notes_v0.2.0-alpha.1.md").read_text(
+        encoding="utf-8"
+    )
+
+    assert "Both required acceptance runs are complete" in changelog
+    assert "9 checkpoint runs and 6 paired gates" in notes
+    assert "four matched model request/response pairs" in notes
+    assert "strict causal" in notes
+    assert "safety proofs" in notes
+
+
+def test_sdist_configuration_excludes_local_and_large_generated_content() -> None:
+    pyproject = (ROOT / "pyproject.toml").read_text(encoding="utf-8")
+
+    assert "[tool.hatch.build.targets.sdist]" in pyproject
+    assert '"/plugins/deepseek-harness/src"' in pyproject
+    assert '"/plugins/deepseek-harness/tests"' in pyproject
+    assert '"/docs/assets/demo/*.mp4"' in pyproject
+    assert '"**/__pycache__"' in pyproject
+
+    workflow = (ROOT / ".github/workflows/ci.yml").read_text(encoding="utf-8")
+    assert 'tar -tf "$sdist" > .sdist-contents.txt' in workflow
+    assert "(\\.git|\\.venv|build|dist|node_modules|runs)(/|$)" in workflow
+    assert "tar -tf dist/*.tar.gz | grep" not in workflow
+
+
+def test_pypi_readme_uses_resolvable_absolute_links() -> None:
+    english = (ROOT / "README.md").read_text(encoding="utf-8")
+    targets = re.findall(r"\[[^\]]+\]\(([^)]+)\)", english)
+
+    assert targets
+    assert all(target.startswith(("https://", "#")) for target in targets)
+
+
+def test_release_guides_cover_both_distributions_and_flagship_template() -> None:
+    for relative_path in ("docs/release_install.en.md", "docs/release_install.zh.md"):
+        guide = (ROOT / relative_path).read_text(encoding="utf-8")
+        assert "promptcontrollab-0.2.0a1-py3-none-any.whl" in guide
+        assert "promptcontrollab-0.2.0a1.tar.gz" in guide
+        assert "pcl install-plugin deepseek-harness" in guide
+        assert "node_modules" in guide
 
 
 def test_alpha_quickstarts_and_pilot_prepare_match_real_cli() -> None:

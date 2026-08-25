@@ -33,9 +33,16 @@ jobs:
         run: mypy
       - name: Tests
         run: pytest
-      - name: Wheel smoke
+      - name: Distribution smoke
         run: |
-          python -m build --wheel --no-isolation
+          python -m build --no-isolation
+          sdist="$(find dist -maxdepth 1 -type f -name '*.tar.gz' -print -quit)"
+          test -n "$sdist"
+          tar -tf "$sdist" > .sdist-contents.txt
+          if grep -E '(^|/)(\.git|\.venv|build|dist|node_modules|runs)(/|$)|\.mp4$' .sdist-contents.txt; then
+            echo "sdist contains a forbidden local or generated path"
+            exit 1
+          fi
           python -m venv .wheel-smoke
           . .wheel-smoke/bin/activate
           python -m pip install --no-index --find-links dist promptcontrollab
