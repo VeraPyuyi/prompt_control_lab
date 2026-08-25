@@ -2,7 +2,7 @@
 
 Chinese: [deepseek_harness.zh.md](deepseek_harness.zh.md)
 
-DeepSeek Harness is PromptControlLab 2.0's flagship agent integration. It is a native Cordis plugin, not a log scraper or a second agent loop. The plugin uses Harness interception points before model and tool execution, then sends bounded, redacted observations to one persistent local Python bridge.
+DeepSeek Harness is the flagship agent integration in the PromptControlLab 0.2 alpha framework direction. It is a native Cordis plugin, not a log scraper or a second agent loop. The plugin uses Harness interception points before model and tool execution, then sends bounded, redacted observations to one persistent local Python bridge.
 
 This integration is a community-maintained PromptControlLab component. Its existence does not claim endorsement, support, or inclusion by DeepSeek Harness maintainers.
 
@@ -151,10 +151,10 @@ Only `capture: redacted` is supported by the native reference integration.
 |---|---|
 | Raw prompt | Crosses local stdio only for synchronous `harness_pre_step`; persists as SHA-256 identity, findings, and decision, never as the raw prompt body. |
 | Tool arguments | SHA-256 over a stable projection plus sorted top-level argument keys. |
-| Tool results | Error flag, bounded error name/code, turn-conclusion flag, and content-block count. |
+| Tool results | Error flag, integer shell exit code when exposed, bounded error name/code, turn-conclusion flag, and content-block count. Raw stdout and stderr are not retained. |
 | Assistant content | Never copied into PromptControlLab events; `assistant/chunk` is skipped. |
 | Hidden reasoning | Hidden reasoning, chain-of-thought, thinking fields, and reasoning content are not persisted. |
-| API keys | API keys, authorization headers, tokens, and credential-shaped values are not persisted. |
+| API keys | Recognized credential fields and credential-shaped values are dropped before persistence. Public evidence still requires a scoped artifact scan; this is not a claim about unscanned external systems. |
 | Paths | Replay sanitization hashes workspace/repository paths instead of retaining them. |
 
 Redaction reduces retained content; it is not a guarantee that arbitrary user-supplied metadata is harmless. Review policies and artifacts before sharing them.

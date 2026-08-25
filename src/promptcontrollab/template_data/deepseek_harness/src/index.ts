@@ -27,8 +27,8 @@ import {
   safeSessionEvent,
   safeToolMetadata,
   safeToolResult,
-  sha256,
   shouldObserveSessionEvent,
+  stableJsonDigest,
   stableEventKey,
 } from './privacy.ts'
 import type {
@@ -164,7 +164,7 @@ export function apply(ctx: Context, input: import('./config.ts').Config): void {
         turn,
         step,
         prompt,
-        prompt_hash: sha256(prompt),
+        prompt_hash: stableJsonDigest(prompt),
         policy_path: config.policyPath ?? null,
         feedback_max_chars: config.feedbackMaxChars,
       }, gateSignal)

@@ -366,11 +366,11 @@ def _destructive_change(prompt: str, lowered: str, read_only_docs: bool) -> bool
         "关闭权限",
         "删除迁移",
     ]
-    if _has_any(prompt, lowered, direct):
+    if _has_non_negated_phrase(prompt, direct):
         return True
-    return _has_any(prompt, lowered, _risk_actions()) and _has_any(
+    return _has_non_negated_action_object_pair(
         prompt,
-        lowered,
+        _risk_actions(),
         ["database", "table", "migration", "数据库", "数据表", "迁移"],
     )
 
@@ -391,18 +391,25 @@ def _security_sensitive_change(prompt: str, lowered: str, read_only_docs: bool) 
         "关闭权限",
         "移除权限",
     ]
-    if _has_any(prompt, lowered, direct):
+    if _has_non_negated_phrase(prompt, direct):
         return True
-    return _has_any(prompt, lowered, _risk_actions()) and _has_any(
+    return _has_non_negated_action_object_pair(
         prompt,
-        lowered,
+        _risk_actions(),
         [
             "auth",
+            "authentication",
+            "authorization",
             "permission",
+            "permissions",
             "token",
+            "tokens",
             "secret",
+            "secrets",
             "credential",
+            "credentials",
             "api key",
+            "api keys",
             "认证",
             "权限",
             "令牌",
@@ -414,9 +421,8 @@ def _security_sensitive_change(prompt: str, lowered: str, read_only_docs: bool) 
 
 
 def _data_exposure(prompt: str, lowered: str) -> bool:
-    return _has_any(
+    return _has_non_negated_phrase(
         prompt,
-        lowered,
         [
             "dump database",
             "export user data",
@@ -432,9 +438,8 @@ def _data_exposure(prompt: str, lowered: str) -> bool:
 
 
 def _broad_refactor(prompt: str, lowered: str) -> bool:
-    return _has_any(
+    return _has_non_negated_phrase(
         prompt,
-        lowered,
         [
             "refactor whole repo",
             "rewrite all",
@@ -449,15 +454,16 @@ def _broad_refactor(prompt: str, lowered: str) -> bool:
 def _production_change(prompt: str, lowered: str, read_only_docs: bool) -> bool:
     if read_only_docs:
         return False
-    return _has_any(prompt, lowered, _risk_actions()) and _has_any(
+    return _has_non_negated_action_object_pair(
         prompt,
-        lowered,
+        _risk_actions(),
         [
             "prod",
             "production",
             "billing",
             "payment",
             "deploy",
+            "deployment",
             "生产环境",
             "生产",
             "账单",
@@ -500,6 +506,76 @@ def _looks_like_read_only_docs(prompt: str, lowered: str) -> bool:
 
 def _has_any(prompt: str, lowered: str, tokens: list[str]) -> bool:
     return any(token in (lowered if token.isascii() else prompt) for token in tokens)
+
+
+def _has_non_negated_phrase(prompt: str, phrases: list[str]) -> bool:
+    normalized = prompt.lower()
+    for phrase in phrases:
+        for match in _phrase_matches(normalized, phrase):
+            if not _is_negated(normalized, match.start()):
+                return True
+    return False
+
+
+def _has_non_negated_action_object_pair(
+    prompt: str,
+    actions: list[str],
+    objects: list[str],
+) -> bool:
+    clauses = re.split(r"[,\r\n.!?;:\uff0c\u3002\uff01\uff1f\uff1b\uff1a]+", prompt.lower())
+    for clause in clauses:
+        object_matches = [
+            match
+            for object_name in objects
+            for match in _phrase_matches(clause, object_name)
+        ]
+        if not object_matches:
+            continue
+        for action in actions:
+            for match in _phrase_matches(clause, action):
+                if _is_negated(clause, match.start()):
+                    continue
+                if any(_match_gap(match, object_match) <= 48 for object_match in object_matches):
+                    return True
+    return False
+
+
+def _phrase_matches(text: str, phrase: str) -> list[re.Match[str]]:
+    escaped = re.escape(phrase.lower())
+    pattern = rf"(?<!\w){escaped}(?!\w)" if phrase.isascii() else escaped
+    return list(re.finditer(pattern, text))
+
+
+def _match_gap(left: re.Match[str], right: re.Match[str]) -> int:
+    if left.end() < right.start():
+        return right.start() - left.end()
+    if right.end() < left.start():
+        return left.start() - right.end()
+    return 0
+
+
+def _is_negated(text: str, start: int) -> bool:
+    prefix = text[max(0, start - 160) : start]
+    scope = re.split(
+        r"(?:[\r\n.!?;:\u3002\uff01\uff1f\uff1b\uff1a]|\bbut\b|\bhowever\b|\bthen\b|\u4f46\u662f|\u4f46|\u7136\u540e)",
+        prefix,
+    )[-1]
+    if re.search(
+        r"(?:\b(?:do\s+not|don't|never)\s+(?:forget|fail|hesitate)\s+to\b|"
+        r"\b(?:avoid|without)\s+(?:forgetting|failing|hesitating)\s+to\b|"
+        r"(?:\u4e0d\u8981|\u522b|\u4e0d\u5f97|\u5207\u52ff)(?:\u5fd8\u8bb0|\u5fd8\u4e86|\u72b9\u8c6b)(?:\u53bb|\u8981)?)"
+        r".{0,120}$",
+        scope,
+    ):
+        return False
+    return bool(
+        re.search(
+            r"(?:\bdo\s+not\b|\bdon't\b|\bmust\s+not\b|\bnever\b|\bavoid\b|"
+            r"\bwithout\b|\u4e0d\u8981|\u4e0d\u5f97|\u7981\u6b62|\u907f\u514d|\u65e0\u9700|\u4e0d\u80fd|\u4e0d\u5e94)"
+            r".{0,120}$",
+            scope,
+        )
+    )
 
 
 def _looks_like_coding_prompt(lowered: str) -> bool:

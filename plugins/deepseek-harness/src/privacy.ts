@@ -21,6 +21,11 @@ export function sha256(value: string): string {
   return `sha256:${createHash('sha256').update(value, 'utf8').digest('hex')}`
 }
 
+/** Match Python stable_digest for the string-valued Harness prompt path. */
+export function stableJsonDigest(value: string): string {
+  return sha256(JSON.stringify(toStableJson(value)))
+}
+
 export function boundedText(value: unknown, maxChars: number): string {
   const text = typeof value === 'string' ? value : ''
   if (text.length <= maxChars) return text
@@ -65,8 +70,10 @@ export function safeToolResult(result: unknown): JsonObject {
   const error = isRecord(result.error)
     ? compact({ name: stringValue(result.error.name), code: stringValue(result.error.code) })
     : null
+  const value = isRecord(result.value) ? result.value : {}
   return compact({
     is_error: result.isError === true,
+    exit_code: integerValue(value.exitCode),
     error,
     concludes_turn: result.concludesTurn === true,
     content_block_count: Array.isArray(result.content) ? result.content.length : 0,
@@ -211,6 +218,10 @@ function stringValue(value: unknown): string | undefined {
 
 function numberValue(value: unknown): number | undefined {
   return typeof value === 'number' && Number.isFinite(value) ? value : undefined
+}
+
+function integerValue(value: unknown): number | undefined {
+  return typeof value === 'number' && Number.isInteger(value) ? value : undefined
 }
 
 function booleanValue(value: unknown): boolean | undefined {

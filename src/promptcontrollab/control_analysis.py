@@ -814,6 +814,10 @@ def _test_outcomes(events: list[JsonDict]) -> list[str]:
     for event in events:
         event_type = cast(str, event["event_type"]).lower()
         payload = cast(JsonDict, event["payload"])
+        harness_outcome = _harness_test_result_outcome(event_type, payload)
+        if harness_outcome is not None:
+            outcomes.append(harness_outcome)
+            continue
         tool = _tool_name(payload).lower()
         if "test" not in event_type and not any(name in tool for name in ("pytest", "test")):
             continue
@@ -827,6 +831,24 @@ def _test_outcomes(events: list[JsonDict]) -> list[str]:
         elif status in {"fail", "failed", "failure", "error"}:
             outcomes.append("fail")
     return outcomes
+
+
+def _harness_test_result_outcome(event_type: str, payload: JsonDict) -> str | None:
+    if not event_type.endswith(("tool/result", "tools/result")):
+        return None
+    tool = payload.get("tool")
+    result = payload.get("result")
+    if not isinstance(tool, Mapping) or not isinstance(result, Mapping):
+        return None
+    if tool.get("operation_category") != "test_execution":
+        return None
+    is_error = result.get("is_error")
+    if is_error is True:
+        return "fail"
+    exit_code = result.get("exit_code")
+    if is_error is False and isinstance(exit_code, int) and not isinstance(exit_code, bool):
+        return "pass" if exit_code == 0 else "fail"
+    return None
 
 
 def _numeric_series(events: list[JsonDict], keys: tuple[str, ...]) -> list[float]:
@@ -890,6 +912,8 @@ def _latest_completion_sequence(events: list[JsonDict]) -> int | None:
             marker in event_type
             for marker in ("step/completed", "task/completed", "session/finalized")
         ) or status in {"completed", "done", "succeeded"}
+        if not completed:
+            completed = _harness_test_result_outcome(event_type, payload) == "pass"
         if not completed and "test" in event_type:
             passed = payload.get("passed", payload.get("tests_passed"))
             outcome = _lower_string(payload.get("status", payload.get("outcome")))

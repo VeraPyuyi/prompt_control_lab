@@ -487,7 +487,8 @@ def finalize_harness_run(
     if outcome == "completed" and acceptance["accepted"] is not True:
         msg = (
             "Cannot mark a Harness run completed without a model response, file read, "
-            "file modification, test result, and matching preflight/request evidence"
+            "file modification, successful test execution, and matching "
+            "preflight/request evidence"
         )
         raise ValueError(msg)
     if session.run.status == "finalized":
@@ -579,14 +580,23 @@ def assess_harness_run_acceptance(run_dir: Path) -> JsonDict:
                 for key in ("response_id", "provider", "model")
             ):
                 responses.append(safe_payload)
-        elif event_type in {"tools/post-execute", "tools/result"}:
+        elif event_type == "tools/result":
             tool = safe_payload.get("tool")
             result = safe_payload.get("result")
             if not isinstance(tool, dict) or not isinstance(result, dict):
                 continue
             category = str(tool.get("operation_category", ""))
-            if category in successful_categories and result.get("is_error") is False:
+            if category in {"file_read", "file_write"} and result.get("is_error") is False:
                 successful_categories[category] += 1
+            elif category == "test_execution":
+                exit_code = result.get("exit_code")
+                if (
+                    result.get("is_error") is False
+                    and isinstance(exit_code, int)
+                    and not isinstance(exit_code, bool)
+                    and exit_code == 0
+                ):
+                    successful_categories[category] += 1
 
     matched_responses = 0
     matched_models: set[str] = set()

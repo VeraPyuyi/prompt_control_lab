@@ -61,7 +61,7 @@ def _accepted_harness_events() -> list[tuple[str, dict[str, object]]]:
             "tools/result",
             {
                 "tool": {"operation_category": "test_execution"},
-                "result": {"is_error": False},
+                "result": {"is_error": False, "exit_code": 0},
             },
         ),
     ]
@@ -442,7 +442,10 @@ def test_completed_harness_run_requires_a_real_model_tool_and_test_chain(
         },
     )
 
-    with pytest.raises(ValueError, match="model response, file read, file modification, test"):
+    with pytest.raises(
+        ValueError,
+        match="model response, file read, file modification, successful test execution",
+    ):
         finalize_harness_run(
             runs_root,
             "incomplete-live-session",
@@ -523,6 +526,90 @@ def test_completed_harness_run_writes_machine_verified_acceptance(tmp_path: Path
     assert result["acceptance"]["accepted"] is True
     acceptance = json.loads((run_dir / "harness_acceptance.json").read_text(encoding="utf-8"))
     assert all(check["passed"] for check in acceptance["checks"].values())
+
+
+@pytest.mark.parametrize(
+    "test_result",
+    [
+        {"is_error": False, "exit_code": 1},
+        {"is_error": False},
+    ],
+    ids=["nonzero-exit", "missing-exit"],
+)
+def test_completed_harness_run_rejects_unverified_test_result(
+    tmp_path: Path,
+    test_result: dict[str, object],
+) -> None:
+    from promptcontrollab.control_bridge import ControlBridge
+    from promptcontrollab.files import stable_digest
+
+    runs_root = tmp_path / "runs"
+    bridge = ControlBridge(runs_root)
+    started = bridge.dispatch(
+        "harness_session_start",
+        {
+            "session_id": "failed-test-live-session",
+            "source": "runtime",
+            "mode": "suggest",
+            "authorization": "agent-scoped",
+            "policy_path": None,
+            "capture": "redacted",
+            "provider": "deepseek",
+            "model": "deepseek-chat",
+            "runs_root": str(runs_root),
+            "harness_version": HARNESS_VERSION,
+            "harness_commit": HARNESS_COMMIT,
+            "session_origin": "live_cordis",
+            "bridge_transport": "persistent_stdio",
+        },
+    )
+    prompt = "Update one fixture and run its test."
+    bridge.dispatch(
+        "harness_pre_step",
+        {
+            "run_id": started["run_id"],
+            "session_id": "failed-test-live-session",
+            "turn": 1,
+            "step": 1,
+            "prompt": prompt,
+            "prompt_hash": "sha256:" + stable_digest(prompt),
+            "policy_path": None,
+            "feedback_max_chars": 600,
+        },
+    )
+    events = _accepted_harness_events()
+    events[-1] = (
+        "tools/result",
+        {
+            "tool": {"operation_category": "test_execution"},
+            "result": test_result,
+        },
+    )
+    for index, (event_type, payload) in enumerate(events, 1):
+        bridge.dispatch(
+            "harness_event",
+            {
+                "run_id": started["run_id"],
+                "session_id": "failed-test-live-session",
+                "idempotency_key": f"failed-test-{index}",
+                "event_type": event_type,
+                "sequence": index,
+                "timestamp": "2026-08-25T00:00:00Z",
+                "payload": payload,
+            },
+        )
+
+    with pytest.raises(ValueError, match="successful test execution"):
+        finalize_harness_run(
+            runs_root,
+            "failed-test-live-session",
+            outcome="completed",
+            exit_code=0,
+        )
+
+    run_dir = runs_root / str(started["run_id"])
+    acceptance = json.loads((run_dir / "harness_acceptance.json").read_text())
+    assert acceptance["checks"]["test"]["passed"] is False
 
 
 def test_direct_fixture_events_cannot_satisfy_live_harness_acceptance(

@@ -1653,6 +1653,72 @@ def test_cli_guard_safe_coding_prompt_remains_low_risk(
     assert payload["policy_violations"] == []
 
 
+def test_cli_guard_does_not_treat_negated_migration_boundary_as_destructive(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    prompt = (
+        "Fix the inclusive_count off-by-one bug in src/math_utils.py. "
+        "Do not remove authentication or change public APIs, database migration, "
+        "or production deployment behavior. "
+        "Run python -m unittest tests.test_math_utils -v."
+    )
+    assert main(["guard", "--prompt", prompt, "--profile", "coding", "--json"]) == 0
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["risk_level"] == "low"
+    assert payload["required_review"] is False
+    assert "destructive_change" not in payload["risk_categories"]
+    assert "security" not in payload["risk_categories"]
+    assert "production_path" not in payload["risk_categories"]
+
+
+def test_cli_guard_respects_negated_exposure_and_refactor_boundaries(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    prompt = (
+        "Fix the parser bug in src/parser.py. Do not dump database data, print env, "
+        "refactor whole repo, or rewrite all modules. Run pytest tests/test_parser.py."
+    )
+    assert main(["guard", "--prompt", prompt, "--profile", "coding", "--json"]) == 0
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["risk_level"] == "low"
+    assert "data_exposure" not in payload["risk_categories"]
+    assert "broad_refactor" not in payload["risk_categories"]
+
+
+def test_cli_guard_does_not_match_sensitive_substrings_in_code_names(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    prompt = (
+        "Modify src/tokenizer.py to fix product_label formatting. "
+        "Run pytest tests/test_tokenizer.py."
+    )
+    assert main(["guard", "--prompt", prompt, "--profile", "coding", "--json"]) == 0
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["risk_level"] == "low"
+    assert "security" not in payload["risk_categories"]
+    assert "production_path" not in payload["risk_categories"]
+
+
+@pytest.mark.parametrize(
+    "prompt",
+    [
+        "Do not forget to delete database records. Run pytest tests/test_db.py.",
+        "Never hesitate to drop table accounts. Run pytest tests/test_db.py.",
+        "Do not fail to remove authentication. Run pytest tests/test_auth.py.",
+        "不要忘记删除数据库并移除认证, 然后运行 pytest.",
+    ],
+)
+def test_cli_guard_keeps_negation_raising_dangerous_requests_high_risk(
+    prompt: str,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    assert main(["guard", "--prompt", prompt, "--profile", "coding", "--json"]) == 0
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["risk_level"] == "high"
+    assert payload["required_review"] is True
+    assert set(payload["risk_categories"]) & {"destructive_change", "security"}
+
+
 def test_cli_guard_docs_deployment_prompt_does_not_trigger_high_production_risk(
     capsys: pytest.CaptureFixture[str],
 ) -> None:

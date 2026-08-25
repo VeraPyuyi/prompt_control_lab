@@ -2,7 +2,7 @@
 
 **Prompt、Checkpoint 与 AI Agent 的本地证据、诊断和控制闭环。**
 
-> Alpha 包候选版本：`promptcontrollab 0.2.0a1`。真实三 seed checkpoint pilot 已完成；公共预览版目前仍等待真实 DeepSeek Harness session 验收。
+> Alpha 包候选版本：`promptcontrollab 0.2.0a1`。真实三 seed checkpoint pilot 与一次范围受限的 DeepSeek Harness 生命周期已完成；公共预览版仍等待最终审查与发布验证。
 
 PromptControlLab 是一个开源、本地优先的框架，用来解释结果为什么变化、比较是否有效、观察到的行为是否稳定，以及 Prompt、checkpoint 或 Agent run 是否值得继续。它把执行前控制与 trajectory、soft-hard、generation mismatch、selective-risk 和拟合 surrogate 证据连接起来。英文：[README.md](README.md)。
 
@@ -30,7 +30,7 @@ pcl posttrain-gate --baseline runs/checkpoint-000 --candidate runs/checkpoint-50
 
 ## 旗舰集成：DeepSeek Harness
 
-[原生 Cordis 集成](docs/deepseek_harness.zh.md)可以在模型请求和工具执行前 gate，并通过一个持久本地 bridge 写入脱敏生命周期证据；兼容性锁定到 Harness `0.1.1-rc.2`、commit `b150a551...`。[可公开集成状态](docs/case_studies/deepseek_harness/README.zh.md)记录已验证的 bridge 与脱敏链路，同时明确标记：在本地提供 provider credential 前，真实模型、工具、修改与测试会话仍处于阻塞状态。
+[原生 Cordis 集成](docs/deepseek_harness.zh.md)可以在模型请求和工具执行前 gate，并通过一个持久本地 bridge 写入脱敏生命周期证据；兼容性锁定到 Harness `0.1.1-rc.2`、commit `b150a551...`。[可公开真实会话案例](docs/case_studies/deepseek_harness/README.zh.md)记录了 4 组模型请求/响应、2 次终态读取、1 次有界修改、1 次退出码为 `0` 的测试调用和 3/3 测试通过。经过严格协议验收的真实运行是 `low` risk、`converging`，最终仍保守给出 `suggest`；生命周期验收不被包装成安全证明。
 
 ## 支持范围
 

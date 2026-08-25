@@ -52,23 +52,69 @@ def test_pilot_status_records_completed_bounded_checkpoint_evidence() -> None:
     assert payload["observed"]["final_mean_score"] == 0.194444444444
 
 
-def test_harness_status_separates_integration_wiring_from_live_acceptance() -> None:
+def test_harness_status_records_public_safe_live_acceptance() -> None:
     path = ROOT / "docs/case_studies/deepseek_harness/live_session_status.json"
     payload = json.loads(path.read_text(encoding="utf-8"))
+    evidence_path = ROOT / "docs/case_studies/deepseek_harness/live_session_evidence.json"
+    evidence = json.loads(evidence_path.read_text(encoding="utf-8"))
 
-    assert payload["integration_evidence"]["typescript_contract_tests_passed"] == 27
+    assert payload["integration_evidence"]["typescript_contract_tests_passed"] == 28
     assert payload["integration_evidence"]["machine_acceptance_enforced"] is True
     assert (
         payload["integration_evidence"]["fixture_replay_rejected_from_live_acceptance"]
         is True
     )
     assert payload["integration_evidence"]["persistent_bridge_started"] is True
-    assert payload["live_acceptance"]["credential_available"] is False
-    assert payload["live_acceptance"]["model_request_observed"] is False
-    assert payload["live_acceptance"]["provider_request_id_recorded"] is False
-    assert payload["live_acceptance"]["accepted"] is False
-    assert "not a real DeepSeek Harness" in payload["claim_boundary"]
-    persisted = path.read_text(encoding="utf-8")
+    assert payload["evidence"] == "live_session_evidence.json"
+    assert evidence["source"]["session_origin"] == "live_cordis"
+    assert evidence["source"]["transport"] == "persistent_stdio"
+    assert evidence["source"]["provider_request_id_recorded"] is False
+    assert evidence["credential_scan"]["supplied_ephemerally"] is True
+    assert evidence["credential_scan"]["scan_type"] == "credential_shape_regex"
+    assert evidence["credential_scan"]["findings"] == 0
+    assert len(evidence["credential_scan"]["scope"]) == 3
+    assert evidence["credential_scan"]["scope_results"] == {
+        "disposable_task_worktree": {"files_scanned": 10, "findings": 0},
+        "prompt_control_lab_control_artifacts": {"files_scanned": 11, "findings": 0},
+        "deepseek_harness_session_artifacts": {"files_scanned": 1, "findings": 0},
+    }
+    assert payload["live_acceptance"]["model_request_observed"] is True
+    assert payload["live_acceptance"] == {
+        "model_request_observed": True,
+        **evidence["lifecycle"],
+    }
+    assert evidence["lifecycle"]["model_request_response_pairs"] == 4
+    assert evidence["lifecycle"]["unique_tool_calls"] == 4
+    assert evidence["lifecycle"]["operations"] == {
+        "file_read": 2,
+        "file_write": 1,
+        "test_execution": 1,
+    }
+    assert evidence["lifecycle"]["test_execution_exit_codes"] == [0]
+    assert evidence["lifecycle"]["tests_passed"] == 3
+    assert evidence["lifecycle"]["tests_total"] == 3
+    assert evidence["lifecycle"]["changed_files"] == ["src/math_utils.py"]
+    assert evidence["lifecycle"]["changed_lines"] == {"added": 1, "deleted": 1}
+    assert evidence["usage"] == {
+        "source": "captured_harness_metadata",
+        "input_tokens": 13401,
+        "output_tokens": 619,
+        "cache_tokens_recorded": False,
+    }
+    assert payload["diagnostic_result"] == evidence["control"]
+    assert evidence["control"]["preflight_decision"] == "suggest"
+    assert evidence["control"]["preflight_risk"] == "low"
+    assert evidence["control"]["final_control_decision"] == "suggest"
+    assert evidence["control"]["stability_state"] == "converging"
+    assert evidence["control"]["stability_evidence"] == "terminal_test_exit_code_0"
+    assert "real model-backed Harness lifecycle" in payload["claim_boundary"]
+    assert "does not prove" in payload["claim_boundary"]
+    persisted = path.read_text(encoding="utf-8") + evidence_path.read_text(encoding="utf-8")
     assert "D:\\" not in persisted
     assert "/root/" not in persisted
     assert "session-" not in persisted
+    assert "DEEPSEEK_API_KEY" not in persisted
+    assert "sk-" not in persisted.lower()
+    assert evidence["derivation"]["raw_prompt_published"] is False
+    assert evidence["derivation"]["raw_model_response_published"] is False
+    assert "raw_prompt_body" not in persisted.lower()

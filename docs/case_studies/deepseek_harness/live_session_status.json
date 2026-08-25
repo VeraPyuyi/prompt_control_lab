@@ -1,13 +1,14 @@
 {
   "schema": "prompt_control_lab.deepseek_harness_live_status.v1",
-  "checked_at": "2026-08-24T11:05:00Z",
+  "checked_at": "2026-08-25T08:57:49Z",
+  "evidence": "live_session_evidence.json",
   "harness": {
     "version": "0.1.1-rc.2",
     "commit": "b150a551b8d465e31e418e1b2eaf5e79bbb7d28e"
   },
   "integration_evidence": {
     "native_plugin_built": true,
-    "typescript_contract_tests_passed": 27,
+    "typescript_contract_tests_passed": 28,
     "cordis_profile_resolved": true,
     "persistent_bridge_started": true,
     "redacted_control_run_created": true,
@@ -16,15 +17,38 @@
     "fixture_replay_rejected_from_live_acceptance": true
   },
   "live_acceptance": {
-    "credential_available": false,
-    "model_request_observed": false,
-    "provider_request_id_recorded": false,
-    "tool_read_observed": false,
-    "controlled_file_edit_observed": false,
-    "test_execution_observed": false,
-    "accepted": false
+    "model_request_observed": true,
+    "accepted": true,
+    "model_request_response_pairs": 4,
+    "unique_tool_calls": 4,
+    "operations": {
+      "file_read": 2,
+      "file_write": 1,
+      "test_execution": 1
+    },
+    "test_execution_exit_codes": [
+      0
+    ],
+    "tests_passed": 3,
+    "tests_total": 3,
+    "changed_files": [
+      "src/math_utils.py"
+    ],
+    "changed_lines": {
+      "added": 1,
+      "deleted": 1
+    },
+    "process_exit_code": 0
   },
-  "decision": "blocked_missing_provider_credential",
-  "next_action": "Provide DEEPSEEK_API_KEY through the local environment or secret store, then run the bounded disposable-repository session.",
-  "claim_boundary": "This snapshot proves local plugin, profile, bridge, redaction, and interrupted-run reporting behavior. It is not a real DeepSeek Harness model or tool execution session."
+  "diagnostic_result": {
+    "preflight_decision": "suggest",
+    "preflight_risk": "low",
+    "final_control_decision": "suggest",
+    "stability_state": "converging",
+    "stability_evidence": "terminal_test_exit_code_0",
+    "interpretation": "The verified live run passed machine lifecycle acceptance with an explicit test exit code of zero. The redacted protocol does not treat wrapper success or a missing exit code as a passing test."
+  },
+  "decision": "accepted_with_explanatory_diagnostics",
+  "next_action": "Use the bounded session as the first public Agent closed-loop case and continue collecting sessions across models, policies, and task slices.",
+  "claim_boundary": "This snapshot records one real model-backed Harness lifecycle and observable local outcomes. It does not prove hidden model weights, semantic safety, strict causality, or absence of credential material outside the explicitly scanned local scopes."
 }

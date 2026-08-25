@@ -2,7 +2,7 @@
 
 **The local evidence, diagnosis, and control loop for prompts, checkpoints, and AI agents.**
 
-> Alpha package candidate: `promptcontrollab 0.2.0a1`. The real three-seed checkpoint pilot is complete; public pre-release remains gated on a real DeepSeek Harness session.
+> Alpha package candidate: `promptcontrollab 0.2.0a1`. The real three-seed checkpoint pilot and one bounded DeepSeek Harness lifecycle are complete; public pre-release remains gated on final review and release verification.
 
 PromptControlLab is an open-source, local-first framework for explaining where a result changed, whether the comparison is valid, how stable the observed behavior is, and whether a prompt, checkpoint, or agent run should continue. It combines preflight control with trajectory, soft-hard, generation-mismatch, selective-risk, and fitted-surrogate evidence. Chinese: [README.zh.md](README.zh.md).
 
@@ -30,7 +30,7 @@ The real [three-seed SFT checkpoint case](docs/case_studies/sft_checkpoint_pilot
 
 ## Flagship Integration: DeepSeek Harness
 
-The [native Cordis integration](docs/deepseek_harness.en.md) gates model requests and tools, streams redacted lifecycle evidence through one persistent local bridge, and is contract-locked to Harness `0.1.1-rc.2` at `b150a551...`. The [public-safe integration status](docs/case_studies/deepseek_harness/README.md) records the verified bridge and redaction path while clearly marking the real model/tool/edit/test session as blocked until a local provider credential is supplied.
+The [native Cordis integration](docs/deepseek_harness.en.md) gates model requests and tools, streams redacted lifecycle evidence through one persistent local bridge, and is contract-locked to Harness `0.1.1-rc.2` at `b150a551...`. The [public-safe real-session case](docs/case_studies/deepseek_harness/README.md) records four model request/response pairs, two terminal reads, one bounded edit, one test invocation with exit code `0`, and 3/3 passing tests. The verified live run is `low` risk, `converging`, and conservatively `suggest`; lifecycle acceptance is still not presented as a safety proof.
 
 ## Supported Surfaces
 

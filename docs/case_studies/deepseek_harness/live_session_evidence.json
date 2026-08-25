@@ -1,0 +1,88 @@
+{
+  "schema": "prompt_control_lab.deepseek_harness_public_evidence.v1",
+  "derived_at": "2026-08-25T08:57:49Z",
+  "source": {
+    "session_origin": "live_cordis",
+    "transport": "persistent_stdio",
+    "harness_version": "0.1.1-rc.2",
+    "harness_commit": "b150a551b8d465e31e418e1b2eaf5e79bbb7d28e",
+    "provider": "deepseek-official",
+    "model": "deepseek-v4-flash",
+    "provider_request_id_recorded": false,
+    "local_request_identifiers_recorded": true
+  },
+  "lifecycle": {
+    "accepted": true,
+    "model_request_response_pairs": 4,
+    "unique_tool_calls": 4,
+    "operations": {
+      "file_read": 2,
+      "file_write": 1,
+      "test_execution": 1
+    },
+    "test_execution_exit_codes": [
+      0
+    ],
+    "tests_passed": 3,
+    "tests_total": 3,
+    "changed_files": [
+      "src/math_utils.py"
+    ],
+    "changed_lines": {
+      "added": 1,
+      "deleted": 1
+    },
+    "process_exit_code": 0
+  },
+  "usage": {
+    "source": "captured_harness_metadata",
+    "input_tokens": 13401,
+    "output_tokens": 619,
+    "cache_tokens_recorded": false
+  },
+  "control": {
+    "preflight_decision": "suggest",
+    "preflight_risk": "low",
+    "final_control_decision": "suggest",
+    "stability_state": "converging",
+    "stability_evidence": "terminal_test_exit_code_0",
+    "interpretation": "The verified live run passed machine lifecycle acceptance with an explicit test exit code of zero. The redacted protocol does not treat wrapper success or a missing exit code as a passing test."
+  },
+  "credential_scan": {
+    "supplied_ephemerally": true,
+    "scan_type": "credential_shape_regex",
+    "scope": [
+      "disposable_task_worktree",
+      "prompt_control_lab_control_artifacts",
+      "deepseek_harness_session_artifacts"
+    ],
+    "scope_results": {
+      "disposable_task_worktree": {
+        "files_scanned": 10,
+        "findings": 0
+      },
+      "prompt_control_lab_control_artifacts": {
+        "files_scanned": 11,
+        "findings": 0
+      },
+      "deepseek_harness_session_artifacts": {
+        "files_scanned": 1,
+        "findings": 0
+      }
+    },
+    "findings": 0,
+    "claim": "No credential-shaped string was found in the listed local artifact scopes."
+  },
+  "derivation": {
+    "inputs": [
+      "redacted control_run.json and events.jsonl",
+      "machine acceptance result with explicit test exit status",
+      "disposable repository diff statistics",
+      "fixture test result"
+    ],
+    "raw_prompt_published": false,
+    "raw_model_response_published": false,
+    "session_identifier_published": false
+  },
+  "claim_boundary": "This evidence records one bounded real model-backed Harness lifecycle and observable local outcomes. It does not prove hidden model weights, semantic safety, strict causal correctness, or that unscanned external systems retained no credential material."
+}

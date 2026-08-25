@@ -373,6 +373,88 @@ def test_analysis_accepts_event_objects_and_sorts_by_sequence() -> None:
     assert report.signals["progress"]["completed_markers"] >= 1
 
 
+def test_stability_recognizes_successful_redacted_harness_test_result() -> None:
+    from promptcontrollab.control_analysis import analyze_stability
+
+    events = [
+        _event(1, "agent/request", usage={"input_tokens": 120}),
+        _event(
+            2,
+            "tools/pre-execute",
+            tool={"name": "pwsh", "operation_category": "test_execution"},
+        ),
+        _event(
+            3,
+            "tools/result",
+            tool={"name": "pwsh", "operation_category": "test_execution"},
+            result={"is_error": False, "exit_code": 0},
+        ),
+    ]
+
+    report = analyze_stability({"run_id": "redacted-test-pass"}, events)
+
+    assert report.signals["test_trend"] == {
+        "outcomes": ["pass"],
+        "transitions": 0,
+        "final": "pass",
+    }
+    assert report.signals["progress"]["latest_completion_sequence"] == 3
+    assert report.signals["progress"]["completion_is_current"] is True
+    assert report.state == "converging"
+
+
+def test_stability_recognizes_failed_redacted_harness_test_result_once() -> None:
+    from promptcontrollab.control_analysis import analyze_stability
+
+    events = [
+        _event(1, "agent/request", usage={"input_tokens": 120}),
+        _event(
+            2,
+            "tools/post-execute",
+            tool={"name": "pwsh", "operation_category": "test_execution"},
+            result={"is_error": True},
+        ),
+        _event(
+            3,
+            "tools/result",
+            tool={"name": "pwsh", "operation_category": "test_execution"},
+            result={"is_error": False, "exit_code": 1},
+        ),
+    ]
+
+    report = analyze_stability({"run_id": "redacted-test-fail"}, events)
+
+    assert report.signals["test_trend"] == {
+        "outcomes": ["fail"],
+        "transitions": 0,
+        "final": "fail",
+    }
+    assert report.signals["progress"]["latest_completion_sequence"] is None
+    assert report.state == "stalled"
+
+
+def test_stability_keeps_redacted_test_result_unknown_without_exit_code() -> None:
+    from promptcontrollab.control_analysis import analyze_stability
+
+    report = analyze_stability(
+        {"run_id": "redacted-test-unknown"},
+        [
+            _event(1, "agent/request", usage={"input_tokens": 120}),
+            _event(
+                2,
+                "tools/result",
+                tool={"name": "pwsh", "operation_category": "test_execution"},
+                result={"is_error": False},
+            ),
+            _event(3, "agent/request", usage={"input_tokens": 125}),
+        ],
+    )
+
+    assert report.signals["test_trend"]["final"] == "unknown"
+    assert report.signals["progress"]["latest_completion_sequence"] is None
+    assert report.state == "stalled"
+
+
 def test_stability_returns_insufficient_evidence_for_missing_or_malformed_events() -> None:
     from promptcontrollab.control_analysis import analyze_stability
 

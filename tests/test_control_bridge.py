@@ -51,7 +51,10 @@ def _record_accepted_harness_events(
         ),
         (
             "tools/result",
-            {"tool": {"operation_category": "test_execution"}, "result": {"is_error": False}},
+            {
+                "tool": {"operation_category": "test_execution"},
+                "result": {"is_error": False, "exit_code": 0},
+            },
         ),
     ]
     for offset, (event_type, payload) in enumerate(records):
