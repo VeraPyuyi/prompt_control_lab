@@ -1,0 +1,6 @@
+{
+  "confidence": "medium",
+  "evidence": ["No repeated tool loop", "Focused test passed", "Bounded token growth"],
+  "next_action": "Retain human review because the write tool required confirmation.",
+  "state": "converging"
+}

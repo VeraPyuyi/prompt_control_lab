@@ -1,0 +1,7 @@
+{"event_id":"evt-1","event_type":"agent/session-start","payload":{"agent":"deepseek-harness-fixture","status":"started"},"sequence":1,"timestamp":"2026-08-01T00:00:00Z"}
+{"event_id":"evt-2","event_type":"agent/preflight","payload":{"decision":"ask","required_review":true,"risk_level":"medium"},"sequence":2,"timestamp":"2026-08-01T00:00:01Z"}
+{"event_id":"evt-3","event_type":"agent/response","payload":{"model":"deepseek-demo-model","provider":"deepseek","request_id":"redacted-demo-id","usage":{"input_tokens":180,"output_tokens":90,"total_tokens":270}},"sequence":3,"timestamp":"2026-08-01T00:00:03Z"}
+{"event_id":"evt-4","event_type":"tools/pre-execute","payload":{"decision":"allow","risk_level":"low","tool_name":"read_file"},"sequence":4,"timestamp":"2026-08-01T00:00:04Z"}
+{"event_id":"evt-5","event_type":"tools/pre-execute","payload":{"decision":"ask","risk_level":"medium","tool_name":"write_file"},"sequence":5,"timestamp":"2026-08-01T00:00:06Z"}
+{"event_id":"evt-6","event_type":"tools/result","payload":{"status":"passed","tool_name":"focused_test"},"sequence":6,"timestamp":"2026-08-01T00:00:10Z"}
+{"event_id":"evt-7","event_type":"turn/end","payload":{"status":"completed","turn":1},"sequence":7,"timestamp":"2026-08-01T00:00:11Z"}

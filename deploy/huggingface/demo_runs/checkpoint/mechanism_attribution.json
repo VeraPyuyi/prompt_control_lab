@@ -1,0 +1,13 @@
+{
+  "findings": [
+    {
+      "claim_boundary": "The association does not prove a unique hidden-state mechanism.",
+      "confidence": "medium",
+      "explanation": "The final checkpoint improved readout alignment while one strict-format slice regressed.",
+      "next_action": "Repeat across matched seeds and inspect strict-format failures.",
+      "observation": "Score +0.07; strict-format slice -0.02.",
+      "role": "mechanism"
+    }
+  ],
+  "status": "mixed"
+}

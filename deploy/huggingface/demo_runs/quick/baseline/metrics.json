@@ -1,0 +1,9 @@
+{
+  "by_slice": {
+    "arithmetic": {"count": 4, "mean_score": 0.5},
+    "format": {"count": 4, "mean_score": 0.75}
+  },
+  "count": 8,
+  "mean_score": 0.625,
+  "method": "baseline"
+}

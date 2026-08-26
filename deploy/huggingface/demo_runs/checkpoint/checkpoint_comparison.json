@@ -1,0 +1,12 @@
+{
+  "baseline": "checkpoint-initial",
+  "candidate": "checkpoint-final",
+  "metrics": {
+    "baseline_score": 0.61,
+    "candidate_score": 0.68,
+    "mean_delta": 0.07
+  },
+  "slice_regressions": [
+    {"delta": -0.02, "slice": "strict-format"}
+  ]
+}

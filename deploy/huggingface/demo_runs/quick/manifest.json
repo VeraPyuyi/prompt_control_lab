@@ -1,0 +1,24 @@
+{
+  "candidate_model": {
+    "confidence": "high",
+    "model_id": "demo-evaluator-v1",
+    "provider": "offline",
+    "source": "curated_demo"
+  },
+  "baseline_model": {
+    "confidence": "high",
+    "model_id": "demo-evaluator-v1",
+    "provider": "offline",
+    "source": "curated_demo"
+  },
+  "method": "candidate",
+  "metric": "exact_match",
+  "mode": "hf_demo_fixture",
+  "prompt": {
+    "prompt_hash": "demo:quick-v1",
+    "prompt_id": "hf-demo-candidate",
+    "prompt_version": "1"
+  },
+  "tool": "prompt_control_lab",
+  "tool_version": "0.2.0a1"
+}

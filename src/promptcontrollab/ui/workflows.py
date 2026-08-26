@@ -14,6 +14,7 @@ from promptcontrollab.evidence_card import write_evidence_card
 from promptcontrollab.external_evidence import ExternalTool, build_external_evidence
 from promptcontrollab.files import JsonDict, ensure_dir, write_json
 from promptcontrollab.gate import run_gate
+from promptcontrollab.hf_demo import is_hf_demo, require_hf_demo_workflow
 from promptcontrollab.history import index_history
 from promptcontrollab.ingest import (
     ingest_auto_results,
@@ -892,6 +893,8 @@ def _handle_execution(
     allow_external_outputs: bool = False,
 ) -> JsonDict:
     _validate_execution_mode(execution_mode)
+    if is_hf_demo():
+        require_hf_demo_workflow(name, outputs=outputs, safe_root=safe_root)
     path_warnings = _external_output_warnings(outputs, safe_root)
     payload: JsonDict = {
         "workflow": name,

@@ -1,0 +1,12 @@
+{
+  "capability_mode": "full-open-model",
+  "certificate_summary": {
+    "green_certificate": "surrogate_consistent",
+    "posterior_certificate": "certificate_verified",
+    "terminal_sensitivity": "empirical_only"
+  },
+  "claim_boundary": "The decision applies only to this curated low-dimensional surrogate example.",
+  "decision": "needs_review",
+  "next_action": "Collect matched multi-seed checkpoint evidence before promotion.",
+  "status": "needs_review"
+}

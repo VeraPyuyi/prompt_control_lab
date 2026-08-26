@@ -1,0 +1,15 @@
+{
+  "boundary_sigma_min": 0.42,
+  "certificate_level": "surrogate_consistent",
+  "check_state": "passed",
+  "claim_boundary": "Floating-point checks apply only to the supplied two-dimensional surrogate and sampled horizons.",
+  "explanation": "The surrogate remained hyperbolic and its scaled boundary matrices stayed away from singularity.",
+  "horizons": [
+    {"boundary_sigma_min": 0.49, "coefficient_recovery_residual": 1e-12, "horizon": 8, "passed": true},
+    {"boundary_sigma_min": 0.45, "coefficient_recovery_residual": 2e-12, "horizon": 16, "passed": true},
+    {"boundary_sigma_min": 0.42, "coefficient_recovery_residual": 2e-12, "horizon": 32, "passed": true}
+  ],
+  "hyperbolicity_margin": 0.2,
+  "next_action": "Provide conservative premise bounds before claiming a verified certificate.",
+  "observation": "Hyperbolicity margin 0.20; minimum sampled boundary singular value 0.42."
+}

@@ -1,0 +1,16 @@
+{
+  "checks": [
+    {
+      "name": "candidate_score",
+      "passed": true,
+      "reason": "Candidate score meets the demo policy threshold."
+    },
+    {
+      "name": "statistical_strength",
+      "passed": false,
+      "reason": "The curated eight-example demo is too small for a strong deployment claim."
+    }
+  ],
+  "plain_summary": "The candidate improved on this small fixture, but human review is required because statistical evidence is limited.",
+  "status": "needs_review"
+}

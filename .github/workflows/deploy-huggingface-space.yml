@@ -1,0 +1,160 @@
+name: Deploy Hugging Face Space
+
+on:
+  workflow_dispatch:
+  release:
+    types: [published]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-huggingface-space
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - name: Validate deployment secrets
+        shell: bash
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+          HF_SPACE_ID: ${{ secrets.HF_SPACE_ID }}
+        run: |
+          test -n "$HF_TOKEN" || { echo "HF_TOKEN is not configured"; exit 1; }
+          test -n "$HF_SPACE_ID" || { echo "HF_SPACE_ID is not configured"; exit 1; }
+      - name: Install build and verification dependencies
+        run: python -m pip install -e ".[dev,research,ui]" "huggingface_hub>=0.34"
+      - name: Verify the deployment source
+        run: |
+          python -m ruff check .
+          python -m mypy src tests
+          python -m pytest
+      - name: Build wheel and Space bundle
+        shell: bash
+        run: |
+          python -m build
+          wheel="$(find dist -maxdepth 1 -name '*.whl' -print -quit)"
+          test -n "$wheel"
+          python scripts/build_hf_space_bundle.py \
+            --project-root . \
+            --output .hf-space \
+            --wheel "$wheel" \
+            --source-commit "$GITHUB_SHA" \
+            --force
+      - name: Smoke test the Docker Space locally
+        shell: bash
+        run: |
+          container_id=""
+          cleanup() {
+            status=$?
+            if [ -n "$container_id" ]; then
+              if [ "$status" -ne 0 ]; then docker logs "$container_id"; fi
+              docker rm -f "$container_id" >/dev/null 2>&1 || true
+            fi
+            exit "$status"
+          }
+          trap cleanup EXIT
+          docker build --tag prompt-control-lab-hf:smoke .hf-space
+          container_id="$(docker run --detach --publish 127.0.0.1:7860:7860 prompt-control-lab-hf:smoke)"
+          for _ in $(seq 1 60); do
+            if curl --fail --silent http://127.0.0.1:7860/_stcore/health >/dev/null; then
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "Docker Space health check timed out" >&2
+          exit 1
+      - name: Upload the curated bundle
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+          HF_SPACE_ID: ${{ secrets.HF_SPACE_ID }}
+        run: |
+          python - <<'PY'
+          import os
+          from huggingface_hub import HfApi
+
+          api = HfApi(token=os.environ["HF_TOKEN"])
+          space_id = os.environ["HF_SPACE_ID"]
+          api.create_repo(
+              repo_id=space_id,
+              repo_type="space",
+              space_sdk="docker",
+              private=False,
+              space_hardware="cpu-basic",
+              exist_ok=True,
+          )
+          api.update_repo_settings(
+              repo_id=space_id,
+              repo_type="space",
+              private=False,
+          )
+          runtime = api.request_space_hardware(space_id, "cpu-basic")
+          if getattr(runtime, "volumes", None):
+              raise SystemExit("The public demo must not use persistent Space volumes")
+          api.upload_folder(
+              repo_id=space_id,
+              repo_type="space",
+              folder_path=".hf-space",
+              delete_patterns=["*"],
+              commit_message=f"Deploy prompt_control_lab {os.environ['GITHUB_SHA'][:12]}",
+          )
+          PY
+      - name: Verify runtime and deployed source version
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+          HF_SPACE_ID: ${{ secrets.HF_SPACE_ID }}
+        run: |
+          python - <<'PY'
+          import json
+          import os
+          import time
+          import urllib.request
+          from huggingface_hub import HfApi, hf_hub_download
+
+          api = HfApi(token=os.environ["HF_TOKEN"])
+          space_id = os.environ["HF_SPACE_ID"]
+          api.wait_for_space(space_id, timeout=1200)
+          runtime = api.get_space_runtime(space_id)
+          if str(runtime.stage) != "RUNNING":
+              raise SystemExit(f"Space runtime is not RUNNING: {runtime.stage}")
+          if str(runtime.hardware) != "cpu-basic":
+              raise SystemExit(f"Space is not running on cpu-basic: {runtime.hardware}")
+          requested_hardware = getattr(runtime, "requested_hardware", None)
+          if requested_hardware is not None and str(requested_hardware) != "cpu-basic":
+              raise SystemExit(f"Space requested unexpected hardware: {requested_hardware}")
+          if getattr(runtime, "volumes", None):
+              raise SystemExit("Space has persistent volumes configured")
+          info = api.repo_info(repo_id=space_id, repo_type="space")
+          if info.private:
+              raise SystemExit("Space is private; the public demo requires public visibility")
+          manifest_path = hf_hub_download(
+              repo_id=space_id,
+              repo_type="space",
+              filename="space_manifest.json",
+              token=os.environ["HF_TOKEN"],
+          )
+          with open(manifest_path, encoding="utf-8") as handle:
+              manifest = json.load(handle)
+          if manifest.get("source_commit") != os.environ["GITHUB_SHA"]:
+              raise SystemExit("Deployed Space manifest does not match the source commit")
+          host = f"https://{space_id.replace('/', '-')}.hf.space".lower()
+          health = f"{host}/_stcore/health"
+          last_error = None
+          for _ in range(20):
+              try:
+                  with urllib.request.urlopen(health, timeout=10) as response:
+                      if response.status == 200:
+                          print(f"Verified {host} at {manifest['source_commit']}")
+                          break
+              except Exception as exc:
+                  last_error = exc
+              time.sleep(15)
+          else:
+              raise SystemExit(f"Space health check failed: {last_error}")
+          PY

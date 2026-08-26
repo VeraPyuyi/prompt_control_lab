@@ -1,0 +1,13 @@
+{
+  "comparisons": [
+    {
+      "baseline_method": "baseline",
+      "bootstrap_ci": [0.0, 0.5],
+      "candidate_method": "candidate",
+      "holm_adjusted_p_value": 0.125,
+      "mean_delta": 0.25,
+      "permutation_p_value": 0.125
+    }
+  ],
+  "holm_family_size": 1
+}

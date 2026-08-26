@@ -1,0 +1,11 @@
+{
+  "certificate_level": "certificate_verified",
+  "check_state": "passed",
+  "claim_boundary": "The verified local existence check is limited to the named surrogate, bounds, and radius.",
+  "existence_radius": 0.0513,
+  "explanation": "The conservative residual, inverse-Jacobian, and local Lipschitz bounds satisfy the posterior condition.",
+  "h": 0.0192,
+  "neighborhood_margin": 0.1487,
+  "next_action": "Retain the bound provenance with the checkpoint decision.",
+  "observation": "h=0.0192 is below 0.5 and the existence radius remains inside the certified neighborhood."
+}

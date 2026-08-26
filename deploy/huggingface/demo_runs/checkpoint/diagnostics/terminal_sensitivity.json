@@ -1,0 +1,16 @@
+{
+  "certificate_level": "empirical_only",
+  "check_state": "passed",
+  "claim_boundary": "Finite-horizon sensitivity decay is empirical and does not prove a uniform theorem for the full model.",
+  "decay_rate": 0.18,
+  "explanation": "Early control sensitivity decreased as the terminal objective moved farther away.",
+  "next_action": "Repeat on real matched checkpoints and additional horizons.",
+  "observation": "Sensitivity followed an approximately exponential decay over four synthetic horizons.",
+  "r_squared": 0.96,
+  "records": [
+    {"distance_to_terminal": 8, "early_step": 0, "horizon": 8, "intervention_kind": "terminal_objective", "log_sensitivity": -1.44, "sensitivity": 0.237},
+    {"distance_to_terminal": 16, "early_step": 0, "horizon": 16, "intervention_kind": "terminal_objective", "log_sensitivity": -2.88, "sensitivity": 0.056},
+    {"distance_to_terminal": 24, "early_step": 0, "horizon": 24, "intervention_kind": "terminal_objective", "log_sensitivity": -4.32, "sensitivity": 0.013},
+    {"distance_to_terminal": 32, "early_step": 0, "horizon": 32, "intervention_kind": "terminal_objective", "log_sensitivity": -5.76, "sensitivity": 0.003}
+  ]
+}

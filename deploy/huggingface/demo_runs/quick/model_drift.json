@@ -1,0 +1,9 @@
+{
+  "current_model": {"model_id": "demo-evaluator-v1", "provider": "offline"},
+  "previous_model": {"model_id": "demo-evaluator-v1", "provider": "offline"},
+  "reason": "The same pinned offline evaluator identity was recorded.",
+  "risk": "low",
+  "same_model": true,
+  "same_prompt": false,
+  "warnings": []
+}

@@ -1,0 +1,25 @@
+{
+  "changed_files": ["src/parser.py", "tests/test_parser.py"],
+  "changed_lines": [
+    {"added": 12, "deleted": 3, "file": "src/parser.py", "type": "source"},
+    {"added": 18, "deleted": 0, "file": "tests/test_parser.py", "type": "test"}
+  ],
+  "config_files_changed": 0,
+  "dangerous_paths": [],
+  "deleted_test_files": [],
+  "dependency_files_changed": [],
+  "docs_files_changed": 0,
+  "generated_files_changed": [],
+  "human_review_required": true,
+  "lockfiles_changed": [],
+  "public_api_changed": false,
+  "secret_findings": [],
+  "source_files_changed": 1,
+  "test_files_changed": 1,
+  "test_results": [{"command": "pytest tests/test_parser.py", "exit_code": 0, "status": "passed"}],
+  "tests_passed": true,
+  "tests_run": ["pytest tests/test_parser.py"],
+  "touched_files": 2,
+  "unexpected_files": [],
+  "workflow_files_changed": []
+}

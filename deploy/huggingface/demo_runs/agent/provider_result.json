@@ -1,0 +1,12 @@
+{
+  "latency_ms": 1840,
+  "model_id": "deepseek-demo-model",
+  "provenance_evidence": [
+    {"confidence": "high", "model_id": "deepseek-demo-model", "source": "response.model", "type": "observed_response"}
+  ],
+  "provider": "deepseek",
+  "request_id": "redacted-demo-id",
+  "requested_model": "deepseek-demo-model",
+  "usage": {"input_tokens": 180, "output_tokens": 90, "total_tokens": 270},
+  "warnings": ["Curated fixture: no live provider request is made by this Space."]
+}

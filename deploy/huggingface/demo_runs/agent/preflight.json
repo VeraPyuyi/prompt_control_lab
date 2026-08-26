@@ -1,0 +1,6 @@
+{
+  "decision": "ask",
+  "required_review": true,
+  "risk_categories": ["missing_acceptance_criteria"],
+  "risk_level": "medium"
+}

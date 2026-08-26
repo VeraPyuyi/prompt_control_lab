@@ -1,0 +1,6 @@
+{
+  "boundary": "This curated event fixture demonstrates the ControlRun view and is not a live agent safety proof.",
+  "decision": "needs_review",
+  "next_action": "Review the scoped write before merging.",
+  "reasons": ["The write required confirmation", "Focused tests passed"]
+}

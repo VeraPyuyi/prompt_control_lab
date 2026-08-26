@@ -97,6 +97,7 @@ include = [
   "/README.zh.md",
   "/SECURITY.md",
   "/docs",
+  "/deploy",
   "/examples",
   "/plugins/deepseek-harness/COMPATIBILITY.md",
   "/plugins/deepseek-harness/README.md",

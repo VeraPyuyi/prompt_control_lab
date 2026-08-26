@@ -14,7 +14,8 @@
   bounded file edit, and a test process with exit code `0`.
 - Added public contribution, private vulnerability reporting, issue, pull request, and release
   inspection guidance.
+- Added a Docker Hugging Face Space bundle with session isolation, bounded JSON/JSONL imports,
+  curated public-safe artifacts, bilingual documentation, and manual/release deployment automation.
 
-Both required acceptance runs are complete. Publication remains blocked until the repository owner
-reviews the candidate, rotates the live-session credential, merges PR #3, and approves the Public
-visibility change and GitHub Pre-release.
+Both required acceptance runs are complete and the GitHub source is public. GitHub Pre-release,
+PyPI, and Hugging Face Space publication remain separate maintainer-controlled release steps.

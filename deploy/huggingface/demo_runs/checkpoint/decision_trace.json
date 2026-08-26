@@ -1,0 +1,22 @@
+{
+  "checks": [
+    {
+      "check": "terminal_sensitivity",
+      "evidence": ["diagnostics/terminal_sensitivity.json"],
+      "impact": "review",
+      "next_action": "Repeat on matched real checkpoints.",
+      "observed": "empirical_only",
+      "status": "passed",
+      "threshold": "empirical_only or stronger"
+    },
+    {
+      "check": "slice_regression",
+      "evidence": ["checkpoint_comparison.json"],
+      "impact": "review",
+      "next_action": "Inspect strict-format failures.",
+      "observed": -0.02,
+      "status": "triggered",
+      "threshold": -0.01
+    }
+  ]
+}

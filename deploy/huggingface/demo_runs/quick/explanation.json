@@ -1,0 +1,12 @@
+{
+  "deployment_recommendation": {
+    "label": "needs_review",
+    "reason": "The observed gain is promising, but the confidence interval reaches zero."
+  },
+  "evidence_strength": {
+    "level": "limited",
+    "summary": "This is a curated UI fixture, not a universal benchmark."
+  },
+  "next_action": "Repeat the paired evaluation on a larger withheld task set.",
+  "overall_summary": "The candidate scored higher on both demo slices, while uncertainty remains material."
+}

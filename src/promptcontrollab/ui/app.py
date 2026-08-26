@@ -13,6 +13,14 @@ from pathlib import Path
 from typing import Any, cast
 
 from promptcontrollab.files import JsonDict
+from promptcontrollab.hf_demo import (
+    DemoSession,
+    cleanup_expired_sessions,
+    is_hf_demo,
+    prepare_demo_session,
+    store_uploaded_artifact,
+    validate_uploaded_artifact,
+)
 from promptcontrollab.prompt_context import load_prompt_context
 from promptcontrollab.prompt_guard import guard_prompt
 from promptcontrollab.tool_choice import (
@@ -148,6 +156,36 @@ PRIMARY_VIEW_LABELS = {
         "evidence": "证据边界",
         "decision": "决策",
         "history": "历史",
+    },
+}
+
+HF_DEMO_TEXT = {
+    "en": {
+        "mode": "Public demo: CPU-only, session-isolated, and no external model calls.",
+        "subtitle": (
+            "Public demo artifacts are stored only in an isolated temporary server-side session; "
+            "no external model requests are made."
+        ),
+        "upload_title": "Import a session artifact",
+        "upload_help": "JSON or JSONL only, up to 5 MB. Files stay in this temporary session.",
+        "upload_run": "Run name",
+        "upload_button": "Validate and import",
+        "upload_ok": "Imported into this session",
+        "restricted": "Local write, Git, provider, plugin, bridge, and training workflows are disabled in the public demo.",
+        "guard_memory": "The public demo keeps this Prompt in browser-session memory and does not save it as a server artifact.",
+    },
+    "zh": {
+        "mode": "公共演示：仅使用 Space CPU，会话相互隔离，不调用任何外部模型。",
+        "subtitle": (
+            "公共演示 artifact 仅保存在隔离的临时服务器会话中；不会调用任何外部模型。"
+        ),
+        "upload_title": "导入当前会话的 artifact",
+        "upload_help": "仅支持不超过 5 MB 的 JSON 或 JSONL；文件只保存在当前临时会话。",
+        "upload_run": "Run 名称",
+        "upload_button": "校验并导入",
+        "upload_ok": "已导入当前会话",
+        "restricted": "公共演示已禁用本地写入工作流、Git、外部 Provider、插件、Bridge 和训练功能。",
+        "guard_memory": "公共演示只在浏览器会话内存中使用这条 Prompt，不会把原文保存为服务器 artifact。",
     },
 }
 
@@ -1644,28 +1682,49 @@ def main() -> None:
     query = _query_params(st)
     language = _sidebar_language(st, query)
     text = TEXT[language]
-    runs_dir = Path(str(st.sidebar.text_input(text["runs"], os.environ.get("PCL_UI_RUNS", "runs"))))
-    default_policy = os.environ.get("PCL_UI_POLICY", "")
-    policy_raw = st.sidebar.text_input(text["policy"], default_policy)
-    policy_path = Path(policy_raw) if policy_raw else None
-    project_config = os.environ.get("PCL_UI_CONFIG", "")
-    if project_config:
-        st.sidebar.caption(f"Project config: {project_config}")
-    execution_label = str(
-        st.sidebar.selectbox(
-            text["execution_mode"],
-            _choice_labels("execution_mode", language),
-            index=0,
+    deployment_mode = os.environ.get("PCL_DEPLOYMENT_MODE", "local")
+    if is_hf_demo(deployment_mode):
+        session = _prepare_hf_demo_session(st)
+        runs_dir = session.runs_dir
+        default_policy = os.environ.get("PCL_UI_POLICY", "")
+        policy_path = Path(default_policy) if default_policy else None
+        execution_mode = "confirm"
+        overwrite = False
+        allow_external_outputs = False
+        st.sidebar.info(HF_DEMO_TEXT[language]["mode"])
+        _render_hf_demo_upload(st, session, language)
+    else:
+        runs_dir = Path(
+            str(st.sidebar.text_input(text["runs"], os.environ.get("PCL_UI_RUNS", "runs")))
         )
+        default_policy = os.environ.get("PCL_UI_POLICY", "")
+        policy_raw = st.sidebar.text_input(text["policy"], default_policy)
+        policy_path = Path(policy_raw) if policy_raw else None
+        project_config = os.environ.get("PCL_UI_CONFIG", "")
+        if project_config:
+            st.sidebar.caption(f"Project config: {project_config}")
+        execution_label = str(
+            st.sidebar.selectbox(
+                text["execution_mode"],
+                _choice_labels("execution_mode", language),
+                index=0,
+            )
+        )
+        execution_mode = _choice_value("execution_mode", execution_label, language)
+        overwrite = bool(st.sidebar.checkbox(text["overwrite"], value=False))
+        allow_external_outputs = bool(
+            st.sidebar.checkbox(text["allow_external_outputs"], value=False)
+        )
+    hero_subtitle = (
+        HF_DEMO_TEXT[language]["subtitle"]
+        if is_hf_demo(deployment_mode)
+        else text["subtitle"]
     )
-    execution_mode = _choice_value("execution_mode", execution_label, language)
-    overwrite = bool(st.sidebar.checkbox(text["overwrite"], value=False))
-    allow_external_outputs = bool(st.sidebar.checkbox(text["allow_external_outputs"], value=False))
     st.markdown(
         (
             '<section class="pcl-hero">'
             f"<h1>{html.escape(text['title'])}</h1>"
-            f"<p>{html.escape(text['subtitle'])}</p>"
+            f"<p>{html.escape(hero_subtitle)}</p>"
             "</section>"
         ),
         unsafe_allow_html=True,
@@ -1701,6 +1760,7 @@ def main() -> None:
         execution_mode,
         overwrite,
         allow_external_outputs,
+        deployment_mode,
     )
 
 
@@ -1716,6 +1776,7 @@ def _render_view(
     execution_mode: str,
     overwrite: bool,
     allow_external_outputs: bool,
+    deployment_mode: str = "local",
 ) -> None:
     primary = _resolve_primary_view(name)
     if primary == "before":
@@ -1728,6 +1789,7 @@ def _render_view(
             query,
             runs_dir,
             overwrite,
+            deployment_mode,
         )
     elif primary == "run":
         _render_run_view(
@@ -1740,6 +1802,7 @@ def _render_view(
             execution_mode,
             overwrite,
             allow_external_outputs,
+            deployment_mode=deployment_mode,
         )
     elif primary == "mechanism":
         _render_mechanism_view(st, language, detail)
@@ -1764,6 +1827,7 @@ def _render_before_view(
     query: JsonDict,
     runs_dir: Path,
     overwrite: bool,
+    deployment_mode: str = "local",
 ) -> None:
     control_text = CONTROL_TEXT[language]
     view = deepseek_harness_view(detail)
@@ -1790,7 +1854,11 @@ def _render_before_view(
         if prompt_gates:
             st.markdown(f"### {control_text['prompt_gate']}")
             st.dataframe(prompt_gates, use_container_width=True, hide_index=True)
-    with st.expander(control_text["legacy_guard"], expanded=False):
+    demo_mode = is_hf_demo(deployment_mode)
+    guard_tab, tutorial_tab = st.tabs(
+        [control_text["legacy_guard"], control_text["legacy_tutorial"]]
+    )
+    with guard_tab:
         _render_guard_tab(
             st,
             text,
@@ -1799,8 +1867,9 @@ def _render_before_view(
             runs_dir,
             _truthy(query.get("demo")),
             overwrite,
+            persistence_enabled=not demo_mode,
         )
-    with st.expander(control_text["legacy_tutorial"], expanded=False):
+    with tutorial_tab:
         _render_tutorial_tab(st, text, language)
 
 
@@ -1814,6 +1883,8 @@ def _render_run_view(
     execution_mode: str,
     overwrite: bool,
     allow_external_outputs: bool,
+    *,
+    deployment_mode: str = "local",
 ) -> None:
     control_text = CONTROL_TEXT[language]
     view = deepseek_harness_view(detail)
@@ -1888,18 +1959,21 @@ def _render_run_view(
         if repeated:
             st.markdown(f"### {control_text['repeated_tools']}")
             st.dataframe(repeated, use_container_width=True, hide_index=True)
-    with st.expander(control_text["legacy_workflows"], expanded=False):
-        _render_workflows_tab(
-            st,
-            text,
-            language,
-            policy_path,
-            detail,
-            runs_dir,
-            execution_mode,
-            overwrite,
-            allow_external_outputs,
-        )
+    if is_hf_demo(deployment_mode):
+        st.info(HF_DEMO_TEXT[language]["restricted"])
+    else:
+        with st.expander(control_text["legacy_workflows"], expanded=False):
+            _render_workflows_tab(
+                st,
+                text,
+                language,
+                policy_path,
+                detail,
+                runs_dir,
+                execution_mode,
+                overwrite,
+                allow_external_outputs,
+            )
 
 
 def _render_why_view(st: Any, language: str, detail: JsonDict) -> None:
@@ -4047,6 +4121,7 @@ def _render_guard_tab(
     runs_dir: Path,
     run_demo: bool = False,
     overwrite: bool = False,
+    persistence_enabled: bool = True,
 ) -> None:
     prompt = st.text_area(
         text["prompt"],
@@ -4068,10 +4143,19 @@ def _render_guard_tab(
     token_mode = _choice_value("token_mode", token_mode_label, language)
     max_tokens_raw = columns[3].number_input(text["max_tokens"], min_value=0, value=0)
     max_tokens = int(max_tokens_raw) if max_tokens_raw else None
-    save_guard = bool(st.checkbox(text["save_guard"], value=False))
-    save_dir = Path(
-        st.text_input(text["save_guard_dir"], str(runs_dir / "guard-ui"), disabled=not save_guard)
-    )
+    if persistence_enabled:
+        save_guard = bool(st.checkbox(text["save_guard"], value=False))
+        save_dir = Path(
+            st.text_input(
+                text["save_guard_dir"],
+                str(runs_dir / "guard-ui"),
+                disabled=not save_guard,
+            )
+        )
+    else:
+        save_guard = False
+        save_dir = runs_dir / "guard-ui"
+        st.caption(HF_DEMO_TEXT[language]["guard_memory"])
     if st.button(text["run_guard"], type="primary") or run_demo:
         result = guard_prompt(
             prompt,
@@ -4410,6 +4494,62 @@ def _history_model_rows(runs: list[object]) -> list[JsonDict]:
 
 def _streamlit() -> Any:
     return cast(Any, importlib.import_module("streamlit"))
+
+
+def _prepare_hf_demo_session(st: Any) -> DemoSession:
+    """Return the isolated artifact workspace owned by this Streamlit session."""
+
+    base_dir = Path(os.environ.get("PCL_UI_RUNS", "/tmp/prompt_control_lab"))
+    state = st.session_state
+    session_id = state.get("pcl_hf_demo_session_id")
+    if not isinstance(session_id, str):
+        cleanup_expired_sessions(base_dir)
+        session_id = None
+    seed_raw = os.environ.get("PCL_HF_DEMO_SOURCE", "")
+    seed = Path(seed_raw) if seed_raw and session_id is None else None
+    session = prepare_demo_session(base_dir, seed_runs=seed, session_id=session_id)
+    state["pcl_hf_demo_session_id"] = session.session_id
+    return session
+
+
+def _render_hf_demo_upload(st: Any, session: DemoSession, language: str) -> None:
+    """Render the bounded JSON/JSONL importer for one public-demo session."""
+
+    labels = HF_DEMO_TEXT[language]
+    with st.sidebar.expander(labels["upload_title"], expanded=False):
+        st.caption(labels["upload_help"])
+        run_name = st.text_input(labels["upload_run"], "uploaded-run", key="hf_upload_run")
+        uploaded = st.file_uploader(
+            labels["upload_title"],
+            type=["json", "jsonl"],
+            accept_multiple_files=False,
+            key="hf_artifact_upload",
+            label_visibility="collapsed",
+        )
+        if st.button(labels["upload_button"], key="hf_upload_button"):
+            if uploaded is None:
+                st.warning(labels["upload_help"])
+                return
+            try:
+                content = uploaded.getvalue()
+                metadata = validate_uploaded_artifact(uploaded.name, content)
+                output = store_uploaded_artifact(
+                    session,
+                    run_name=run_name,
+                    filename=uploaded.name,
+                    content=content,
+                )
+            except (OSError, UnicodeError, ValueError) as exc:
+                st.error(str(exc))
+                return
+            st.success(f"{labels['upload_ok']}: {output.relative_to(session.root)}")
+            st.json(
+                {
+                    "format": metadata["format"],
+                    "record_count": metadata["record_count"],
+                    "size_bytes": metadata["size_bytes"],
+                }
+            )
 
 
 def _dict(value: object) -> JsonDict:

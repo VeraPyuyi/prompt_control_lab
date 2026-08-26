@@ -1,0 +1,25 @@
+{
+  "runs": [
+    {
+      "gate_status": "pass",
+      "mean_score": 0.625,
+      "model": {"model_id": "demo-evaluator-v1", "provider": "offline"},
+      "prompt_identity": {"prompt_hash": "demo:baseline-v1"},
+      "review_required": false,
+      "risk_categories": [],
+      "risk_level": "low",
+      "run_name": "baseline"
+    },
+    {
+      "gate_status": "needs_review",
+      "mean_score": 0.875,
+      "model": {"model_id": "demo-evaluator-v1", "provider": "offline"},
+      "prompt_identity": {"prompt_hash": "demo:quick-v1"},
+      "review_required": true,
+      "risk_categories": ["statistical_uncertainty"],
+      "risk_level": "medium",
+      "run_name": "candidate"
+    }
+  ],
+  "schema": "prompt_control_lab.history_index.v1"
+}

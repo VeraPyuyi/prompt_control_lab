@@ -1,0 +1,10 @@
+{
+  "agent": "deepseek-harness-fixture",
+  "authorization": "agent-scoped",
+  "model": "deepseek-demo-model",
+  "provider": "deepseek",
+  "run_id": "hf-demo-agent-run",
+  "schema": "prompt_control_lab.control_run.v1",
+  "session_id": "hf-demo-session",
+  "status": "completed"
+}
