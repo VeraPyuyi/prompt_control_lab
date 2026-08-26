@@ -2233,7 +2233,38 @@ def test_score_delta_ci_accepts_stats_json_comparisons(
     }
 
 
-def test_ui_control_certificate_rows_and_charts_use_recorded_artifacts(tmp_path: Path) -> None:
+def _fake_plotly_line_module() -> SimpleNamespace:
+    def line(
+        chart_rows: list[dict[str, object]],
+        *,
+        x: str,
+        y: str,
+        color: str,
+        **_kwargs: object,
+    ) -> SimpleNamespace:
+        grouped: dict[object, list[dict[str, object]]] = {}
+        for row in chart_rows:
+            grouped.setdefault(row.get(color), []).append(row)
+        traces = [
+            SimpleNamespace(
+                x=tuple(row[x] for row in rows),
+                y=tuple(row[y] for row in rows),
+                name=str(name),
+            )
+            for name, rows in grouped.items()
+        ]
+        return SimpleNamespace(
+            data=traces,
+            layout=SimpleNamespace(yaxis=SimpleNamespace(type=None)),
+        )
+
+    return SimpleNamespace(line=line)
+
+
+def test_ui_control_certificate_rows_and_charts_use_recorded_artifacts(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     run = tmp_path / "run"
     diagnostics = run / "diagnostics"
     _write_json(
@@ -2310,6 +2341,7 @@ def test_ui_control_certificate_rows_and_charts_use_recorded_artifacts(tmp_path:
     assert green_certificate_rows(detail)[0]["boundary_sigma_min"] == 0.8
     assert posterior_certificate_metrics(detail)["h"] == 0.1
 
+    monkeypatch.setattr(charts, "_plotly_express", _fake_plotly_line_module)
     terminal_figure = charts.terminal_sensitivity_decay(terminal_sensitivity_rows(detail))
     green_figure = charts.green_boundary_margin(green_certificate_rows(detail))
     assert list(terminal_figure.data[0].x) == [16, 32]
@@ -2350,7 +2382,10 @@ def test_ui_keeps_single_run_when_diagnostics_directory_contains_artifacts(
     assert list_runs(run) == [{"name": "quick", "path": str(run)}]
 
 
-def test_terminal_sensitivity_chart_uses_finite_log_values_for_zero_response() -> None:
+def test_terminal_sensitivity_chart_uses_finite_log_values_for_zero_response(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(charts, "_plotly_express", _fake_plotly_line_module)
     figure = charts.terminal_sensitivity_decay(
         [
             {
@@ -2368,7 +2403,10 @@ def test_terminal_sensitivity_chart_uses_finite_log_values_for_zero_response() -
     assert figure.layout.yaxis.type != "log"
 
 
-def test_terminal_sensitivity_chart_separates_intervention_and_model_groups() -> None:
+def test_terminal_sensitivity_chart_separates_intervention_and_model_groups(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(charts, "_plotly_express", _fake_plotly_line_module)
     figure = charts.terminal_sensitivity_decay(
         [
             {
