@@ -1,5 +1,6 @@
 import base64
 import json
+import math
 import subprocess
 import sys
 from pathlib import Path
@@ -23,6 +24,7 @@ from promptcontrollab.ui.data import (
     changed_line_rows,
     claim_check_summary,
     claim_evidence_ladder,
+    control_certificate_interpretation_rows,
     ecosystem_demo_rows,
     ecosystem_evidence_matrix_rows,
     ecosystem_market_map_rows,
@@ -36,6 +38,7 @@ from promptcontrollab.ui.data import (
     external_bridge_summary,
     filter_history_rows,
     first_comparison,
+    green_certificate_rows,
     guard_download_payloads,
     history_rows,
     list_runs,
@@ -44,6 +47,7 @@ from promptcontrollab.ui.data import (
     peoc_method_rows,
     peoc_status_summary,
     peoc_trajectory_rows,
+    posterior_certificate_metrics,
     prompt_asset_rows,
     prompt_asset_summary,
     prompt_optimizer_gap_rows,
@@ -59,6 +63,7 @@ from promptcontrollab.ui.data import (
     scaffold_check_action_rows,
     scaffold_check_issue_rows,
     scaffold_check_summary,
+    terminal_sensitivity_rows,
 )
 
 
@@ -1139,6 +1144,22 @@ def test_research_diagnostic_rows_summarize_paper_artifacts(tmp_path: Path) -> N
         run / "diagnostics" / "tv_soft.json",
         {"delta_vs_baseline": {"time_varying": 0.2}},
     )
+    _write_json(
+        run / "diagnostics" / "terminal_sensitivity.json",
+        {"check_state": "passed", "decay_rate": 0.08, "r_squared": 0.99},
+    )
+    _write_json(
+        run / "diagnostics" / "green_certificate.json",
+        {
+            "check_state": "passed",
+            "hyperbolicity_margin": 0.5,
+            "boundary_sigma_min": 0.9,
+        },
+    )
+    _write_json(
+        run / "diagnostics" / "posterior_certificate.json",
+        {"check_state": "passed", "h": 0.1, "existence_radius": 0.12},
+    )
 
     detail = load_run_detail(run)
     rows = research_diagnostic_rows(detail)
@@ -1149,9 +1170,12 @@ def test_research_diagnostic_rows_summarize_paper_artifacts(tmp_path: Path) -> N
         "trajectory",
         "Riccati surrogate",
         "tv-soft lane",
+        "terminal sensitivity",
+        "Green certificate",
+        "posterior certificate",
     ]
     assert all(row["status"] == "available" for row in rows)
-    assert research_status_counts(detail) == {"available": 5}
+    assert research_status_counts(detail) == {"available": 8}
 
 
 def test_research_insight_rows_explain_diagnostics_in_both_languages(tmp_path: Path) -> None:
@@ -1191,6 +1215,7 @@ def test_research_at_a_glance_rows_are_localized(tmp_path: Path) -> None:
             "at_a_glance": {
                 "mode": "demo",
                 "diagnostics_ready": "4/4",
+                "control_certificates_ready": "3/3",
                 "hidden_state_input": "present",
                 "evidence_recommendation": "share_bundle",
                 "evidence_tier": "tier_4_full_research_diagnostics",
@@ -1208,9 +1233,11 @@ def test_research_at_a_glance_rows_are_localized(tmp_path: Path) -> None:
 
     assert english[0] == {"field": "Mode", "value": "demo"}
     assert {"field": "Open first", "value": "research_bundle.html"} in english
+    assert {"field": "Control certificates ready", "value": "3/3"} in english
     assert {"field": "Next action", "value": "Share the research bundle."} in english
     assert chinese[0] == {"field": "模式", "value": "demo"}
     assert {"field": "先打开", "value": "research_bundle.html"} in chinese
+    assert {"field": "控制证书覆盖", "value": "3/3"} in chinese
     assert {"field": "下一步", "value": "Share the research bundle."} in chinese
 
 
@@ -2203,6 +2230,170 @@ def test_score_delta_ci_accepts_stats_json_comparisons(
         "type": "data",
         "array": [0.3],
         "arrayminus": [0.2],
+    }
+
+
+def test_ui_control_certificate_rows_and_charts_use_recorded_artifacts(tmp_path: Path) -> None:
+    run = tmp_path / "run"
+    diagnostics = run / "diagnostics"
+    _write_json(
+        diagnostics / "terminal_sensitivity.json",
+        {
+            "certificate_level": "empirical_only",
+            "check_state": "passed",
+            "observation": "Sensitivity decays with distance.",
+            "explanation": "Terminal influence is smaller at earlier steps.",
+            "claim_boundary": "Does not prove a uniform full-model bound.",
+            "next_action": "Check Green transversality.",
+            "records": [
+                {
+                    "horizon": 16,
+                    "early_step": 0,
+                    "distance_to_terminal": 16,
+                    "sensitivity": 0.2,
+                    "log_sensitivity": -1.609,
+                },
+                {
+                    "horizon": 32,
+                    "early_step": 0,
+                    "distance_to_terminal": 32,
+                    "sensitivity": 0.05,
+                    "log_sensitivity": -2.996,
+                },
+            ],
+        },
+    )
+    _write_json(
+        diagnostics / "green_certificate.json",
+        {
+            "certificate_level": "surrogate_consistent",
+            "check_state": "passed",
+            "observation": "Boundary margins remain positive.",
+            "explanation": "The reduced system is hyperbolic and transverse.",
+            "claim_boundary": "Does not prove the full language model.",
+            "next_action": "Retain the surrogate premises.",
+            "hyperbolicity_margin": 0.4,
+            "horizons": [
+                {"horizon": 16, "boundary_sigma_min": 0.8},
+                {"horizon": 32, "boundary_sigma_min": 0.7},
+            ],
+        },
+    )
+    _write_json(
+        diagnostics / "posterior_certificate.json",
+        {
+            "certificate_level": "surrogate_consistent",
+            "check_state": "passed",
+            "observation": "The local scalar inequalities close.",
+            "explanation": "A scoped local existence radius is supported.",
+            "claim_boundary": "Does not prove global optimality.",
+            "next_action": "Keep the conservative bounds.",
+            "h": 0.1,
+            "existence_radius": 0.2,
+            "neighborhood_margin": 0.3,
+        },
+    )
+
+    detail = load_run_detail(run)
+    interpretation = control_certificate_interpretation_rows(detail, "zh")
+
+    assert {row["adapter"] for row in interpretation} == {
+        "terminal_sensitivity",
+        "green_certificate",
+        "posterior_certificate",
+    }
+    assert all(
+        {"observed", "explains", "does_not_prove", "next_action"} <= set(row)
+        for row in interpretation
+    )
+    assert terminal_sensitivity_rows(detail)[1]["horizon"] == 32
+    assert green_certificate_rows(detail)[0]["boundary_sigma_min"] == 0.8
+    assert posterior_certificate_metrics(detail)["h"] == 0.1
+
+    terminal_figure = charts.terminal_sensitivity_decay(terminal_sensitivity_rows(detail))
+    green_figure = charts.green_boundary_margin(green_certificate_rows(detail))
+    assert list(terminal_figure.data[0].x) == [16, 32]
+    assert list(terminal_figure.data[0].y) == [-1.609, -2.996]
+    assert list(green_figure.data[0].y) == [0.8, 0.7]
+
+
+def test_ui_discovers_standalone_control_certificate_runs(tmp_path: Path) -> None:
+    runs = tmp_path / "runs"
+    terminal = runs / "terminal"
+    _write_json(
+        terminal / "terminal_sensitivity.json",
+        {
+            "schema": "prompt_control_lab.terminal_sensitivity.v1",
+            "kind": "terminal_sensitivity",
+            "check_state": "passed",
+            "certificate_level": "empirical_only",
+            "records": [],
+        },
+    )
+
+    assert list_runs(runs) == [{"name": "terminal", "path": str(terminal)}]
+    detail = load_run_detail(terminal)
+    assert detail["diagnostics"]["terminal_sensitivity"]["check_state"] == "passed"
+    assert "terminal_sensitivity.json" in detail["artifacts"]
+
+
+def test_ui_keeps_single_run_when_diagnostics_directory_contains_artifacts(
+    tmp_path: Path,
+) -> None:
+    run = tmp_path / "quick"
+    _write_json(run / "manifest.json", {"tool": "prompt_control_lab"})
+    _write_json(
+        run / "diagnostics/terminal_sensitivity.json",
+        {"check_state": "passed", "certificate_level": "empirical_only"},
+    )
+
+    assert list_runs(run) == [{"name": "quick", "path": str(run)}]
+
+
+def test_terminal_sensitivity_chart_uses_finite_log_values_for_zero_response() -> None:
+    figure = charts.terminal_sensitivity_decay(
+        [
+            {
+                "horizon": 16,
+                "early_step": 0,
+                "distance_to_terminal": 16,
+                "sensitivity": 0.0,
+                "log_sensitivity": math.log(1e-15),
+                "intervention_kind": "terminal_objective",
+            }
+        ]
+    )
+
+    assert list(figure.data[0].y) == [pytest.approx(math.log(1e-15))]
+    assert figure.layout.yaxis.type != "log"
+
+
+def test_terminal_sensitivity_chart_separates_intervention_and_model_groups() -> None:
+    figure = charts.terminal_sensitivity_decay(
+        [
+            {
+                "horizon": horizon,
+                "early_step": 0,
+                "distance_to_terminal": horizon,
+                "sensitivity": sensitivity,
+                "log_sensitivity": math.log(sensitivity),
+                "intervention_kind": intervention,
+                "checkpoint": checkpoint,
+                "model": model,
+            }
+            for intervention, checkpoint, model, horizon, sensitivity in (
+                ("reward", "a", "m1", 8, 0.5),
+                ("reward", "a", "m1", 16, 0.25),
+                ("readout", "b", "m2", 8, 0.8),
+                ("readout", "b", "m2", 16, 0.7),
+            )
+        ]
+    )
+
+    assert len(figure.data) == 2
+    assert {trace.name for trace in figure.data} == {
+        "reward | t=0 | a | m1",
+        "readout | t=0 | b | m2",
     }
 
 

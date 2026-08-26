@@ -41,6 +41,12 @@ _PROMPT_REACH_PATHS = tuple(
     for path in (f"{name}.json", f"diagnostics/{name}.json")
 )
 
+_CONTROL_CERTIFICATE_PATHS = tuple(
+    path
+    for name in ("terminal_sensitivity", "green_certificate", "posterior_certificate")
+    for path in (f"{name}.json", f"diagnostics/{name}.json")
+)
+
 RUN_ARTIFACTS = [
     *CONTROL_ARTIFACTS,
     "manifest.json",
@@ -66,6 +72,7 @@ RUN_ARTIFACTS = [
     "mechanism_attribution.json",
     "decision_trace.json",
     *_PROMPT_REACH_PATHS,
+    *_CONTROL_CERTIFICATE_PATHS,
     "research_bundle.json",
     "research_bundle.html",
     "research_overview.svg",
@@ -120,6 +127,7 @@ RUN_LEVEL_ARTIFACTS = [
     "mechanism_attribution.json",
     "decision_trace.json",
     *_PROMPT_REACH_PATHS,
+    *_CONTROL_CERTIFICATE_PATHS,
     "research_bundle.json",
     "research_bundle.html",
     "research_overview.svg",
@@ -151,6 +159,14 @@ RUN_LEVEL_ARTIFACTS = [
     "eval_scaffold/scaffold_check.html",
 ]
 
+_INTERNAL_RUN_DIRECTORIES = {
+    "baseline",
+    "candidate",
+    "diagnostics",
+    "eval_scaffold",
+    "inputs",
+}
+
 
 def list_runs(runs_dir: Path) -> list[JsonDict]:
     """List run directories under ``runs_dir``."""
@@ -159,7 +175,11 @@ def list_runs(runs_dir: Path) -> list[JsonDict]:
         return []
     runs: list[JsonDict] = []
     for child in sorted(runs_dir.iterdir(), key=lambda path: path.name):
-        if child.is_dir() and _has_any_artifact(child):
+        if (
+            child.is_dir()
+            and child.name not in _INTERNAL_RUN_DIRECTORIES
+            and _has_any_artifact(child)
+        ):
             runs.append({"name": child.name, "path": str(child)})
     if runs:
         return runs
@@ -313,6 +333,153 @@ def interpretability_rows(detail: JsonDict) -> list[JsonDict]:
             }
         )
     return rows
+
+
+def control_certificate_interpretation_rows(
+    detail: JsonDict,
+    language: str = "en",
+) -> list[JsonDict]:
+    """Return bounded interpretation records for the three control certificates."""
+
+    diagnostics_value = detail.get("diagnostics")
+    diagnostics = diagnostics_value if isinstance(diagnostics_value, dict) else {}
+    labels = {
+        "en": {
+            "terminal_sensitivity": "Terminal sensitivity",
+            "green_certificate": "Green certificate",
+            "posterior_certificate": "Posterior certificate",
+        },
+        "zh": {
+            "terminal_sensitivity": "终端敏感度",
+            "green_certificate": "Green 边界证书",
+            "posterior_certificate": "局部后验证书",
+        },
+    }
+    lang = "zh" if language == "zh" else "en"
+    roles = {
+        "terminal_sensitivity": "stability",
+        "green_certificate": "stability",
+        "posterior_certificate": "uncertainty",
+    }
+    rows: list[JsonDict] = []
+    for name in ("terminal_sensitivity", "green_certificate", "posterior_certificate"):
+        value = diagnostics.get(name)
+        if not isinstance(value, dict) or not value:
+            continue
+        level = str(value.get("certificate_level") or "insufficient_evidence")
+        rows.append(
+            {
+                "adapter": name,
+                "diagnostic": labels[lang][name],
+                "role": roles[name],
+                "status": value.get("check_state") or "unknown",
+                "confidence": _certificate_confidence(level),
+                "certificate_level": level,
+                "observed": value.get("observation") or _certificate_observation(name, value),
+                "explains": value.get("explanation") or "A scoped control signal was recorded.",
+                "does_not_prove": value.get("claim_boundary")
+                or "This result does not prove the full language model.",
+                "next_action": value.get("next_action")
+                or "Retain the artifact and inspect its premise record.",
+            }
+        )
+    return rows
+
+
+def terminal_sensitivity_rows(detail: JsonDict) -> list[JsonDict]:
+    """Return terminal-sensitivity records suitable for a distance-decay chart."""
+
+    payload = _control_certificate_payload(detail, "terminal_sensitivity")
+    records = payload.get("records")
+    rows = [cast(JsonDict, row) for row in records if isinstance(row, dict)] if isinstance(
+        records, list
+    ) else []
+    return sorted(
+        [
+            {
+                "horizon": row.get("horizon"),
+                "early_step": row.get("early_step"),
+                "distance_to_terminal": row.get("distance_to_terminal"),
+                "sensitivity": row.get("sensitivity"),
+                "log_sensitivity": row.get("log_sensitivity"),
+                "intervention_kind": row.get("intervention_kind"),
+                "checkpoint": row.get("checkpoint"),
+                "model": row.get("model"),
+            }
+            for row in rows
+        ],
+        key=lambda row: (
+            int(row.get("distance_to_terminal") or 0),
+            int(row.get("early_step") or 0),
+        ),
+    )
+
+
+def green_certificate_rows(detail: JsonDict) -> list[JsonDict]:
+    """Return sampled Green boundary margins for charting."""
+
+    payload = _control_certificate_payload(detail, "green_certificate")
+    horizons = payload.get("horizons")
+    rows = [cast(JsonDict, row) for row in horizons if isinstance(row, dict)] if isinstance(
+        horizons, list
+    ) else []
+    return sorted(
+        [
+            {
+                "horizon": row.get("horizon"),
+                "boundary_sigma_min": row.get("boundary_sigma_min"),
+                "recovery_residual": row.get("coefficient_recovery_residual"),
+                "passed": row.get("passed"),
+            }
+            for row in rows
+        ],
+        key=lambda row: int(row.get("horizon") or 0),
+    )
+
+
+def posterior_certificate_metrics(detail: JsonDict) -> JsonDict:
+    """Return the local posterior scalar margins shown by the dashboard."""
+
+    payload = _control_certificate_payload(detail, "posterior_certificate")
+    return {
+        "certificate_level": payload.get("certificate_level"),
+        "check_state": payload.get("check_state"),
+        "h": payload.get("h"),
+        "existence_radius": payload.get("existence_radius"),
+        "neighborhood_margin": payload.get("neighborhood_margin"),
+    }
+
+
+def _control_certificate_payload(detail: JsonDict, name: str) -> JsonDict:
+    diagnostics = detail.get("diagnostics")
+    if not isinstance(diagnostics, dict):
+        return {}
+    payload = diagnostics.get(name)
+    return payload if isinstance(payload, dict) else {}
+
+
+def _certificate_confidence(level: str) -> str:
+    return {
+        "certificate_verified": "high",
+        "surrogate_consistent": "medium",
+        "empirical_only": "low",
+        "not_applicable": "not_applicable",
+        "insufficient_evidence": "unknown",
+    }.get(level, "unknown")
+
+
+def _certificate_observation(name: str, payload: JsonDict) -> str:
+    if name == "terminal_sensitivity":
+        return f"decay_rate={payload.get('decay_rate')}; R2={payload.get('r_squared')}"
+    if name == "green_certificate":
+        return (
+            f"spectral_gap={payload.get('hyperbolicity_margin')}; "
+            f"sigma_min={payload.get('boundary_sigma_min')}"
+        )
+    return (
+        f"h={payload.get('h')}; radius={payload.get('existence_radius')}; "
+        f"margin={payload.get('neighborhood_margin')}"
+    )
 
 
 def prompt_reach_interpretation_rows(
@@ -1367,6 +1534,24 @@ def research_diagnostic_rows(detail: JsonDict) -> list[JsonDict]:
             "Time-varying control structure",
             _tv_soft_signal,
         ),
+        (
+            "terminal_sensitivity",
+            "terminal sensitivity",
+            "Early-control response to terminal perturbations",
+            _terminal_certificate_signal,
+        ),
+        (
+            "green_certificate",
+            "Green certificate",
+            "Hyperbolic splitting and boundary transversality",
+            _green_certificate_signal,
+        ),
+        (
+            "posterior_certificate",
+            "posterior certificate",
+            "Local residual and derivative bound check",
+            _posterior_certificate_signal,
+        ),
     ]
     rows: list[JsonDict] = []
     for key, label, meaning, signal_fn in specs:
@@ -1447,6 +1632,7 @@ def research_at_a_glance_rows(detail: JsonDict, language: str = "en") -> list[Js
         "en": {
             "mode": "Mode",
             "diagnostics_ready": "Diagnostics ready",
+            "control_certificates_ready": "Control certificates ready",
             "hidden_state_input": "Hidden-state input",
             "evidence_recommendation": "Evidence recommendation",
             "evidence_tier": "Evidence tier",
@@ -1458,6 +1644,7 @@ def research_at_a_glance_rows(detail: JsonDict, language: str = "en") -> list[Js
         "zh": {
             "mode": "模式",
             "diagnostics_ready": "诊断覆盖",
+            "control_certificates_ready": "控制证书覆盖",
             "hidden_state_input": "Hidden-state 输入",
             "evidence_recommendation": "证据建议",
             "evidence_tier": "证据层级",
@@ -1471,6 +1658,7 @@ def research_at_a_glance_rows(detail: JsonDict, language: str = "en") -> list[Js
     ordered_keys = [
         "mode",
         "diagnostics_ready",
+        "control_certificates_ready",
         "hidden_state_input",
         "evidence_recommendation",
         "evidence_tier",
@@ -2170,6 +2358,27 @@ def _tv_soft_signal(payload: JsonDict) -> str:
         return f"best delta={best_key}:{deltas.get(best_key)}"
     means = payload.get("method_means")
     return f"method means={len(means) if isinstance(means, dict) else 0}"
+
+
+def _terminal_certificate_signal(payload: JsonDict) -> str:
+    return (
+        f"state={payload.get('check_state')}; alpha={payload.get('decay_rate')}; "
+        f"R2={payload.get('r_squared')}"
+    )
+
+
+def _green_certificate_signal(payload: JsonDict) -> str:
+    return (
+        f"state={payload.get('check_state')}; gap={payload.get('hyperbolicity_margin')}; "
+        f"sigma_min={payload.get('boundary_sigma_min')}"
+    )
+
+
+def _posterior_certificate_signal(payload: JsonDict) -> str:
+    return (
+        f"state={payload.get('check_state')}; h={payload.get('h')}; "
+        f"radius={payload.get('existence_radius')}"
+    )
 
 
 def _research_label(key: str, language: str) -> str:

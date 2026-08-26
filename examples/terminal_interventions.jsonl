@@ -1,0 +1,4 @@
+{"intervention_kind":"terminal_objective","horizon":8,"early_step":0,"perturbation_norm":1.0,"control_delta_norm":0.6703200460,"seed":0,"checkpoint":"example"}
+{"intervention_kind":"terminal_objective","horizon":16,"early_step":0,"perturbation_norm":1.0,"control_delta_norm":0.4493289641,"seed":0,"checkpoint":"example"}
+{"intervention_kind":"terminal_objective","horizon":32,"early_step":0,"perturbation_norm":1.0,"control_delta_norm":0.2018965180,"seed":0,"checkpoint":"example"}
+{"intervention_kind":"terminal_objective","horizon":64,"early_step":0,"perturbation_norm":1.0,"control_delta_norm":0.0407622040,"seed":0,"checkpoint":"example"}

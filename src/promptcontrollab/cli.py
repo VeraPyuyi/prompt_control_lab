@@ -44,6 +44,7 @@ from promptcontrollab.external_evidence import (
 )
 from promptcontrollab.files import JsonDict, ensure_dir, read_json, write_json
 from promptcontrollab.gate import run_gate
+from promptcontrollab.green_certificate import analyze_green_certificate
 from promptcontrollab.harness_integration import (
     doctor_harness,
     finalize_harness_run,
@@ -69,6 +70,7 @@ from promptcontrollab.peoc_import import (
     import_peoc_bundle,
 )
 from promptcontrollab.plugin_installer import install_plugin
+from promptcontrollab.posterior_certificate import analyze_posterior_certificate
 from promptcontrollab.posttrain_export import export_posttrain_pilot
 from promptcontrollab.posttrain_gate import run_posttrain_gate
 from promptcontrollab.posttrain_pilot import (
@@ -119,6 +121,7 @@ from promptcontrollab.soft_hard import analyze_soft_hard
 from promptcontrollab.splitting import load_tasks, make_split, write_split
 from promptcontrollab.statistics import compare_prediction_files
 from promptcontrollab.templates import write_example_project, write_external_examples
+from promptcontrollab.terminal_sensitivity import analyze_terminal_sensitivity
 from promptcontrollab.tool_choice import (
     adoption_path_rows,
     choose_tool_for_need,
@@ -1581,6 +1584,61 @@ def build_parser() -> argparse.ArgumentParser:
         help="With --verify, return a non-zero exit code when bundle verification does not pass.",
     )
     research_bundle_parser.set_defaults(func=_cmd_research_bundle)
+
+    terminal_parser = subcommands.add_parser(
+        "terminal-sensitivity",
+        help="Measure early-control sensitivity to terminal objective or readout changes.",
+    )
+    terminal_source = terminal_parser.add_mutually_exclusive_group(required=True)
+    terminal_source.add_argument(
+        "--records",
+        type=Path,
+        help="JSONL intervention records.",
+    )
+    terminal_source.add_argument(
+        "--surrogate",
+        type=Path,
+        help="NPZ low-dimensional boundary-value surrogate.",
+    )
+    terminal_parser.add_argument("--horizon", type=int, action="append", dest="horizons")
+    terminal_parser.add_argument(
+        "--early-step",
+        type=int,
+        action="append",
+        dest="early_steps",
+    )
+    terminal_parser.add_argument("--bootstrap-samples", type=int, default=1000)
+    terminal_parser.add_argument("--out", type=Path, required=True)
+    terminal_parser.set_defaults(func=_cmd_terminal_sensitivity)
+
+    green_parser = subcommands.add_parser(
+        "green-certificate",
+        help="Check Green-response hyperbolicity and boundary transversality on a surrogate.",
+    )
+    green_parser.add_argument("--surrogate", type=Path, required=True)
+    green_parser.add_argument(
+        "--horizon",
+        type=int,
+        action="append",
+        dest="horizons",
+        required=True,
+    )
+    green_parser.add_argument(
+        "--premises",
+        type=Path,
+        default=None,
+        help="Optional conservative premise manifest for a scoped verified certificate.",
+    )
+    green_parser.add_argument("--out", type=Path, required=True)
+    green_parser.set_defaults(func=_cmd_green_certificate)
+
+    posterior_parser = subcommands.add_parser(
+        "posterior-certificate",
+        help="Check local posterior existence conditions from conservative scalar bounds.",
+    )
+    posterior_parser.add_argument("--input", type=Path, required=True)
+    posterior_parser.add_argument("--out", type=Path, required=True)
+    posterior_parser.set_defaults(func=_cmd_posterior_certificate)
 
     diagnose_parser = subcommands.add_parser(
         "diagnose",
@@ -3799,12 +3857,18 @@ def _research_diagnostic_labels(*, language: str = "en") -> dict[str, str]:
             "trajectory": "hidden-state trajectory (隐藏状态轨迹)",
             "riccati": "Riccati surrogate (降维控制论替代模型)",
             "tv_soft": "time-varying soft-control (时变 soft prompt 控制)",
+            "terminal_sensitivity": "终端敏感度衰减",
+            "green_certificate": "Green 边界证书",
+            "posterior_certificate": "局部后验证书",
         }
     return {
         "soft_hard": "soft-hard gap",
         "trajectory": "hidden-state trajectory",
         "riccati": "Riccati surrogate",
         "tv_soft": "time-varying soft-control",
+        "terminal_sensitivity": "terminal sensitivity decay",
+        "green_certificate": "Green boundary certificate",
+        "posterior_certificate": "local posterior certificate",
     }
 
 
@@ -3845,6 +3909,7 @@ def _research_cli_summary_lines(
     at_a_glance = payload.get("at_a_glance")
     summary = at_a_glance if isinstance(at_a_glance, dict) else {}
     diagnostics_ready = summary.get("diagnostics_ready", "unknown")
+    control_certificates_ready = summary.get("control_certificates_ready", "unknown")
     claim_status = summary.get("claim_status", "unknown")
     evidence_tier = summary.get("evidence_tier", "unknown")
     readable_tier = _readable_evidence_tier(str(evidence_tier), language=language)
@@ -3852,7 +3917,10 @@ def _research_cli_summary_lines(
     open_first = summary.get("open_first")
     if language == "zh":
         lines = [
-            (f"概览: 诊断={diagnostics_ready}; 主张检查={claim_status}; 证据层级={readable_tier}"),
+            (
+                f"概览: 诊断={diagnostics_ready}; 控制证书={control_certificates_ready}; "
+                f"主张检查={claim_status}; 证据层级={readable_tier}"
+            ),
         ]
         if isinstance(open_first, str) and open_first:
             open_path = (
@@ -3866,7 +3934,8 @@ def _research_cli_summary_lines(
         (
             "At a glance: "
             f"diagnostics={diagnostics_ready}; claim={claim_status}; "
-            f"evidence tier={readable_tier}"
+            f"evidence tier={readable_tier}; "
+            f"control certificates={control_certificates_ready}"
         ),
     ]
     if isinstance(open_first, str) and open_first:
@@ -3953,6 +4022,33 @@ def _cmd_diagnose(args: argparse.Namespace) -> None:
         )
     )
     print("\n".join(_research_output_guide_lines(summary_dir_path, language=args.language)))
+
+
+def _cmd_terminal_sensitivity(args: argparse.Namespace) -> None:
+    payload = analyze_terminal_sensitivity(
+        records_path=args.records,
+        surrogate_path=args.surrogate,
+        horizons=args.horizons,
+        early_steps=args.early_steps,
+        bootstrap_samples=args.bootstrap_samples,
+        out_dir=args.out,
+    )
+    print(json.dumps(payload, indent=2, ensure_ascii=False, sort_keys=True))
+
+
+def _cmd_green_certificate(args: argparse.Namespace) -> None:
+    payload = analyze_green_certificate(
+        surrogate_path=args.surrogate,
+        horizons=args.horizons,
+        premises_path=args.premises,
+        out_dir=args.out,
+    )
+    print(json.dumps(payload, indent=2, ensure_ascii=False, sort_keys=True))
+
+
+def _cmd_posterior_certificate(args: argparse.Namespace) -> None:
+    payload = analyze_posterior_certificate(input_path=args.input, out_dir=args.out)
+    print(json.dumps(payload, indent=2, ensure_ascii=False, sort_keys=True))
 
 
 def _cmd_gap_status(args: argparse.Namespace) -> None:

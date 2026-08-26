@@ -10,12 +10,13 @@ pcl posttrain-gate \
   --out runs/posttrain-gate
 ```
 
-## What each checkpoint directory needs
+## Core artifacts
+
+For the full-open-model profile, both checkpoint directories provide:
 
 ```text
 manifest.json
 metrics.json
-stats.json
 diagnostics/trajectory.json
 diagnostics/soft_hard.json
 diagnostics/generation_mismatch.json
@@ -25,6 +26,15 @@ diagnostics/readout_alignment.json
 diagnostics/prompt_routing.json
 diagnostics/prompt_projection.json
 diagnostics/prompt_stability.json
+```
+
+The candidate additionally provides `stats.json`. Black-box runs use a smaller capability-aware
+subset. The following control-certificate artifacts are optional unless policy requires them:
+
+```text
+diagnostics/terminal_sensitivity.json
+diagnostics/green_certificate.json
+diagnostics/posterior_certificate.json
 ```
 
 The five prompt diagnostic files answer different questions:
@@ -53,6 +63,8 @@ For SFT, DPO, PPO, or GRPO checkpoints that do not deploy a learned soft prompt,
 ```
 
 This is more accurate than inventing a low projection risk.
+
+The three control-certificate artifacts distinguish an empirical terminal-response trend, a finite-dimensional Green boundary check, and a local posterior bound check. Configure `require_terminal_sensitivity`, `require_green_certificate`, `require_posterior_certificate`, or `minimum_control_certificate_level` only when the checkpoint capability and evidence protocol justify them. See the [control certificate guide](control_certificates.en.md).
 
 ## Decisions
 

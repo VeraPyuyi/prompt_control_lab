@@ -14,6 +14,9 @@ max_readout_alignment_gap: 0.1
 max_prompt_projection_gap: 0.5
 max_prompt_stability_drift_increase: 0.05
 require_prompt_routing_evidence: false
+require_terminal_sensitivity: false
+require_green_certificate: false
+require_posterior_certificate: false
 require_split_hash_match: true
 require_model_match: true
 require_training_method_match: true

@@ -44,6 +44,78 @@ def control_signal_bar(
     return px.bar(chart_rows, x="signal", y="value", title=title)
 
 
+def terminal_sensitivity_decay(
+    rows: list[JsonDict],
+    *,
+    title: str = "Terminal sensitivity decay",
+) -> Any:
+    """Plot sensitivity against distance from the terminal boundary."""
+
+    px = _plotly_express()
+    chart_rows = [
+        {
+            **row,
+            "series": " | ".join(
+                [
+                    str(row.get("intervention_kind") or "terminal_objective"),
+                    f"t={row.get('early_step') if row.get('early_step') is not None else '?'}",
+                    str(row.get("checkpoint") or "-"),
+                    str(row.get("model") or "-"),
+                ]
+            ),
+        }
+        for row in rows
+        if _number(row.get("distance_to_terminal")) is not None
+        and _number(row.get("log_sensitivity")) is not None
+    ]
+    if not chart_rows:
+        chart_rows = [
+            {
+                "distance_to_terminal": 0,
+                "log_sensitivity": 0.0,
+                "sensitivity": 1.0,
+                "early_step": 0,
+                "intervention_kind": "no evidence",
+                "series": "no evidence | t=0 | - | -",
+            }
+        ]
+    return px.line(
+        chart_rows,
+        x="distance_to_terminal",
+        y="log_sensitivity",
+        color="series",
+        markers=True,
+        hover_data=["intervention_kind", "horizon", "sensitivity"],
+        title=title,
+    )
+
+
+def green_boundary_margin(
+    rows: list[JsonDict],
+    *,
+    title: str = "Green boundary margin",
+) -> Any:
+    """Plot the sampled minimum singular value of the scaled boundary matrix."""
+
+    px = _plotly_express()
+    chart_rows = [
+        row
+        for row in rows
+        if _number(row.get("horizon")) is not None
+        and _number(row.get("boundary_sigma_min")) is not None
+    ]
+    if not chart_rows:
+        chart_rows = [{"horizon": 0, "boundary_sigma_min": 0.0, "passed": False}]
+    return px.line(
+        chart_rows,
+        x="horizon",
+        y="boundary_sigma_min",
+        color="passed",
+        markers=True,
+        title=title,
+    )
+
+
 def risk_category_bar(
     counts: dict[str, int],
     *,

@@ -12,11 +12,14 @@ from promptcontrollab.claim_check import run_claim_check
 from promptcontrollab.evaluation import run_import_eval
 from promptcontrollab.evidence_card import write_evidence_card
 from promptcontrollab.files import JsonDict, ensure_dir, read_json, write_json, write_jsonl
+from promptcontrollab.green_certificate import analyze_green_certificate
 from promptcontrollab.optional import require_module
+from promptcontrollab.posterior_certificate import analyze_posterior_certificate
 from promptcontrollab.riccati import analyze_riccati
 from promptcontrollab.soft_hard import analyze_soft_hard
 from promptcontrollab.splitting import load_tasks, make_split, write_split
 from promptcontrollab.statistics import compare_prediction_files
+from promptcontrollab.terminal_sensitivity import analyze_terminal_sensitivity
 from promptcontrollab.trajectory import analyze_trajectory
 from promptcontrollab.tv_soft import summarize_tv_soft
 from promptcontrollab.validity import run_comparison_validity
@@ -71,6 +74,27 @@ PAPER_MAPPING: list[JsonDict] = [
         "commands": ["pcl tv-soft"],
         "artifact": "diagnostics/tv_soft.json",
         "meaning": "Compares static, time-varying, shuffled, and random soft-control lanes.",
+    },
+    {
+        "concept": "terminal sensitivity decay",
+        "commands": ["pcl terminal-sensitivity", "pcl diagnose"],
+        "artifact": "diagnostics/terminal_sensitivity.json",
+        "meaning": "Measures how terminal-objective changes influence early controls by horizon.",
+    },
+    {
+        "concept": "Green boundary certificate",
+        "commands": ["pcl green-certificate", "pcl diagnose"],
+        "artifact": "diagnostics/green_certificate.json",
+        "meaning": (
+            "Checks hyperbolicity and scaled boundary transversality on a named low-dimensional "
+            "surrogate."
+        ),
+    },
+    {
+        "concept": "posterior local certificate",
+        "commands": ["pcl posterior-certificate", "pcl diagnose"],
+        "artifact": "diagnostics/posterior_certificate.json",
+        "meaning": "Checks local existence conditions from residual and derivative bounds.",
     },
     {
         "concept": "prompt optimization evidence card",
@@ -144,6 +168,11 @@ class ResearchPaths:
     states_path: Path | None
     matrices_path: Path | None
     tv_predictions_path: Path | None
+    terminal_records_path: Path | None
+    terminal_surrogate_path: Path | None
+    green_surrogate_path: Path | None
+    green_premises_path: Path | None
+    posterior_bounds_path: Path | None
     diagnostics_dir: Path
     summary_dir: Path
 
@@ -178,6 +207,10 @@ def write_research_demo(*, out_dir: Path, seed: int = 0) -> JsonDict:
     states_path = inputs_dir / "hidden_states.npz"
     matrices_path = inputs_dir / "surrogate_mats.npz"
     predictions_path = inputs_dir / "method_predictions.jsonl"
+    terminal_surrogate_path = inputs_dir / "terminal_surrogate.npz"
+    green_surrogate_path = inputs_dir / "green_surrogate.npz"
+    green_premises_path = inputs_dir / "green_premises.json"
+    posterior_bounds_path = inputs_dir / "posterior_bounds.json"
     np.savez(soft_path, soft=soft)
     np.savez(vocab_path, embeddings=embeddings)
     np.savez(states_path, states=states)
@@ -199,6 +232,57 @@ def write_research_demo(*, out_dir: Path, seed: int = 0) -> JsonDict:
         },
     )
     np.savez(matrices_path, **matrices)
+    hyperbolic = np.diag([0.5, 2.0])
+    boundary_start = np.array([[1.0, 0.0], [0.0, 0.0]], dtype=float)
+    boundary_terminal = np.array([[0.0, 0.0], [0.0, 1.0]], dtype=float)
+    np.savez(
+        terminal_surrogate_path,
+        M=hyperbolic,
+        B0=boundary_start,
+        BN=boundary_terminal,
+        terminal_perturbations=np.array([[0.0, 1.0]], dtype=float),
+        control_readout=np.array([[0.0, 1.0]], dtype=float),
+    )
+    np.savez(
+        green_surrogate_path,
+        M=hyperbolic,
+        B0=boundary_start,
+        BN=boundary_terminal,
+        graph_S=np.array([[0.0]], dtype=float),
+    )
+    write_json(
+        green_premises_path,
+        {
+            "schema": "prompt_control_lab.green_premises.v1",
+            "source_kind": "synthetic_demo",
+            "scope": "synthetic two-dimensional research-demo surrogate",
+            "fixed_dimension": True,
+            "existing_local_branch": True,
+            "interior_control": True,
+            "uniform_c3_neighborhood": False,
+            "provenance": {
+                "kind": "synthetic_fixture",
+                "conservative": False,
+                "source": "pcl research-demo",
+            },
+        },
+    )
+    write_json(
+        posterior_bounds_path,
+        {
+            "schema": "prompt_control_lab.posterior_bounds.v1",
+            "residual_norm_upper": 0.05,
+            "jacobian_inverse_norm_upper": 1.0,
+            "jacobian_lipschitz_upper": 1.0,
+            "neighborhood_radius": 0.5,
+            "bound_provenance": {
+                "kind": "estimated_bounds",
+                "conservative": False,
+                "scope": "synthetic two-dimensional research-demo surrogate",
+                "source": "pcl research-demo",
+            },
+        },
+    )
     write_jsonl(predictions_path, _demo_method_predictions())
     write_json(
         inputs_dir / "README.json",
@@ -209,6 +293,10 @@ def write_research_demo(*, out_dir: Path, seed: int = 0) -> JsonDict:
                 "without an LLM and are not benchmark results."
             ),
             "seed": seed,
+            "control_certificates": (
+                "Synthetic low-dimensional examples only; they do not certify an operational "
+                "language model."
+            ),
         },
     )
     _write_demo_evaluation_bundle(out_dir=out_dir, inputs_dir=inputs_dir, seed=seed)
@@ -221,6 +309,10 @@ def write_research_demo(*, out_dir: Path, seed: int = 0) -> JsonDict:
         states_path=states_path,
         matrices_path=matrices_path,
         tv_predictions_path=predictions_path,
+        terminal_surrogate_path=terminal_surrogate_path,
+        green_surrogate_path=green_surrogate_path,
+        green_premises_path=green_premises_path,
+        posterior_bounds_path=posterior_bounds_path,
         diagnostics_dir=out_dir / "diagnostics",
         summary_dir=out_dir,
         tail=1,
@@ -381,6 +473,11 @@ def run_research_diagnostics(
     states_path: Path | None = None,
     matrices_path: Path | None = None,
     tv_predictions_path: Path | None = None,
+    terminal_records_path: Path | None = None,
+    terminal_surrogate_path: Path | None = None,
+    green_surrogate_path: Path | None = None,
+    green_premises_path: Path | None = None,
+    posterior_bounds_path: Path | None = None,
     diagnostics_dir: Path | None = None,
     summary_dir: Path | None = None,
     baseline_method: str = "static",
@@ -396,6 +493,11 @@ def run_research_diagnostics(
         states_path=states_path,
         matrices_path=matrices_path,
         tv_predictions_path=tv_predictions_path,
+        terminal_records_path=terminal_records_path,
+        terminal_surrogate_path=terminal_surrogate_path,
+        green_surrogate_path=green_surrogate_path,
+        green_premises_path=green_premises_path,
+        posterior_bounds_path=posterior_bounds_path,
         diagnostics_dir=diagnostics_dir,
         summary_dir=summary_dir,
     )
@@ -441,6 +543,44 @@ def run_research_diagnostics(
             baseline_method=baseline_method,
         )
         artifacts["tv_soft"] = str(paths.diagnostics_dir / "tv_soft.json")
+
+    if paths.terminal_records_path is not None or paths.terminal_surrogate_path is not None:
+        diagnostics["terminal_sensitivity"] = analyze_terminal_sensitivity(
+            records_path=paths.terminal_records_path,
+            surrogate_path=paths.terminal_surrogate_path,
+            horizons=[16, 32, 64] if paths.terminal_surrogate_path is not None else None,
+            early_steps=[0, 1] if paths.terminal_surrogate_path is not None else None,
+            out_dir=paths.diagnostics_dir,
+        )
+        artifacts["terminal_sensitivity"] = str(
+            paths.diagnostics_dir / "terminal_sensitivity.json"
+        )
+
+    if paths.green_surrogate_path is not None:
+        diagnostics["green_certificate"] = analyze_green_certificate(
+            surrogate_path=paths.green_surrogate_path,
+            horizons=[16, 32, 64],
+            premises_path=paths.green_premises_path,
+            out_dir=paths.diagnostics_dir,
+        )
+        artifacts["green_certificate"] = str(
+            paths.diagnostics_dir / "green_certificate.json"
+        )
+
+    if paths.posterior_bounds_path is not None:
+        diagnostics["posterior_certificate"] = analyze_posterior_certificate(
+            input_path=paths.posterior_bounds_path,
+            out_dir=paths.diagnostics_dir,
+        )
+        artifacts["posterior_certificate"] = str(
+            paths.diagnostics_dir / "posterior_certificate.json"
+        )
+
+    for name in ("terminal_sensitivity", "green_certificate", "posterior_certificate"):
+        artifact_path = paths.diagnostics_dir / f"{name}.json"
+        if name not in diagnostics and artifact_path.is_file():
+            diagnostics[name] = read_json(artifact_path)
+            artifacts[name] = str(artifact_path)
 
     if not diagnostics:
         bridge_payload = _run_external_bridge_diagnostics(
@@ -1113,6 +1253,9 @@ def _readable_diagnostic_name(name: str, *, language: str = "en") -> str:
             "trajectory": "hidden-state trajectory",
             "riccati": "Riccati surrogate",
             "tv_soft": "time-varying soft-control",
+            "terminal_sensitivity": "终端敏感度",
+            "green_certificate": "Green 边界证书",
+            "posterior_certificate": "局部后验证书",
         }
         return labels.get(name, name.replace("_", "-"))
     labels = {
@@ -1120,6 +1263,9 @@ def _readable_diagnostic_name(name: str, *, language: str = "en") -> str:
         "trajectory": "hidden-state trajectory",
         "riccati": "Riccati surrogate",
         "tv_soft": "time-varying soft-control",
+        "terminal_sensitivity": "terminal sensitivity",
+        "green_certificate": "Green boundary certificate",
+        "posterior_certificate": "posterior local certificate",
     }
     return labels.get(name, name.replace("_", "-"))
 
@@ -2500,6 +2646,7 @@ def render_research_overview_svg(payload: JsonDict) -> str:
     """Render a dependency-free SVG overview of paper-derived evidence coverage."""
 
     rows = _research_overview_rows(payload)
+    height = 180 + ((len(rows) + 2) // 3) * 116
     cards = []
     for index, row in enumerate(rows):
         col = index % 3
@@ -2518,8 +2665,8 @@ def render_research_overview_svg(payload: JsonDict) -> str:
     <text x="{x + 272}" y="{y + 34}" class="badge" fill="{color["text"]}">{_svg_text(status)}</text>
   </g>""".rstrip()
         )
-    return f"""<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="520"
-  viewBox="0 0 1200 520" role="img" aria-labelledby="title desc">
+    return f"""<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="{height}"
+  viewBox="0 0 1200 {height}" role="img" aria-labelledby="title desc">
   <title id="title">prompt_control_lab research overview</title>
   <desc id="desc">Paper-derived prompt optimization evidence coverage: protocol,
   statistics, deployment, hidden-state trajectory, Riccati, and time-varying
@@ -2531,8 +2678,8 @@ def render_research_overview_svg(payload: JsonDict) -> str:
     .t {{ font: 14px Segoe UI, Arial, sans-serif; fill: #53657d; }}
     .badge {{ font: 700 12px Segoe UI, Arial, sans-serif; text-anchor: middle; }}
   </style>
-  <rect width="1200" height="520" rx="24" fill="#f6f8fb"/>
-  <rect x="26" y="26" width="1148" height="468" rx="22" fill="#ffffff" stroke="#d8e0ec"/>
+  <rect width="1200" height="{height}" rx="24" fill="#f6f8fb"/>
+  <rect x="26" y="26" width="1148" height="{height - 52}" rx="22" fill="#ffffff" stroke="#d8e0ec"/>
   <text x="54" y="74" class="title">Paper-derived prompt-control evidence</text>
   <text x="54" y="103" class="sub">From clean protocol to deployability,
   hidden-state dynamics, surrogate stability, and reviewer artifacts.</text>
@@ -2581,6 +2728,21 @@ def _research_overview_rows(payload: JsonDict) -> list[JsonDict]:
             "label": "TV soft-control",
             "meaning": "static / tv / shuffled / random",
             "status": _overview_diagnostic_status(diagnostics_dict, "tv_soft"),
+        },
+        {
+            "label": "Terminal sensitivity",
+            "meaning": "early response vs terminal distance",
+            "status": _overview_diagnostic_status(diagnostics_dict, "terminal_sensitivity"),
+        },
+        {
+            "label": "Green certificate",
+            "meaning": "hyperbolicity and boundary margin",
+            "status": _overview_diagnostic_status(diagnostics_dict, "green_certificate"),
+        },
+        {
+            "label": "Posterior certificate",
+            "meaning": "local residual and derivative bounds",
+            "status": _overview_diagnostic_status(diagnostics_dict, "posterior_certificate"),
         },
         {
             "label": "Evidence card",
@@ -2885,6 +3047,15 @@ def _research_input_summary(paths: ResearchPaths) -> JsonDict:
     inputs: JsonDict = {}
     if paths.states_path is not None:
         inputs["hidden_states"] = _hidden_state_input_summary(paths.states_path)
+    for key, path in (
+        ("terminal_records", paths.terminal_records_path),
+        ("terminal_surrogate", paths.terminal_surrogate_path),
+        ("green_surrogate", paths.green_surrogate_path),
+        ("green_premises", paths.green_premises_path),
+        ("posterior_bounds", paths.posterior_bounds_path),
+    ):
+        if path is not None:
+            inputs[key] = {"path": str(path), "source": "provided_or_discovered"}
     return inputs
 
 
@@ -2950,6 +3121,11 @@ def _resolve_research_paths(
     states_path: Path | None,
     matrices_path: Path | None,
     tv_predictions_path: Path | None,
+    terminal_records_path: Path | None,
+    terminal_surrogate_path: Path | None,
+    green_surrogate_path: Path | None,
+    green_premises_path: Path | None,
+    posterior_bounds_path: Path | None,
     diagnostics_dir: Path | None,
     summary_dir: Path | None,
 ) -> ResearchPaths:
@@ -2967,6 +3143,31 @@ def _resolve_research_paths(
             tv_predictions_path,
             input_dir,
             "method_predictions.jsonl",
+        ),
+        terminal_records_path=_existing_or_explicit(
+            terminal_records_path,
+            input_dir,
+            "terminal_interventions.jsonl",
+        ),
+        terminal_surrogate_path=_existing_or_explicit(
+            terminal_surrogate_path,
+            input_dir,
+            "terminal_surrogate.npz",
+        ),
+        green_surrogate_path=_existing_or_explicit(
+            green_surrogate_path,
+            input_dir,
+            "green_surrogate.npz",
+        ),
+        green_premises_path=_existing_or_explicit(
+            green_premises_path,
+            input_dir,
+            "green_premises.json",
+        ),
+        posterior_bounds_path=_existing_or_explicit(
+            posterior_bounds_path,
+            input_dir,
+            "posterior_bounds.json",
         ),
         diagnostics_dir=resolved_diagnostics,
         summary_dir=resolved_summary,
@@ -3032,6 +3233,17 @@ def _interpret_diagnostics(diagnostics: JsonDict) -> list[str]:
         interpretations.append(
             "Time-varying soft-control comparison recorded method means and deltas vs baseline."
         )
+    for key, label in (
+        ("terminal_sensitivity", "Terminal sensitivity"),
+        ("green_certificate", "Green certificate"),
+        ("posterior_certificate", "Posterior certificate"),
+    ):
+        diagnostic = diagnostics.get(key)
+        if isinstance(diagnostic, dict):
+            interpretations.append(
+                f"{label} state={diagnostic.get('check_state')} at level "
+                f"{diagnostic.get('certificate_level')}."
+            )
     return interpretations
 
 
@@ -3052,6 +3264,21 @@ def _plain_language_research_insights(payload: JsonDict) -> list[JsonDict]:
         ),
         ("riccati", "diagnostics/riccati.json", _payload_dict(diagnostics_dict, "riccati")),
         ("tv_soft", "diagnostics/tv_soft.json", _payload_dict(diagnostics_dict, "tv_soft")),
+        (
+            "terminal_sensitivity",
+            "diagnostics/terminal_sensitivity.json",
+            _payload_dict(diagnostics_dict, "terminal_sensitivity"),
+        ),
+        (
+            "green_certificate",
+            "diagnostics/green_certificate.json",
+            _payload_dict(diagnostics_dict, "green_certificate"),
+        ),
+        (
+            "posterior_certificate",
+            "diagnostics/posterior_certificate.json",
+            _payload_dict(diagnostics_dict, "posterior_certificate"),
+        ),
     ]
     return [
         {
@@ -3077,6 +3304,11 @@ def _research_at_a_glance(payload: JsonDict, *, summary_dir: Path | None = None)
         for key in ["soft_hard", "trajectory", "riccati", "tv_soft"]
         if isinstance(diagnostics_dict.get(key), dict)
     ]
+    certificate_keys = [
+        key
+        for key in ["terminal_sensitivity", "green_certificate", "posterior_certificate"]
+        if isinstance(diagnostics_dict.get(key), dict)
+    ]
     inputs = payload.get("inputs")
     inputs_dict = inputs if isinstance(inputs, dict) else {}
     hidden_state_input = (
@@ -3099,6 +3331,7 @@ def _research_at_a_glance(payload: JsonDict, *, summary_dir: Path | None = None)
     return {
         "mode": str(payload.get("mode") or "unknown"),
         "diagnostics_ready": f"{len(ready_keys)}/4",
+        "control_certificates_ready": f"{len(certificate_keys)}/3",
         "hidden_state_input": hidden_state_input,
         "evidence_recommendation": evidence_recommendation,
         "evidence_tier": str(
@@ -3160,6 +3393,9 @@ def _plain_diagnostic_label(key: str) -> str:
         "trajectory": "Trajectory stability",
         "riccati": "Riccati surrogate",
         "tv_soft": "Time-varying soft-control",
+        "terminal_sensitivity": "Terminal sensitivity",
+        "green_certificate": "Green certificate",
+        "posterior_certificate": "Posterior certificate",
     }[key]
 
 
@@ -3170,6 +3406,9 @@ def _plain_diagnostic_check(key: str) -> str:
         "trajectory": "Does the hidden-state path drift or show turnpike-like decay?",
         "riccati": "Is the fitted finite-dimensional control surrogate internally stable?",
         "tv_soft": "Does time-varying structure beat static, shuffled, or random controls?",
+        "terminal_sensitivity": "Do terminal changes have exponentially less early influence?",
+        "green_certificate": "Is the reduced recurrence hyperbolic with transverse boundaries?",
+        "posterior_certificate": "Do the recorded local residual and derivative bounds close?",
     }[key]
 
 
@@ -3194,6 +3433,10 @@ def _plain_diagnostic_result(key: str, payload: JsonDict) -> str:
         )
     if key == "tv_soft":
         return f"best delta={_best_delta_key(payload) or 'not isolated'}"
+    if key in {"terminal_sensitivity", "green_certificate", "posterior_certificate"}:
+        return (
+            f"state={payload.get('check_state')}; level={payload.get('certificate_level')}"
+        )
     return "recorded"
 
 
@@ -3221,6 +3464,11 @@ def _plain_diagnostic_interpretation(key: str, payload: JsonDict) -> str:
         if best and "time" in best:
             return "Time-varying structure may explain part of the gain."
         return "The current result does not isolate a time-varying advantage."
+    if key in {"terminal_sensitivity", "green_certificate", "posterior_certificate"}:
+        return str(
+            payload.get("explanation")
+            or "A bounded control-certificate result was recorded."
+        )
     return "Recorded diagnostic evidence."
 
 
@@ -3237,6 +3485,8 @@ def _plain_diagnostic_next_action(key: str, payload: JsonDict, artifact: str) ->
         return "Report this as a fitted surrogate probe, not a full-LM proof."
     if key == "tv_soft":
         return "Compare static, shuffled, random, and time-varying lanes side by side."
+    if key in {"terminal_sensitivity", "green_certificate", "posterior_certificate"}:
+        return str(payload.get("next_action") or "Keep this scoped certificate artifact.")
     return "Keep this artifact with the run."
 
 
@@ -3247,6 +3497,17 @@ def _plain_missing_command(key: str) -> str:
         "trajectory": "pcl trajectory --states inputs/hidden_states.npz --out diagnostics",
         "riccati": "pcl riccati --trajectory diagnostics/trajectory.json --out diagnostics",
         "tv_soft": "pcl tv-soft --config promptcontrol.example.yaml --out diagnostics",
+        "terminal_sensitivity": (
+            "pcl terminal-sensitivity --records inputs/terminal_interventions.jsonl "
+            "--out diagnostics"
+        ),
+        "green_certificate": (
+            "pcl green-certificate --surrogate inputs/green_surrogate.npz "
+            "--horizon 16 --horizon 32 --horizon 64 --out diagnostics"
+        ),
+        "posterior_certificate": (
+            "pcl posterior-certificate --input inputs/posterior_bounds.json --out diagnostics"
+        ),
     }[key]
 
 

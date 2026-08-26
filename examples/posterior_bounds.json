@@ -1,0 +1,13 @@
+{
+  "schema": "prompt_control_lab.posterior_bounds.v1",
+  "residual_norm_upper": 0.05,
+  "jacobian_inverse_norm_upper": 2.0,
+  "jacobian_lipschitz_upper": 1.0,
+  "neighborhood_radius": 0.5,
+  "bound_provenance": {
+    "kind": "estimated_bounds",
+    "conservative": false,
+    "scope": "synthetic two-dimensional documentation fixture",
+    "source": "examples/posterior_bounds.json"
+  }
+}

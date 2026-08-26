@@ -24,6 +24,10 @@ def test_start_research_runs_paper_diagnostics_demo(
     assert "What it did: generated a small synthetic evidence bundle" in out
     assert f"Open first: {run_dir / 'research_bundle.html'}" in out
     assert "At a glance: diagnostics=4/4; claim=pass" in out
+    assert "control certificates=3/3" in out
+    assert "terminal sensitivity decay" in out
+    assert "Green boundary certificate" in out
+    assert "local posterior certificate" in out
     assert "How to read the outputs:" in out
     assert "Next action: Share the research bundle" in out
     assert "Evidence card:" in out
@@ -66,6 +70,10 @@ def test_start_research_supports_chinese_output(
     assert "如何阅读输出:" in out
     assert "研究诊断报告:" in out
     assert "证据层级=完整研究诊断" in out
+    assert "控制证书=3/3" in out
+    assert "终端敏感度衰减" in out
+    assert "Green 边界证书" in out
+    assert "局部后验证书" in out
     assert str(run_dir / "research_bundle.zh.html") in out
     assert f"UI: pcl ui --runs {run_dir} --language zh" in out
 
@@ -96,7 +104,15 @@ def test_research_demo_generates_paper_diagnostics(
     assert (run_dir / "inputs" / "method_predictions.jsonl").exists()
 
     diagnostics = run_dir / "diagnostics"
-    for name in ["soft_hard.json", "trajectory.json", "riccati.json", "tv_soft.json"]:
+    for name in [
+        "soft_hard.json",
+        "trajectory.json",
+        "riccati.json",
+        "tv_soft.json",
+        "terminal_sensitivity.json",
+        "green_certificate.json",
+        "posterior_certificate.json",
+    ]:
         assert (diagnostics / name).exists()
 
     summary = read_json(run_dir / "research_diagnostics.json")
@@ -104,10 +120,19 @@ def test_research_demo_generates_paper_diagnostics(
     assert summary["mode"] == "demo"
     assert summary["inputs"]["hidden_states"]["source"] == "synthetic_demo"
     assert summary["inputs"]["hidden_states"]["states_shape"] == [6, 2]
-    assert set(summary["diagnostics"]) == {"soft_hard", "trajectory", "riccati", "tv_soft"}
+    assert set(summary["diagnostics"]) == {
+        "soft_hard",
+        "trajectory",
+        "riccati",
+        "tv_soft",
+        "terminal_sensitivity",
+        "green_certificate",
+        "posterior_certificate",
+    }
     assert summary["plain_language_insights"][0]["diagnostic"] == "Soft-to-hard gap"
     assert summary["plain_language_insights"][0]["next_action"]
     assert summary["at_a_glance"]["diagnostics_ready"] == "4/4"
+    assert summary["at_a_glance"]["control_certificates_ready"] == "3/3"
     assert summary["at_a_glance"]["open_first"] == "research_bundle.html"
     assert summary["at_a_glance"]["claim_status"] == "pass"
     concept_names = {item["concept"] for item in _mapping(summary)}
@@ -115,6 +140,9 @@ def test_research_demo_generates_paper_diagnostics(
     assert "HuggingFace hidden-state extraction" in concept_names
     assert "Riccati surrogate" in concept_names
     assert "time-varying soft-control lane" in concept_names
+    assert "terminal sensitivity decay" in concept_names
+    assert "Green boundary certificate" in concept_names
+    assert "posterior local certificate" in concept_names
     assert "prompt optimization evidence card" in concept_names
     report = (run_dir / "research_diagnostics.md").read_text(encoding="utf-8")
     assert "Research Diagnostics Report" in report
@@ -126,6 +154,9 @@ def test_research_demo_generates_paper_diagnostics(
     assert "Hidden-state input" in report
     assert "soft-to-hard projection gap" in report
     assert "Riccati surrogate" in report
+    assert "Terminal sensitivity" in report
+    assert "Green certificate" in report
+    assert "Posterior certificate" in report
     report_html = (run_dir / "research_diagnostics.html").read_text(encoding="utf-8")
     assert "Research Diagnostics Report" in report_html
     assert "At a Glance" in report_html
@@ -402,6 +433,9 @@ def test_diagnose_reuses_research_demo_inputs(
     assert summary["diagnostics"]["trajectory"]["turnpike_like_signal"] is True
     assert (run_dir / "diagnostics" / "soft_hard.json").exists()
     assert (run_dir / "diagnostics" / "tv_soft.json").exists()
+    assert (run_dir / "diagnostics" / "terminal_sensitivity.json").exists()
+    assert (run_dir / "diagnostics" / "green_certificate.json").exists()
+    assert (run_dir / "diagnostics" / "posterior_certificate.json").exists()
     assert (run_dir / "evidence_card.json").exists()
     assert (run_dir / "evidence_card.html").exists()
     assert (run_dir / "claim_check.json").exists()
@@ -409,6 +443,40 @@ def test_diagnose_reuses_research_demo_inputs(
     assert (run_dir / "research_diagnostics.html").exists()
     assert (run_dir / "research_overview.svg").exists()
     assert (run_dir / "research_bundle.html").exists()
+
+
+def test_diagnose_discovers_existing_control_certificate_artifacts(tmp_path: Path) -> None:
+    run_dir = tmp_path / "certificate-run"
+    diagnostics = run_dir / "diagnostics"
+    diagnostics.mkdir(parents=True)
+    for name, level in (
+        ("terminal_sensitivity", "empirical_only"),
+        ("green_certificate", "surrogate_consistent"),
+        ("posterior_certificate", "surrogate_consistent"),
+    ):
+        write_json(
+            diagnostics / f"{name}.json",
+            {
+                "schema": f"prompt_control_lab.{name}.v1",
+                "certificate_level": level,
+                "check_state": "passed",
+                "observation": f"{name} observed",
+                "explanation": f"{name} explains a bounded surrogate signal",
+                "scope": "fixture",
+                "claim_boundary": "Does not prove the full language model.",
+                "next_action": "Keep the evidence with the run.",
+            },
+        )
+
+    assert main(["diagnose", "--run", str(run_dir)]) == 0
+
+    summary = read_json(run_dir / "research_diagnostics.json")
+    assert set(summary["diagnostics"]) == {
+        "terminal_sensitivity",
+        "green_certificate",
+        "posterior_certificate",
+    }
+    assert summary["at_a_glance"]["control_certificates_ready"] == "3/3"
 
 
 def test_diagnose_summarizes_ecosystem_demo_evidence_gaps(tmp_path: Path) -> None:

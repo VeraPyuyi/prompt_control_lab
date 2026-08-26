@@ -10,12 +10,13 @@ pcl posttrain-gate \
   --out runs/posttrain-gate
 ```
 
-## 每个 checkpoint 目录需要什么
+## 核心 Artifact
+
+在 full-open-model 模式下，baseline 与 candidate checkpoint 目录都提供：
 
 ```text
 manifest.json
 metrics.json
-stats.json
 diagnostics/trajectory.json
 diagnostics/soft_hard.json
 diagnostics/generation_mismatch.json
@@ -25,6 +26,15 @@ diagnostics/readout_alignment.json
 diagnostics/prompt_routing.json
 diagnostics/prompt_projection.json
 diagnostics/prompt_stability.json
+```
+
+candidate 还需要 `stats.json`；black-box 模式会按能力使用更小的 artifact 子集。下面三项控制
+证书默认可选，只有 policy 明确要求时才成为必需项：
+
+```text
+diagnostics/terminal_sensitivity.json
+diagnostics/green_certificate.json
+diagnostics/posterior_certificate.json
 ```
 
 五类 Prompt 诊断分别回答不同的问题：
@@ -52,6 +62,8 @@ p-value。两侧 `metrics.json` 都要记录 `n`、`sample_hash`、平均生成 
 ```
 
 这比虚构一个 low projection risk 更准确。
+
+三项控制证书分别表示经验性的终端响应趋势、有限维 Green 边界检查和局部后验界检查。只有 checkpoint 能力和证据协议确实支持时，才应配置 `require_terminal_sensitivity`、`require_green_certificate`、`require_posterior_certificate` 或 `minimum_control_certificate_level`。详见[控制证书指南](control_certificates.zh.md)。
 
 ## 四种决策
 

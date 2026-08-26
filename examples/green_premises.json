@@ -1,0 +1,13 @@
+{
+  "schema": "prompt_control_lab.green_premises.v1",
+  "source_kind": "estimated_bounds",
+  "scope": "synthetic two-dimensional documentation fixture",
+  "expected_stable_dimension": 1,
+  "uniform_unit_circle_margin_lower": 0.25,
+  "uniform_boundary_sigma_min_lower": 0.1,
+  "provenance": {
+    "kind": "estimated_record",
+    "conservative": false,
+    "source": "examples/green_premises.json"
+  }
+}

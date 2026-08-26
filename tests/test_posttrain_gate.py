@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import math
 from importlib import resources
 from pathlib import Path
 
@@ -201,6 +202,113 @@ def _write_prompt_diagnostics(
     )
 
 
+def _write_control_certificates(
+    root: Path,
+    *,
+    terminal_state: str = "passed",
+    terminal_level: str = "empirical_only",
+    green_state: str = "passed",
+    green_level: str = "surrogate_consistent",
+    posterior_state: str = "passed",
+    posterior_level: str = "surrogate_consistent",
+) -> None:
+    terminal_records = [
+        {
+            "intervention_kind": "terminal_objective",
+            "horizon": horizon,
+            "early_step": 0,
+            "distance_to_terminal": horizon,
+            "perturbation_norm": 1.0,
+            "control_delta_norm": math.exp(-0.08 * horizon),
+            "sensitivity": math.exp(-0.08 * horizon),
+            "log_sensitivity": -0.08 * horizon,
+        }
+        for horizon in (8, 16, 32)
+    ]
+    _write_json(
+        root / "diagnostics/terminal_sensitivity.json",
+        {
+            "schema": "prompt_control_lab.terminal_sensitivity.v1",
+            "kind": "terminal_sensitivity",
+            "check_state": terminal_state,
+            "certificate_level": terminal_level,
+            "decay_rate": 0.08,
+            "r_squared": 1.0,
+            "bootstrap_ci": [0.07, 0.09],
+            "record_count": len(terminal_records),
+            "distinct_horizons": [8, 16, 32],
+            "records": terminal_records,
+            "conditions_not_met": (
+                [] if terminal_state == "passed" else ["positive_exponential_decay"]
+            ),
+        },
+    )
+    _write_json(
+        root / "diagnostics/green_certificate.json",
+        {
+            "schema": "prompt_control_lab.green_certificate.v1",
+            "kind": "green_certificate",
+            "check_state": green_state,
+            "certificate_level": green_level,
+            "dimension": 2,
+            "stable_dimension": 1,
+            "unstable_dimension": 1,
+            "eigenvalue_moduli": [0.6, 1.4],
+            "hyperbolicity_margin": 0.4,
+            "boundary_sigma_min": 0.8,
+            "maximum_recovery_residual": 1e-12,
+            "horizons": [
+                {
+                    "horizon": horizon,
+                    "boundary_sigma_min": 0.8,
+                    "coefficient_recovery_residual": 1e-12,
+                    "passed": True,
+                }
+                for horizon in (8, 16, 32)
+            ],
+            "premises_complete": green_level == "certificate_verified",
+            "verified_scope": (
+                "fixed two-dimensional surrogate"
+                if green_level == "certificate_verified"
+                else None
+            ),
+            "conditions_not_met": (
+                [] if green_state == "passed" else ["boundary_transversality"]
+            ),
+        },
+    )
+    posterior_verified = posterior_level == "certificate_verified"
+    _write_json(
+        root / "diagnostics/posterior_certificate.json",
+        {
+            "schema": "prompt_control_lab.posterior_certificate.v1",
+            "kind": "posterior_certificate",
+            "check_state": posterior_state,
+            "certificate_level": posterior_level,
+            "residual_norm_upper": 0.1,
+            "jacobian_inverse_norm_upper": 1.0,
+            "jacobian_lipschitz_upper": 1.0,
+            "neighborhood_radius": 1.0,
+            "eta": 0.1,
+            "K": 1.0,
+            "h": 0.1,
+            "existence_radius": 0.105572809,
+            "h_margin": 0.4,
+            "neighborhood_margin": 0.894427191,
+            "bound_provenance": {
+                "kind": "certified_bounds" if posterior_verified else "estimated_bounds",
+                "conservative": posterior_verified,
+                "scope": "fixed local surrogate neighborhood",
+                "source": "posttrain gate test fixture",
+            },
+            "provenance_complete": posterior_verified,
+            "conditions_not_met": (
+                [] if posterior_state == "passed" else ["kantorovich_h"]
+            ),
+        },
+    )
+
+
 def test_posttrain_gate_uses_prompt_reach_diagnostics_when_available(
     tmp_path: Path,
 ) -> None:
@@ -250,6 +358,380 @@ def test_posttrain_gate_uses_prompt_reach_diagnostics_when_available(
     assert trace_rows["readout_alignment"]["evidence"] == [
         "diagnostics/readout_alignment.json"
     ]
+
+
+def test_posttrain_gate_holds_when_recorded_control_certificate_conditions_fail(
+    tmp_path: Path,
+) -> None:
+    baseline = tmp_path / "checkpoint-000"
+    candidate = tmp_path / "checkpoint-500"
+    _write_checkpoint(baseline, checkpoint_id="000", score=0.6)
+    _write_checkpoint(candidate, checkpoint_id="500", score=0.7)
+    _write_control_certificates(candidate, terminal_state="conditions_not_met")
+    policy = tmp_path / "posttrain.policy.yaml"
+    _write_policy(policy)
+
+    payload = run_posttrain_gate(
+        baseline_dir=baseline,
+        candidate_dir=candidate,
+        policy_path=policy,
+        out_dir=tmp_path / "gate",
+    )
+
+    assert payload["decision"] == "hold"
+    assert payload["checks"]["terminal_sensitivity"]["passed"] is False
+    assert payload["certificate_summary"]["overall_state"] == "conditions_not_met"
+
+
+def test_posttrain_gate_required_missing_certificate_is_insufficient(tmp_path: Path) -> None:
+    baseline = tmp_path / "checkpoint-000"
+    candidate = tmp_path / "checkpoint-500"
+    _write_checkpoint(baseline, checkpoint_id="000", score=0.6)
+    _write_checkpoint(candidate, checkpoint_id="500", score=0.7)
+    policy = tmp_path / "posttrain.policy.yaml"
+    _write_policy(policy)
+    policy.write_text(
+        policy.read_text(encoding="utf-8") + "require_green_certificate: true\n",
+        encoding="utf-8",
+    )
+
+    payload = run_posttrain_gate(
+        baseline_dir=baseline,
+        candidate_dir=candidate,
+        policy_path=policy,
+        out_dir=tmp_path / "gate",
+    )
+
+    assert payload["decision"] == "insufficient_evidence"
+    assert "candidate:diagnostics/green_certificate.json" in payload["missing_artifacts"]
+    assert payload["checks"]["green_certificate"]["severity"] == "insufficient"
+
+
+def test_posttrain_gate_black_box_marks_optional_certificates_not_applicable(
+    tmp_path: Path,
+) -> None:
+    baseline = tmp_path / "checkpoint-000"
+    candidate = tmp_path / "checkpoint-500"
+    _write_checkpoint(baseline, checkpoint_id="000", score=0.6)
+    _write_checkpoint(candidate, checkpoint_id="500", score=0.7)
+    policy = tmp_path / "posttrain.policy.yaml"
+    _write_policy(policy)
+
+    payload = run_posttrain_gate(
+        baseline_dir=baseline,
+        candidate_dir=candidate,
+        policy_path=policy,
+        out_dir=tmp_path / "gate",
+        capability="black-box",
+    )
+
+    assert payload["checks"]["terminal_sensitivity"]["applicable"] is False
+    assert payload["checks"]["green_certificate"]["observed"] == "not_applicable"
+    assert payload["checks"]["posterior_certificate"]["observed"] == "not_applicable"
+
+
+def test_posttrain_gate_enforces_minimum_control_certificate_level(tmp_path: Path) -> None:
+    baseline = tmp_path / "checkpoint-000"
+    candidate = tmp_path / "checkpoint-500"
+    _write_checkpoint(baseline, checkpoint_id="000", score=0.6)
+    _write_checkpoint(candidate, checkpoint_id="500", score=0.7)
+    _write_control_certificates(candidate)
+    policy = tmp_path / "posttrain.policy.yaml"
+    _write_policy(policy)
+    policy.write_text(
+        policy.read_text(encoding="utf-8")
+        + "minimum_control_certificate_level: certificate_verified\n",
+        encoding="utf-8",
+    )
+
+    payload = run_posttrain_gate(
+        baseline_dir=baseline,
+        candidate_dir=candidate,
+        policy_path=policy,
+        out_dir=tmp_path / "gate",
+    )
+
+    assert payload["decision"] == "insufficient_evidence"
+    assert payload["checks"]["terminal_sensitivity"]["passed"] is True
+    assert payload["checks"]["terminal_sensitivity"]["minimum_certificate_level"] == (
+        "empirical_only"
+    )
+    assert payload["checks"]["green_certificate"]["evidence_status"] == (
+        "below_minimum_certificate_level"
+    )
+    assert payload["certificate_summary"]["minimum_required_level"] == (
+        "certificate_verified"
+    )
+
+
+def test_posttrain_gate_applies_global_minimum_with_each_diagnostics_natural_cap(
+    tmp_path: Path,
+) -> None:
+    baseline = tmp_path / "checkpoint-000"
+    candidate = tmp_path / "checkpoint-500"
+    _write_checkpoint(baseline, checkpoint_id="000", score=0.6)
+    _write_checkpoint(candidate, checkpoint_id="500", score=0.7)
+    _write_control_certificates(candidate)
+    policy = tmp_path / "posttrain.policy.yaml"
+    _write_policy(policy)
+    policy.write_text(
+        policy.read_text(encoding="utf-8")
+        + "minimum_control_certificate_level: surrogate_consistent\n",
+        encoding="utf-8",
+    )
+
+    payload = run_posttrain_gate(
+        baseline_dir=baseline,
+        candidate_dir=candidate,
+        policy_path=policy,
+        out_dir=tmp_path / "gate",
+    )
+
+    assert payload["decision"] == "pass"
+    assert payload["checks"]["terminal_sensitivity"]["certificate_level"] == "empirical_only"
+    assert payload["checks"]["terminal_sensitivity"]["minimum_certificate_level"] == (
+        "empirical_only"
+    )
+
+
+def test_posttrain_gate_rejects_unvalidated_control_certificate_json(tmp_path: Path) -> None:
+    baseline = tmp_path / "checkpoint-000"
+    candidate = tmp_path / "checkpoint-500"
+    _write_checkpoint(baseline, checkpoint_id="000", score=0.6)
+    _write_checkpoint(candidate, checkpoint_id="500", score=0.7)
+    _write_json(
+        candidate / "diagnostics/terminal_sensitivity.json",
+        {
+            "check_state": "passed",
+            "certificate_level": "certificate_verified",
+        },
+    )
+    policy = tmp_path / "posttrain.policy.yaml"
+    _write_policy(policy)
+    policy.write_text(
+        policy.read_text(encoding="utf-8") + "require_terminal_sensitivity: true\n",
+        encoding="utf-8",
+    )
+
+    payload = run_posttrain_gate(
+        baseline_dir=baseline,
+        candidate_dir=candidate,
+        policy_path=policy,
+        out_dir=tmp_path / "gate",
+    )
+
+    check = payload["checks"]["terminal_sensitivity"]
+    assert payload["decision"] == "insufficient_evidence"
+    assert check["evidence_status"] == "invalid_certificate_schema"
+    assert "schema" in check["validation_errors"]
+    assert "certificate_level" in check["validation_errors"]
+
+
+def test_posttrain_gate_rejects_terminal_summary_that_contradicts_records(
+    tmp_path: Path,
+) -> None:
+    baseline = tmp_path / "checkpoint-000"
+    candidate = tmp_path / "checkpoint-500"
+    _write_checkpoint(baseline, checkpoint_id="000", score=0.6)
+    _write_checkpoint(candidate, checkpoint_id="500", score=0.7)
+    _write_control_certificates(candidate)
+    path = candidate / "diagnostics/terminal_sensitivity.json"
+    artifact = read_json(path)
+    for row in artifact["records"]:
+        row["control_delta_norm"] = 1.0
+        row["sensitivity"] = 1.0
+        row["log_sensitivity"] = 0.0
+    _write_json(path, artifact)
+    policy = tmp_path / "posttrain.policy.yaml"
+    _write_policy(policy)
+    policy.write_text(
+        policy.read_text(encoding="utf-8") + "require_terminal_sensitivity: true\n",
+        encoding="utf-8",
+    )
+
+    payload = run_posttrain_gate(
+        baseline_dir=baseline,
+        candidate_dir=candidate,
+        policy_path=policy,
+        out_dir=tmp_path / "gate",
+    )
+
+    check = payload["checks"]["terminal_sensitivity"]
+    assert payload["decision"] == "insufficient_evidence"
+    assert "decay_rate" in check["validation_errors"]
+
+
+def test_posttrain_gate_rejects_terminal_pass_with_a_growing_fit_group(
+    tmp_path: Path,
+) -> None:
+    baseline = tmp_path / "checkpoint-000"
+    candidate = tmp_path / "checkpoint-500"
+    _write_checkpoint(baseline, checkpoint_id="000", score=0.6)
+    _write_checkpoint(candidate, checkpoint_id="500", score=0.7)
+    _write_control_certificates(candidate)
+    path = candidate / "diagnostics/terminal_sensitivity.json"
+    artifact = read_json(path)
+    growing_records = []
+    for horizon in (8, 16, 32):
+        distance = horizon - 1
+        sensitivity = math.exp(0.04 * distance)
+        growing_records.append(
+            {
+                "intervention_kind": "readout",
+                "horizon": horizon,
+                "early_step": 1,
+                "distance_to_terminal": distance,
+                "perturbation_norm": 1.0,
+                "control_delta_norm": sensitivity,
+                "sensitivity": sensitivity,
+                "log_sensitivity": math.log(sensitivity),
+            }
+        )
+    artifact["records"].extend(growing_records)
+    artifact["record_count"] = len(artifact["records"])
+    artifact["decay_rate"] = 0.02
+    artifact["r_squared"] = 1.0
+    artifact["bootstrap_ci"] = [0.01, 0.03]
+    _write_json(path, artifact)
+    policy = tmp_path / "posttrain.policy.yaml"
+    _write_policy(policy)
+    policy.write_text(
+        policy.read_text(encoding="utf-8") + "require_terminal_sensitivity: true\n",
+        encoding="utf-8",
+    )
+
+    payload = run_posttrain_gate(
+        baseline_dir=baseline,
+        candidate_dir=candidate,
+        policy_path=policy,
+        out_dir=tmp_path / "gate",
+    )
+
+    check = payload["checks"]["terminal_sensitivity"]
+    assert payload["decision"] == "insufficient_evidence"
+    assert "group_pass_conditions" in check["validation_errors"]
+
+
+def test_posttrain_gate_rejects_mixed_terminal_seed_metadata(tmp_path: Path) -> None:
+    baseline = tmp_path / "checkpoint-000"
+    candidate = tmp_path / "checkpoint-500"
+    _write_checkpoint(baseline, checkpoint_id="000", score=0.6)
+    _write_checkpoint(candidate, checkpoint_id="500", score=0.7)
+    _write_control_certificates(candidate)
+    path = candidate / "diagnostics/terminal_sensitivity.json"
+    artifact = read_json(path)
+    artifact["records"][0]["seed"] = 0
+    _write_json(path, artifact)
+    policy = tmp_path / "posttrain.policy.yaml"
+    _write_policy(policy)
+    policy.write_text(
+        policy.read_text(encoding="utf-8") + "require_terminal_sensitivity: true\n",
+        encoding="utf-8",
+    )
+
+    payload = run_posttrain_gate(
+        baseline_dir=baseline,
+        candidate_dir=candidate,
+        policy_path=policy,
+        out_dir=tmp_path / "gate",
+    )
+
+    check = payload["checks"]["terminal_sensitivity"]
+    assert payload["decision"] == "insufficient_evidence"
+    assert "seed_metadata" in check["validation_errors"]
+
+
+def test_posttrain_gate_rejects_green_summary_that_contradicts_horizon_rows(
+    tmp_path: Path,
+) -> None:
+    baseline = tmp_path / "checkpoint-000"
+    candidate = tmp_path / "checkpoint-500"
+    _write_checkpoint(baseline, checkpoint_id="000", score=0.6)
+    _write_checkpoint(candidate, checkpoint_id="500", score=0.7)
+    _write_control_certificates(candidate)
+    path = candidate / "diagnostics/green_certificate.json"
+    artifact = read_json(path)
+    artifact["horizons"][0]["boundary_sigma_min"] = 0.0
+    artifact["horizons"][0]["passed"] = False
+    _write_json(path, artifact)
+    policy = tmp_path / "posttrain.policy.yaml"
+    _write_policy(policy)
+    policy.write_text(
+        policy.read_text(encoding="utf-8") + "require_green_certificate: true\n",
+        encoding="utf-8",
+    )
+
+    payload = run_posttrain_gate(
+        baseline_dir=baseline,
+        candidate_dir=candidate,
+        policy_path=policy,
+        out_dir=tmp_path / "gate",
+    )
+
+    check = payload["checks"]["green_certificate"]
+    assert payload["decision"] == "insufficient_evidence"
+    assert "boundary_sigma_min" in check["validation_errors"]
+    assert "horizons" in check["validation_errors"]
+
+
+def test_posttrain_gate_rejects_green_split_that_contradicts_spectrum(
+    tmp_path: Path,
+) -> None:
+    baseline = tmp_path / "checkpoint-000"
+    candidate = tmp_path / "checkpoint-500"
+    _write_checkpoint(baseline, checkpoint_id="000", score=0.6)
+    _write_checkpoint(candidate, checkpoint_id="500", score=0.7)
+    _write_control_certificates(candidate)
+    path = candidate / "diagnostics/green_certificate.json"
+    artifact = read_json(path)
+    artifact["eigenvalue_moduli"] = [0.6, 0.7]
+    artifact["hyperbolicity_margin"] = 0.3
+    _write_json(path, artifact)
+    policy = tmp_path / "posttrain.policy.yaml"
+    _write_policy(policy)
+    policy.write_text(
+        policy.read_text(encoding="utf-8") + "require_green_certificate: true\n",
+        encoding="utf-8",
+    )
+
+    payload = run_posttrain_gate(
+        baseline_dir=baseline,
+        candidate_dir=candidate,
+        policy_path=policy,
+        out_dir=tmp_path / "gate",
+    )
+
+    check = payload["checks"]["green_certificate"]
+    assert payload["decision"] == "insufficient_evidence"
+    assert "stable_unstable_dimension" in check["validation_errors"]
+
+
+def test_control_certificates_do_not_override_slice_regression(tmp_path: Path) -> None:
+    baseline = tmp_path / "checkpoint-000"
+    candidate = tmp_path / "checkpoint-500"
+    _write_checkpoint(baseline, checkpoint_id="000", score=0.6)
+    _write_checkpoint(candidate, checkpoint_id="500", score=0.7)
+    candidate_metrics = read_json(candidate / "metrics.json")
+    candidate_metrics["by_slice"]["format"] = 0.4
+    _write_json(candidate / "metrics.json", candidate_metrics)
+    _write_control_certificates(
+        candidate,
+        terminal_level="empirical_only",
+        green_level="certificate_verified",
+        posterior_level="certificate_verified",
+    )
+    policy = tmp_path / "posttrain.policy.yaml"
+    _write_policy(policy)
+
+    payload = run_posttrain_gate(
+        baseline_dir=baseline,
+        candidate_dir=candidate,
+        policy_path=policy,
+        out_dir=tmp_path / "gate",
+    )
+
+    assert payload["checks"]["slice_regression"]["passed"] is False
+    assert payload["decision"] == "needs_review"
 
 
 @pytest.mark.parametrize(

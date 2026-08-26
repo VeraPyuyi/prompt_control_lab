@@ -7,6 +7,12 @@ from pathlib import Path
 
 from promptcontrollab.files import JsonDict, read_json
 
+_CONTROL_CERTIFICATE_NAMES = (
+    "terminal_sensitivity",
+    "green_certificate",
+    "posterior_certificate",
+)
+
 
 @dataclass(frozen=True)
 class ReportModel:
@@ -62,7 +68,7 @@ class ReportModel:
         baseline_metrics = _read_optional(run_dir / "baseline" / "metrics.json")
         candidate_metrics = _read_optional(run_dir / "candidate" / "metrics.json")
         metrics = root_metrics or candidate_metrics
-        diagnostics = _collect_diagnostics(run_dir / "diagnostics")
+        diagnostics = _collect_diagnostics(run_dir)
         artifacts = _existing_artifacts(run_dir, diagnostics)
         return cls(
             run_dir=run_dir,
@@ -238,14 +244,24 @@ def _existing_artifacts(run_dir: Path, diagnostics: dict[str, JsonDict]) -> list
         "report.html",
     ]
     artifacts = [name for name in names if (run_dir / name).exists()]
-    artifacts.extend(f"diagnostics/{name}.json" for name in sorted(diagnostics))
+    for name in sorted(diagnostics):
+        nested = run_dir / "diagnostics" / f"{name}.json"
+        artifacts.append(
+            f"diagnostics/{name}.json" if nested.is_file() else f"{name}.json"
+        )
     return artifacts
 
 
-def _collect_diagnostics(path: Path) -> dict[str, JsonDict]:
-    if not path.exists():
-        return {}
-    return {item.stem: read_json(item) for item in sorted(path.glob("*.json"))}
+def _collect_diagnostics(run_dir: Path) -> dict[str, JsonDict]:
+    result: dict[str, JsonDict] = {}
+    nested = run_dir / "diagnostics"
+    if nested.is_dir():
+        result.update({item.stem: read_json(item) for item in sorted(nested.glob("*.json"))})
+    for name in _CONTROL_CERTIFICATE_NAMES:
+        path = run_dir / f"{name}.json"
+        if name not in result and path.is_file():
+            result[name] = read_json(path)
+    return result
 
 
 def _score(value: JsonDict) -> float | None:

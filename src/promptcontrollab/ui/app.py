@@ -28,12 +28,14 @@ from promptcontrollab.ui.charts import (
     control_event_timeline,
     control_signal_bar,
     file_breakdown_bar,
+    green_boundary_margin,
     history_category_timeline,
     history_numeric_trend,
     research_diagnostic_bar,
     risk_category_bar,
     score_delta_ci,
     slice_score_heatmap,
+    terminal_sensitivity_decay,
 )
 from promptcontrollab.ui.components import (
     badge,
@@ -52,6 +54,7 @@ from promptcontrollab.ui.data import (
     changed_line_rows,
     claim_check_summary,
     claim_evidence_ladder,
+    control_certificate_interpretation_rows,
     decision_trace_interpretation_rows,
     deepseek_harness_view,
     ecosystem_demo_rows,
@@ -68,6 +71,7 @@ from promptcontrollab.ui.data import (
     external_bridge_summary,
     filter_history_rows,
     first_comparison,
+    green_certificate_rows,
     guard_download_payloads,
     history_rows,
     interpretability_rows,
@@ -78,6 +82,7 @@ from promptcontrollab.ui.data import (
     peoc_method_rows,
     peoc_status_summary,
     peoc_trajectory_rows,
+    posterior_certificate_metrics,
     prompt_asset_rows,
     prompt_asset_summary,
     prompt_optimizer_gap_rows,
@@ -95,6 +100,7 @@ from promptcontrollab.ui.data import (
     scaffold_check_issue_rows,
     scaffold_check_summary,
     slice_rows,
+    terminal_sensitivity_rows,
 )
 from promptcontrollab.ui.workflows import (
     build_agent_run_workflow,
@@ -1944,7 +1950,10 @@ def _render_mechanism_view(st: Any, language: str, detail: JsonDict) -> None:
         for row in interpretability_rows(detail)
         if row.get("role") in {"mechanism", "boundary"}
     ]
-    rows = _merge_interpretation_records(prompt_rows, report_rows)
+    rows = _merge_interpretation_records(
+        control_certificate_interpretation_rows(detail, language),
+        _merge_interpretation_records(prompt_rows, report_rows),
+    )
     title = "Mechanism and boundary findings" if language == "en" else "机制与适用边界"
     if rows:
         _render_interpretation_records(st, rows, language, title=title)
@@ -2016,10 +2025,62 @@ def _render_stability_view(
         for row in interpretability_rows(detail)
         if row.get("role") in {"stability", "uncertainty"}
     ]
-    rows = _merge_interpretation_records(prompt_rows, report_rows)
+    certificate_rows = control_certificate_interpretation_rows(detail, language)
+    rows = _merge_interpretation_records(
+        certificate_rows,
+        _merge_interpretation_records(prompt_rows, report_rows),
+    )
     title = "Stability and uncertainty findings" if language == "en" else "稳定性与不确定性"
     if rows:
         _render_interpretation_records(st, rows, language, title=title)
+    terminal_rows = terminal_sensitivity_rows(detail)
+    if terminal_rows:
+        st.plotly_chart(
+            terminal_sensitivity_decay(
+                terminal_rows,
+                title=(
+                    "Terminal sensitivity by boundary distance"
+                    if language == "en"
+                    else "终端敏感度随边界距离变化"
+                ),
+            ),
+            use_container_width=True,
+            config={"displayModeBar": False},
+        )
+    green_rows = green_certificate_rows(detail)
+    if green_rows:
+        st.plotly_chart(
+            green_boundary_margin(
+                green_rows,
+                title=(
+                    "Scaled boundary minimum singular value"
+                    if language == "en"
+                    else "缩放边界矩阵最小奇异值"
+                ),
+            ),
+            use_container_width=True,
+            config={"displayModeBar": False},
+        )
+    posterior = posterior_certificate_metrics(detail)
+    if any(value is not None for value in posterior.values()):
+        metric_cards(
+            st,
+            [
+                ("Posterior h" if language == "en" else "后验 h", posterior.get("h")),
+                (
+                    "Existence radius" if language == "en" else "存在半径",
+                    posterior.get("existence_radius"),
+                ),
+                (
+                    "Neighborhood margin" if language == "en" else "邻域余量",
+                    posterior.get("neighborhood_margin"),
+                ),
+                (
+                    "Certificate level" if language == "en" else "证书等级",
+                    posterior.get("certificate_level"),
+                ),
+            ],
+        )
 
 
 def _render_training_gate_view(st: Any, language: str, detail: JsonDict) -> None:
@@ -2066,6 +2127,43 @@ def _render_training_gate_view(st: Any, language: str, detail: JsonDict) -> None
         ],
     )
     st.info(str(gate.get("plain_summary") or ""))
+    certificate_summary = _dict(gate.get("certificate_summary"))
+    certificate_checks = _dict(certificate_summary.get("checks"))
+    if certificate_summary:
+        st.markdown("### Control certificates" if language == "en" else "### 控制证书")
+        metric_cards(
+            st,
+            [
+                (
+                    "Overall state" if language == "en" else "总体状态",
+                    certificate_summary.get("overall_state"),
+                ),
+                (
+                    "Highest level" if language == "en" else "最高等级",
+                    certificate_summary.get("highest_recorded_level"),
+                ),
+                (
+                    "Minimum required" if language == "en" else "策略最低要求",
+                    certificate_summary.get("minimum_required_level") or "not configured",
+                ),
+            ],
+        )
+        if certificate_checks:
+            st.dataframe(
+                [
+                    {
+                        "certificate": name,
+                        "state": _dict(raw).get("check_state")
+                        or _dict(raw).get("observed"),
+                        "level": _dict(raw).get("certificate_level"),
+                        "passed": _dict(raw).get("passed"),
+                        "message": _dict(raw).get("message"),
+                    }
+                    for name, raw in certificate_checks.items()
+                ],
+                use_container_width=True,
+                hide_index=True,
+            )
     checks = _dict(gate.get("checks"))
     if checks:
         st.dataframe(
@@ -2153,8 +2251,11 @@ def _render_advanced_view(
     if matrix:
         st.dataframe(matrix, use_container_width=True, hide_index=True)
     findings = _merge_interpretation_records(
-        prompt_reach_interpretation_rows(detail, language),
-        interpretability_rows(detail),
+        control_certificate_interpretation_rows(detail, language),
+        _merge_interpretation_records(
+            prompt_reach_interpretation_rows(detail, language),
+            interpretability_rows(detail),
+        ),
     )
     if findings:
         _render_interpretation_records(
