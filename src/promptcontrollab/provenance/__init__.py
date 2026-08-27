@@ -11,6 +11,10 @@ _EXPORTS = {
         "promptcontrollab.provenance.prompt_identity",
         "build_prompt_identity",
     ),
+    "compare_model_identities": (
+        "promptcontrollab.provenance.model_identity",
+        "compare_model_identities",
+    ),
     "detect_model_identity": (
         "promptcontrollab.provenance.model_identity",
         "detect_model_identity",

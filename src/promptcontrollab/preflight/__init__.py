@@ -8,11 +8,16 @@ from typing import Any
 _EXPORTS = {
     "GuardPolicy": ("promptcontrollab.preflight.guard_policy", "GuardPolicy"),
     "GuardViolation": ("promptcontrollab.preflight.guard_policy", "GuardViolation"),
+    "PromptContext": ("promptcontrollab.preflight.prompt_context", "PromptContext"),
     "PromptGuardResult": ("promptcontrollab.preflight.prompt_guard", "PromptGuardResult"),
     "PromptImprovement": ("promptcontrollab.preflight.prompt_improver", "PromptImprovement"),
     "choose_tool_for_need": ("promptcontrollab.preflight.tool_choice", "choose_tool_for_need"),
     "guard_prompt": ("promptcontrollab.preflight.prompt_guard", "guard_prompt"),
     "improve_prompt": ("promptcontrollab.preflight.prompt_improver", "improve_prompt"),
+    "load_guard_policy": (
+        "promptcontrollab.preflight.guard_policy",
+        "load_guard_policy",
+    ),
 }
 
 __all__ = sorted(_EXPORTS)

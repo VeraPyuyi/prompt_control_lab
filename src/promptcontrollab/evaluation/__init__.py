@@ -6,6 +6,12 @@ from importlib import import_module
 from typing import Any
 
 _EXPORTS = {
+    "ComparisonResult": (
+        "promptcontrollab.evaluation.statistics",
+        "ComparisonResult",
+    ),
+    "ReportModel": ("promptcontrollab.evaluation.report_model", "ReportModel"),
+    "SplitResult": ("promptcontrollab.evaluation.splitting", "SplitResult"),
     "compare_prediction_files": (
         "promptcontrollab.evaluation.statistics",
         "compare_prediction_files",

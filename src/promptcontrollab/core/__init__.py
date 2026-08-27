@@ -2,18 +2,29 @@
 
 from promptcontrollab.core.config import load_project_config, read_simple_yaml
 from promptcontrollab.core.errors import OptionalDependencyError, PromptControlLabError
-from promptcontrollab.core.files import JsonDict, read_json, read_jsonl, write_json, write_jsonl
+from promptcontrollab.core.files import (
+    JsonDict,
+    read_json,
+    read_jsonl,
+    stable_digest,
+    write_json,
+    write_jsonl,
+)
+from promptcontrollab.core.schemas import PredictionRecord, TaskRecord
 from promptcontrollab.core.version import __version__
 
 __all__ = [
     "JsonDict",
     "OptionalDependencyError",
     "PromptControlLabError",
+    "PredictionRecord",
+    "TaskRecord",
     "__version__",
     "load_project_config",
     "read_json",
     "read_jsonl",
     "read_simple_yaml",
+    "stable_digest",
     "write_json",
     "write_jsonl",
 ]

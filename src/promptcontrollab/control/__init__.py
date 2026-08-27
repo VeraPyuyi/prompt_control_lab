@@ -8,12 +8,15 @@ from typing import Any
 _EXPORTS = {
     "AttributionReport": ("promptcontrollab.control.control_protocol", "AttributionReport"),
     "ControlDecision": ("promptcontrollab.control.control_protocol", "ControlDecision"),
+    "ControlBridge": ("promptcontrollab.control.control_bridge", "ControlBridge"),
     "ControlEvent": ("promptcontrollab.control.control_protocol", "ControlEvent"),
     "ControlRun": ("promptcontrollab.control.control_protocol", "ControlRun"),
+    "EventLog": ("promptcontrollab.control.control_events", "EventLog"),
     "PreflightDecision": ("promptcontrollab.control.control_protocol", "PreflightDecision"),
     "StabilityReport": ("promptcontrollab.control.control_protocol", "StabilityReport"),
     "analyze_attribution": ("promptcontrollab.control.control_analysis", "analyze_attribution"),
     "analyze_stability": ("promptcontrollab.control.control_analysis", "analyze_stability"),
+    "run_control": ("promptcontrollab.control.control_workflow", "run_control"),
 }
 
 __all__ = sorted(_EXPORTS)
