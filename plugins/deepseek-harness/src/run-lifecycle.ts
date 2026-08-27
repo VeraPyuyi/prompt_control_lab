@@ -7,6 +7,7 @@ export interface SessionRunLifecycleOptions<Agent, State extends object> {
   onError: (error: unknown) => void
 }
 
+/** Coordinate exactly one active ControlRun lifecycle per Harness session. */
 export class SessionRunLifecycle<Agent, State extends object> {
   private readonly options: SessionRunLifecycleOptions<Agent, State>
   private readonly active = new Map<string, State>()
@@ -17,6 +18,7 @@ export class SessionRunLifecycle<Agent, State extends object> {
     this.options = options
   }
 
+  /** Return the active run or serialize creation behind any finalization. */
   ensure(agent: Agent, source: string): Promise<State> {
     const sessionId = this.options.idOf(agent)
     const finalization = this.finalizations.get(sessionId)
@@ -45,16 +47,19 @@ export class SessionRunLifecycle<Agent, State extends object> {
     return start
   }
 
+  /** Return an active run without starting a new one. */
   current(sessionId: string): State | undefined {
     return this.active.get(sessionId)
   }
 
+  /** Return an active or starting run unless finalization has begun. */
   whenAvailable(sessionId: string): Promise<State> | undefined {
     if (this.finalizations.has(sessionId)) return undefined
     const current = this.active.get(sessionId)
     return current ? Promise.resolve(current) : this.starts.get(sessionId)
   }
 
+  /** Finalize the run associated with one disposed Harness agent. */
   dispose(agent: Agent): Promise<void> {
     const sessionId = this.options.idOf(agent)
     return this.disposeSession(sessionId)

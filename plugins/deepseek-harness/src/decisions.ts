@@ -29,6 +29,7 @@ export interface FinalPreStepGate<T extends { content?: unknown }> {
   onBridgeError: (error: unknown) => void
 }
 
+/** Convert a pre-step inspection into the host action for the selected mode. */
 export function preStepAction(
   mode: ControlMode,
   decision: 'allow' | 'suggest' | 'deny',
@@ -39,6 +40,7 @@ export function preStepAction(
   return 'delegate'
 }
 
+/** Convert a tool policy decision into an allow, ask, or deny host action. */
 export function toolGateAction(
   mode: ControlMode,
   decision: 'allow' | 'ask' | 'deny',

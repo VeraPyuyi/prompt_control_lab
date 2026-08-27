@@ -38,6 +38,7 @@ export type BridgeFailureCategory =
   | 'timeout'
   | 'transport-error'
 
+/** Describe a bridge failure without exposing raw subprocess or provider details. */
 export class BridgeFailure extends Error {
   readonly category: BridgeFailureCategory
 
@@ -48,6 +49,7 @@ export class BridgeFailure extends Error {
   }
 }
 
+/** Classify an unknown error into the stable bridge failure taxonomy. */
 export function bridgeFailureCategory(error: unknown): BridgeFailureCategory | 'unexpected' {
   return error instanceof BridgeFailure ? error.category : 'unexpected'
 }
@@ -85,6 +87,7 @@ export interface BridgeClientOptions {
   env?: NodeJS.ProcessEnv
 }
 
+/** Manage one persistent JSON-RPC subprocess and its in-flight requests. */
 export class JsonRpcBridgeClient {
   private readonly options: BridgeClientOptions
   private process: ChildProcessWithoutNullStreams | undefined
@@ -101,6 +104,7 @@ export class JsonRpcBridgeClient {
     return this.process?.pid
   }
 
+  /** Send a versioned bridge request and validate transport-level completion. */
   async call(
     method: JsonRpcRequest['method'],
     params: JsonObject,
@@ -134,6 +138,7 @@ export class JsonRpcBridgeClient {
     })
   }
 
+  /** Close the bridge process and reject no additional calls. */
   async close(): Promise<void> {
     if (this.closed) return
     this.closed = true
@@ -212,6 +217,7 @@ export class JsonRpcBridgeClient {
   }
 }
 
+/** Expose typed Harness operations over the generic JSON-RPC client. */
 export class HarnessBridge {
   private readonly client: JsonRpcBridgeClient
 
@@ -219,10 +225,12 @@ export class HarnessBridge {
     this.client = client
   }
 
+  /** Check whether the local bridge is responsive. */
   async health(): Promise<JsonObject> {
     return this.client.call('health', {})
   }
 
+  /** Create a local ControlRun for a newly started Harness session. */
   async harnessSessionStart(params: HarnessSessionStartParams): Promise<HarnessSessionStartResult> {
     const result = await this.client.call('harness_session_start', params)
     requireNonEmptyString('harness_session_start', result, 'run_id')
@@ -230,6 +238,7 @@ export class HarnessBridge {
     return result as HarnessSessionStartResult
   }
 
+  /** Inspect a pending agent step before a model request is allowed downstream. */
   async harnessPreStep(
     params: HarnessPreStepParams,
     signal?: AbortSignal,
@@ -244,6 +253,7 @@ export class HarnessBridge {
     return result as HarnessPreStepResult
   }
 
+  /** Ask the local policy engine whether a tool call may proceed. */
   async harnessToolPreExecute(
     params: HarnessToolPreExecuteParams,
     signal?: AbortSignal,
@@ -254,6 +264,7 @@ export class HarnessBridge {
     return result as HarnessToolPreExecuteResult
   }
 
+  /** Record one redacted, idempotent Harness observation. */
   async harnessEvent(params: HarnessEventParams): Promise<HarnessEventResult> {
     const result = await this.client.call('harness_event', params)
     requireBoolean('harness_event', result, 'accepted')
@@ -261,6 +272,7 @@ export class HarnessBridge {
     return result as HarnessEventResult
   }
 
+  /** Update stability diagnostics and optional bounded recovery advice at turn end. */
   async harnessTurnEnd(params: HarnessTurnEndParams): Promise<HarnessTurnEndResult> {
     const result = await this.client.call('harness_turn_end', params)
     requireEnum('harness_turn_end', result, 'stability', [
@@ -271,6 +283,7 @@ export class HarnessBridge {
     return result as HarnessTurnEndResult
   }
 
+  /** Read the current local control status without changing run state. */
   async harnessStatus(params: HarnessStatusParams): Promise<HarnessStatusResult> {
     const result = await this.client.call('harness_status', params)
     requireNonEmptyString('harness_status', result, 'run_id')
@@ -281,6 +294,7 @@ export class HarnessBridge {
     return result as HarnessStatusResult
   }
 
+  /** Finalize a Harness-backed ControlRun and its report artifacts. */
   async harnessFinalize(params: HarnessFinalizeParams): Promise<HarnessFinalizeResult> {
     const result = await this.client.call('harness_finalize', params)
     requireNonEmptyString('harness_finalize', result, 'run_id')
@@ -289,6 +303,7 @@ export class HarnessBridge {
     return result as HarnessFinalizeResult
   }
 
+  /** Close the underlying persistent bridge process. */
   async close(): Promise<void> {
     await this.client.close()
   }

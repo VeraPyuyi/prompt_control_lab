@@ -140,10 +140,12 @@ export function apply(ctx: Context, input: import('./config.ts').Config): void {
     }
   }
 
+  /** Create the local run as soon as the Harness session starts. */
   ctx.on('agent/session-start', ({ agent, source }) => {
     void ensureRun(agent, source).catch(error => warnBridge(ctx, config, error))
   })
 
+  /** Gate the final downstream message batch before any model request. */
   ctx.on('agent/pre-step', async (
     { agent, messages, turn, step, signal },
     next,
@@ -173,6 +175,7 @@ export function apply(ctx: Context, input: import('./config.ts').Config): void {
     onBridgeError: error => warnBridge(ctx, config, error),
   }))
 
+  /** Record public provider and model request metadata after downstream resolution. */
   ctx.on('agent/request', async ({ agent, turn, step }, next) => {
     const request = await next()
     void ensureRun(agent).then(state => {
@@ -193,6 +196,7 @@ export function apply(ctx: Context, input: import('./config.ts').Config): void {
     return request
   })
 
+  /** Record redacted provider failures and retry context. */
   ctx.on('agent/request-error', async (
     { agent, turn, step, provider, failure, retryPolicy },
     next,
@@ -212,6 +216,7 @@ export function apply(ctx: Context, input: import('./config.ts').Config): void {
     return next()
   })
 
+  /** Enforce allow, ask, or deny policy before a tool executes. */
   ctx.on('tools/pre-execute', async (exec, next): Promise<PreToolDecision> => {
     if (!exec.agent) return next()
     try {
@@ -242,6 +247,7 @@ export function apply(ctx: Context, input: import('./config.ts').Config): void {
     }
   })
 
+  /** Observe a completed tool call after downstream post-execute listeners. */
   ctx.on('tools/post-execute', async (
     exec,
     result,
@@ -252,10 +258,12 @@ export function apply(ctx: Context, input: import('./config.ts').Config): void {
     return downstream
   })
 
+  /** Persist final tool-result metadata as an immutable observation. */
   ctx.on('tools/result', (exec, result) => {
     observeTool(ctx, config, ensureRun, enqueueEvent, exec, result, 'tools/result')
   })
 
+  /** Convert durable session events into ordered control observations. */
   ctx.on('session/event', (session, event: SessionEvent) => {
     if (!shouldObserveSessionEvent(event.type)) return
     const payload = safeSessionEvent(event)
@@ -286,6 +294,7 @@ export function apply(ctx: Context, input: import('./config.ts').Config): void {
   })
 
   if (config.autoRecover && config.maxAutoRecoveries > 0) {
+    /** Apply bounded recovery guidance only when automatic recovery is enabled. */
     ctx.on('agent/turn-stopping', async ({ agent, turn }) => {
       try {
         const state = await ensureRun(agent)
@@ -309,6 +318,7 @@ export function apply(ctx: Context, input: import('./config.ts').Config): void {
     })
   }
 
+  /** Finalize the ControlRun when its Harness agent is disposed. */
   ctx.on('agent/disposed', ({ agent }) => {
     void lifecycle.dispose(agent)
   })
