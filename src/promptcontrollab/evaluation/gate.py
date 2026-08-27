@@ -158,6 +158,12 @@ def _soft_hard_check(diagnostics: dict[str, JsonDict], policy: JsonDict) -> Json
 
 
 def _model_provenance_check(manifest: JsonDict, policy: JsonDict) -> JsonDict:
+    """Evaluate recorded model identities against model-aware gate policy.
+
+    Returns a structured check rather than inferring any hidden provider model
+    revision from behavior.
+    """
+
     baseline = _model_dict(manifest.get("baseline_model"))
     candidate = _model_dict(manifest.get("candidate_model"))
     single = _model_dict(manifest.get("model"))

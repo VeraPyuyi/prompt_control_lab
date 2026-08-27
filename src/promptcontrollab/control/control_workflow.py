@@ -436,6 +436,12 @@ def finalize_incomplete_control_session(
 
 
 def _finalize_control_session_locked(session: ControlSession) -> JsonDict:
+    """Finalize a control session while its lifecycle lock remains held.
+
+    The function derives attribution, stability, audit, and decision artifacts
+    from the same immutable event snapshot before transitioning run status.
+    """
+
     current = ControlRun.from_json(read_json(session.run_dir / "control_run.json"))
     if current.status == "finalized":
         return control_status(ControlSession(session.run_dir, current))

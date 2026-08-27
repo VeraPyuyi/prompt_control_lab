@@ -212,6 +212,22 @@ def _run_test_commands(
     timeout_seconds: int,
     allow_shell: bool,
 ) -> tuple[list[str], bool | None, list[JsonDict]]:
+    """Run explicitly authorized test commands and capture bounded results.
+
+    Args:
+        repo: Repository used as the command working directory.
+        commands: Test commands explicitly supplied by the caller.
+        timeout_seconds: Maximum duration allowed for each command.
+        allow_shell: Whether shell syntax is explicitly permitted.
+
+    Returns:
+        Executed command labels, aggregate pass state, and redacted result details.
+
+    Notes:
+        Shell execution remains opt-in. Captured output is truncated before it
+        is written to the audit artifact.
+    """
+
     if not commands:
         return [], None, []
     passed = True
@@ -584,6 +600,12 @@ def _parse_external_secret_output(scanner: str, output: str) -> list[JsonDict]:
 
 
 def _render_sarif(payload: JsonDict) -> JsonDict:
+    """Convert supported audit findings into a SARIF 2.1.0 document.
+
+    The conversion exposes heuristic findings for review and does not upgrade
+    them into proof of exploitability or safety.
+    """
+
     results: list[JsonDict] = []
     for finding in payload.get("secret_findings", []):
         if isinstance(finding, dict):

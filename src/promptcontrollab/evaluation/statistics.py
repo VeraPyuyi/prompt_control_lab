@@ -23,6 +23,8 @@ class ComparisonResult:
     holm_adjusted_p_value: float
 
     def to_json(self) -> JsonDict:
+        """Serialize the paired comparison and its statistical interpretation."""
+
         return {
             "n": self.n,
             "baseline_mean": self.baseline_mean,

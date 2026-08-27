@@ -158,6 +158,16 @@ def _read_optional(path: Path) -> JsonDict:
 
 
 def _existing_artifacts(run_dir: Path, diagnostics: dict[str, JsonDict]) -> list[str]:
+    """List known report artifacts that exist for a run.
+
+    Args:
+        run_dir: Run directory containing evaluation artifacts.
+        diagnostics: Diagnostic artifacts already loaded from the run.
+
+    Returns:
+        Stable relative artifact names suitable for reports and user interfaces.
+    """
+
     names = [
         "manifest.json",
         "source_manifest.json",

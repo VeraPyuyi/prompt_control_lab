@@ -34,6 +34,8 @@ class RunIndex:
         self.path = path
 
     def rebuild(self, runs_root: Path) -> int:
+        """Rebuild the query index from canonical control-run artifacts."""
+
         ensure_dir(self.path.parent)
         records = [
             self._record(path.parent) for path in sorted(runs_root.rglob("control_run.json"))
@@ -96,6 +98,8 @@ class RunIndex:
         return record
 
     def get(self, run_id: str) -> JsonDict | None:
+        """Return one indexed control run, or ``None`` when it is absent."""
+
         if not self.path.exists():
             return None
         with closing(self._connect()) as connection, connection:

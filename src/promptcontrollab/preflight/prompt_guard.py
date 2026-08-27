@@ -41,6 +41,8 @@ class PromptGuardResult:
     required_review: bool
 
     def to_json(self) -> JsonDict:
+        """Serialize the guard result to a JSON-compatible object."""
+
         return {
             "action": self.action,
             "risk_level": self.risk_level,
@@ -187,6 +189,17 @@ def _compact_guarded_prompt(
 
 
 def _compact_coding_prompt(prompt: str, *, language: str, aggressive: bool) -> str:
+    """Rewrite a coding prompt into a compact execution-oriented structure.
+
+    Args:
+        prompt: Original prompt text.
+        language: Language used for generated structure labels.
+        aggressive: Whether to apply the most compact supported template.
+
+    Returns:
+        A compact prompt that preserves the requested coding task.
+    """
+
     normalized = prompt.rstrip(".! \n")
     if language == "zh":
         task = "\u4efb\u52a1"

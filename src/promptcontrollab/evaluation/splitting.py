@@ -21,6 +21,8 @@ class SplitResult:
     seed: int
 
     def to_json(self) -> JsonDict:
+        """Serialize the deterministic split and its provenance metadata."""
+
         return {
             "train": self.train,
             "val": self.val,

@@ -1076,6 +1076,12 @@ def _stability_confidence(meaningful_events: int, guards: list[JsonDict]) -> str
 
 
 def _classify_stability(signals: JsonDict) -> str:
+    """Classify run stability from bounded observable execution signals.
+
+    The classification is a governance heuristic over recorded events. It is
+    not a mathematical certificate of convergence for the underlying model.
+    """
+
     observed = cast(int, signals["observed_events"])
     meaningful = cast(int, signals["meaningful_events"])
     repeated = cast(JsonDict, signals["repeated_tool_calls"])
@@ -1241,6 +1247,8 @@ def _complete_safe_preflight(preflight: JsonDict, run: JsonDict) -> bool:
 
 
 def _complete_attribution_evidence(attribution: JsonDict, run_id: str) -> bool:
+    """Validate that attribution evidence is internally complete for a run."""
+
     if attribution.get("schema") != AttributionReport.SCHEMA:
         return False
     if attribution.get("run_id") != run_id or not _safe_summary(attribution.get("summary")):
@@ -1296,6 +1304,8 @@ def _complete_attribution_evidence(attribution: JsonDict, run_id: str) -> bool:
 
 
 def _complete_stability_evidence(stability: JsonDict, run_id: str) -> bool:
+    """Validate that stability evidence is internally complete for a run."""
+
     if stability.get("schema") != StabilityReport.SCHEMA:
         return False
     if stability.get("run_id") != run_id:

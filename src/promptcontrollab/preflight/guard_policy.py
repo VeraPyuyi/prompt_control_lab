@@ -45,6 +45,8 @@ class GuardViolation:
     source: str
 
     def to_json(self) -> JsonDict:
+        """Serialize the policy violation to a JSON-compatible object."""
+
         return {
             "id": self.id,
             "severity": self.severity,
@@ -101,6 +103,18 @@ def _uses_nested_policy(path: Path) -> bool:
 
 
 def _load_nested_policy(path: Path) -> GuardPolicy:
+    """Parse the supported dependency-free nested policy syntax.
+
+    Args:
+        path: Policy file to parse.
+
+    Returns:
+        A validated guard policy assembled from the nested YAML subset.
+
+    Raises:
+        ValueError: If the file contains unsupported or malformed policy syntax.
+    """
+
     profile: str | None = None
     block_at = "high"
     review_at = "medium"
@@ -282,6 +296,12 @@ def unique_categories(violations: list[GuardViolation]) -> list[str]:
 
 
 def _builtin_violations(prompt: str) -> list[GuardViolation]:
+    """Detect built-in prompt risks using bounded heuristic rules.
+
+    The findings are preflight governance signals, not proof that an agent
+    action is safe or unsafe.
+    """
+
     lowered = prompt.lower()
     read_only_docs = _looks_like_read_only_docs(prompt, lowered)
     violations: list[GuardViolation] = []

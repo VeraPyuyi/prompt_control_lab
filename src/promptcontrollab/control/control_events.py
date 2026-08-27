@@ -57,10 +57,14 @@ class EventLog:
         self.lock_path = path.with_name(path.name + ".lock")
 
     def read(self) -> list[ControlEvent]:
+        """Read all persisted events while holding the event-log lock."""
+
         with self._locked():
             return self._read_unlocked()
 
     def append(self, event: ControlEvent) -> bool:
+        """Append an event unless its stable identity was already recorded."""
+
         with self._locked():
             existing = self._read_unlocked()
             return self._append_unlocked(event, existing)
@@ -125,6 +129,8 @@ class EventLog:
             return appended
 
     def next_sequence(self) -> int:
+        """Return the next sequence number under the event-log lock."""
+
         with self._locked():
             return len(self._read_unlocked()) + 1
 

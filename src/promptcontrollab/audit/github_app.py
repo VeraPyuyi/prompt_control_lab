@@ -21,15 +21,30 @@ SUMMARY_COMMENT_MARKER = "<!-- prompt-control-lab-summary -->"
 class PullRequestClient(Protocol):
     """Minimal client contract used by the webhook handler."""
 
-    def list_pull_files(self, repo: str, number: int) -> list[JsonDict]: ...
+    def list_pull_files(self, repo: str, number: int) -> list[JsonDict]:
+        """Return all changed files visible for a pull request."""
 
-    def create_comment(self, repo: str, number: int, body: str) -> None: ...
+        ...
 
-    def list_comments(self, repo: str, number: int) -> list[JsonDict]: ...
+    def create_comment(self, repo: str, number: int, body: str) -> None:
+        """Create a pull-request summary comment."""
 
-    def update_comment(self, repo: str, comment_id: int, body: str) -> None: ...
+        ...
 
-    def add_labels(self, repo: str, number: int, labels: list[str]) -> None: ...
+    def list_comments(self, repo: str, number: int) -> list[JsonDict]:
+        """Return existing issue comments associated with a pull request."""
+
+        ...
+
+    def update_comment(self, repo: str, comment_id: int, body: str) -> None:
+        """Replace an existing pull-request summary comment."""
+
+        ...
+
+    def add_labels(self, repo: str, number: int, labels: list[str]) -> None:
+        """Add review labels to a pull request."""
+
+        ...
 
     def create_check_run(
         self,
@@ -40,7 +55,10 @@ class PullRequestClient(Protocol):
         conclusion: str,
         title: str,
         summary: str,
-    ) -> None: ...
+    ) -> None:
+        """Create a completed PromptControlLab check run for a commit."""
+
+        ...
 
 
 def verify_webhook_signature(secret: str, body: bytes, signature_header: str | None) -> bool:

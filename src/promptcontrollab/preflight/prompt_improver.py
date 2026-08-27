@@ -23,6 +23,8 @@ class PromptTokenReport:
     compression_applied: bool
 
     def to_json(self) -> JsonDict:
+        """Serialize the token estimate to a JSON-compatible object."""
+
         return {
             "original_estimated_tokens": self.original_estimated_tokens,
             "improved_estimated_tokens": self.improved_estimated_tokens,
@@ -49,6 +51,8 @@ class PromptImprovement:
     token_report: PromptTokenReport
 
     def to_json(self) -> JsonDict:
+        """Serialize the prompt improvement to a JSON-compatible object."""
+
         return {
             "original_prompt": self.original_prompt,
             "improved_prompt": self.improved_prompt,

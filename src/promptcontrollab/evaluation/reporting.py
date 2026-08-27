@@ -408,6 +408,8 @@ def _html_recommendation_card(markdown: str) -> str:
 
 
 def _html_dashboard(markdown: str) -> str:
+    """Render the reviewer-facing dashboard section from report Markdown."""
+
     baseline_model = html.escape(_markdown_field(markdown, "Baseline model") or "unknown")
     candidate_model = html.escape(_markdown_field(markdown, "Candidate model") or "unknown")
     verified = html.escape(_markdown_field(markdown, "Model verified") or "see manifest")

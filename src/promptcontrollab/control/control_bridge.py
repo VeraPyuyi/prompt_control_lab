@@ -65,6 +65,19 @@ class ControlBridge:
         )
 
     def dispatch(self, method: str, params: JsonDict) -> JsonDict:
+        """Dispatch one versioned bridge request to its local handler.
+
+        Args:
+            method: JSON-RPC method name exposed by the bridge.
+            params: Redacted method parameters.
+
+        Returns:
+            A JSON-compatible bridge response.
+
+        Raises:
+            ValueError: If the method or its parameters are unsupported.
+        """
+
         if method == "health":
             return {"status": "ok", "protocol": BRIDGE_PROTOCOL}
         if method == "harness_session_start":
@@ -124,6 +137,8 @@ class ControlBridge:
         raise MethodNotFoundError(f"Unknown bridge method: {method}")
 
     def _harness_session_start(self, params: JsonDict) -> JsonDict:
+        """Create a controlled Harness session after validating its safety contract."""
+
         from promptcontrollab.harness_integration import HARNESS_COMMIT, HARNESS_VERSION
 
         session_id = _required_string(params, "session_id")
@@ -223,6 +238,8 @@ class ControlBridge:
         return {"run_id": run_id, "status": session.run.status}
 
     def _harness_pre_step(self, params: JsonDict) -> JsonDict:
+        """Apply prompt preflight before a Harness model step is allowed to run."""
+
         run_id = _required_string(params, "run_id")
         session_id = _required_string(params, "session_id")
         context = self._harness_context(run_id, session_id)

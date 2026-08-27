@@ -17,6 +17,8 @@ class PromptContext:
     deployment_notes: list[str]
 
     def to_json(self) -> JsonDict:
+        """Serialize the prompt context to a JSON-compatible object."""
+
         return {
             "regressed_slices": self.regressed_slices,
             "broken_ids": self.broken_ids,

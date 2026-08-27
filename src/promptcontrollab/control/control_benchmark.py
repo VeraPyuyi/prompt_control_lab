@@ -120,6 +120,13 @@ def _read_json_object(path: Path, description: str) -> JsonDict:
 
 
 def _read_events(path: Path) -> list[JsonDict]:
+    """Read and validate an ordered benchmark event fixture.
+
+    Raises:
+        ControlBenchmarkError: If the fixture is unreadable, malformed, or has
+            invalid event sequencing.
+    """
+
     try:
         lines = path.read_text(encoding="utf-8-sig").splitlines()
     except (OSError, UnicodeError) as exc:

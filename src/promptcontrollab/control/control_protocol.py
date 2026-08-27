@@ -251,6 +251,8 @@ class ControlRun:
         created_at: str | None = None,
         status: str = "initialized",
     ) -> ControlRun:
+        """Create a validated control-run record with redacted metadata."""
+
         return cls(
             run_id=run_id,
             created_at=created_at or utc_now(),
@@ -264,6 +266,8 @@ class ControlRun:
         )
 
     def to_json(self) -> JsonDict:
+        """Serialize the control run to its versioned persistence schema."""
+
         return {
             "schema": self.SCHEMA,
             "run_id": self.run_id,
@@ -279,6 +283,8 @@ class ControlRun:
 
     @classmethod
     def from_json(cls, value: JsonDict) -> ControlRun:
+        """Create a control run from its validated persistence schema."""
+
         _schema(value, cls.SCHEMA)
         return cls.create(
             run_id=_string(value.get("run_id"), "run_id"),
@@ -324,6 +330,8 @@ class ControlEvent:
         timestamp: str | None = None,
         idempotency_key: str | None = None,
     ) -> ControlEvent:
+        """Create a deterministic, redacted control event."""
+
         safe_payload = cast(JsonDict, redact_sensitive(payload))
         resolved_timestamp = timestamp or utc_now()
         event_id = _canonical_event_id(
@@ -345,6 +353,8 @@ class ControlEvent:
         )
 
     def to_json(self) -> JsonDict:
+        """Serialize the control event to its versioned persistence schema."""
+
         return {
             "schema": self.SCHEMA,
             "run_id": self.run_id,
@@ -358,6 +368,8 @@ class ControlEvent:
 
     @classmethod
     def from_json(cls, value: JsonDict) -> ControlEvent:
+        """Create a control event from its validated persistence schema."""
+
         _schema(value, cls.SCHEMA)
         sequence = value.get("sequence")
         if not isinstance(sequence, int) or isinstance(sequence, bool) or sequence < 1:
@@ -495,6 +507,8 @@ class AttributionReport:
         object.__setattr__(self, "factors", redact_sensitive(self.factors))
 
     def to_json(self) -> JsonDict:
+        """Serialize the attribution report with sensitive fields redacted."""
+
         return {
             "schema": self.SCHEMA,
             "run_id": self.run_id,
@@ -505,6 +519,8 @@ class AttributionReport:
 
     @classmethod
     def from_json(cls, value: JsonDict) -> AttributionReport:
+        """Create an attribution report from its validated persistence schema."""
+
         _schema(value, cls.SCHEMA)
         factors = value.get("factors")
         if not isinstance(factors, list) or not all(isinstance(item, dict) for item in factors):
@@ -533,6 +549,8 @@ class StabilityReport:
         object.__setattr__(self, "signals", redact_sensitive(self.signals))
 
     def to_json(self) -> JsonDict:
+        """Serialize the stability report with sensitive fields redacted."""
+
         return {
             "schema": self.SCHEMA,
             "run_id": self.run_id,
@@ -543,6 +561,8 @@ class StabilityReport:
 
     @classmethod
     def from_json(cls, value: JsonDict) -> StabilityReport:
+        """Create a stability report from its validated persistence schema."""
+
         _schema(value, cls.SCHEMA)
         return cls(
             run_id=_string(value.get("run_id"), "run_id"),
@@ -564,6 +584,8 @@ class ControlDecision:
     reasons: list[str]
 
     def to_json(self) -> JsonDict:
+        """Serialize the control decision to its versioned persistence schema."""
+
         return {
             "schema": self.SCHEMA,
             "run_id": self.run_id,
@@ -574,6 +596,8 @@ class ControlDecision:
 
     @classmethod
     def from_json(cls, value: JsonDict) -> ControlDecision:
+        """Create a control decision from its validated persistence schema."""
+
         _schema(value, cls.SCHEMA)
         return cls(
             run_id=_string(value.get("run_id"), "run_id"),

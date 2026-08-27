@@ -35,6 +35,8 @@ class TaskRecord:
 
     @classmethod
     def from_json(cls, value: JsonDict) -> TaskRecord:
+        """Create a task record from a validated JSON object."""
+
         known = {"id", "input", "expected", "slice", "meta"}
         meta_value = value.get("meta", {})
         if not isinstance(meta_value, dict):
@@ -51,6 +53,8 @@ class TaskRecord:
         )
 
     def to_json(self) -> JsonDict:
+        """Serialize the task record to a JSON-compatible object."""
+
         return {
             "id": self.id,
             "input": self.input,
@@ -74,6 +78,8 @@ class PredictionRecord:
     model: JsonDict = field(default_factory=dict)
 
     def to_json(self) -> JsonDict:
+        """Serialize the prediction record to a JSON-compatible object."""
+
         return {
             "id": self.id,
             "output": self.output,
@@ -87,6 +93,8 @@ class PredictionRecord:
 
     @classmethod
     def from_json(cls, value: JsonDict) -> PredictionRecord:
+        """Create a prediction record from a validated JSON object."""
+
         raw_score = value.get("score")
         if not isinstance(raw_score, int | float):
             msg = "Prediction field `score` must be numeric"
@@ -120,6 +128,8 @@ class MetricSummary:
     by_slice: dict[str, float]
 
     def to_json(self) -> JsonDict:
+        """Serialize the metric summary to a JSON-compatible object."""
+
         return {
             "count": self.count,
             "mean_score": self.mean_score,

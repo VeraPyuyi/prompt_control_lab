@@ -32,6 +32,8 @@ class ModelIdentity:
     warnings: list[str] = field(default_factory=list)
 
     def to_json(self) -> JsonDict:
+        """Serialize the model identity and its provenance evidence."""
+
         return {
             "provider": self.provider,
             "model_id": self.model_id,
@@ -110,6 +112,8 @@ def unknown_identity(
     provider: str | None = None,
     api_version: str | None = None,
 ) -> ModelIdentity:
+    """Create an explicit unknown identity when no public model ID is available."""
+
     return ModelIdentity(
         provider=provider or "unknown",
         model_id="unknown",
@@ -130,6 +134,8 @@ def from_declared_model(
     api_version: str | None = None,
     source: str,
 ) -> ModelIdentity:
+    """Create model provenance from a caller-declared public model ID."""
+
     return ModelIdentity(
         provider=provider or infer_provider(model_id),
         model_id=model_id,
@@ -148,6 +154,12 @@ def from_response_file(
     provider: str | None = None,
     api_version: str | None = None,
 ) -> ModelIdentity:
+    """Extract an observed public model ID from a response JSON file.
+
+    This records what the response declares and does not prove the provider's
+    hidden weight build.
+    """
+
     payload = read_json(path)
     found = _find_model_field(payload)
     if found is None:
@@ -183,6 +195,12 @@ def from_predictions_file(
     provider: str | None = None,
     api_version: str | None = None,
 ) -> ModelIdentity:
+    """Summarize observed model provenance across prediction records.
+
+    Mixed model IDs are retained as an explicit reproducibility warning rather
+    than collapsed into a single identity.
+    """
+
     records = read_jsonl(path)
     model_ids: set[str] = set()
     providers: set[str] = set()
@@ -316,6 +334,8 @@ def compare_model_identities(
 
 
 def infer_provider(model_id: str) -> str:
+    """Infer a provider from a small set of recognizable public model prefixes."""
+
     lowered = model_id.lower()
     if lowered.startswith("gpt-") or lowered.startswith("o1") or lowered.startswith("o3"):
         return "openai"
@@ -331,6 +351,13 @@ def is_alias_model(model_id: str) -> bool:
 
 
 def _verify_openai(identity: ModelIdentity) -> ModelIdentity:
+    """Verify that OpenAI exposes a matching public model metadata object.
+
+    Notes:
+        A successful lookup verifies the public model object only. It cannot
+        establish the provider's hidden internal weight revision.
+    """
+
     import json
     import os
     import urllib.error
