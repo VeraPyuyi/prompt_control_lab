@@ -32,7 +32,9 @@ def test_core_does_not_import_product_domains() -> None:
                 continue
             parts = module.split(".")
             if len(parts) >= 2 and parts[0] == "promptcontrollab" and parts[1] in PRODUCT_DOMAINS:
-                violations.append(f"{source.name}:{node.lineno} imports {module}")
+                violations.append(
+                    f"{source.name}:{getattr(node, 'lineno', 0)} imports {module}"
+                )
 
     assert violations == []
 
@@ -63,7 +65,9 @@ def test_canonical_packages_do_not_import_legacy_facades() -> None:
                     and parts[1] in facade_names
                 ):
                     relative = source.relative_to(PACKAGE_ROOT)
-                    violations.append(f"{relative}:{node.lineno} imports {module}")
+                    violations.append(
+                        f"{relative}:{getattr(node, 'lineno', 0)} imports {module}"
+                    )
 
     assert violations == []
 
@@ -86,7 +90,9 @@ def test_outer_domains_do_not_create_reverse_dependency_cycles() -> None:
                     and module.startswith(f"promptcontrollab.{target_domain}.")
                 ):
                     relative = source.relative_to(PACKAGE_ROOT)
-                    violations.append(f"{relative}:{node.lineno} imports {module}")
+                    violations.append(
+                        f"{relative}:{getattr(node, 'lineno', 0)} imports {module}"
+                    )
 
     assert violations == []
 

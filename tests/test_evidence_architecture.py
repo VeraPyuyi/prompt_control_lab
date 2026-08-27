@@ -125,7 +125,8 @@ def test_canonical_evidence_code_never_imports_legacy_facades() -> None:
                 parts = module_name.split(".")
                 if len(parts) >= 2 and parts[0] == "promptcontrollab" and parts[1] in legacy_names:
                     violations.append(
-                        f"{path.relative_to(PACKAGE_ROOT)}:{node.lineno}:{module_name}"
+                        f"{path.relative_to(PACKAGE_ROOT)}:"
+                        f"{getattr(node, 'lineno', 0)}:{module_name}"
                     )
     assert violations == []
 
