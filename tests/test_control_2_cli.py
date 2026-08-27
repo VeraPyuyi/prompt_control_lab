@@ -74,7 +74,7 @@ def test_control_model_authorization_calls_provider_and_persists_safe_evidence(
         assert kwargs["prompt"] == "Explain the result."
         return response
 
-    monkeypatch.setattr("promptcontrollab.cli.legacy.call_provider", fake_call)
+    monkeypatch.setattr("promptcontrollab.cli.handlers.control.call_provider", fake_call)
     out = tmp_path / "control"
     assert (
         main(
@@ -101,9 +101,7 @@ def test_control_model_authorization_calls_provider_and_persists_safe_evidence(
     assert provider_result["model_id"] == "deepseek-observed"
     assert provider_result["output_text"] == "Public answer"
     persisted = "\n".join(
-        path.read_text(encoding="utf-8")
-        for path in out.iterdir()
-        if path.is_file()
+        path.read_text(encoding="utf-8") for path in out.iterdir() if path.is_file()
     )
     assert "request-1" in persisted
     assert "Explain the result." not in persisted
@@ -182,7 +180,7 @@ def test_control_model_preflight_gate_never_calls_provider(
         called = True
         raise AssertionError(f"provider must not be called: {kwargs}")
 
-    monkeypatch.setattr("promptcontrollab.cli.legacy.call_provider", unexpected_call)
+    monkeypatch.setattr("promptcontrollab.cli.handlers.control.call_provider", unexpected_call)
     out = tmp_path / f"control-{severity}"
 
     assert (
@@ -298,7 +296,9 @@ def test_install_plugin_deepseek_harness_default_and_all_layout(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.setattr("promptcontrollab.integrations.plugin_installer.Path.home", lambda: tmp_path)
+    monkeypatch.setattr(
+        "promptcontrollab.integrations.plugin_installer.Path.home", lambda: tmp_path
+    )
 
     installed = install_plugin("deepseek-harness")
     default_target = tmp_path / ".prompt_control_lab" / "deepseek-harness"

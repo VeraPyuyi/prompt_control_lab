@@ -22,7 +22,9 @@ def test_control_requires_explicit_authorization_when_noninteractive(
     monkeypatch: object,
     capsys: object,
 ) -> None:
-    monkeypatch.setattr("promptcontrollab.cli.legacy.sys.stdin", _NonInteractiveInput())  # type: ignore[attr-defined]
+    monkeypatch.setattr(  # type: ignore[attr-defined]
+        "promptcontrollab.cli.handlers.preflight.sys.stdin", _NonInteractiveInput()
+    )
     result = main(
         [
             "control",
@@ -182,7 +184,7 @@ def test_control_tty_previews_then_asks_for_authorization(
     capsys: object,
 ) -> None:
     monkeypatch.setattr(  # type: ignore[attr-defined]
-        "promptcontrollab.cli.legacy.sys.stdin",
+        "promptcontrollab.cli.handlers.preflight.sys.stdin",
         _InteractiveInput("inspect\n"),
     )
     run_dir = tmp_path / "runs" / "interactive"

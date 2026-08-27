@@ -1139,7 +1139,9 @@ def test_research_import_peoc_keeps_primary_artifacts_when_downstream_fails(
     def fail_downstream(_run_dir: Path) -> NoReturn:
         raise failure_type("forced downstream failure")
 
-    monkeypatch.setattr("promptcontrollab.cli.legacy.write_evidence_card", fail_downstream)
+    monkeypatch.setattr(
+        "promptcontrollab.cli.handlers.evidence.write_evidence_card", fail_downstream
+    )
 
     assert (
         main(
@@ -1223,7 +1225,7 @@ def test_research_import_peoc_overwrite_restores_previous_downstream_chain_on_fa
     def fail_claim_check(*_args: object, **_kwargs: object) -> NoReturn:
         raise RuntimeError("forced downstream replacement failure")
 
-    monkeypatch.setattr("promptcontrollab.cli.legacy.run_claim_check", fail_claim_check)
+    monkeypatch.setattr("promptcontrollab.cli.handlers.evidence.run_claim_check", fail_claim_check)
 
     assert main([*args, "--overwrite"]) == 2
     captured = capsys.readouterr()
