@@ -10,7 +10,6 @@ from typing import Any
 import pytest
 
 from promptcontrollab.cli import main
-from promptcontrollab.report_model import ReportModel
 from promptcontrollab.integrations.ui import charts
 from promptcontrollab.integrations.ui.components import (
     dashboard_css,
@@ -65,6 +64,7 @@ from promptcontrollab.integrations.ui.data import (
     scaffold_check_summary,
     terminal_sensitivity_rows,
 )
+from promptcontrollab.report_model import ReportModel
 
 
 def _peoc_fixture() -> dict[str, object]:
@@ -2040,7 +2040,13 @@ def test_research_overview_tab_renders_generated_svg(
     detail = load_run_detail(run)
     calls: list[dict[str, object]] = []
     dataframes: list[object] = []
-    monkeypatch.setattr(app, "research_diagnostic_bar", lambda *_args, **_kwargs: object())
+    from promptcontrollab.integrations.ui.pages import research as research_page
+
+    monkeypatch.setattr(
+        research_page,
+        "research_diagnostic_bar",
+        lambda *_args, **_kwargs: object(),
+    )
 
     class FakeStreamlit:
         def markdown(self, body: str, *, unsafe_allow_html: bool = False) -> None:

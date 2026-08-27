@@ -245,6 +245,7 @@ def test_core_diagnostic_views_route_prompt_reach_and_trace_to_four_part_rendere
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     from promptcontrollab.integrations.ui import app
+    from promptcontrollab.integrations.ui.pages import control as control_page
 
     rendered: list[tuple[str, list[str]]] = []
 
@@ -292,12 +293,12 @@ def test_core_diagnostic_views_route_prompt_reach_and_trace_to_four_part_rendere
     }
     fake = FakeStreamlit()
 
-    monkeypatch.setattr(app, "_render_why_view", lambda *_args: None)
-    monkeypatch.setattr(app, "_render_after_view", lambda *_args: None)
-    monkeypatch.setattr(app, "metric_cards", lambda *_args, **_kwargs: None)
-    monkeypatch.setattr(app, "_render_research_overview_tab", lambda *_args: None)
+    monkeypatch.setattr(control_page, "_render_why_view", lambda *_args: None)
+    monkeypatch.setattr(control_page, "_render_after_view", lambda *_args: None)
+    monkeypatch.setattr(control_page, "metric_cards", lambda *_args, **_kwargs: None)
+    monkeypatch.setattr(control_page, "_render_research_overview_tab", lambda *_args: None)
     monkeypatch.setattr(
-        app,
+        control_page,
         "_render_interpretation_records",
         lambda _st, rows, language, **_kwargs: rendered.append(
             (language, [str(row.get("adapter")) for row in rows])

@@ -304,6 +304,7 @@ def test_before_view_uses_tabs_instead_of_nesting_tutorial_expanders(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     from promptcontrollab.integrations.ui import app
+    from promptcontrollab.integrations.ui.pages import control as control_page
 
     rendered: list[str] = []
 
@@ -332,12 +333,12 @@ def test_before_view_uses_tabs_instead_of_nesting_tutorial_expanders(
             raise AssertionError("Before view must not wrap nested tutorial expanders.")
 
     monkeypatch.setattr(
-        app,
+        control_page,
         "_render_guard_tab",
         lambda *_args, **_kwargs: rendered.append("guard"),
     )
     monkeypatch.setattr(
-        app,
+        control_page,
         "_render_tutorial_tab",
         lambda *_args, **_kwargs: rendered.append("tutorial"),
     )
