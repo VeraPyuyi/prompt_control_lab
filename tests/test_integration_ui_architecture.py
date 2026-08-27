@@ -44,6 +44,10 @@ def test_old_ui_facades_export_the_canonical_public_symbols() -> None:
     legacy_app = importlib.import_module("promptcontrollab.ui.app")
     canonical_data = importlib.import_module("promptcontrollab.integrations.ui.data")
     legacy_data = importlib.import_module("promptcontrollab.ui.data")
+    canonical_workflows = importlib.import_module(
+        "promptcontrollab.integrations.ui.workflows"
+    )
+    legacy_workflows = importlib.import_module("promptcontrollab.ui.workflows")
 
     assert legacy_app.main is canonical_app.main
     assert legacy_app.TEXT is canonical_app.TEXT
@@ -51,3 +55,4 @@ def test_old_ui_facades_export_the_canonical_public_symbols() -> None:
     assert legacy_data.list_runs is canonical_data.list_runs
     assert legacy_data.load_run_detail is canonical_data.load_run_detail
     assert legacy_data.deepseek_harness_view is canonical_data.deepseek_harness_view
+    assert legacy_workflows.ExecutionRunner is canonical_workflows.ExecutionRunner

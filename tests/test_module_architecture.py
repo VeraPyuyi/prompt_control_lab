@@ -6,6 +6,7 @@ import ast
 import importlib
 import inspect
 import json
+import shlex
 from pathlib import Path
 
 import pytest
@@ -213,6 +214,30 @@ def test_bilingual_module_guides_share_the_required_structure(module_name: str) 
         CHINESE_GUIDE_SECTIONS
     )
     assert english.count("```") == chinese.count("```")
+
+
+def test_module_guide_cli_examples_parse_with_the_public_parser() -> None:
+    """Keep every copyable single-line module command aligned with the CLI parser."""
+
+    from promptcontrollab.cli import build_parser
+
+    failures: list[str] = []
+    for module_name in MODULES:
+        for guide_name in ("README.md", "README.zh.md"):
+            guide = PACKAGE_ROOT / module_name / guide_name
+            for line_number, raw_line in enumerate(
+                guide.read_text(encoding="utf-8").splitlines(),
+                start=1,
+            ):
+                line = raw_line.strip()
+                if not line.startswith("pcl ") or line == "pcl --help":
+                    continue
+                try:
+                    build_parser().parse_args(shlex.split(line)[1:])
+                except SystemExit as exc:
+                    failures.append(f"{guide}:{line_number} exited {exc.code}: {line}")
+
+    assert failures == []
 
 
 @pytest.mark.parametrize(("canonical", "legacy", "symbol"), PUBLIC_COMPATIBILITY)

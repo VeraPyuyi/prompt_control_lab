@@ -21,7 +21,7 @@ pcl trajectory --states states.npz --out runs/trajectory
 pcl riccati --matrices matrices.npz --trajectory states.npz --out runs/riccati
 pcl tv-soft --predictions scored_predictions.jsonl --out runs/tv-soft
 pcl terminal-sensitivity --records terminal_interventions.jsonl --out runs/certificates
-pcl green-certificate --surrogate green_surrogate.npz --premises green_premises.json --out runs/certificates
+pcl green-certificate --surrogate green_surrogate.npz --horizon 16 --horizon 32 --horizon 64 --premises green_premises.json --out runs/certificates
 pcl posterior-certificate --input posterior_bounds.json --out runs/certificates
 ```
 

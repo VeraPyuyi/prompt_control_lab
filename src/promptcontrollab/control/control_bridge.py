@@ -139,7 +139,7 @@ class ControlBridge:
     def _harness_session_start(self, params: JsonDict) -> JsonDict:
         """Create a controlled Harness session after validating its safety contract."""
 
-        from promptcontrollab.integrations.harness_integration import (
+        from promptcontrollab.control.harness_runtime import (
             HARNESS_COMMIT,
             HARNESS_VERSION,
         )
@@ -341,7 +341,7 @@ class ControlBridge:
         return {"decision": decision, "reason": reason}
 
     def _harness_event(self, params: JsonDict) -> JsonDict:
-        from promptcontrollab.integrations.harness_integration import sanitize_harness_event
+        from promptcontrollab.control.harness_runtime import sanitize_harness_event
 
         run_id = _required_string(params, "run_id")
         session_id = _required_string(params, "session_id")
@@ -426,7 +426,7 @@ class ControlBridge:
         }
 
     def _harness_finalize(self, params: JsonDict) -> JsonDict:
-        from promptcontrollab.integrations.harness_integration import finalize_harness_run
+        from promptcontrollab.control.harness_runtime import finalize_harness_run
 
         run_id = _required_string(params, "run_id")
         session_id = _required_string(params, "session_id")

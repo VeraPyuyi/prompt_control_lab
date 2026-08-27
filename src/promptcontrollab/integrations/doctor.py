@@ -67,16 +67,13 @@ def _check_package_import() -> JsonDict:
 
 
 def _check_cli_parser() -> JsonDict:
-    try:
-        from promptcontrollab.cli import build_parser
-
-        parser = build_parser()
-        if parser.prog == "pcl":
-            return _check("cli_parser", "pass", "CLI parser is available.")
-        return _check("cli_parser", "fail", f"Unexpected CLI parser prog: {parser.prog}.")
-    except Exception as exc:  # pragma: no cover - defensive environment boundary
-        return _check("cli_parser", "fail", f"CLI parser failed: {exc}")
-    return _check("cli_parser", "pass", "CLI parser is available.")
+    return _run_subprocess_check(
+        "cli_parser",
+        [sys.executable, "-m", "promptcontrollab", "--help"],
+        input_text="",
+        cwd=Path.cwd(),
+        success_message="CLI parser is available.",
+    )
 
 
 def _check_openai_key() -> JsonDict:

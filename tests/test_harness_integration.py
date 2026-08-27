@@ -111,11 +111,11 @@ def test_harness_doctor_is_offline_and_checks_local_contract(
         return subprocess.CompletedProcess(command, 0, stdout="v22.19.0\n", stderr="")
 
     monkeypatch.setattr(
-        "promptcontrollab.integrations.harness_integration.shutil.which",
+        "promptcontrollab.control.harness_runtime.shutil.which",
         lambda name: "node.exe",
     )
     monkeypatch.setattr(
-        "promptcontrollab.integrations.harness_integration.subprocess.run",
+        "promptcontrollab.control.harness_runtime.subprocess.run",
         fake_run,
     )
 

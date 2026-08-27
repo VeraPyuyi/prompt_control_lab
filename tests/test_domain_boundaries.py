@@ -68,6 +68,29 @@ def test_canonical_packages_do_not_import_legacy_facades() -> None:
     assert violations == []
 
 
+def test_outer_domains_do_not_create_reverse_dependency_cycles() -> None:
+    """Keep control independent from integrations and integrations independent from CLI."""
+
+    forbidden_edges = {
+        ("control", "integrations"),
+        ("integrations", "cli"),
+    }
+    violations: list[str] = []
+    for source_domain, target_domain in sorted(forbidden_edges):
+        for source in sorted((PACKAGE_ROOT / source_domain).rglob("*.py")):
+            tree = ast.parse(source.read_text(encoding="utf-8"), filename=str(source))
+            for node in ast.walk(tree):
+                module = _imported_module(node)
+                if module == f"promptcontrollab.{target_domain}" or (
+                    module is not None
+                    and module.startswith(f"promptcontrollab.{target_domain}.")
+                ):
+                    relative = source.relative_to(PACKAGE_ROOT)
+                    violations.append(f"{relative}:{node.lineno} imports {module}")
+
+    assert violations == []
+
+
 def _imported_module(node: ast.AST) -> str | None:
     """Return the absolute module named by one import node."""
 
