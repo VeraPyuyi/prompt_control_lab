@@ -52,7 +52,7 @@ pcl posttrain-gate --baseline runs/checkpoint-000 --candidate runs/checkpoint-50
 | 本地 UI | 执行前 / 运行中 / 机制解释 / 稳定性 / 训练门禁 / 证据边界 / 决策 / 历史 |
 ## Documentation
 
-[五分钟快速上手](docs/quickstart.zh.md) | [控制证书](docs/control_certificates.zh.md) | [证据与可解释性](docs/server_evidence.zh.md) | [后训练诊断](docs/posttraining.zh.md) | [控制闭环](docs/control_loop.zh.md) | [DeepSeek Harness](docs/deepseek_harness.zh.md) | [Provider](docs/providers.zh.md) | [本地 UI](docs/control_ui.zh.md)
+[架构与模块](docs/modules/README.zh.md) | [五分钟快速上手](docs/quickstart.zh.md) | [控制证书](docs/control_certificates.zh.md) | [证据与可解释性](docs/server_evidence.zh.md) | [后训练诊断](docs/posttraining.zh.md) | [控制闭环](docs/control_loop.zh.md) | [DeepSeek Harness](docs/deepseek_harness.zh.md) | [Provider](docs/providers.zh.md) | [本地 UI](docs/control_ui.zh.md)
 
 安装与已有流程：[发布安装说明](docs/release_install.zh.md)、`pcl start --guide --language zh`、`pcl quickstart --language zh --out demo --open-report`、`pcl start --choice demo --language zh --out demo`、`pcl choose --need "<你的目标>" --language zh`。
 
