@@ -45,7 +45,7 @@ from promptcontrollab.evaluation.evaluation import run_import_eval
 from promptcontrollab.evaluation.splitting import load_tasks, make_split, write_split
 from promptcontrollab.evaluation.statistics import compare_prediction_files
 from promptcontrollab.evaluation.validity import run_comparison_validity
-from promptcontrollab.evidence_card import write_evidence_card
+from promptcontrollab.evidence.evidence_card import write_evidence_card
 
 
 def write_research_demo(*, out_dir: Path, seed: int = 0) -> JsonDict:
@@ -191,6 +191,8 @@ def write_research_demo(*, out_dir: Path, seed: int = 0) -> JsonDict:
 
 
 def _write_demo_evaluation_bundle(*, out_dir: Path, inputs_dir: Path, seed: int) -> None:
+    """Create deterministic synthetic evaluation artifacts for the research demo."""
+
     tasks_path = inputs_dir / "tasks.jsonl"
     baseline_raw_path = inputs_dir / "baseline_predictions.jsonl"
     candidate_raw_path = inputs_dir / "candidate_predictions.jsonl"
@@ -501,6 +503,8 @@ def _run_external_bridge_diagnostics(
     diagnostics_dir: Path,
     summary_dir: Path,
 ) -> JsonDict | None:
+    """Summarize imported external evidence without treating it as native proof."""
+
     if run_dir is None:
         return None
     ecosystem_path = run_dir / "ecosystem_demo.json"
@@ -694,6 +698,8 @@ def _resolve_research_paths(
     diagnostics_dir: Path | None,
     summary_dir: Path | None,
 ) -> ResearchPaths:
+    """Resolve explicit and run-relative paths for one research diagnostic workflow."""
+
     input_dir = run_dir / "inputs" if run_dir is not None else None
     resolved_diagnostics = diagnostics_dir or (run_dir / "diagnostics" if run_dir else None)
     if resolved_diagnostics is None:

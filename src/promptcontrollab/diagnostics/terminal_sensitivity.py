@@ -174,6 +174,8 @@ def _run_surrogate(
     horizons: list[int],
     early_steps: list[int],
 ) -> list[JsonDict]:
+    """Generate normalized sensitivity records from a fixed low-dimensional surrogate."""
+
     if len(set(horizons)) < 1:
         raise ValueError("--surrogate requires at least one --horizon")
     if any(not isinstance(value, int) or value <= 0 for value in horizons):

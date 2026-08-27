@@ -451,6 +451,8 @@ def render_research_overview_svg(payload: JsonDict) -> str:
 
 
 def _research_overview_rows(payload: JsonDict) -> list[JsonDict]:
+    """Build stable overview rows from the available diagnostic artifacts."""
+
     run_dir_value = payload.get("run_dir")
     run_dir = Path(str(run_dir_value)) if run_dir_value else None
     diagnostics = payload.get("diagnostics")
@@ -609,6 +611,8 @@ def _render_remediation_html(value: object) -> str:
 
 
 def _html_page(*, title: str, subtitle: str, body: list[str]) -> str:
+    """Render a self-contained research dashboard page from trusted fragments."""
+
     return f"""<!doctype html>
 <html lang="en">
 <head>

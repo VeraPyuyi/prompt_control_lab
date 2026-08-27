@@ -1,4 +1,4 @@
-"""Documentation contracts for the stable canonical domain packages."""
+"""Documentation contracts for every canonical PromptControlLab package."""
 
 from __future__ import annotations
 
@@ -11,7 +11,18 @@ from pathlib import Path
 import pytest
 
 PACKAGE_ROOT = Path(__file__).parents[1] / "src" / "promptcontrollab"
-STABLE_DOMAINS = ("core", "preflight", "provenance", "evaluation", "control", "audit")
+CANONICAL_DOMAINS = (
+    "core",
+    "preflight",
+    "provenance",
+    "evaluation",
+    "control",
+    "audit",
+    "evidence",
+    "diagnostics",
+    "integrations",
+    "cli",
+)
 CJK_PATTERN = re.compile(r"[\u3400-\u4dbf\u4e00-\u9fff\uf900-\ufaff]")
 SUMMARY_TERMINATORS = (".", "!", "?")
 
@@ -21,8 +32,8 @@ def _python_sources() -> list[Path]:
 
     return [
         path
-        for domain in STABLE_DOMAINS
-        for path in sorted((PACKAGE_ROOT / domain).glob("*.py"))
+        for domain in CANONICAL_DOMAINS
+        for path in sorted((PACKAGE_ROOT / domain).rglob("*.py"))
     ]
 
 
@@ -50,7 +61,9 @@ def _requires_docstring(
         return False
     if scope == "public_class" and _is_tiny_property(node):
         return False
-    if scope == "module" and not node.name.startswith("_"):
+    if scope == "module" and (
+        not node.name.startswith("_") or node.name.startswith("_cmd_")
+    ):
         return True
     if scope == "public_class" and not node.name.startswith("_"):
         return True
@@ -100,16 +113,16 @@ def _docstring_violations(path: Path) -> list[str]:
 
 
 @pytest.mark.parametrize("source_path", _python_sources(), ids=lambda path: path.name)
-def test_stable_domain_apis_have_english_pep257_docstrings(source_path: Path) -> None:
-    """Require English PEP 257 docstrings on stable-domain API definitions."""
+def test_canonical_apis_have_english_pep257_docstrings(source_path: Path) -> None:
+    """Require English PEP 257 docstrings on canonical API definitions."""
 
     violations = _docstring_violations(source_path)
     assert not violations, "\n".join(violations)
 
 
 @pytest.mark.parametrize("source_path", _python_sources(), ids=lambda path: path.name)
-def test_stable_domain_inline_comments_remain_english(source_path: Path) -> None:
-    """Reject CJK text in Python comments within the stable canonical domains."""
+def test_canonical_inline_comments_remain_english(source_path: Path) -> None:
+    """Reject CJK text in Python comments within canonical packages."""
 
     source = source_path.read_text(encoding="utf-8")
     comments = [

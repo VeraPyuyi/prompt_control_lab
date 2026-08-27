@@ -8,6 +8,8 @@ from pathlib import Path
 
 @dataclass(frozen=True)
 class ResearchPaths:
+    """Resolve the inputs and output locations used by a research diagnostic run."""
+
     soft_path: Path | None
     vocab_path: Path | None
     states_path: Path | None

@@ -40,6 +40,8 @@ class ProviderSpec:
     docs_url: str
 
     def to_json(self) -> JsonDict:
+        """Serialize public provider configuration without credential values."""
+
         return {
             "id": self.provider_id,
             "display_name": self.display_name,
@@ -72,6 +74,8 @@ class ProviderResponse:
         self.to_json()
 
     def to_json(self) -> JsonDict:
+        """Serialize a normalized provider response after finite-value validation."""
+
         payload: JsonDict = {
             "provider": self.provider,
             "model_id": self.model_id,
@@ -187,6 +191,8 @@ class _RejectRedirectHandler(urllib.request.HTTPRedirectHandler):
     """Reject redirects so authorization headers never reach another URL."""
 
     def redirect_request(self, *args: object, **kwargs: object) -> None:
+        """Reject every redirect to keep authorization headers on the original host."""
+
         return None
 
 
@@ -422,6 +428,8 @@ def _build_request(
     api_key: str,
     max_output_tokens: int,
 ) -> tuple[urllib.request.Request, JsonDict]:
+    """Build a provider-specific HTTPS request and its hashable payload."""
+
     if spec.protocol == "anthropic-messages":
         endpoint = f"{base_url}/v1/messages"
         payload: JsonDict = {
@@ -505,6 +513,8 @@ def _normalize_response(
     request_sha256: str,
     response_sha256: str,
 ) -> ProviderResponse:
+    """Normalize one provider payload into the persistence-safe response schema."""
+
     _validate_usable_response(spec, payload)
     if spec.protocol == "anthropic-messages":
         output = _anthropic_output(payload)
@@ -585,6 +595,8 @@ def _raise_for_error_envelope(
 
 
 def _validate_usable_response(spec: ProviderSpec, payload: JsonDict) -> None:
+    """Reject provider payloads that represent refusal, blocking, or empty output."""
+
     if spec.protocol == "anthropic-messages":
         stop_reason = _string(payload.get("stop_reason"))
         if stop_reason and stop_reason.lower() in {"refusal", "safety", "content_filter"}:

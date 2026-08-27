@@ -22,6 +22,30 @@ MODULES = (
     "cli",
 )
 
+ENGLISH_GUIDE_SECTIONS = (
+    "Purpose",
+    "Use cases",
+    "CLI commands",
+    "Python API",
+    "Inputs/Artifacts",
+    "Dependencies",
+    "Extension points",
+    "Limitations",
+    "Tests/Examples",
+)
+
+CHINESE_GUIDE_SECTIONS = (
+    "目的",
+    "使用场景",
+    "CLI 命令",
+    "Python API",
+    "输入与产物",
+    "依赖",
+    "扩展点",
+    "限制",
+    "测试与示例",
+)
+
 PUBLIC_COMPATIBILITY = (
     ("preflight", "prompt_guard", "guard_prompt"),
     ("evaluation", "workflow", "run_quick_analysis"),
@@ -91,6 +115,22 @@ def test_canonical_module_has_bilingual_readmes(module_name: str) -> None:
     assert (package_dir / "__init__.py").is_file()
     assert (package_dir / "README.md").is_file()
     assert (package_dir / "README.zh.md").is_file()
+
+
+@pytest.mark.parametrize("module_name", MODULES)
+def test_bilingual_module_guides_share_the_required_structure(module_name: str) -> None:
+    """Keep every module guide complete and structurally aligned across languages."""
+
+    package_dir = PACKAGE_ROOT / module_name
+    english = (package_dir / "README.md").read_text(encoding="utf-8")
+    chinese = (package_dir / "README.zh.md").read_text(encoding="utf-8")
+    assert [line[3:] for line in english.splitlines() if line.startswith("## ")] == list(
+        ENGLISH_GUIDE_SECTIONS
+    )
+    assert [line[3:] for line in chinese.splitlines() if line.startswith("## ")] == list(
+        CHINESE_GUIDE_SECTIONS
+    )
+    assert english.count("```") == chinese.count("```")
 
 
 @pytest.mark.parametrize(("canonical", "legacy", "symbol"), PUBLIC_COMPATIBILITY)

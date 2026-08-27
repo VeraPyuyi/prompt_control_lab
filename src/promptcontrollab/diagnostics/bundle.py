@@ -376,6 +376,8 @@ def _bundle_status(
 
 
 def _bundle_review_order(run_dir: Path) -> list[JsonDict]:
+    """Build the ordered reviewer entry points available in one research run."""
+
     candidates = [
         (
             "Evidence audit",
@@ -434,6 +436,8 @@ def _bundle_review_order(run_dir: Path) -> list[JsonDict]:
 
 
 def _bundle_artifacts(run_dir: Path) -> list[JsonDict]:
+    """Describe the expected research-bundle artifacts and their availability."""
+
     names = [
         "research_bundle.html",
         "research_bundle.md",

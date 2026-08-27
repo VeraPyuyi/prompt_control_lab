@@ -30,7 +30,7 @@ from promptcontrollab.evidence.ingest import (
     ingest_langsmith_results,
     ingest_promptfoo_results,
 )
-from promptcontrollab.research_workflow import (
+from promptcontrollab.diagnostics.research_workflow import (
     run_research_diagnostics,
     verify_research_bundle_index,
     write_research_bundle_index,

@@ -15,9 +15,9 @@ from promptcontrollab.evaluation.artifact_export import export_report_zip
 from promptcontrollab.evaluation.gate import run_gate
 from promptcontrollab.evaluation.history import index_history
 from promptcontrollab.evaluation.workflow import run_quick_analysis
-from promptcontrollab.evidence_card import write_evidence_card
-from promptcontrollab.external_evidence import ExternalTool, build_external_evidence
-from promptcontrollab.ingest import (
+from promptcontrollab.evidence.evidence_card import write_evidence_card
+from promptcontrollab.evidence.external_evidence import ExternalTool, build_external_evidence
+from promptcontrollab.evidence.ingest import (
     ingest_auto_results,
     ingest_deepeval_results,
     ingest_langfuse_results,
@@ -529,6 +529,8 @@ def _run_external_import(
     method: str | None,
     asset_id: str | None,
 ) -> JsonDict:
+    """Dispatch one allowlisted external-result importer for the local UI workflow."""
+
     if tool == "auto":
         return ingest_auto_results(
             source_path=input_path,

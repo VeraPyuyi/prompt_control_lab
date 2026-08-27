@@ -29,7 +29,7 @@ from promptcontrollab.cli.handlers.evidence import (
     _cmd_research_import_peoc,
     _cmd_source_verify,
 )
-from promptcontrollab.posttrain_pilot_data import (
+from promptcontrollab.evidence.posttrain_pilot_data import (
     GSM8K_DATASET_ID,
     GSM8K_DATASET_REVISION,
     PILOT_SELECTION_SEED,

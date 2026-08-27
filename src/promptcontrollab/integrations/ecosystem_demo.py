@@ -8,8 +8,8 @@ from pathlib import Path
 
 from promptcontrollab.core.files import JsonDict, ensure_dir, read_json, write_json
 from promptcontrollab.diagnostics.research_workflow import run_research_diagnostics
-from promptcontrollab.external_evidence import ExternalTool, build_external_evidence
-from promptcontrollab.ingest import ingest_prompt_optimizer_assets
+from promptcontrollab.evidence.external_evidence import ExternalTool, build_external_evidence
+from promptcontrollab.evidence.ingest import ingest_prompt_optimizer_assets
 from promptcontrollab.integrations.ecosystem_renderers import (
     _render_readme,
     _render_scorecard,

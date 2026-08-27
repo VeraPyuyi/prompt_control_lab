@@ -1,6 +1,6 @@
 # Canonical 功能模块
 
-本索引定义 PromptControlLab 已批准的模块边界。模块文档先于纯代码迁移落地，因此部分实现仍位于旧的平铺模块中。迁移期间，公共 CLI 行为和 artifact schema 保持不变。
+本索引定义 PromptControlLab 的 canonical 模块边界。真实实现位于下列领域 package 中，旧的平铺模块仅作为显式兼容 facade；本次代码组织调整不改变公共 CLI 行为和 artifact schema。
 
 | 模块 | 职责 | 指南 |
 |---|---|---|

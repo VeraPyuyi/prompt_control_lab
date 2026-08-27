@@ -324,6 +324,8 @@ def _graph_boundary_check(
     unstable_block: Any,
     horizons: list[int],
 ) -> JsonDict:
+    """Evaluate the optional terminal graph-boundary condition on the surrogate."""
+
     if graph_s is None:
         return {
             "provided": False,

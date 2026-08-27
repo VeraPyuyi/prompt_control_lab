@@ -32,7 +32,7 @@ from promptcontrollab.evaluation.history import index_history
 from promptcontrollab.evaluation.workflow import (
     run_quick_analysis,
 )
-from promptcontrollab.ingest import (
+from promptcontrollab.evidence.ingest import (
     ingest_auto_results,
     ingest_deepeval_results,
     ingest_langfuse_results,

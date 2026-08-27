@@ -11,7 +11,7 @@ from promptcontrollab.core.version import __version__
 from promptcontrollab.evaluation.reporting import generate_report
 from promptcontrollab.evaluation.statistics import compare_prediction_files
 from promptcontrollab.evaluation.validity import run_comparison_validity
-from promptcontrollab.evidence_card import write_evidence_card
+from promptcontrollab.evidence.evidence_card import write_evidence_card
 from promptcontrollab.provenance.model_identity import compare_model_identities
 
 

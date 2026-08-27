@@ -6,7 +6,7 @@ import html
 from pathlib import Path
 
 from promptcontrollab.core.files import JsonDict, ensure_dir, write_json
-from promptcontrollab.evidence_card import build_evidence_card
+from promptcontrollab.evidence.evidence_card import build_evidence_card
 
 CLAIM_REQUIREMENTS = {
     "paired": 2,

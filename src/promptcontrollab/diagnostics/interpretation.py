@@ -95,6 +95,8 @@ def _plain_language_research_insights(payload: JsonDict) -> list[JsonDict]:
 
 
 def _research_at_a_glance(payload: JsonDict, *, summary_dir: Path | None = None) -> JsonDict:
+    """Summarize diagnostic coverage without upgrading the underlying evidence level."""
+
     existing = payload.get("at_a_glance")
     if summary_dir is None and isinstance(existing, dict) and existing:
         return existing

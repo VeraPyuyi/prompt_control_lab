@@ -17,15 +17,15 @@ from promptcontrollab.diagnostics.research_workflow import (
     write_research_bundle_index,
     write_research_gap_status,
 )
-from promptcontrollab.evidence_card import write_evidence_card
-from promptcontrollab.evidence_gate import run_evidence_gate
-from promptcontrollab.external_evidence import (
+from promptcontrollab.evidence.evidence_card import write_evidence_card
+from promptcontrollab.evidence.evidence_gate import run_evidence_gate
+from promptcontrollab.evidence.external_evidence import (
     attach_evidence_gate_to_audit,
     build_external_evidence,
     build_external_evidence_audit,
     verify_source_inputs,
 )
-from promptcontrollab.ingest import (
+from promptcontrollab.evidence.ingest import (
     ingest_auto_results,
     ingest_deepeval_results,
     ingest_langfuse_results,
@@ -33,25 +33,25 @@ from promptcontrollab.ingest import (
     ingest_prompt_optimizer_assets,
     ingest_promptfoo_results,
 )
-from promptcontrollab.peoc_import import (
+from promptcontrollab.evidence.peoc_import import (
     PeocImportOptions,
     PeocSourceOverrides,
     import_peoc_bundle,
 )
-from promptcontrollab.posttrain_export import export_posttrain_pilot
-from promptcontrollab.posttrain_gate import run_posttrain_gate
-from promptcontrollab.posttrain_pilot import (
+from promptcontrollab.evidence.posttrain_export import export_posttrain_pilot
+from promptcontrollab.evidence.posttrain_gate import run_posttrain_gate
+from promptcontrollab.evidence.posttrain_pilot import (
     PilotInputs,
     build_sft_pilot_plan,
     write_model_provenance,
 )
-from promptcontrollab.posttrain_pilot_data import (
+from promptcontrollab.evidence.posttrain_pilot_data import (
     load_gsm8k_jsonl,
     prepare_sft_pilot_data,
     prepare_sft_pilot_data_from_huggingface,
 )
-from promptcontrollab.posttrain_pilot_runner import execute_sft_pilot
-from promptcontrollab.server_evidence import (
+from promptcontrollab.evidence.posttrain_pilot_runner import execute_sft_pilot
+from promptcontrollab.evidence.server_evidence import (
     EvidenceImportOptions,
     import_evidence_manifest,
     merge_evidence_manifests,

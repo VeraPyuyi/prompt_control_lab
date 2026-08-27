@@ -1,6 +1,6 @@
 # Canonical Feature Modules
 
-This index defines the approved module boundaries for PromptControlLab. The documentation is being added before the code-only migration is complete, so some implementations still live in legacy flat modules. Public CLI behavior and artifact schemas remain unchanged during that migration.
+This index defines the canonical module boundaries for PromptControlLab. Real implementations live in the domain packages below; the legacy flat modules are explicit compatibility facades. Public CLI behavior and artifact schemas remain unchanged by this code-organization migration.
 
 | Module | Responsibility | Guide |
 |---|---|---|

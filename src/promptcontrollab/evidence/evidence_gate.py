@@ -7,7 +7,7 @@ from pathlib import Path
 
 from promptcontrollab.core.files import JsonDict, read_json, write_json
 from promptcontrollab.evidence.external_evidence import verify_source_inputs
-from promptcontrollab.research_workflow import verify_research_bundle_index
+from promptcontrollab.diagnostics.research_workflow import verify_research_bundle_index
 
 DYNAMIC_BUNDLE_ARTIFACTS = {
     "bridge_summary.html",
