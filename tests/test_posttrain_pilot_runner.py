@@ -9,9 +9,9 @@ from pathlib import Path
 
 import pytest
 
-from promptcontrollab import posttrain_pilot_runner
-from promptcontrollab.posttrain_pilot import PilotInputs
-from promptcontrollab.posttrain_pilot_runner import (
+import promptcontrollab.evidence.posttrain_pilot_runner as posttrain_pilot_runner
+from promptcontrollab.evidence.posttrain_pilot import PilotInputs
+from promptcontrollab.evidence.posttrain_pilot_runner import (
     PosttrainPilotError,
     _posix_exclusive_lock,
     _validate_training_runtime_dependencies,
@@ -21,8 +21,7 @@ from promptcontrollab.posttrain_pilot_runner import (
 
 def _inputs(tmp_path: Path) -> PilotInputs:
     paths = {
-        name: tmp_path / f"{name}.jsonl"
-        for name in ("train", "validation", "withheld", "format")
+        name: tmp_path / f"{name}.jsonl" for name in ("train", "validation", "withheld", "format")
     }
     for name, path in paths.items():
         path.write_text(

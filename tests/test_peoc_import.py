@@ -8,10 +8,9 @@ from typing import Any, NoReturn
 
 import pytest
 
-import promptcontrollab.peoc_import as peoc_import_module
+import promptcontrollab.evidence.peoc_import as peoc_import_module
 from promptcontrollab.cli import main
-from promptcontrollab.files import JsonDict, read_json
-from promptcontrollab.peoc_import import (
+from promptcontrollab.evidence.peoc_import import (
     HARD_SUMMARY,
     PeocImportOptions,
     PeocSourceOverrides,
@@ -19,10 +18,11 @@ from promptcontrollab.peoc_import import (
     discover_peoc_sources,
     import_peoc_bundle,
 )
-from promptcontrollab.peoc_reporting import (
+from promptcontrollab.evidence.peoc_reporting import (
     render_peoc_case_study_html,
     render_peoc_case_study_markdown,
 )
+from promptcontrollab.files import JsonDict, read_json
 
 
 def _write_json(path: Path, value: object) -> None:
@@ -156,7 +156,7 @@ def _write_minimal_bundle(root: Path) -> None:
                     "task": "gsm8k",
                     "split": "held",
                     "delta_tv_static_mean": -0.004,
-                }
+                },
             ],
         },
     )
@@ -723,11 +723,7 @@ def test_build_peoc_evidence_rejects_trajectory_without_required_metrics(
 
     trajectory = evidence["sections"]["trajectory"]
     assert trajectory["status"] == "unusable"
-    invalid = [
-        row
-        for row in trajectory["observations"]["entries"]
-        if row["status"] == "unusable"
-    ]
+    invalid = [row for row in trajectory["observations"]["entries"] if row["status"] == "unusable"]
     assert len(invalid) == 1
     assert "alpha_emp_mean" in invalid[0]["error"]
 
@@ -738,11 +734,7 @@ def test_build_peoc_evidence_rejects_stage_pass_without_validation_design(
     bundle_root = tmp_path / "bundle"
     _write_minimal_bundle(bundle_root)
     stage_path = (
-        bundle_root
-        / "experiments"
-        / "redesign_v2"
-        / "stage_heterogeneity"
-        / "shi_r27_summary.json"
+        bundle_root / "experiments" / "redesign_v2" / "stage_heterogeneity" / "shi_r27_summary.json"
     )
     _write_json(
         stage_path,
@@ -1230,9 +1222,7 @@ def test_research_import_peoc_overwrite_restores_previous_downstream_chain_on_fa
     assert main([*args, "--overwrite"]) == 2
     captured = capsys.readouterr()
     assert "forced downstream replacement failure" in captured.err
-    assert {
-        name: (out_dir / name).read_bytes() for name in downstream
-    } == downstream
+    assert {name: (out_dir / name).read_bytes() for name in downstream} == downstream
 
 
 def test_research_import_peoc_cli_reports_invalid_bundle_without_traceback(

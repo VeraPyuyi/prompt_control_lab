@@ -9,12 +9,12 @@ import pytest
 from pytest import CaptureFixture
 
 from promptcontrollab.cli import main
-from promptcontrollab.files import read_json
-from promptcontrollab.server_evidence import (
+from promptcontrollab.evidence.server_evidence import (
     EvidenceImportOptions,
     import_evidence_manifest,
     scan_evidence_root,
 )
+from promptcontrollab.files import read_json
 
 
 def _write_json(path: Path, value: object) -> None:
@@ -84,8 +84,7 @@ def _write_server_fixture(root: Path) -> None:
         {"status": "PILOT_NEUTRAL_DO_NOT_CLAIM_FIX"},
     )
     _write_json(
-        root
-        / "experiments/p4_selective_risk_seed_holdout/p4_selective_risk_report.json",
+        root / "experiments/p4_selective_risk_seed_holdout/p4_selective_risk_report.json",
         {
             "status": "SELECTIVE_RISK_PASS",
             "n_seed_rows": 360,
@@ -286,9 +285,7 @@ def test_import_evidence_manifest_builds_interpretability_outputs_without_copyin
     assert not (out_dir / "sources").exists()
     assert (out_dir / "interpretability_report.html").is_file()
 
-    soft_hard = next(
-        entry for entry in report["findings"] if entry["adapter"] == "soft_hard_tv"
-    )
+    soft_hard = next(entry for entry in report["findings"] if entry["adapter"] == "soft_hard_tv")
     raw_statistics = soft_hard["raw_statistics"]
     assert any(row["field"] == "p_value" and row["value"] == 0.2 for row in raw_statistics)
     assert any(row["field"] == "ci" and row["value"] == [-0.01, 0.03] for row in raw_statistics)
@@ -321,9 +318,7 @@ def test_import_rejects_preexisting_portable_symlink(tmp_path: Path) -> None:
         )
 
 
-def test_evidence_cli_scan_and_import(
-    tmp_path: Path, capsys: CaptureFixture[str]
-) -> None:
+def test_evidence_cli_scan_and_import(tmp_path: Path, capsys: CaptureFixture[str]) -> None:
     root = tmp_path / "projects"
     _write_server_fixture(root)
     manifest_path = tmp_path / "manifest.json"
@@ -345,10 +340,7 @@ def test_evidence_cli_scan_and_import(
         == 0
     )
     assert (
-        main(
-            ["evidence", "import", "--manifest", str(manifest_path), "--out", str(out_dir)]
-        )
-        == 0
+        main(["evidence", "import", "--manifest", str(manifest_path), "--out", str(out_dir)]) == 0
     )
     assert manifest_path.is_file()
     assert (out_dir / "evidence_matrix.json").is_file()
@@ -382,10 +374,7 @@ def test_public_server_case_is_derived_and_path_free() -> None:
 def test_evidence_import_normalizes_non_finite_metrics_to_null(tmp_path: Path) -> None:
     root = tmp_path / "projects"
     _write_server_fixture(root)
-    selective = (
-        root
-        / "experiments/p4_selective_risk_seed_holdout/p4_selective_risk_report.json"
-    )
+    selective = root / "experiments/p4_selective_risk_seed_holdout/p4_selective_risk_report.json"
     _write_json(
         selective,
         {

@@ -9,8 +9,8 @@ from pathlib import Path
 import pytest
 
 from promptcontrollab.cli import main
+from promptcontrollab.evidence.posttrain_export import export_posttrain_pilot
 from promptcontrollab.files import read_json
-from promptcontrollab.posttrain_export import export_posttrain_pilot
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -123,7 +123,7 @@ def _write_complete_run(root: Path) -> None:
                         "observed": 0.2,
                         "threshold": 0.05,
                     }
-                ]
+                ],
             },
         )
     _write_json(

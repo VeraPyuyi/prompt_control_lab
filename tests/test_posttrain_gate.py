@@ -8,8 +8,8 @@ from pathlib import Path
 import pytest
 
 from promptcontrollab.cli import main
+from promptcontrollab.evidence.posttrain_gate import run_posttrain_gate
 from promptcontrollab.files import read_json
-from promptcontrollab.posttrain_gate import run_posttrain_gate
 
 _SAMPLE_HASH = "sha256:" + "a" * 64
 
@@ -268,13 +268,9 @@ def _write_control_certificates(
             ],
             "premises_complete": green_level == "certificate_verified",
             "verified_scope": (
-                "fixed two-dimensional surrogate"
-                if green_level == "certificate_verified"
-                else None
+                "fixed two-dimensional surrogate" if green_level == "certificate_verified" else None
             ),
-            "conditions_not_met": (
-                [] if green_state == "passed" else ["boundary_transversality"]
-            ),
+            "conditions_not_met": ([] if green_state == "passed" else ["boundary_transversality"]),
         },
     )
     posterior_verified = posterior_level == "certificate_verified"
@@ -302,9 +298,7 @@ def _write_control_certificates(
                 "source": "posttrain gate test fixture",
             },
             "provenance_complete": posterior_verified,
-            "conditions_not_met": (
-                [] if posterior_state == "passed" else ["kantorovich_h"]
-            ),
+            "conditions_not_met": ([] if posterior_state == "passed" else ["kantorovich_h"]),
         },
     )
 
@@ -344,20 +338,14 @@ def test_posttrain_gate_uses_prompt_reach_diagnostics_when_available(
     assert payload["checks"]["readout_alignment"]["observed"] == 0.04
     assert payload["checks"]["prompt_routing"]["applicable"] is True
     assert payload["checks"]["prompt_routing"]["passed"] is False
-    assert payload["checks"]["prompt_routing"]["evidence_status"] == (
-        "insufficient_evidence"
-    )
+    assert payload["checks"]["prompt_routing"]["evidence_status"] == ("insufficient_evidence")
     assert payload["checks"]["prompt_routing"]["severity"] == "insufficient"
     assert payload["checks"]["prompt_projection"]["applicable"] is False
     assert payload["checks"]["prompt_stability"]["increase"] == pytest.approx(0.02)
     trace = read_json(tmp_path / "gate/decision_trace.json")
     trace_rows = {row["check"]: row for row in trace["checks"]}
-    assert trace_rows["prompt_reachability"]["evidence"] == [
-        "diagnostics/prompt_reachability.json"
-    ]
-    assert trace_rows["readout_alignment"]["evidence"] == [
-        "diagnostics/readout_alignment.json"
-    ]
+    assert trace_rows["prompt_reachability"]["evidence"] == ["diagnostics/prompt_reachability.json"]
+    assert trace_rows["readout_alignment"]["evidence"] == ["diagnostics/readout_alignment.json"]
 
 
 def test_posttrain_gate_holds_when_recorded_control_certificate_conditions_fail(
@@ -459,9 +447,7 @@ def test_posttrain_gate_enforces_minimum_control_certificate_level(tmp_path: Pat
     assert payload["checks"]["green_certificate"]["evidence_status"] == (
         "below_minimum_certificate_level"
     )
-    assert payload["certificate_summary"]["minimum_required_level"] == (
-        "certificate_verified"
-    )
+    assert payload["certificate_summary"]["minimum_required_level"] == ("certificate_verified")
 
 
 def test_posttrain_gate_applies_global_minimum_with_each_diagnostics_natural_cap(
@@ -1013,9 +999,10 @@ def test_posttrain_gate_marks_generation_saturation_as_insufficient_evidence(
     )
 
     assert payload["decision"] == "insufficient_evidence"
-    assert "candidate:diagnostics.generation_mismatch.generation_saturation_rate" in payload[
-        "invalid_evidence"
-    ]
+    assert (
+        "candidate:diagnostics.generation_mismatch.generation_saturation_rate"
+        in payload["invalid_evidence"]
+    )
     assert payload["missing_artifacts"] == []
     assert payload["checks"]["artifact_completeness"]["passed"] is True
     validity = payload["checks"]["evidence_validity"]
@@ -1024,9 +1011,7 @@ def test_posttrain_gate_marks_generation_saturation_as_insufficient_evidence(
     assert validity["invalid"] == payload["invalid_evidence"]
     assert "invalid" in payload["plain_summary"].lower()
     trace = read_json(tmp_path / "gate/decision_trace.json")
-    trace_row = next(
-        row for row in trace["checks"] if row["check"] == "evidence_validity"
-    )
+    trace_row = next(row for row in trace["checks"] if row["check"] == "evidence_validity")
     assert trace_row["status"] == "triggered"
     assert trace_row["impact"] == "insufficient_evidence"
     assert trace_row["observed"] == payload["invalid_evidence"]
@@ -1386,17 +1371,20 @@ def test_posttrain_gate_cli_uses_packaged_default_policy(tmp_path: Path) -> None
     _write_checkpoint(candidate, checkpoint_id="500", score=0.7)
     out_dir = tmp_path / "gate"
 
-    assert main(
-        [
-            "posttrain-gate",
-            "--baseline",
-            str(baseline),
-            "--candidate",
-            str(candidate),
-            "--out",
-            str(out_dir),
-        ]
-    ) == 0
+    assert (
+        main(
+            [
+                "posttrain-gate",
+                "--baseline",
+                str(baseline),
+                "--candidate",
+                str(candidate),
+                "--out",
+                str(out_dir),
+            ]
+        )
+        == 0
+    )
     payload = read_json(out_dir / "posttrain_gate.json")
     assert payload["policy_path"] == "packaged-default"
     assert (

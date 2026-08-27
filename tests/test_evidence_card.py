@@ -4,7 +4,7 @@ import json
 from pathlib import Path
 
 from promptcontrollab.cli import main
-from promptcontrollab.evidence_card import (
+from promptcontrollab.evidence.evidence_card import (
     build_evidence_card,
     render_evidence_card_html,
     render_evidence_card_markdown,

@@ -7,9 +7,9 @@ from pathlib import Path
 
 import pytest
 
-from promptcontrollab import posttrain_pilot_runner
+import promptcontrollab.evidence.posttrain_pilot_runner as posttrain_pilot_runner
 from promptcontrollab.cli import main
-from promptcontrollab.posttrain_pilot import (
+from promptcontrollab.evidence.posttrain_pilot import (
     PilotInputs,
     aggregate_pilot_decisions,
     build_sft_pilot_plan,
@@ -25,7 +25,7 @@ from promptcontrollab.posttrain_pilot import (
     validate_resource_approval,
     write_model_provenance,
 )
-from promptcontrollab.posttrain_pilot_runner import (
+from promptcontrollab.evidence.posttrain_pilot_runner import (
     _assert_gpu_idle_twice,
     _aurc,
     _generation_budget,
@@ -100,8 +100,7 @@ def test_sft_pilot_plan_is_three_seed_fixed_split_and_plan_only(tmp_path: Path) 
     assert plan["split_provenance"]["combined_sha256"].startswith("sha256:")
     assert len(plan["planned_evaluations"]) == 9
     assert all(
-        row["soft_hard_applicability"] == "not_applicable"
-        for row in plan["planned_evaluations"]
+        row["soft_hard_applicability"] == "not_applicable" for row in plan["planned_evaluations"]
     )
 
 
@@ -136,23 +135,26 @@ def test_posttrain_pilot_cli_is_available_without_gpu_dependencies(tmp_path: Pat
         _write_jsonl(path)
     out_dir = tmp_path / "pilot"
 
-    assert main(
-        [
-            "posttrain-pilot",
-            "--model",
-            str(tmp_path / "Qwen2.5-0.5B"),
-            "--train",
-            str(paths[0]),
-            "--validation",
-            str(paths[1]),
-            "--withheld",
-            str(paths[2]),
-            "--format-fixture",
-            str(paths[3]),
-            "--out",
-            str(out_dir),
-        ]
-    ) == 0
+    assert (
+        main(
+            [
+                "posttrain-pilot",
+                "--model",
+                str(tmp_path / "Qwen2.5-0.5B"),
+                "--train",
+                str(paths[0]),
+                "--validation",
+                str(paths[1]),
+                "--withheld",
+                str(paths[2]),
+                "--format-fixture",
+                str(paths[3]),
+                "--out",
+                str(out_dir),
+            ]
+        )
+        == 0
+    )
     protocol = json.loads((out_dir / "pilot_protocol.json").read_text(encoding="utf-8"))
     assert protocol["execution_status"] == "plan_only"
 
@@ -342,9 +344,7 @@ def test_paired_checkpoint_statistics_are_deterministic_and_matched() -> None:
 
 
 def test_training_strategy_argument_supports_current_and_legacy_transformers() -> None:
-    assert training_strategy_argument({"eval_strategy", "output_dir"}) == {
-        "eval_strategy": "steps"
-    }
+    assert training_strategy_argument({"eval_strategy", "output_dir"}) == {"eval_strategy": "steps"}
     assert training_strategy_argument({"evaluation_strategy", "output_dir"}) == {
         "evaluation_strategy": "steps"
     }
@@ -457,9 +457,7 @@ def test_gpu_idle_execution_check_uses_explicit_memory_ceiling(
         (["insufficient_evidence", "hold"], "hold"),
     ],
 )
-def test_pilot_decision_aggregation_is_conservative(
-    decisions: list[str], expected: str
-) -> None:
+def test_pilot_decision_aggregation_is_conservative(decisions: list[str], expected: str) -> None:
     assert aggregate_pilot_decisions(decisions) == expected
 
 
@@ -640,9 +638,7 @@ def test_resource_approval_rejects_stale_or_external_queue_snapshot(tmp_path: Pa
 
     fresh_checked_at = now - timedelta(seconds=15)
     payload["checked_at"] = fresh_checked_at.isoformat()
-    payload["queue_snapshot_sha256"] = _write_queue_snapshot(
-        snapshot, checked_at=fresh_checked_at
-    )
+    payload["queue_snapshot_sha256"] = _write_queue_snapshot(snapshot, checked_at=fresh_checked_at)
     approval.write_text(json.dumps(payload), encoding="utf-8")
     with pytest.raises(ValueError, match="outside the pilot runtime"):
         validate_resource_approval(approval, gpu=3, now=now, runtime_root=runtime)
@@ -715,28 +711,29 @@ def test_model_provenance_cli_writes_outside_the_model_cache(tmp_path: Path) -> 
     (model / "config.json").write_text("{}", encoding="utf-8")
     output = tmp_path / "runtime" / "model-provenance.json"
 
-    assert main(
-        [
-            "posttrain-model-provenance",
-            "--model",
-            str(model),
-            "--model-id",
-            "Qwen/Qwen2.5-0.5B-Instruct",
-            "--revision",
-            "c" * 40,
-            "--out",
-            str(output),
-        ]
-    ) == 0
+    assert (
+        main(
+            [
+                "posttrain-model-provenance",
+                "--model",
+                str(model),
+                "--model-id",
+                "Qwen/Qwen2.5-0.5B-Instruct",
+                "--revision",
+                "c" * 40,
+                "--out",
+                str(output),
+            ]
+        )
+        == 0
+    )
 
     assert output.is_file()
     assert not (model / "model_provenance.json").exists()
 
 
 @pytest.mark.parametrize("revision", ["main", "latest", "not-a-hash", "abc123"])
-def test_model_provenance_requires_pinned_commit_revision(
-    tmp_path: Path, revision: str
-) -> None:
+def test_model_provenance_requires_pinned_commit_revision(tmp_path: Path, revision: str) -> None:
     model = tmp_path / revision.replace("/", "_")
     model.mkdir()
     (model / "config.json").write_text("{}", encoding="utf-8")

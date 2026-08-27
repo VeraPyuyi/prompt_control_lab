@@ -7,7 +7,7 @@ from pathlib import Path
 import pytest
 from pytest import CaptureFixture
 
-from promptcontrollab import server_evidence
+import promptcontrollab.evidence.server_evidence as server_evidence
 from promptcontrollab.cli import main
 from promptcontrollab.files import JsonDict, read_json
 
@@ -111,14 +111,7 @@ def test_prompt_reach_scan_finds_evidence_below_an_archive_prefix_once(
     tmp_path: Path,
 ) -> None:
     root = tmp_path / "archive"
-    evidence = (
-        root
-        / "_release"
-        / "prompt-reach"
-        / "results"
-        / "reach_length"
-        / "summary.json"
-    )
+    evidence = root / "_release" / "prompt-reach" / "results" / "reach_length" / "summary.json"
     _write_json(
         evidence,
         {"effective_rank": 4.25, "gramian_trace": 8.5, "sample_count": 12},
@@ -129,11 +122,7 @@ def test_prompt_reach_scan_finds_evidence_below_an_archive_prefix_once(
         profile="prompt-reach-v2",
     )
 
-    reachability = [
-        row
-        for row in manifest["sources"]
-        if row["adapter"] == "prompt_reachability"
-    ]
+    reachability = [row for row in manifest["sources"] if row["adapter"] == "prompt_reachability"]
     assert len(reachability) == 1
     assert reachability[0]["relative_path"] == (
         "_release/prompt-reach/results/reach_length/summary.json"
@@ -152,9 +141,7 @@ def test_prompt_reach_scan_and_import_write_bounded_diagnostics(tmp_path: Path) 
     assert set(manifest["adapter_counts"]) == set(ADAPTERS)
     assert all("canonical_sha256" in row for row in manifest["sources"])
     pt_row = next(
-        row
-        for row in manifest["sources"]
-        if row["media_type"] == "application/x-pytorch"
+        row for row in manifest["sources"] if row["media_type"] == "application/x-pytorch"
     )
     assert pt_row["load_policy"] == "metadata_only_never_deserialize"
 
@@ -251,9 +238,7 @@ def test_prompt_reach_import_parses_the_same_bytes_that_were_verified(
         )
     )
 
-    metric = read_json(out_dir / "prompt_reachability.json")["metrics"][
-        "effective_rank"
-    ]
+    metric = read_json(out_dir / "prompt_reachability.json")["metrics"]["effective_rank"]
     assert metric["mean"] == 4.0
 
 
@@ -403,9 +388,10 @@ def test_evidence_merge_accepts_verified_portable_runs_without_source_roots(
     assert result["conflict_count"] == 0
     merged = read_json(tmp_path / "portable-merged/source_reconciliation.json")
     assert merged["status_counts"]["canonical_equivalent"] >= 1
-    assert read_json(tmp_path / "portable-merged/prompt_stability.json")[
-        "support_status"
-    ] == "observed"
+    assert (
+        read_json(tmp_path / "portable-merged/prompt_stability.json")["support_status"]
+        == "observed"
+    )
 
 
 def test_portable_merge_rejects_a_tampered_derived_artifact(tmp_path: Path) -> None:
@@ -462,7 +448,5 @@ def test_portable_merge_pools_non_conflicting_numeric_summaries(tmp_path: Path) 
         out_dir=tmp_path / "merged",
     )
 
-    metric = read_json(tmp_path / "merged/prompt_reachability.json")["metrics"][
-        "effective_rank"
-    ]
+    metric = read_json(tmp_path / "merged/prompt_reachability.json")["metrics"]["effective_rank"]
     assert metric == {"count": 2, "max": 3.0, "mean": 2.0, "min": 1.0}

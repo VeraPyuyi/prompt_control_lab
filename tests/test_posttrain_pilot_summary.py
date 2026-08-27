@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from promptcontrollab.posttrain_pilot_summary import write_pilot_summary
+from promptcontrollab.evidence.posttrain_pilot_summary import write_pilot_summary
 
 
 def _write_json(path: Path, payload: object) -> None:

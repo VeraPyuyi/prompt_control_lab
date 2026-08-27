@@ -5,8 +5,7 @@ from typing import Any
 import pytest
 
 from promptcontrollab.cli import main
-from promptcontrollab.files import read_json, read_jsonl
-from promptcontrollab.ingest import (
+from promptcontrollab.evidence.ingest import (
     ingest_auto_results,
     ingest_deepeval_results,
     ingest_langfuse_results,
@@ -14,6 +13,7 @@ from promptcontrollab.ingest import (
     ingest_prompt_optimizer_assets,
     ingest_promptfoo_results,
 )
+from promptcontrollab.files import read_json, read_jsonl
 
 
 def test_ingest_promptfoo_v3_writes_pcl_run(tmp_path: Path) -> None:
@@ -209,9 +209,9 @@ def test_ingest_prompt_optimizer_favorites_write_prompt_assets(tmp_path: Path) -
     assert not (out_dir / "predictions.jsonl").exists()
     assert not (out_dir / "metrics.json").exists()
     assert "does not prove" in (out_dir / "prompt_assets.md").read_text(encoding="utf-8")
-    assert "Missing evidence" in (
-        out_dir / "prompt_optimizer_gap_plan.md"
-    ).read_text(encoding="utf-8")
+    assert "Missing evidence" in (out_dir / "prompt_optimizer_gap_plan.md").read_text(
+        encoding="utf-8"
+    )
     scaffold = read_json(out_dir / "eval_scaffold" / "prompt_optimizer_eval_scaffold.json")
     assert scaffold["kind"] == "prompt_optimizer_eval_scaffold"
     assert scaffold["status"] == "template_not_scored"
@@ -221,12 +221,10 @@ def test_ingest_prompt_optimizer_favorites_write_prompt_assets(tmp_path: Path) -
     assert (out_dir / "eval_scaffold" / "tasks.template.jsonl").exists()
     assert (out_dir / "eval_scaffold" / "baseline_predictions.template.jsonl").exists()
     assert (out_dir / "eval_scaffold" / "candidate_predictions.template.jsonl").exists()
-    assert (
-        out_dir / "eval_scaffold" / "promptcontrol.prompt_optimizer.example.yaml"
-    ).exists()
-    assert "pcl analyze --config" in (
-        out_dir / "eval_scaffold" / "README.md"
-    ).read_text(encoding="utf-8")
+    assert (out_dir / "eval_scaffold" / "promptcontrol.prompt_optimizer.example.yaml").exists()
+    assert "pcl analyze --config" in (out_dir / "eval_scaffold" / "README.md").read_text(
+        encoding="utf-8"
+    )
     gap_plan = read_json(out_dir / "prompt_optimizer_gap_plan.json")
     assert gap_plan["eval_scaffold"]["kind"] == "prompt_optimizer_eval_scaffold"
     assert any(
@@ -237,9 +235,7 @@ def test_ingest_prompt_optimizer_favorites_write_prompt_assets(tmp_path: Path) -
     scaffold_check = read_json(out_dir / "eval_scaffold" / "scaffold_check.json")
     assert scaffold_check["status"] == "needs_input"
     assert scaffold_check["html_path"].endswith("scaffold_check.html")
-    scaffold_html = (out_dir / "eval_scaffold" / "scaffold_check.html").read_text(
-        encoding="utf-8"
-    )
+    scaffold_html = (out_dir / "eval_scaffold" / "scaffold_check.html").read_text(encoding="utf-8")
     assert "Prompt Optimizer Eval Scaffold Check" in scaffold_html
     assert "needs_input" in scaffold_html
     assert any(issue["code"] == "placeholder_value" for issue in scaffold_check["issues"])
@@ -607,9 +603,9 @@ def test_evidence_from_promptfoo_generates_comparison_bundle(tmp_path: Path) -> 
     research = read_json(out_dir / "research_diagnostics.json")
     assert research["diagnostics"]["external_bridge"]["tool"] == "promptfoo"
     assert research["artifacts"]["research_gap_plan"] == str(out_dir / "research_gap_plan.json")
-    assert "soft-to-hard projection gap" in (
-        out_dir / "research_diagnostics.md"
-    ).read_text(encoding="utf-8")
+    assert "soft-to-hard projection gap" in (out_dir / "research_diagnostics.md").read_text(
+        encoding="utf-8"
+    )
     bridge = read_json(out_dir / "bridge_summary.json")
     assert bridge["kind"] == "external_bridge_summary"
     assert bridge["detected_tools"] == ["promptfoo"]
@@ -1065,7 +1061,7 @@ def _prompt_optimizer_favorites_payload() -> dict[str, Any]:
                         "schemaVersion": "1.0",
                         "currentVersionId": "v1",
                         "versions": [{"id": "v1", "content": "Answer with JSON."}],
-                        "examples": [{"input": "2+2", "output": "{\"answer\":\"4\"}"}],
+                        "examples": [{"input": "2+2", "output": '{"answer":"4"}'}],
                     },
                 },
             },
@@ -1151,9 +1147,7 @@ def _deepeval_payload() -> dict[str, Any]:
                 "actual_output": "5",
                 "expected_output": "6",
                 "metadata": {"example_id": "case-2", "slice": "arithmetic"},
-                "metrics": [
-                    {"name": "exact_match", "score": 0, "reason": "wrong answer"}
-                ],
+                "metrics": [{"name": "exact_match", "score": 0, "reason": "wrong answer"}],
             },
         ],
     }

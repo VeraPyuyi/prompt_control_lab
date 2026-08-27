@@ -7,14 +7,14 @@ from pathlib import Path
 import pytest
 
 from promptcontrollab.cli import main
-from promptcontrollab.files import read_json
-from promptcontrollab.posttrain_pilot import PilotInputs, build_sft_pilot_plan
-from promptcontrollab.posttrain_pilot_data import (
+from promptcontrollab.evidence.posttrain_pilot import PilotInputs, build_sft_pilot_plan
+from promptcontrollab.evidence.posttrain_pilot_data import (
     GSM8K_DATASET_ID,
     GSM8K_DATASET_REVISION,
     prepare_sft_pilot_data,
     prepare_sft_pilot_data_from_huggingface,
 )
+from promptcontrollab.files import read_json
 
 
 def _gsm8k_rows(count: int, *, offset: int = 0) -> list[dict[str, str]]:
