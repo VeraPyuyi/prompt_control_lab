@@ -2,6 +2,9 @@
 
 ## 0.2.0a1 - Unreleased release candidate
 
+- Reorganized the Python package into documented `core`, `preflight`, `evaluation`, `control`,
+  `provenance`, `audit`, `evidence`, `diagnostics`, `integrations`, and `cli` domains while
+  preserving established imports, commands, protocols, and artifact schemas.
 - Added the versioned local ControlRun and ControlEvent loop with provider-neutral adapters.
 - Added the native DeepSeek Harness Cordis integration and persistent local bridge contracts.
 - Added `prompt-reach-v2`, portable evidence reconciliation, and five prompt diagnostic adapters.
