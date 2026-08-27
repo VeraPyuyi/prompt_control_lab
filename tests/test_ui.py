@@ -1971,7 +1971,12 @@ def test_tutorial_assets_are_packaged_for_wheel_installs() -> None:
     for filename in filenames:
         source = Path("docs/assets") / filename
         target = packaged / filename
-        assert target.read_bytes() == source.read_bytes(), filename
+        if source.suffix == ".svg":
+            assert target.read_text(encoding="utf-8") == source.read_text(
+                encoding="utf-8"
+            ), filename
+        else:
+            assert target.read_bytes() == source.read_bytes(), filename
 
     assert _tutorial_asset_path("overview", "zh").is_file()
     assert _tutorial_screenshot_path("workflows", "en").is_file()

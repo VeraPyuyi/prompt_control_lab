@@ -20,7 +20,7 @@ CLI_DOMAINS = (
     "diagnostics",
     "integrations",
 )
-CLI_PARSER_SNAPSHOT_SHA256 = "1ca4326807b8388bea909fd2e81e0ab34ef8e63a63e8c381b0f0ef120645c8b3"
+CLI_PARSER_SNAPSHOT_SHA256 = "fe377185bf8f5a9d439c407a7baeb8d9f184b5b0ddf17c2acd51dfb8c8d7ae2f"
 
 
 def _normalize_parser_value(value: Any) -> Any:
@@ -29,6 +29,10 @@ def _normalize_parser_value(value: Any) -> Any:
     if callable(value):
         return {"callable": getattr(value, "__name__", type(value).__name__)}
     if isinstance(value, Path):
+        if value.is_absolute() and value.resolve(strict=False) == Path.cwd().resolve(
+            strict=False
+        ):
+            return {"path": "<cwd>"}
         return {"path": str(value)}
     if isinstance(value, type):
         return {"type": f"{value.__module__}.{value.__qualname__}"}
