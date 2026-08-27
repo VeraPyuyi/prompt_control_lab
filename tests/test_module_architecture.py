@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import ast
 import importlib
+import inspect
 from pathlib import Path
 
 import pytest
@@ -115,6 +117,66 @@ def test_canonical_module_has_bilingual_readmes(module_name: str) -> None:
     assert (package_dir / "__init__.py").is_file()
     assert (package_dir / "README.md").is_file()
     assert (package_dir / "README.zh.md").is_file()
+
+
+def test_canonical_implementation_files_stay_below_the_hard_size_limit() -> None:
+    """Prevent any canonical implementation from returning to a giant module."""
+
+    oversized: dict[str, int] = {}
+    for module_name in MODULES:
+        for source in (PACKAGE_ROOT / module_name).rglob("*.py"):
+            line_count = len(source.read_text(encoding="utf-8").splitlines())
+            if line_count > 1500:
+                oversized[source.relative_to(PACKAGE_ROOT).as_posix()] = line_count
+    assert oversized == {}
+
+
+def test_all_flat_facades_preserve_their_declared_public_symbols() -> None:
+    """Bind every legacy flat export to the same canonical object and signature."""
+
+    failures: list[str] = []
+    for facade_path in sorted(PACKAGE_ROOT.glob("*.py")):
+        source = facade_path.read_text(encoding="utf-8")
+        if "Backward-compatible facade" not in source:
+            continue
+        tree = ast.parse(source, filename=str(facade_path))
+        imported: dict[str, tuple[str, str]] = {}
+        public: list[str] | None = None
+        for node in tree.body:
+            if isinstance(node, ast.ImportFrom) and node.module:
+                for alias in node.names:
+                    imported[alias.asname or alias.name] = (node.module, alias.name)
+            if isinstance(node, ast.Assign) and any(
+                isinstance(target, ast.Name) and target.id == "__all__"
+                for target in node.targets
+            ):
+                value = ast.literal_eval(node.value)
+                public = list(value)
+
+        if public is None:
+            failures.append(f"{facade_path.name}: missing explicit __all__")
+            continue
+        legacy = importlib.import_module(f"promptcontrollab.{facade_path.stem}")
+        for symbol in public:
+            target = imported.get(symbol)
+            if target is None:
+                failures.append(f"{facade_path.name}: {symbol} has no explicit canonical import")
+                continue
+            module_name, canonical_name = target
+            canonical = getattr(importlib.import_module(module_name), canonical_name)
+            legacy_value = getattr(legacy, symbol, None)
+            if legacy_value is not canonical:
+                failures.append(f"{facade_path.name}: {symbol} is not the canonical object")
+                continue
+            if callable(canonical):
+                try:
+                    legacy_signature = inspect.signature(legacy_value)
+                    canonical_signature = inspect.signature(canonical)
+                except (TypeError, ValueError):
+                    continue
+                assert legacy_signature == canonical_signature
+
+    assert failures == []
 
 
 @pytest.mark.parametrize("module_name", MODULES)
