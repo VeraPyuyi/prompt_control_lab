@@ -52,10 +52,14 @@ def test_user_facing_integrations_have_paired_readmes() -> None:
         assert chinese.read_text(encoding="utf-8").strip()
 
 
-def test_exported_harness_functions_and_classes_have_tsdoc() -> None:
-    """Require TSDoc on hand-written exported Harness functions and classes."""
+def test_exported_harness_contracts_have_tsdoc() -> None:
+    """Require TSDoc on hand-written exported Harness declarations and re-exports."""
 
-    declaration = re.compile(r"^export\s+(?:async\s+)?(?:function|class)\s+", re.MULTILINE)
+    declaration = re.compile(
+        r"^export\s+(?:(?:async\s+)?(?:function|class|interface|type|const|enum)\b|"
+        r"(?:type\s+)?\{)",
+        re.MULTILINE,
+    )
     missing: list[str] = []
     for path in sorted(HARNESS_SRC.glob("*.ts")):
         source = path.read_text(encoding="utf-8")

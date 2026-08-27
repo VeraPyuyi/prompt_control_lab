@@ -1,0 +1,500 @@
+{
+  "agent_run": [
+    "build_agent_run_manifest"
+  ],
+  "artifact_export": [
+    "export_report_zip"
+  ],
+  "audit_diff": [
+    "CONFIG_EXTENSIONS",
+    "DANGEROUS_PARTS",
+    "DEPENDENCY_FILES",
+    "LOCKFILES",
+    "SOURCE_EXTENSIONS",
+    "run_audit_diff"
+  ],
+  "claim_check": [
+    "CLAIM_LABELS",
+    "CLAIM_REQUIREMENTS",
+    "TIER_ORDER",
+    "render_claim_check_html",
+    "render_claim_check_markdown",
+    "run_claim_check"
+  ],
+  "config": [
+    "find_project_config",
+    "get_config_bool",
+    "get_config_float",
+    "get_config_int",
+    "get_config_list",
+    "get_config_path",
+    "get_config_str",
+    "load_project_config",
+    "read_simple_yaml"
+  ],
+  "control_analysis": [
+    "analyze_attribution",
+    "analyze_stability",
+    "make_control_decision"
+  ],
+  "control_benchmark": [
+    "ControlBenchmarkError",
+    "MANIFEST_SCHEMA",
+    "RESULT_SCHEMA",
+    "STABILITY_LABELS",
+    "main",
+    "run_benchmark"
+  ],
+  "control_bridge": [
+    "BRIDGE_PROTOCOL",
+    "ControlBridge",
+    "InvalidParamsError",
+    "InvalidRequestError",
+    "MethodNotFoundError",
+    "serve_stdio"
+  ],
+  "control_events": [
+    "EventLog",
+    "run_lifecycle_lock"
+  ],
+  "control_index": [
+    "RunIndex"
+  ],
+  "control_protocol": [
+    "AttributionReport",
+    "ControlDecision",
+    "ControlEvent",
+    "ControlRun",
+    "PreflightDecision",
+    "REDACTED",
+    "StabilityReport",
+    "redact_sensitive",
+    "utc_now"
+  ],
+  "control_workflow": [
+    "AUTHORIZATIONS",
+    "ControlSession",
+    "PENDING_PROMPT_HASH",
+    "append_control_event",
+    "bind_control_prompt",
+    "control_status",
+    "finalize_control_session",
+    "finalize_incomplete_control_session",
+    "load_control_session",
+    "perform_harness_preflight",
+    "perform_preflight",
+    "preview_guard",
+    "record_provider_execution",
+    "run_control",
+    "start_control_session"
+  ],
+  "doctor": [
+    "format_doctor",
+    "run_doctor"
+  ],
+  "ecosystem_demo": [
+    "ASSET_SPECS",
+    "DEMO_SPECS",
+    "EcosystemDemoSpec",
+    "PromptOptimizerAssetSpec",
+    "run_ecosystem_demo",
+    "write_ecosystem_scorecard"
+  ],
+  "errors": [
+    "OptionalDependencyError",
+    "PromptControlLabError",
+    "optional_dependency_message"
+  ],
+  "evaluation": [
+    "PredictionRecord",
+    "RawPredictionOutput",
+    "TaskRecord",
+    "build_predictions",
+    "load_prediction_outputs",
+    "load_scored_predictions",
+    "run_import_eval"
+  ],
+  "evidence_card": [
+    "build_evidence_card",
+    "render_evidence_card_html",
+    "render_evidence_card_markdown",
+    "write_evidence_card"
+  ],
+  "evidence_gate": [
+    "DYNAMIC_BUNDLE_ARTIFACTS",
+    "run_evidence_gate"
+  ],
+  "evidence_profiles": [
+    "EvidenceProfile",
+    "LEGACY_ADAPTER_NAMES",
+    "evidence_profile_registry",
+    "get_evidence_profile"
+  ],
+  "explain": [
+    "EXPLAIN_LEVELS",
+    "generate_explanation"
+  ],
+  "external_evidence": [
+    "ExternalTool",
+    "attach_evidence_gate_to_audit",
+    "build_external_evidence",
+    "build_external_evidence_audit",
+    "render_bridge_summary_html",
+    "render_evidence_audit_html",
+    "render_source_input_verification_html",
+    "verify_source_inputs"
+  ],
+  "files": [
+    "JsonDict",
+    "ensure_dir",
+    "read_json",
+    "read_jsonl",
+    "stable_digest",
+    "write_json",
+    "write_jsonl"
+  ],
+  "gate": [
+    "run_gate"
+  ],
+  "github_app": [
+    "PullRequestClient",
+    "SUMMARY_COMMENT_MARKER",
+    "handle_pull_request_payload",
+    "serve_github_app",
+    "summarize_pull_files",
+    "verify_webhook_signature"
+  ],
+  "green_certificate": [
+    "analyze_green_certificate"
+  ],
+  "guard_policy": [
+    "GuardPolicy",
+    "GuardPolicyRule",
+    "GuardViolation",
+    "SEVERITY_RANK",
+    "evaluate_guard_policy",
+    "highest_severity",
+    "load_guard_policy",
+    "severity_at_least",
+    "unique_categories"
+  ],
+  "harness_integration": [
+    "HARNESS_COMMIT",
+    "HARNESS_COMPATIBILITY_SCHEMA",
+    "HARNESS_CONFIG_SCHEMA",
+    "HARNESS_VERSION",
+    "assess_harness_run_acceptance",
+    "doctor_harness",
+    "finalize_harness_run",
+    "initialize_harness_project",
+    "inspect_harness_session",
+    "replay_harness_session",
+    "resolve_harness_report",
+    "sanitize_harness_event"
+  ],
+  "hf_demo": [
+    "DemoSession",
+    "HF_DEMO_ALLOWED_WORKFLOWS",
+    "HF_DEMO_MAX_GLOBAL_BYTES",
+    "HF_DEMO_MAX_JSON_DEPTH",
+    "HF_DEMO_MAX_JSON_NODES",
+    "HF_DEMO_MAX_JSON_RECORDS",
+    "HF_DEMO_MAX_SESSIONS",
+    "HF_DEMO_MAX_SESSION_BYTES",
+    "HF_DEMO_MAX_SESSION_FILES",
+    "HF_DEMO_MAX_UPLOAD_BYTES",
+    "HF_DEMO_MODE",
+    "HF_DEMO_SESSION_TTL_SECONDS",
+    "cleanup_expired_sessions",
+    "is_hf_demo",
+    "prepare_demo_session",
+    "require_hf_demo_workflow",
+    "store_uploaded_artifact",
+    "validate_uploaded_artifact"
+  ],
+  "hf_hidden": [
+    "extract_hidden_states",
+    "load_prompt_texts"
+  ],
+  "hf_space": [
+    "build_space_bundle"
+  ],
+  "history": [
+    "PROMPT_IDENTITY_KEYS",
+    "compare_history",
+    "index_history",
+    "summarize_run"
+  ],
+  "ingest": [
+    "PredictionRecord",
+    "detect_ingest_source",
+    "ingest_auto_results",
+    "ingest_deepeval_results",
+    "ingest_langfuse_results",
+    "ingest_langsmith_results",
+    "ingest_prompt_optimizer_assets",
+    "ingest_promptfoo_results",
+    "render_prompt_assets_html",
+    "render_prompt_assets_markdown",
+    "render_prompt_optimizer_eval_scaffold_markdown",
+    "render_prompt_optimizer_gap_plan_html",
+    "render_prompt_optimizer_gap_plan_markdown"
+  ],
+  "metrics": [
+    "MetricSummary",
+    "PredictionRecord",
+    "normalize_text",
+    "score_output",
+    "summarize_predictions"
+  ],
+  "model_drift": [
+    "PROMPT_IDENTITY_KEYS",
+    "run_model_drift"
+  ],
+  "model_identity": [
+    "ModelIdentity",
+    "compare_model_identities",
+    "detect_model_identity",
+    "from_declared_model",
+    "from_predictions_file",
+    "from_response_file",
+    "infer_provider",
+    "is_alias_model",
+    "model_payload_from_prediction",
+    "unknown_identity",
+    "verify_identity"
+  ],
+  "optional": [
+    "require_module"
+  ],
+  "peoc_import": [
+    "HARD_SUMMARY",
+    "HETEROGENEITY_SUMMARY",
+    "MAX_PORTABLE_FILE_BYTES",
+    "MAX_PORTABLE_TOTAL_BYTES",
+    "PeocImportOptions",
+    "PeocSourceOverrides",
+    "SOFT_SUMMARY",
+    "TRAJECTORY_ROOT",
+    "build_peoc_evidence",
+    "discover_peoc_sources",
+    "import_peoc_bundle"
+  ],
+  "peoc_reporting": [
+    "render_peoc_case_study_html",
+    "render_peoc_case_study_markdown"
+  ],
+  "plugin_installer": [
+    "PLUGIN_CHOICES",
+    "install_plugin"
+  ],
+  "posterior_certificate": [
+    "analyze_posterior_certificate"
+  ],
+  "posttrain_export": [
+    "export_posttrain_pilot"
+  ],
+  "posttrain_gate": [
+    "render_posttrain_html",
+    "render_posttrain_markdown",
+    "run_posttrain_gate"
+  ],
+  "posttrain_pilot": [
+    "PilotInputs",
+    "aggregate_pilot_decisions",
+    "build_sft_pilot_plan",
+    "canonical_answer_exact_match",
+    "model_provenance_path",
+    "paired_checkpoint_statistics",
+    "score_pilot_output",
+    "sequence_exact_match",
+    "token_trajectory_drift",
+    "training_strategy_argument",
+    "validate_gpu_idle_snapshots",
+    "validate_model_provenance",
+    "validate_resource_approval",
+    "write_model_provenance",
+    "write_sft_pilot_plan"
+  ],
+  "posttrain_pilot_data": [
+    "GSM8K_CONFIGURATION",
+    "GSM8K_DATASET_ID",
+    "GSM8K_DATASET_REVISION",
+    "PILOT_SELECTION_SEED",
+    "load_gsm8k_jsonl",
+    "prepare_sft_pilot_data",
+    "prepare_sft_pilot_data_from_huggingface"
+  ],
+  "posttrain_pilot_runner": [
+    "CheckpointEvaluation",
+    "PosttrainPilotError",
+    "execute_sft_pilot"
+  ],
+  "posttrain_pilot_summary": [
+    "write_pilot_summary"
+  ],
+  "pr_summary": [
+    "build_pr_summary",
+    "render_pr_summary_markdown",
+    "write_pr_summary"
+  ],
+  "prompt_context": [
+    "PromptContext",
+    "empty_prompt_context",
+    "load_prompt_context"
+  ],
+  "prompt_diff": [
+    "render_prompt_diff"
+  ],
+  "prompt_guard": [
+    "PromptGuardResult",
+    "guard_prompt"
+  ],
+  "prompt_identity": [
+    "build_prompt_identity"
+  ],
+  "prompt_improver": [
+    "PromptImprovement",
+    "PromptTokenReport",
+    "estimate_tokens",
+    "improve_prompt"
+  ],
+  "providers": [
+    "ProviderError",
+    "ProviderResponse",
+    "ProviderSpec",
+    "call_provider",
+    "doctor_provider",
+    "inspect_provider",
+    "list_providers"
+  ],
+  "report_model": [
+    "ReportModel"
+  ],
+  "reporting": [
+    "generate_report",
+    "render_html",
+    "render_markdown"
+  ],
+  "research_workflow": [
+    "PAPER_MAPPING",
+    "PAPER_REMEDIATION",
+    "ResearchPaths",
+    "build_research_bundle_index",
+    "render_research_bundle_index_html",
+    "render_research_bundle_index_markdown",
+    "render_research_bundle_verification_html",
+    "render_research_diagnostics_html",
+    "render_research_diagnostics_markdown",
+    "render_research_gap_plan_html",
+    "render_research_gap_status_html",
+    "render_research_overview_svg",
+    "run_research_diagnostics",
+    "verify_research_bundle_index",
+    "write_peoc_research_gap_plan",
+    "write_research_bundle_index",
+    "write_research_demo",
+    "write_research_gap_status"
+  ],
+  "riccati": [
+    "analyze_riccati"
+  ],
+  "run_comparison": [
+    "compare_runs"
+  ],
+  "scaffold_check": [
+    "PLACEHOLDER_MARKERS",
+    "check_prompt_optimizer_eval_scaffold",
+    "render_scaffold_check_html",
+    "render_scaffold_check_markdown",
+    "write_scaffold_check"
+  ],
+  "schemas": [
+    "MetricSummary",
+    "PredictionRecord",
+    "TaskRecord"
+  ],
+  "server_evidence": [
+    "ADAPTERS",
+    "EvidenceImportOptions",
+    "MANIFEST_SCHEMA",
+    "MATRIX_SCHEMA",
+    "REPORT_SCHEMA",
+    "evidence_profile_registry",
+    "import_evidence_manifest",
+    "merge_evidence_manifests",
+    "render_interpretability_html",
+    "scan_evidence_root",
+    "validate_evidence_destination"
+  ],
+  "soft_hard": [
+    "analyze_soft_hard"
+  ],
+  "splitting": [
+    "SplitResult",
+    "TaskRecord",
+    "leakage_report",
+    "load_tasks",
+    "make_split",
+    "write_split"
+  ],
+  "statistics": [
+    "ComparisonResult",
+    "bootstrap_ci",
+    "compare_prediction_files",
+    "holm_adjust",
+    "interpret_delta",
+    "mean",
+    "paired_compare",
+    "paired_permutation_p_value"
+  ],
+  "templates": [
+    "BASELINE_JSONL",
+    "CANDIDATE_JSONL",
+    "CONFIG_YAML",
+    "DEEPEVAL_BASELINE_JSON",
+    "DEEPEVAL_CANDIDATE_JSON",
+    "EXTERNAL_README_MD",
+    "GATE_POLICY_YAML",
+    "GUARD_POLICY_YAML",
+    "LANGFUSE_EXPORT_JSON",
+    "LANGSMITH_RUNS_CSV",
+    "PROJECT_CONFIG_YAML",
+    "PROJECT_README_MD",
+    "PROJECT_README_ZH_MD",
+    "PROMPTFOO_RESULTS_JSON",
+    "PROMPT_OPTIMIZER_FAVORITES_JSON",
+    "TASKS_JSONL",
+    "write_example_project",
+    "write_external_examples"
+  ],
+  "terminal_sensitivity": [
+    "analyze_terminal_sensitivity"
+  ],
+  "tool_choice": [
+    "adoption_path_rows",
+    "choose_tool_for_need",
+    "format_tool_choice",
+    "market_gap_action_for_lane",
+    "market_gap_action_rows",
+    "render_tool_choice_markdown",
+    "tool_choice_lanes"
+  ],
+  "trajectory": [
+    "analyze_trajectory"
+  ],
+  "tv_soft": [
+    "summarize_tv_soft"
+  ],
+  "validity": [
+    "PROMPT_IDENTITY_KEYS",
+    "run_comparison_validity"
+  ],
+  "version": [],
+  "workflow": [
+    "config_metric",
+    "load_analyze_config",
+    "resolve_analyze_paths",
+    "run_quick_analysis"
+  ]
+}

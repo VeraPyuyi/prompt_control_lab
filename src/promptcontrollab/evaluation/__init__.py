@@ -5,17 +5,26 @@ from __future__ import annotations
 from importlib import import_module
 from typing import Any
 
+from promptcontrollab.core.schemas import (
+    PredictionRecord as PredictionRecord,
+)
+from promptcontrollab.core.schemas import (
+    TaskRecord as TaskRecord,
+)
+
 _EXPORTS = {
     "RawPredictionOutput": (
         "promptcontrollab.evaluation.evaluation",
         "RawPredictionOutput",
     ),
+    "PredictionRecord": ("promptcontrollab.core.schemas", "PredictionRecord"),
     "ComparisonResult": (
         "promptcontrollab.evaluation.statistics",
         "ComparisonResult",
     ),
     "ReportModel": ("promptcontrollab.evaluation.report_model", "ReportModel"),
     "SplitResult": ("promptcontrollab.evaluation.splitting", "SplitResult"),
+    "TaskRecord": ("promptcontrollab.core.schemas", "TaskRecord"),
     "build_predictions": (
         "promptcontrollab.evaluation.evaluation",
         "build_predictions",

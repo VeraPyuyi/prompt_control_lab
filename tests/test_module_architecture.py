@@ -5,11 +5,13 @@ from __future__ import annotations
 import ast
 import importlib
 import inspect
+import json
 from pathlib import Path
 
 import pytest
 
 PACKAGE_ROOT = Path(__file__).parents[1] / "src" / "promptcontrollab"
+PUBLIC_API_BASELINE = Path(__file__).parent / "fixtures" / "public_api_baseline.json"
 
 MODULES = (
     "core",
@@ -176,6 +178,24 @@ def test_all_flat_facades_preserve_their_declared_public_symbols() -> None:
                     continue
                 assert legacy_signature == canonical_signature
 
+    assert failures == []
+
+
+def test_legacy_modules_preserve_the_pre_migration_public_api_baseline() -> None:
+    """Keep module-defined APIs and public schema types from the baseline release."""
+
+    baseline = json.loads(PUBLIC_API_BASELINE.read_text(encoding="utf-8"))
+    failures: list[str] = []
+    for module_name, symbols in baseline.items():
+        module = importlib.import_module(f"promptcontrollab.{module_name}")
+        declared = set(getattr(module, "__all__", ()))
+        for symbol in symbols:
+            if not hasattr(module, symbol):
+                failures.append(f"promptcontrollab.{module_name}.{symbol} is missing")
+            elif symbol not in declared:
+                failures.append(
+                    f"promptcontrollab.{module_name}.{symbol} is absent from __all__"
+                )
     assert failures == []
 
 

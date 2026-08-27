@@ -183,14 +183,23 @@ def _tutorial_asset_path(image_key: str, language: str) -> Path:
     """Normalize tutorial asset path values for the dashboard."""
     filenames = TUTORIAL_IMAGES.get(image_key) or TUTORIAL_IMAGES["overview"]
     filename = filenames[1] if language == "zh" else filenames[0]
-    return Path(__file__).resolve().parents[3] / "docs" / "assets" / filename
+    return _tutorial_assets_dir() / filename
 
 
 def _tutorial_screenshot_path(image_key: str, language: str) -> Path:
     """Normalize tutorial screenshot path values for the dashboard."""
     filenames = TUTORIAL_SCREENSHOTS.get(image_key) or TUTORIAL_SCREENSHOTS["workflows"]
     filename = filenames[1] if language == "zh" else filenames[0]
-    return Path(__file__).resolve().parents[3] / "docs" / "assets" / filename
+    return _tutorial_assets_dir() / filename
+
+
+def _tutorial_assets_dir() -> Path:
+    """Locate packaged tutorial assets with a source-checkout fallback."""
+
+    packaged = Path(__file__).resolve().parent / "assets"
+    if packaged.is_dir():
+        return packaged
+    return Path(__file__).resolve().parents[4] / "docs" / "assets"
 
 
 def _ordered_views(first: str) -> list[str]:

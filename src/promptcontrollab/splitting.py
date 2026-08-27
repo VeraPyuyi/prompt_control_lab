@@ -1,5 +1,6 @@
 """Backward-compatible facade for :mod:`promptcontrollab.evaluation.splitting`."""
 
+from promptcontrollab.core.schemas import TaskRecord
 from promptcontrollab.evaluation.splitting import (
     SplitResult,
     leakage_report,
@@ -9,6 +10,7 @@ from promptcontrollab.evaluation.splitting import (
 )
 
 __all__ = [
+    "TaskRecord",
     "SplitResult",
     "leakage_report",
     "load_tasks",

@@ -2,14 +2,19 @@
 
 import { boundedText, extractPromptText } from './privacy.ts'
 
+/** Supported enforcement modes for pre-step and tool decisions. */
 export type ControlMode = 'suggest' | 'gate'
+/** Final action applied to an inspected model step. */
 export type PreStepAction = 'delegate' | 'reject'
+/** Final action applied before a Harness tool executes. */
 export type ToolGateAction = 'delegate' | 'ask' | 'deny'
 
+/** Result of delegating or rejecting one final pre-step payload. */
 export type FinalPreStepDecision<T> =
   | { kind: 'reject' }
   | { kind: 'enter'; messages: T[] }
 
+/** Sanitized bridge inspection used to decide a model step. */
 export interface PreStepInspection {
   decision: 'allow' | 'suggest' | 'deny'
   risk_level: 'low' | 'medium' | 'high' | 'unknown'
@@ -17,6 +22,7 @@ export interface PreStepInspection {
   feedback: string | null
 }
 
+/** Dependencies required to inspect and delegate a final pre-step payload. */
 export interface FinalPreStepGate<T extends { content?: unknown }> {
   mode: ControlMode
   step: number

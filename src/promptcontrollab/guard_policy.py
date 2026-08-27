@@ -1,6 +1,7 @@
 """Backward-compatible facade for :mod:`promptcontrollab.preflight.guard_policy`."""
 
 from promptcontrollab.preflight.guard_policy import (
+    SEVERITY_RANK,
     GuardPolicy,
     GuardPolicyRule,
     GuardViolation,
@@ -12,6 +13,7 @@ from promptcontrollab.preflight.guard_policy import (
 )
 
 __all__ = [
+    "SEVERITY_RANK",
     "GuardPolicy",
     "GuardPolicyRule",
     "GuardViolation",

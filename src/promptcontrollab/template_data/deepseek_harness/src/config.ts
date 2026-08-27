@@ -2,6 +2,7 @@
 
 import z from '@deepseek-ai/schemastery'
 
+/** User-configurable settings accepted by the Cordis plugin. */
 export interface Config {
   mode?: 'suggest' | 'gate'
   policyPath?: string
@@ -17,6 +18,7 @@ export interface Config {
   maxAutoRecoveries?: number
 }
 
+/** Fully resolved plugin settings after applying conservative defaults. */
 export interface ResolvedConfig {
   mode: 'suggest' | 'gate'
   policyPath?: string
@@ -32,6 +34,7 @@ export interface ResolvedConfig {
   maxAutoRecoveries: number
 }
 
+/** Conservative local defaults for prompt, tool, and bridge control. */
 export const DEFAULT_CONFIG: ResolvedConfig = {
   mode: 'suggest',
   capture: 'redacted',
@@ -46,6 +49,7 @@ export const DEFAULT_CONFIG: ResolvedConfig = {
   maxAutoRecoveries: 1,
 }
 
+/** Runtime schema that validates user-provided Cordis configuration. */
 export const Config: z<Config> = z.object({
   mode: z.union(['suggest', 'gate'] as const).default('suggest'),
   policyPath: z.string(),

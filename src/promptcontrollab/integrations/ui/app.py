@@ -282,3 +282,7 @@ def _render_view(
         _render_decision_view(st, text, language, detail)
     elif primary == "history":
         _render_history_tab(st, text, detail)
+
+
+if __name__ == "__main__":
+    main()

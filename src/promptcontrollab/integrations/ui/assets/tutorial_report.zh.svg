@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1100" height="420" viewBox="0 0 1100 420" role="img" aria-label="prompt_control_lab 报告教程">
+  <rect width="1100" height="420" fill="#f8fafc"/>
+  <text x="44" y="58" font-family="Microsoft YaHei, Arial, sans-serif" font-size="28" font-weight="700" fill="#111827">评测、门禁和报告</text>
+  <text x="44" y="88" font-family="Microsoft YaHei, Arial, sans-serif" font-size="15" fill="#475569">把 Prompt 改动变成可复现证据，而不是只靠一次感觉。</text>
+  <g font-family="Microsoft YaHei, Arial, sans-serif">
+    <rect x="70" y="135" width="280" height="170" rx="14" fill="#ffffff" stroke="#fde68a" stroke-width="2"/>
+    <text x="95" y="174" font-size="18" font-weight="700" fill="#92400e">输出文件</text>
+    <text x="95" y="208" font-size="13" fill="#475569">metrics.json</text>
+    <text x="95" y="236" font-size="13" fill="#475569">stats.json</text>
+    <text x="95" y="264" font-size="13" fill="#475569">explanation.json</text>
+
+    <rect x="410" y="135" width="280" height="170" rx="14" fill="#ffffff" stroke="#93c5fd" stroke-width="2"/>
+    <text x="435" y="174" font-size="18" font-weight="700" fill="#1e3a8a">证据</text>
+    <text x="435" y="208" font-size="13" fill="#475569">均值差异和置信区间</text>
+    <text x="435" y="236" font-size="13" fill="#475569">p-value 和任务切片</text>
+    <text x="435" y="264" font-size="13" fill="#475569">模型来源记录</text>
+
+    <rect x="750" y="135" width="280" height="170" rx="14" fill="#ffffff" stroke="#86efac" stroke-width="2"/>
+    <text x="775" y="174" font-size="18" font-weight="700" fill="#166534">判断</text>
+    <text x="775" y="208" font-size="13" fill="#475569">通过</text>
+    <text x="775" y="236" font-size="13" fill="#475569">需要复核</text>
+    <text x="775" y="264" font-size="13" fill="#475569">失败</text>
+
+    <rect x="190" y="340" width="720" height="38" rx="10" fill="#ecfeff" stroke="#67e8f9"/>
+    <text x="320" y="364" font-size="15" font-weight="700" fill="#155e75">用报告判断这次 Prompt 改动是否可靠。</text>
+  </g>
+</svg>

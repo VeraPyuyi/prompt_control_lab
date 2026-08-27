@@ -29,6 +29,7 @@ interface PendingCall {
   removeAbort?: () => void
 }
 
+/** Stable failure categories safe to expose outside the bridge process. */
 export type BridgeFailureCategory =
   | 'aborted'
   | 'closed'
@@ -80,6 +81,7 @@ export function settleWithAbort<T>(work: Promise<T>, signal: AbortSignal): Promi
   })
 }
 
+/** Process and queue settings for a persistent JSON-RPC bridge client. */
 export interface BridgeClientOptions {
   runsRoot: string
   timeoutMs: number

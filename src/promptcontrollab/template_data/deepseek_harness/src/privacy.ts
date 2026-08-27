@@ -3,6 +3,7 @@
 import { createHash } from 'node:crypto'
 import type { JsonObject, JsonValue } from './protocol.ts'
 
+/** Request event kinds that participate in retry-attempt tracking. */
 export type RetryObservationType = 'agent/request' | 'agent/request-error'
 
 /** Deterministic occurrence counters for retryable request lifecycle events. */

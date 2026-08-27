@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1100" height="420" viewBox="0 0 1100 420" role="img" aria-label="prompt_control_lab 审计和历史教程">
+  <rect width="1100" height="420" fill="#f8fafc"/>
+  <text x="44" y="58" font-family="Microsoft YaHei, Arial, sans-serif" font-size="28" font-weight="700" fill="#111827">审计和历史</text>
+  <text x="44" y="88" font-family="Microsoft YaHei, Arial, sans-serif" font-size="15" fill="#475569">先看 Agent 改了什么，再追踪每次运行的风险、模型变化和趋势。</text>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#7c3aed"/>
+    </marker>
+  </defs>
+  <g font-family="Microsoft YaHei, Arial, sans-serif">
+    <rect x="80" y="135" width="285" height="160" rx="14" fill="#ffffff" stroke="#fca5a5" stroke-width="2"/>
+    <text x="108" y="174" font-size="18" font-weight="700" fill="#991b1b">audit_result.json</text>
+    <text x="108" y="208" font-size="13" fill="#475569">改动行数</text>
+    <text x="108" y="236" font-size="13" fill="#475569">危险路径</text>
+    <text x="108" y="264" font-size="13" fill="#475569">测试和疑似密钥</text>
+
+    <rect x="425" y="135" width="285" height="160" rx="14" fill="#ffffff" stroke="#c4b5fd" stroke-width="2"/>
+    <text x="453" y="174" font-size="18" font-weight="700" fill="#5b21b6">agent_run.json</text>
+    <text x="453" y="208" font-size="13" fill="#475569">prompt 和策略</text>
+    <text x="453" y="236" font-size="13" fill="#475569">模型和 agent</text>
+    <text x="453" y="264" font-size="13" fill="#475569">是否需要复核</text>
+
+    <rect x="770" y="135" width="285" height="160" rx="14" fill="#ffffff" stroke="#93c5fd" stroke-width="2"/>
+    <text x="798" y="174" font-size="18" font-weight="700" fill="#1e3a8a">history_index.json</text>
+    <text x="798" y="208" font-size="13" fill="#475569">分数趋势</text>
+    <text x="798" y="236" font-size="13" fill="#475569">门禁趋势</text>
+    <text x="798" y="264" font-size="13" fill="#475569">模型变化</text>
+
+    <line x1="375" y1="215" x2="415" y2="215" stroke="#7c3aed" stroke-width="3" marker-end="url(#arrow)"/>
+    <line x1="720" y1="215" x2="760" y2="215" stroke="#7c3aed" stroke-width="3" marker-end="url(#arrow)"/>
+  </g>
+</svg>

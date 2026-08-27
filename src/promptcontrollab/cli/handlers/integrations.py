@@ -326,7 +326,14 @@ def _cmd_ui(args: argparse.Namespace) -> None:
             '`pip install -e ".[ui]"` or `uv pip install -e ".[ui]"`.'
         )
         raise PromptControlLabError(msg)
-    app_path = Path(__file__).resolve().parent / "ui" / "app.py"
+    app_path = (
+        Path(__file__).resolve().parents[2]
+        / "integrations"
+        / "ui"
+        / "app.py"
+    )
+    if not app_path.is_file():
+        raise PromptControlLabError(f"Streamlit app entry point is missing: {app_path}")
     env = os.environ.copy()
     env["PCL_UI_RUNS"] = str(runs_dir)
     env["PCL_UI_POLICY"] = str(policy_path) if policy_path is not None else ""

@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1100" height="420" viewBox="0 0 1100 420" role="img" aria-label="prompt_control_lab guard tutorial">
+  <rect width="1100" height="420" fill="#f8fafc"/>
+  <text x="44" y="58" font-family="Inter, Arial, sans-serif" font-size="28" font-weight="700" fill="#111827">Guard Prompt</text>
+  <text x="44" y="88" font-family="Inter, Arial, sans-serif" font-size="15" fill="#475569">Check a prompt before a coding agent spends tokens or changes files.</text>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#0f766e"/>
+    </marker>
+  </defs>
+  <g font-family="Inter, Arial, sans-serif">
+    <rect x="70" y="145" width="250" height="150" rx="14" fill="#ffffff" stroke="#bae6fd" stroke-width="2"/>
+    <text x="95" y="182" font-size="18" font-weight="700" fill="#075985">Input prompt</text>
+    <text x="95" y="216" font-size="13" fill="#475569">"Fix this bug"</text>
+    <text x="95" y="244" font-size="13" fill="#475569">Profile: coding</text>
+    <text x="95" y="272" font-size="13" fill="#475569">Policy: guard.policy.yaml</text>
+
+    <rect x="425" y="145" width="250" height="150" rx="14" fill="#ffffff" stroke="#86efac" stroke-width="2"/>
+    <text x="450" y="182" font-size="18" font-weight="700" fill="#166534">Guard result</text>
+    <text x="450" y="216" font-size="13" fill="#475569">risk_level</text>
+    <text x="450" y="244" font-size="13" fill="#475569">policy_violations</text>
+    <text x="450" y="272" font-size="13" fill="#475569">token_report</text>
+
+    <rect x="780" y="145" width="250" height="150" rx="14" fill="#ffffff" stroke="#c4b5fd" stroke-width="2"/>
+    <text x="805" y="182" font-size="18" font-weight="700" fill="#5b21b6">Next action</text>
+    <text x="805" y="216" font-size="13" fill="#475569">Use improved prompt</text>
+    <text x="805" y="244" font-size="13" fill="#475569">Add files and tests</text>
+    <text x="805" y="272" font-size="13" fill="#475569">Block high-risk prompts</text>
+
+    <line x1="330" y1="220" x2="415" y2="220" stroke="#0f766e" stroke-width="3" marker-end="url(#arrow)"/>
+    <line x1="685" y1="220" x2="770" y2="220" stroke="#0f766e" stroke-width="3" marker-end="url(#arrow)"/>
+  </g>
+</svg>

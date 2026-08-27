@@ -1,6 +1,8 @@
 """Backward-compatible facade for :mod:`promptcontrollab.control.control_workflow`."""
 
 from promptcontrollab.control.control_workflow import (
+    AUTHORIZATIONS,
+    PENDING_PROMPT_HASH,
     ControlSession,
     append_control_event,
     bind_control_prompt,
@@ -17,6 +19,8 @@ from promptcontrollab.control.control_workflow import (
 )
 
 __all__ = [
+    "AUTHORIZATIONS",
+    "PENDING_PROMPT_HASH",
     "ControlSession",
     "append_control_event",
     "bind_control_prompt",

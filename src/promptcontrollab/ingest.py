@@ -1,5 +1,6 @@
 """Backward-compatible facade for :mod:`promptcontrollab.evidence.ingest`."""
 
+from promptcontrollab.core.schemas import PredictionRecord
 from promptcontrollab.evidence.ingest import (
     detect_ingest_source,
     ingest_auto_results,
@@ -16,6 +17,7 @@ from promptcontrollab.evidence.ingest import (
 )
 
 __all__ = [
+    "PredictionRecord",
     "ingest_auto_results",
     "detect_ingest_source",
     "ingest_promptfoo_results",

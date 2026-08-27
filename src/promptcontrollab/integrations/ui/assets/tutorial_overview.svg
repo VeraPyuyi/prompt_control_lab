@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1100" height="420" viewBox="0 0 1100 420" role="img" aria-label="prompt_control_lab tutorial overview">
+  <rect width="1100" height="420" fill="#f8fafc"/>
+  <text x="44" y="58" font-family="Inter, Arial, sans-serif" font-size="28" font-weight="700" fill="#111827">prompt_control_lab tutorial map</text>
+  <text x="44" y="88" font-family="Inter, Arial, sans-serif" font-size="15" fill="#475569">From prompt preflight to reports, audit, and history. Everything stays local.</text>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#2563eb"/>
+    </marker>
+  </defs>
+  <g font-family="Inter, Arial, sans-serif">
+    <rect x="45" y="145" width="155" height="94" rx="12" fill="#ffffff" stroke="#93c5fd" stroke-width="2"/>
+    <text x="70" y="183" font-size="18" font-weight="700" fill="#1e3a8a">1. Prompt</text>
+    <text x="70" y="211" font-size="13" fill="#475569">User instruction</text>
+
+    <rect x="250" y="145" width="155" height="94" rx="12" fill="#ffffff" stroke="#86efac" stroke-width="2"/>
+    <text x="276" y="183" font-size="18" font-weight="700" fill="#166534">2. Guard</text>
+    <text x="276" y="211" font-size="13" fill="#475569">Risk and policy</text>
+
+    <rect x="455" y="145" width="155" height="94" rx="12" fill="#ffffff" stroke="#fde68a" stroke-width="2"/>
+    <text x="478" y="183" font-size="18" font-weight="700" fill="#92400e">3. Analyze</text>
+    <text x="478" y="211" font-size="13" fill="#475569">Metrics and stats</text>
+
+    <rect x="660" y="145" width="155" height="94" rx="12" fill="#ffffff" stroke="#fca5a5" stroke-width="2"/>
+    <text x="689" y="183" font-size="18" font-weight="700" fill="#991b1b">4. Audit</text>
+    <text x="689" y="211" font-size="13" fill="#475569">Changed files</text>
+
+    <rect x="865" y="145" width="155" height="94" rx="12" fill="#ffffff" stroke="#c4b5fd" stroke-width="2"/>
+    <text x="889" y="183" font-size="18" font-weight="700" fill="#5b21b6">5. History</text>
+    <text x="889" y="211" font-size="13" fill="#475569">Trends and drift</text>
+
+    <line x1="205" y1="192" x2="242" y2="192" stroke="#2563eb" stroke-width="3" marker-end="url(#arrow)"/>
+    <line x1="410" y1="192" x2="447" y2="192" stroke="#2563eb" stroke-width="3" marker-end="url(#arrow)"/>
+    <line x1="615" y1="192" x2="652" y2="192" stroke="#2563eb" stroke-width="3" marker-end="url(#arrow)"/>
+    <line x1="820" y1="192" x2="857" y2="192" stroke="#2563eb" stroke-width="3" marker-end="url(#arrow)"/>
+
+    <rect x="170" y="300" width="760" height="54" rx="14" fill="#e0f2fe" stroke="#7dd3fc"/>
+    <text x="238" y="333" font-size="16" font-weight="700" fill="#075985">Open the Tutorial tab first, then use Workflows to create demo artifacts.</text>
+  </g>
+</svg>

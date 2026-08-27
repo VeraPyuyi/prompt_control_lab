@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1100" height="420" viewBox="0 0 1100 420" role="img" aria-label="prompt_control_lab 守护教程">
+  <rect width="1100" height="420" fill="#f8fafc"/>
+  <text x="44" y="58" font-family="Microsoft YaHei, Arial, sans-serif" font-size="28" font-weight="700" fill="#111827">Prompt 守护</text>
+  <text x="44" y="88" font-family="Microsoft YaHei, Arial, sans-serif" font-size="15" fill="#475569">在编程 Agent 花 token 或改文件之前，先检查指令是否清楚、安全、可执行。</text>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#0f766e"/>
+    </marker>
+  </defs>
+  <g font-family="Microsoft YaHei, Arial, sans-serif">
+    <rect x="70" y="145" width="250" height="150" rx="14" fill="#ffffff" stroke="#bae6fd" stroke-width="2"/>
+    <text x="95" y="182" font-size="18" font-weight="700" fill="#075985">输入 Prompt</text>
+    <text x="95" y="216" font-size="13" fill="#475569">“修复这个 bug”</text>
+    <text x="95" y="244" font-size="13" fill="#475569">场景：编程</text>
+    <text x="95" y="272" font-size="13" fill="#475569">策略：guard.policy.yaml</text>
+
+    <rect x="425" y="145" width="250" height="150" rx="14" fill="#ffffff" stroke="#86efac" stroke-width="2"/>
+    <text x="450" y="182" font-size="18" font-weight="700" fill="#166534">守护结果</text>
+    <text x="450" y="216" font-size="13" fill="#475569">风险等级</text>
+    <text x="450" y="244" font-size="13" fill="#475569">策略违规</text>
+    <text x="450" y="272" font-size="13" fill="#475569">token 估算</text>
+
+    <rect x="780" y="145" width="250" height="150" rx="14" fill="#ffffff" stroke="#c4b5fd" stroke-width="2"/>
+    <text x="805" y="182" font-size="18" font-weight="700" fill="#5b21b6">下一步</text>
+    <text x="805" y="216" font-size="13" fill="#475569">使用改写后 Prompt</text>
+    <text x="805" y="244" font-size="13" fill="#475569">补充文件和测试</text>
+    <text x="805" y="272" font-size="13" fill="#475569">阻断高风险指令</text>
+
+    <line x1="330" y1="220" x2="415" y2="220" stroke="#0f766e" stroke-width="3" marker-end="url(#arrow)"/>
+    <line x1="685" y1="220" x2="770" y2="220" stroke="#0f766e" stroke-width="3" marker-end="url(#arrow)"/>
+  </g>
+</svg>

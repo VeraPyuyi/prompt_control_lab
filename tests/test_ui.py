@@ -233,6 +233,9 @@ def test_cli_ui_launches_streamlit_with_environment(
     command = calls[0]["command"]
     env = calls[0]["env"]
     assert command[:4] == [sys.executable, "-m", "streamlit", "run"]
+    app_path = Path(command[4])
+    assert app_path.is_file()
+    assert app_path.read_text(encoding="utf-8").rstrip().endswith("main()")
     assert "--server.address=127.0.0.1" in command
     assert "--server.port=8510" in command
     assert "--server.headless=true" in command
@@ -1944,6 +1947,34 @@ def test_tutorial_screenshot_assets_exist() -> None:
         path = Path("docs") / "assets" / name
         assert path.exists(), name
         assert path.stat().st_size > 10_000, name
+
+
+def test_tutorial_assets_are_packaged_for_wheel_installs() -> None:
+    """Keep the installed dashboard independent from a repository checkout."""
+
+    from promptcontrollab.integrations.ui.content_tutorial import (
+        TUTORIAL_IMAGES,
+        TUTORIAL_SCREENSHOTS,
+    )
+    from promptcontrollab.integrations.ui.navigation import (
+        _tutorial_asset_path,
+        _tutorial_screenshot_path,
+    )
+
+    packaged = Path("src/promptcontrollab/integrations/ui/assets")
+    filenames = {
+        filename
+        for mapping in (TUTORIAL_IMAGES, TUTORIAL_SCREENSHOTS)
+        for pair in mapping.values()
+        for filename in pair
+    }
+    for filename in filenames:
+        source = Path("docs/assets") / filename
+        target = packaged / filename
+        assert target.read_bytes() == source.read_bytes(), filename
+
+    assert _tutorial_asset_path("overview", "zh").is_file()
+    assert _tutorial_screenshot_path("workflows", "en").is_file()
 
 
 def test_tutorial_svg_assets_exist_and_use_prompt_control_lab() -> None:

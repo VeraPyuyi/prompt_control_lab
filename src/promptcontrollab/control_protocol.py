@@ -1,6 +1,7 @@
 """Backward-compatible facade for :mod:`promptcontrollab.control.control_protocol`."""
 
 from promptcontrollab.control.control_protocol import (
+    REDACTED,
     AttributionReport,
     ControlDecision,
     ControlEvent,
@@ -12,6 +13,7 @@ from promptcontrollab.control.control_protocol import (
 )
 
 __all__ = [
+    "REDACTED",
     "AttributionReport",
     "ControlDecision",
     "ControlEvent",

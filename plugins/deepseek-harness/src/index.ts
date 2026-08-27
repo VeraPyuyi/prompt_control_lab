@@ -38,9 +38,13 @@ import type {
 } from './protocol.ts'
 import { SessionRunLifecycle } from './run-lifecycle.ts'
 
+/** Cordis plugin name used by DeepSeek Harness configuration. */
 export const name = 'prompt-control-lab-deepseek-harness'
+/** Harness services injected into the plugin lifecycle. */
 export const inject = ['tools']
+/** Re-export the runtime configuration schema for Cordis discovery. */
 export { Config }
+/** Re-export the static plugin configuration type for integrators. */
 export type { Config as PluginConfig } from './config.ts'
 
 const HARNESS_VERSION = '0.1.1-rc.2'
