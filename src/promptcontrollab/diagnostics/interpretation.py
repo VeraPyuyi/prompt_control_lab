@@ -6,6 +6,7 @@ from pathlib import Path
 
 from promptcontrollab.core.files import JsonDict
 from promptcontrollab.diagnostics.common import _read_optional_json
+from promptcontrollab.diagnostics.presentation import get_diagnostic_presentation
 
 
 def _interpret_diagnostics(diagnostics: JsonDict) -> list[str]:
@@ -191,28 +192,26 @@ def _payload_dict(payload: JsonDict, key: str) -> JsonDict:
 
 
 def _plain_diagnostic_label(key: str) -> str:
+    if key in {"terminal_sensitivity", "green_certificate", "posterior_certificate"}:
+        return str(get_diagnostic_presentation(key, "en")["label"])
     return {
         "soft_hard": "Soft-to-hard gap",
         "hidden_states": "Hidden-state input",
         "trajectory": "Trajectory stability",
         "riccati": "Riccati surrogate",
         "tv_soft": "Time-varying soft-control",
-        "terminal_sensitivity": "Terminal sensitivity",
-        "green_certificate": "Green certificate",
-        "posterior_certificate": "Posterior certificate",
     }[key]
 
 
 def _plain_diagnostic_check(key: str) -> str:
+    if key in {"terminal_sensitivity", "green_certificate", "posterior_certificate"}:
+        return str(get_diagnostic_presentation(key, "en")["question"])
     return {
         "soft_hard": "Can a soft prompt be deployed as hard tokens without a large gap?",
         "hidden_states": "Do we have explicit activation inputs for trajectory diagnostics?",
         "trajectory": "Does the hidden-state path drift or show turnpike-like decay?",
         "riccati": "Is the fitted finite-dimensional control surrogate internally stable?",
         "tv_soft": "Does time-varying structure beat static, shuffled, or random controls?",
-        "terminal_sensitivity": "Do terminal changes have exponentially less early influence?",
-        "green_certificate": "Is the reduced recurrence hyperbolic with transverse boundaries?",
-        "posterior_certificate": "Do the recorded local residual and derivative bounds close?",
     }[key]
 
 
@@ -269,10 +268,7 @@ def _plain_diagnostic_interpretation(key: str, payload: JsonDict) -> str:
             return "Time-varying structure may explain part of the gain."
         return "The current result does not isolate a time-varying advantage."
     if key in {"terminal_sensitivity", "green_certificate", "posterior_certificate"}:
-        return str(
-            payload.get("explanation")
-            or "A bounded control-certificate result was recorded."
-        )
+        return str(get_diagnostic_presentation(key, "en")["meaning"])
     return "Recorded diagnostic evidence."
 
 
@@ -290,7 +286,8 @@ def _plain_diagnostic_next_action(key: str, payload: JsonDict, artifact: str) ->
     if key == "tv_soft":
         return "Compare static, shuffled, random, and time-varying lanes side by side."
     if key in {"terminal_sensitivity", "green_certificate", "posterior_certificate"}:
-        return str(payload.get("next_action") or "Keep this scoped certificate artifact.")
+        default_action = get_diagnostic_presentation(key, "en")["next_action"]
+        return str(payload.get("next_action") or default_action)
     return "Keep this artifact with the run."
 
 

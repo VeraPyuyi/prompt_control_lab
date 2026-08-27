@@ -1,0 +1,86 @@
+<!doctype html><html><head><meta charset='utf-8'><title>Change Review</title><style>body{font-family:system-ui;max-width:1100px;margin:auto;padding:32px;background:#f7f7f5;color:#1d2525}header{border-bottom:3px solid #1f766e;padding-bottom:20px}section{padding:18px 0;border-bottom:1px solid #d7dddd}code{background:#e8eeec;padding:2px 5px}h1,h2{letter-spacing:0}</style></head><body><header><h1>PromptControlLab Change Review</h1><p>Decision: <strong>hold</strong></p></header><section><h2>What changed?</h2><p>checkpoint_change</p></section><section><h2>What was observed?</h2><p>score changed from 0.0885417 to 0.194444; mean_tokens decreased from 147.339 to 107.335; mean_latency_ms decreased from 8963.94 to 6691.54; generation_mismatch decreased from 0.572917 to 0.467014; selective_aurc decreased from 0.871228 to 0.667432; stability=insufficient_evidence; candidate gate=hold.</p></section><section><h2>What most likely explains the difference?</h2><p>checkpoint_change</p></section><section><h2>How reliable is the evidence?</h2><p>identity comparison=clean; execution stability=insufficient_evidence</p></section><section><h2>What cannot be concluded?</h2><p>The evidence does not establish a unique causal explanation.</p></section><section><h2>What should happen next?</h2><p>Inspect the candidate gate decision trace before promotion.</p></section><section><h2>Decision trace</h2><pre>{
+  &quot;schema&quot;: &quot;prompt_control_lab.change_review_decision_trace.v1&quot;,
+  &quot;decision&quot;: &quot;hold&quot;,
+  &quot;checks&quot;: [
+    {
+      &quot;check&quot;: &quot;comparison_validity&quot;,
+      &quot;observed&quot;: &quot;clean&quot;,
+      &quot;status&quot;: &quot;passed&quot;,
+      &quot;evidence&quot;: [
+        &quot;comparison_validity.json&quot;
+      ]
+    },
+    {
+      &quot;check&quot;: &quot;score_delta&quot;,
+      &quot;observed&quot;: 0.105902777777,
+      &quot;status&quot;: &quot;passed&quot;,
+      &quot;evidence&quot;: [
+        &quot;baseline/metrics.json&quot;,
+        &quot;candidate/metrics.json&quot;
+      ]
+    },
+    {
+      &quot;check&quot;: &quot;stability&quot;,
+      &quot;observed&quot;: &quot;insufficient_evidence&quot;,
+      &quot;status&quot;: &quot;passed&quot;,
+      &quot;evidence&quot;: [
+        &quot;stability.json&quot;
+      ]
+    },
+    {
+      &quot;check&quot;: &quot;candidate_gate&quot;,
+      &quot;observed&quot;: &quot;hold&quot;,
+      &quot;status&quot;: &quot;triggered&quot;,
+      &quot;evidence&quot;: [
+        &quot;candidate/posttrain_gate.json&quot;,
+        &quot;candidate/gate_result.json&quot;
+      ]
+    },
+    {
+      &quot;check&quot;: &quot;secondary_metric_deltas&quot;,
+      &quot;observed&quot;: {
+        &quot;mean_score&quot;: {
+          &quot;baseline&quot;: 0.088541666667,
+          &quot;candidate&quot;: 0.194444444444,
+          &quot;delta&quot;: 0.105902777777,
+          &quot;direction&quot;: &quot;increase&quot;
+        },
+        &quot;mean_tokens&quot;: {
+          &quot;baseline&quot;: 147.338541666667,
+          &quot;candidate&quot;: 107.335069444444,
+          &quot;delta&quot;: -40.003472222222996,
+          &quot;direction&quot;: &quot;decrease&quot;
+        },
+        &quot;mean_latency_ms&quot;: {
+          &quot;baseline&quot;: 8963.940084239262,
+          &quot;candidate&quot;: 6691.539235561828,
+          &quot;delta&quot;: -2272.4008486774346,
+          &quot;direction&quot;: &quot;decrease&quot;
+        },
+        &quot;generation_mismatch&quot;: {
+          &quot;baseline&quot;: 0.572916666667,
+          &quot;candidate&quot;: 0.467013888889,
+          &quot;delta&quot;: -0.10590277777800006,
+          &quot;direction&quot;: &quot;decrease&quot;
+        },
+        &quot;selective_aurc&quot;: {
+          &quot;baseline&quot;: 0.871227659274,
+          &quot;candidate&quot;: 0.667432288825,
+          &quot;delta&quot;: -0.20379537044899998,
+          &quot;direction&quot;: &quot;decrease&quot;
+        },
+        &quot;trajectory_drift&quot;: {
+          &quot;baseline&quot;: 8.395504777982,
+          &quot;candidate&quot;: 8.825874485396,
+          &quot;delta&quot;: 0.43036970741400005,
+          &quot;direction&quot;: &quot;increase&quot;
+        }
+      },
+      &quot;status&quot;: &quot;observed&quot;,
+      &quot;evidence&quot;: [
+        &quot;baseline/metrics.json&quot;,
+        &quot;candidate/metrics.json&quot;
+      ]
+    }
+  ]
+}</pre></section></body></html>

@@ -1,0 +1,20 @@
+{
+  "agent": "pcl-posttrain-pilot",
+  "checkpoint": {
+    "checkpoint_id": "aggregate-initial",
+    "stage": "initial"
+  },
+  "claim_boundary": "This aggregate comparison preserves the real pilot observations. It does not establish a unique causal training mechanism.",
+  "evidence_origin": "real_three_seed_sft_pilot",
+  "metric": "withheld_exact_match",
+  "model": {
+    "model_id": "Qwen/Qwen2.5-0.5B-Instruct",
+    "provider": "huggingface",
+    "revision": "7ae557604adf67be50417f59c2c2f167def9a775"
+  },
+  "prompt": {
+    "prompt_hash": "recorded-shared-evaluation-prompt"
+  },
+  "schema": "prompt_control_lab.public_checkpoint_run.v1",
+  "split_hash": "sha256:664cb24ac6d779378bf256c49f1369f910f49a788594d8813af51655af7bd4b4"
+}

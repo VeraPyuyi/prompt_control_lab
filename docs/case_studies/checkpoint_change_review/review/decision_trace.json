@@ -1,0 +1,86 @@
+{
+  "checks": [
+    {
+      "check": "comparison_validity",
+      "evidence": [
+        "comparison_validity.json"
+      ],
+      "observed": "clean",
+      "status": "passed"
+    },
+    {
+      "check": "score_delta",
+      "evidence": [
+        "baseline/metrics.json",
+        "candidate/metrics.json"
+      ],
+      "observed": 0.105902777777,
+      "status": "passed"
+    },
+    {
+      "check": "stability",
+      "evidence": [
+        "stability.json"
+      ],
+      "observed": "insufficient_evidence",
+      "status": "passed"
+    },
+    {
+      "check": "candidate_gate",
+      "evidence": [
+        "candidate/posttrain_gate.json",
+        "candidate/gate_result.json"
+      ],
+      "observed": "hold",
+      "status": "triggered"
+    },
+    {
+      "check": "secondary_metric_deltas",
+      "evidence": [
+        "baseline/metrics.json",
+        "candidate/metrics.json"
+      ],
+      "observed": {
+        "generation_mismatch": {
+          "baseline": 0.572916666667,
+          "candidate": 0.467013888889,
+          "delta": -0.10590277777800006,
+          "direction": "decrease"
+        },
+        "mean_latency_ms": {
+          "baseline": 8963.940084239262,
+          "candidate": 6691.539235561828,
+          "delta": -2272.4008486774346,
+          "direction": "decrease"
+        },
+        "mean_score": {
+          "baseline": 0.088541666667,
+          "candidate": 0.194444444444,
+          "delta": 0.105902777777,
+          "direction": "increase"
+        },
+        "mean_tokens": {
+          "baseline": 147.338541666667,
+          "candidate": 107.335069444444,
+          "delta": -40.003472222222996,
+          "direction": "decrease"
+        },
+        "selective_aurc": {
+          "baseline": 0.871227659274,
+          "candidate": 0.667432288825,
+          "delta": -0.20379537044899998,
+          "direction": "decrease"
+        },
+        "trajectory_drift": {
+          "baseline": 8.395504777982,
+          "candidate": 8.825874485396,
+          "delta": 0.43036970741400005,
+          "direction": "increase"
+        }
+      },
+      "status": "observed"
+    }
+  ],
+  "decision": "hold",
+  "schema": "prompt_control_lab.change_review_decision_trace.v1"
+}

@@ -10,6 +10,7 @@ from promptcontrollab.core.files import (
     write_json,
     write_jsonl,
 )
+from promptcontrollab.core.network import is_loopback_host
 from promptcontrollab.core.schemas import PredictionRecord, TaskRecord
 from promptcontrollab.core.version import __version__
 
@@ -21,6 +22,7 @@ __all__ = [
     "TaskRecord",
     "__version__",
     "load_project_config",
+    "is_loopback_host",
     "read_json",
     "read_jsonl",
     "read_simple_yaml",

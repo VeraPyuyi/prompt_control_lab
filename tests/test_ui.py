@@ -159,7 +159,7 @@ def test_cli_ui_help_is_available(capsys: pytest.CaptureFixture[str]) -> None:
     assert "pcl ui" in capsys.readouterr().out
 
 
-def test_cli_ui_reports_missing_streamlit(
+def test_cli_ui_reports_missing_fastapi(
     monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
 ) -> None:
@@ -173,7 +173,15 @@ def test_cli_ui_reports_missing_streamlit(
     assert "pip install -e \".[ui]\"" in stderr
 
 
-def test_cli_ui_reports_missing_plotly(
+def test_cli_ui_rejects_unauthenticated_non_loopback_binding(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    assert main(["ui", "--host", "0.0.0.0", "--no-browser"]) == 2
+
+    assert "loopback" in capsys.readouterr().err
+
+
+def test_cli_legacy_ui_reports_missing_plotly(
     monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
 ) -> None:
@@ -184,7 +192,7 @@ def test_cli_ui_reports_missing_plotly(
 
     monkeypatch.setattr(importlib.util, "find_spec", fake_find_spec)
 
-    assert main(["ui", "--runs", "runs"]) == 2
+    assert main(["ui", "--runs", "runs", "--legacy-streamlit"]) == 2
 
     stderr = capsys.readouterr().err
     assert "plotly" in stderr
@@ -192,7 +200,7 @@ def test_cli_ui_reports_missing_plotly(
     assert "pip install -e \".[ui]\"" in stderr
 
 
-def test_cli_ui_launches_streamlit_with_environment(
+def test_cli_legacy_ui_launches_streamlit_with_environment(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -213,6 +221,7 @@ def test_cli_ui_launches_streamlit_with_environment(
         main(
             [
                 "ui",
+                "--legacy-streamlit",
                 "--runs",
                 str(runs),
                 "--policy",
@@ -244,6 +253,32 @@ def test_cli_ui_launches_streamlit_with_environment(
     assert env["PCL_UI_RUNS"] == str(runs)
     assert env["PCL_UI_POLICY"] == str(policy)
     assert env["PCL_UI_LANGUAGE"] == "zh"
+
+
+def test_cli_ui_launches_react_cockpit_with_environment(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    import importlib.util
+
+    calls: list[dict[str, Any]] = []
+    monkeypatch.setattr(importlib.util, "find_spec", lambda name: object())
+
+    def fake_run(command: list[str], *, env: dict[str, str], check: bool) -> SimpleNamespace:
+        calls.append({"command": command, "env": env, "check": check})
+        return SimpleNamespace(returncode=0)
+
+    monkeypatch.setattr(subprocess, "run", fake_run)
+    runs = tmp_path / "runs"
+
+    assert main(["ui", "--runs", str(runs), "--no-browser", "--port", "8511"]) == 0
+
+    command = calls[0]["command"]
+    assert command[:3] == [sys.executable, "-m", "uvicorn"]
+    assert "promptcontrollab.integrations.web_api:create_app" in command
+    assert "--factory" in command
+    assert "8511" in command
+    assert calls[0]["env"]["PCL_UI_RUNS"] == str(runs)
 
 
 def test_cli_ui_uses_project_config_defaults(
@@ -1173,9 +1208,9 @@ def test_research_diagnostic_rows_summarize_paper_artifacts(tmp_path: Path) -> N
         "trajectory",
         "Riccati surrogate",
         "tv-soft lane",
-        "terminal sensitivity",
-        "Green certificate",
-        "posterior certificate",
+        "Long-horizon goal influence",
+        "Local stability boundary",
+        "Local solution confidence range",
     ]
     assert all(row["status"] == "available" for row in rows)
     assert research_status_counts(detail) == {"available": 8}

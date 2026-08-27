@@ -16,7 +16,14 @@ _EXPORTS = {
     "StabilityReport": ("promptcontrollab.control.control_protocol", "StabilityReport"),
     "analyze_attribution": ("promptcontrollab.control.control_analysis", "analyze_attribution"),
     "analyze_stability": ("promptcontrollab.control.control_analysis", "analyze_stability"),
+    "create_trace_server": ("promptcontrollab.control.trace_receiver", "create_trace_server"),
+    "import_trace_file": ("promptcontrollab.control.trace_ingest", "import_trace_file"),
+    "import_trace_payloads": (
+        "promptcontrollab.control.trace_ingest",
+        "import_trace_payloads",
+    ),
     "run_control": ("promptcontrollab.control.control_workflow", "run_control"),
+    "serve_trace_http": ("promptcontrollab.control.trace_receiver", "serve_trace_http"),
 }
 
 __all__ = sorted(_EXPORTS)

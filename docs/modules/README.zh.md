@@ -6,12 +6,12 @@
 |---|---|---|
 | Core | 配置、文件、schema、错误、版本和可选依赖 | [English](../../src/promptcontrollab/core/README.md) · [中文](../../src/promptcontrollab/core/README.zh.md) |
 | Preflight | Prompt Guard、Policy、改写、Token 预算和工具选择 | [English](../../src/promptcontrollab/preflight/README.md) · [中文](../../src/promptcontrollab/preflight/README.zh.md) |
-| Evaluation | 数据切分、评测、统计、报告、Gate 和 History | [English](../../src/promptcontrollab/evaluation/README.md) · [中文](../../src/promptcontrollab/evaluation/README.zh.md) |
-| Control | ControlRun、生命周期事件、归因、稳定性和决策 | [English](../../src/promptcontrollab/control/README.md) · [中文](../../src/promptcontrollab/control/README.zh.md) |
+| Evaluation | Change Review、数据切分、评测、统计、报告、Gate 和 History | [English](../../src/promptcontrollab/evaluation/README.md) · [中文](../../src/promptcontrollab/evaluation/README.zh.md) |
+| Control | ControlRun、Trace 导入、生命周期事件、归因、稳定性和决策 | [English](../../src/promptcontrollab/control/README.md) · [中文](../../src/promptcontrollab/control/README.zh.md) |
 | Provenance | Prompt/模型身份、验证证据和模型漂移 | [English](../../src/promptcontrollab/provenance/README.md) · [中文](../../src/promptcontrollab/provenance/README.zh.md) |
 | Audit | Git Diff、Agent Run、PR Summary、SARIF 和结论审查 | [English](../../src/promptcontrollab/audit/README.md) · [中文](../../src/promptcontrollab/audit/README.zh.md) |
 | Evidence | 外部证据、Adapter、PEOC 导入和后训练 Gate | [English](../../src/promptcontrollab/evidence/README.md) · [中文](../../src/promptcontrollab/evidence/README.zh.md) |
-| Diagnostics | Trajectory、Soft-Hard、Riccati、TV-Soft 和控制证书 | [English](../../src/promptcontrollab/diagnostics/README.md) · [中文](../../src/promptcontrollab/diagnostics/README.zh.md) |
+| Diagnostics | 表示轨迹、Prompt 离散化差距、低维稳定近似、最终目标影响、局部稳定边界和局部解可信范围 | [English](../../src/promptcontrollab/diagnostics/README.md) · [中文](../../src/promptcontrollab/diagnostics/README.zh.md) |
 | Integrations | Provider、Agent、插件、UI、GitHub 和 Hugging Face | [English](../../src/promptcontrollab/integrations/README.md) · [中文](../../src/promptcontrollab/integrations/README.zh.md) |
 | CLI | 稳定的命令注册、调度、输出和兼容层 | [English](../../src/promptcontrollab/cli/README.md) · [中文](../../src/promptcontrollab/cli/README.zh.md) |
 

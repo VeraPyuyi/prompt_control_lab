@@ -1,0 +1,21 @@
+{
+  "aggregation_unit": "task_method_cell",
+  "by_method": {
+    "pez": 0.3998046875,
+    "prefix": 0.4546875,
+    "random_tv": 0.41279296875,
+    "shuffled_tv": 0.45576171875,
+    "static_autograd": 0.46259765625,
+    "tv_pmp": 0.4650390625
+  },
+  "by_slice": {
+    "bbh3": 0.661783854167,
+    "commonsenseqa": 0.365885416667,
+    "gsm8k": 0.213541666667,
+    "svamp": 0.525911458333
+  },
+  "count": 24,
+  "mean_score": 0.441780598958,
+  "paired_per_example": false,
+  "source_replicates": 240
+}

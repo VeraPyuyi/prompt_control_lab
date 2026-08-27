@@ -2,13 +2,13 @@
 
 ## 目的
 
-`promptcontrollab.integrations` 将领域 API 连接到 Provider、Agent、开发工具、本地 Streamlit UI 和受限 Hugging Face Demo。Integration 负责转换外部协议，不重新定义核心证据或决策语义。
+`promptcontrollab.integrations` 将领域 API 连接到 Provider、Agent、开发工具、本地 React 工作台、兼容版 Streamlit UI 和受限 Hugging Face Demo。Integration 负责转换外部协议，不重新定义核心证据或决策语义。
 
 ## 使用场景
 
 - 通过统一的本地 Adapter 契约检查或调用受支持的模型 Provider。
 - 安装和使用 DeepSeek Harness、Claude Code、Cursor、Codex 或 GitHub Action Adapter。
-- 在不上传项目数据的前提下通过本地 Dashboard 查看 run。
+- 在不上传项目数据的前提下，通过本地 React 工作台审查变更并查看 run。
 - 构建公共安全、仅使用 CPU 的 Hugging Face Space Bundle。
 
 ## CLI 命令
@@ -22,6 +22,7 @@ pcl harness doctor --project .
 pcl install-plugin deepseek-harness
 pcl install-plugin all --target ./installed-templates
 pcl ui --runs runs --language zh
+pcl ui --runs runs --language zh --legacy-streamlit
 pcl github-app serve --host 0.0.0.0 --port 8080
 pcl doctor --json
 ```
@@ -51,7 +52,7 @@ from promptcontrollab.integrations import (
 
 ## 依赖
 
-Provider 元数据和插件安装使用默认运行环境。UI 需要 `ui` extra，GitHub App 需要 `bot`，模型/后训练集成使用各自声明的可选 extra。DeepSeek Harness 插件使用独立的 TypeScript 工具链。
+Provider 元数据和插件安装使用默认运行环境。React/FastAPI 工作台与兼容版 Streamlit UI 需要 `ui` extra，GitHub App 需要 `bot`，模型/后训练集成使用各自声明的可选 extra。DeepSeek Harness 插件使用独立的 TypeScript 工具链。
 
 ## 扩展点
 

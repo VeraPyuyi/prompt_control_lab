@@ -18,6 +18,7 @@ from promptcontrollab.diagnostics.common import (
     _remediation_list,
 )
 from promptcontrollab.diagnostics.constants import PAPER_MAPPING, PAPER_REMEDIATION
+from promptcontrollab.diagnostics.presentation import get_diagnostic_presentation
 
 
 def write_research_bundle_index(run_dir: Path) -> JsonDict:
@@ -277,15 +278,14 @@ def _research_bundle_plain_summary(
 
 
 def _readable_diagnostic_name(name: str, *, language: str = "en") -> str:
+    if name in {"terminal_sensitivity", "green_certificate", "posterior_certificate"}:
+        return str(get_diagnostic_presentation(name, language)["label"])
     if language == "zh":
         labels = {
             "soft_hard": "soft-hard gap",
             "trajectory": "hidden-state trajectory",
             "riccati": "Riccati surrogate",
             "tv_soft": "time-varying soft-control",
-            "terminal_sensitivity": "终端敏感度",
-            "green_certificate": "Green 边界证书",
-            "posterior_certificate": "局部后验证书",
         }
         return labels.get(name, name.replace("_", "-"))
     labels = {
@@ -293,9 +293,6 @@ def _readable_diagnostic_name(name: str, *, language: str = "en") -> str:
         "trajectory": "hidden-state trajectory",
         "riccati": "Riccati surrogate",
         "tv_soft": "time-varying soft-control",
-        "terminal_sensitivity": "terminal sensitivity",
-        "green_certificate": "Green boundary certificate",
-        "posterior_certificate": "posterior local certificate",
     }
     return labels.get(name, name.replace("_", "-"))
 

@@ -53,7 +53,7 @@ def test_core_chinese_docs_do_not_contain_mojibake() -> None:
             assert marker not in text, f"{path} contains mojibake marker {marker!r}"
 
     readme_zh = Path("README.zh.md").read_text(encoding="utf-8")
-    assert "Prompt、Checkpoint 与 AI Agent 的本地证据、诊断和控制闭环。" in readme_zh
+    assert "面向 Prompt、模型、Checkpoint 与 AI Agent 的本地 Change Review 决策层。" in readme_zh
     assert "旗舰集成" in readme_zh and "DeepSeek Harness" in readme_zh
     assert "核心诊断闭环" in readme_zh
     assert "边界" in readme_zh

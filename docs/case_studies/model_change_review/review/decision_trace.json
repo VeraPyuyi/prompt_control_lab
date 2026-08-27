@@ -1,0 +1,56 @@
+{
+  "checks": [
+    {
+      "check": "comparison_validity",
+      "evidence": [
+        "comparison_validity.json"
+      ],
+      "observed": "needs_review",
+      "status": "triggered"
+    },
+    {
+      "check": "score_delta",
+      "evidence": [
+        "baseline/metrics.json",
+        "candidate/metrics.json"
+      ],
+      "observed": 0.0032877604170000185,
+      "status": "passed"
+    },
+    {
+      "check": "stability",
+      "evidence": [
+        "stability.json"
+      ],
+      "observed": "insufficient_evidence",
+      "status": "passed"
+    },
+    {
+      "check": "candidate_gate",
+      "evidence": [
+        "candidate/posttrain_gate.json",
+        "candidate/gate_result.json"
+      ],
+      "observed": "needs_review",
+      "status": "triggered"
+    },
+    {
+      "check": "secondary_metric_deltas",
+      "evidence": [
+        "baseline/metrics.json",
+        "candidate/metrics.json"
+      ],
+      "observed": {
+        "mean_score": {
+          "baseline": 0.441780598958,
+          "candidate": 0.445068359375,
+          "delta": 0.0032877604170000185,
+          "direction": "increase"
+        }
+      },
+      "status": "observed"
+    }
+  ],
+  "decision": "needs_review",
+  "schema": "prompt_control_lab.change_review_decision_trace.v1"
+}

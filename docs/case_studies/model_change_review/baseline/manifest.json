@@ -1,0 +1,14 @@
+{
+  "agent": "pcl-evidence-import",
+  "capture": "aggregate_public_safe",
+  "claim_boundary": "These historical aggregate cells describe an association between recorded model identity and outcomes. They do not provide paired per-example significance, a verified shared prompt identity, or unique causal attribution.",
+  "evidence_origin": "real_historical_aggregate",
+  "metric": "acc_hard_test",
+  "model": {
+    "model_id": "Qwen/Qwen2.5-7B-Instruct",
+    "provider": "huggingface"
+  },
+  "run_id": "historical-qwen-aggregate",
+  "schema": "prompt_control_lab.public_model_aggregate_run.v1",
+  "split_hash": "peoc-hard-test-aggregate-grid-v1"
+}

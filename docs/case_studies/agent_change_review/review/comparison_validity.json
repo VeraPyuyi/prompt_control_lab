@@ -1,0 +1,63 @@
+{
+  "blocking_issues": [],
+  "change_kind": "prompt_change",
+  "checks": {
+    "agent": {
+      "baseline": {
+        "name": "codex-local-exec"
+      },
+      "candidate": {
+        "name": "codex-local-exec"
+      },
+      "changed": false,
+      "status": "pass",
+      "what_this_means": "The recorded agent identity stayed the same."
+    },
+    "checkpoint": {
+      "baseline": {},
+      "candidate": {},
+      "changed": "unknown",
+      "status": "review",
+      "what_this_means": "The checkpoint identity was not recorded on both runs."
+    },
+    "metric": {
+      "baseline": "paired_task_success",
+      "candidate": "paired_task_success",
+      "changed": false,
+      "status": "pass",
+      "what_this_means": "The recorded metric identity stayed the same."
+    },
+    "model": {
+      "baseline": {},
+      "candidate": {},
+      "changed": "unknown",
+      "status": "review",
+      "what_this_means": "The model identity was not recorded on both runs."
+    },
+    "prompt": {
+      "baseline": {
+        "prompt_hash": "raw-set-v1"
+      },
+      "candidate": {
+        "prompt_hash": "guarded-set-v1"
+      },
+      "changed": true,
+      "status": "pass",
+      "what_this_means": "The expected prompt identity changed."
+    },
+    "split": {
+      "baseline": "controlled-coding-fixtures-v1",
+      "candidate": "controlled-coding-fixtures-v1",
+      "changed": false,
+      "status": "pass",
+      "what_this_means": "The recorded split identity stayed the same."
+    }
+  },
+  "plain_summary": "Review the recorded identity gaps or confounders before attributing the result.",
+  "review_items": [
+    "The model identity was not recorded on both runs.",
+    "The checkpoint identity was not recorded on both runs."
+  ],
+  "schema": "prompt_control_lab.change_comparison_validity.v1",
+  "validity": "needs_review"
+}

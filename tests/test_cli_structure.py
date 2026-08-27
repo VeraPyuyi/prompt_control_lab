@@ -20,7 +20,7 @@ CLI_DOMAINS = (
     "diagnostics",
     "integrations",
 )
-CLI_PARSER_SNAPSHOT_SHA256 = "62a1156f63f0fd05767e1e3de37d5cb01d4499281084bb7f6e0f8517583552c5"
+CLI_PARSER_SNAPSHOT_SHA256 = "ade18e7c453b53da0d7ebfc8a156fdde018b1cef777e0873a4901bf92c9f296d"
 
 
 def _normalize_parser_value(value: Any) -> Any:

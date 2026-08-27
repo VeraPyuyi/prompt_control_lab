@@ -1,0 +1,10 @@
+{
+  "count": 30,
+  "mean_duration_seconds": 54.955,
+  "mean_score": 1.0,
+  "mean_tool_calls": 6.2,
+  "mean_total_tokens": 169150.43333333332,
+  "mean_touched_files": 1.0,
+  "mean_unnecessary_file_edits": 0.0,
+  "tests_pass_rate": 1.0
+}

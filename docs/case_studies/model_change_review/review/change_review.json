@@ -1,0 +1,48 @@
+{
+  "artifacts": [
+    "comparison_validity.json",
+    "attribution.json",
+    "stability.json",
+    "decision_trace.json",
+    "human_feedback.json",
+    "report.md",
+    "report.html"
+  ],
+  "baseline_run": "../baseline",
+  "candidate_run": "../candidate",
+  "change_kind": "model_change",
+  "claim_boundary": "This review describes recorded associations and decision evidence. It does not establish a unique causal explanation.",
+  "coverage": {
+    "baseline_events": false,
+    "baseline_gate": false,
+    "baseline_manifest": true,
+    "baseline_metrics": true,
+    "candidate_events": false,
+    "candidate_gate": true,
+    "candidate_manifest": true,
+    "candidate_metrics": true
+  },
+  "decision": "needs_review",
+  "downstream_modified": false,
+  "enforcement": "observe_only",
+  "mode": "shadow",
+  "next_action": "Resolve the candidate gate review items before promotion.",
+  "observations": {
+    "baseline_score": 0.441780598958,
+    "candidate_gate": "needs_review",
+    "candidate_score": 0.445068359375,
+    "metric_deltas": {
+      "mean_score": {
+        "baseline": 0.441780598958,
+        "candidate": 0.445068359375,
+        "delta": 0.0032877604170000185,
+        "direction": "increase"
+      }
+    },
+    "stability_state": "insufficient_evidence"
+  },
+  "reasons": [
+    "The candidate gate requires human review."
+  ],
+  "schema": "prompt_control_lab.change_review.v1"
+}

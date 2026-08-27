@@ -1,11 +1,13 @@
 from pathlib import Path
 
 
-def test_readmes_lead_with_evidence_diagnosis_and_control() -> None:
+def test_readmes_lead_with_change_review_and_keep_diagnostic_depth() -> None:
     readme = Path("README.md").read_text(encoding="utf-8")
     readme_zh = Path("README.zh.md").read_text(encoding="utf-8")
 
-    assert "The local evidence, diagnosis, and control loop" in readme
+    assert "The local Change Review layer" in readme
+    assert "pcl review" in readme
+    assert "pcl trace import" in readme
     assert "pcl control" in readme
     assert "Core Diagnostic Loop" in readme
     assert "pcl evidence scan" in readme
@@ -20,7 +22,9 @@ def test_readmes_lead_with_evidence_diagnosis_and_control() -> None:
     assert "docs/research_from_paper.en.md" in readme
     assert "Control-theoretic diagnostics and reproducible evidence" not in readme[:600]
 
-    assert "本地证据、诊断和控制闭环" in readme_zh
+    assert "本地 Change Review 决策层" in readme_zh
+    assert "pcl review" in readme_zh
+    assert "pcl trace import" in readme_zh
     assert "pcl control" in readme_zh
     assert "核心诊断闭环" in readme_zh
     assert "pcl evidence scan" in readme_zh

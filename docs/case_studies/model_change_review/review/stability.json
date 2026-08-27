@@ -1,0 +1,13 @@
+{
+  "run_id": "historical-mistral-aggregate",
+  "schema": "prompt_control_lab.stability_report.v1",
+  "signals": {
+    "confidence": "low",
+    "evidence_scope": "aggregate_independent_runs",
+    "sample_count": 24,
+    "success_rate": 0.445068359375,
+    "tests_pass_rate": null
+  },
+  "state": "insufficient_evidence",
+  "summary": "Repeated-run outcomes were recorded, but aggregate samples do not establish within-run convergence, oscillation, or divergence."
+}

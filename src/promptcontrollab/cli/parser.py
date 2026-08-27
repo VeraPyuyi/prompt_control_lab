@@ -35,11 +35,12 @@ def build_parser() -> argparse.ArgumentParser:
     evidence.register_commands(subcommands, ("ingest",))
     preflight.register_commands(subcommands, ("scaffold-check", "improve"))
     control.register_commands(subcommands, ("control",))
+    control.register_commands(subcommands, ("trace",))
     integrations.register_commands(subcommands, ("providers", "harness"))
     control.register_commands(subcommands, ("bridge",))
     preflight.register_commands(subcommands, ("guard",))
     provenance.register_commands(subcommands, ("model-detect", "model-drift"))
-    evaluation.register_commands(subcommands, ("validity", "compare-runs"))
+    evaluation.register_commands(subcommands, ("validity", "compare-runs", "review"))
     evidence.register_commands(
         subcommands,
         ("evidence-from", "evidence-audit", "source-verify", "evidence-gate"),

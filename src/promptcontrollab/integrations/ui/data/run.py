@@ -5,7 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import cast
 
-from promptcontrollab.core.files import JsonDict
+from promptcontrollab.core.files import JsonDict, read_json
 from promptcontrollab.evaluation.report_model import ReportModel
 from promptcontrollab.integrations.ui.data.constants import (
     _INTERNAL_RUN_DIRECTORIES,
@@ -28,14 +28,18 @@ def list_runs(runs_dir: Path) -> list[JsonDict]:
         return []
     runs: list[JsonDict] = []
     for child in sorted(runs_dir.iterdir(), key=lambda path: path.name):
-        if (
-            child.is_dir()
-            and child.name not in _INTERNAL_RUN_DIRECTORIES
-            and _has_any_artifact(child)
-        ):
+        if not child.is_dir() or child.name in _INTERNAL_RUN_DIRECTORIES:
+            continue
+        case = _featured_case_run(child)
+        if case:
+            runs.append(case)
+        elif _has_any_artifact(child):
             runs.append({"name": child.name, "path": str(child)})
     if runs:
-        return runs
+        return sorted(runs, key=_run_sort_key)
+    current_case = _featured_case_run(runs_dir)
+    if current_case:
+        return [current_case]
     if _has_run_level_artifact(runs_dir):
         return [{"name": runs_dir.name, "path": str(runs_dir)}]
     if _has_any_artifact(runs_dir):
@@ -46,6 +50,82 @@ def list_runs(runs_dir: Path) -> list[JsonDict]:
     return runs
 
 
+def _featured_case_run(case_dir: Path) -> JsonDict:
+    """Return one curated case row when its nested review is valid and bounded."""
+
+    manifest_path = case_dir / "case_manifest.json"
+    if not manifest_path.is_file():
+        return {}
+    try:
+        manifest = read_json(manifest_path)
+    except (OSError, ValueError):
+        return {}
+    display = manifest.get("display")
+    if not isinstance(display, dict):
+        return {}
+    review_name = display.get("review_path", "review")
+    if not isinstance(review_name, str) or not review_name:
+        return {}
+    relative = Path(review_name)
+    if relative.is_absolute() or ".." in relative.parts:
+        return {}
+    review_dir = (case_dir / relative).resolve(strict=False)
+    case_root = case_dir.resolve(strict=False)
+    if case_root not in review_dir.parents or not _has_any_artifact(review_dir):
+        return {}
+    title = _localized_mapping(display.get("title"))
+    summary = _localized_mapping(display.get("summary"))
+    boundary = _localized_mapping(display.get("boundary"))
+    row: JsonDict = {
+        "name": case_dir.name,
+        "path": str(review_dir),
+        "featured": display.get("featured") is True,
+        "order": _case_order(display.get("order")),
+    }
+    for key, value in (
+        ("title", title),
+        ("summary", summary),
+        ("boundary", boundary),
+        ("category", display.get("category")),
+        ("evidence_level", display.get("evidence_level")),
+        ("technical_change_kind", display.get("technical_change_kind")),
+        ("decision", manifest.get("decision")),
+    ):
+        if value not in ({}, None, ""):
+            row[key] = value
+    return row
+
+
+def _localized_mapping(value: object) -> JsonDict:
+    """Keep only bounded English and Chinese strings from display metadata."""
+
+    if not isinstance(value, dict):
+        return {}
+    return {
+        language: text
+        for language in ("en", "zh")
+        if isinstance((text := value.get(language)), str) and text
+    }
+
+
+def _case_order(value: object) -> int:
+    """Normalize a public case order without accepting booleans or negative values."""
+
+    if isinstance(value, int) and not isinstance(value, bool) and value >= 0:
+        return value
+    return 10_000
+
+
+def _run_sort_key(row: JsonDict) -> tuple[int, int, str]:
+    """Place featured cases first while preserving deterministic run ordering."""
+
+    return (
+        0 if row.get("featured") is True else 1,
+        _case_order(row.get("order")),
+        str(row.get("name") or ""),
+    )
+
+
 def load_run_detail(run_dir: Path) -> JsonDict:
     """Load all known artifacts for one run directory."""
 
@@ -53,13 +133,13 @@ def load_run_detail(run_dir: Path) -> JsonDict:
     control_run = _read_control_json(run_dir / "control_run.json")
     events = load_jsonl_safe(run_dir / "events.jsonl")
     preflight = _read_control_json(run_dir / "preflight.json")
-    attribution = _read_control_json(run_dir / "attribution.json")
-    stability = _read_control_json(run_dir / "stability.json")
+    attribution = model.attribution
+    stability = model.stability
     decision = _read_control_json(run_dir / "decision.json")
     provider_result = _read_control_json(run_dir / "provider_result.json")
     audit = cast(JsonDict, redact_for_display(model.audit))
     prompt_reach_artifacts, prompt_reach_paths = _load_prompt_reach_artifacts(run_dir)
-    decision_trace = _read_control_json(run_dir / "decision_trace.json")
+    decision_trace = model.decision_trace
     control_artifacts = [name for name in CONTROL_ARTIFACTS if (run_dir / name).exists()]
     artifacts = [*model.artifacts]
     artifacts.extend(name for name in control_artifacts if name not in artifacts)
@@ -88,7 +168,10 @@ def load_run_detail(run_dir: Path) -> JsonDict:
         "stats": model.stats,
         "splits": model.splits,
         "gate": model.gate,
+        "change_review": model.change_review,
         "comparison_validity": model.comparison_validity,
+        "human_feedback": model.human_feedback,
+        "trace_import": model.trace_import,
         "explanation": model.explanation,
         "model_drift": model.model_drift,
         "audit": audit,

@@ -6,12 +6,12 @@ This index defines the canonical module boundaries for PromptControlLab. Real im
 |---|---|---|
 | Core | Configuration, files, schemas, errors, versioning, optional dependencies | [English](../../src/promptcontrollab/core/README.md) · [中文](../../src/promptcontrollab/core/README.zh.md) |
 | Preflight | Prompt guard, policy, improvement, token budgeting, tool selection | [English](../../src/promptcontrollab/preflight/README.md) · [中文](../../src/promptcontrollab/preflight/README.zh.md) |
-| Evaluation | Split, evaluation, statistics, reports, gates, history | [English](../../src/promptcontrollab/evaluation/README.md) · [中文](../../src/promptcontrollab/evaluation/README.zh.md) |
-| Control | ControlRun, lifecycle events, attribution, stability, decisions | [English](../../src/promptcontrollab/control/README.md) · [中文](../../src/promptcontrollab/control/README.zh.md) |
+| Evaluation | Change Review, split, evaluation, statistics, reports, gates, history | [English](../../src/promptcontrollab/evaluation/README.md) · [中文](../../src/promptcontrollab/evaluation/README.zh.md) |
+| Control | ControlRun, imported traces, lifecycle events, attribution, stability, decisions | [English](../../src/promptcontrollab/control/README.md) · [中文](../../src/promptcontrollab/control/README.zh.md) |
 | Provenance | Prompt/model identity, verification evidence, model drift | [English](../../src/promptcontrollab/provenance/README.md) · [中文](../../src/promptcontrollab/provenance/README.zh.md) |
 | Audit | Git diff, agent run, PR summary, SARIF, claim review | [English](../../src/promptcontrollab/audit/README.md) · [中文](../../src/promptcontrollab/audit/README.zh.md) |
 | Evidence | External evidence, adapters, PEOC import, post-training gates | [English](../../src/promptcontrollab/evidence/README.md) · [中文](../../src/promptcontrollab/evidence/README.zh.md) |
-| Diagnostics | Trajectory, soft-hard, Riccati, TV-soft, control certificates | [English](../../src/promptcontrollab/diagnostics/README.md) · [中文](../../src/promptcontrollab/diagnostics/README.zh.md) |
+| Diagnostics | Trajectory, soft-hard, reduced-model stability, and bounded confidence checks | [English](../../src/promptcontrollab/diagnostics/README.md) · [中文](../../src/promptcontrollab/diagnostics/README.zh.md) |
 | Integrations | Providers, agents, plugins, UI, GitHub, Hugging Face | [English](../../src/promptcontrollab/integrations/README.md) · [中文](../../src/promptcontrollab/integrations/README.zh.md) |
 | CLI | Stable command registration, dispatch, output, and compatibility | [English](../../src/promptcontrollab/cli/README.md) · [中文](../../src/promptcontrollab/cli/README.zh.md) |
 

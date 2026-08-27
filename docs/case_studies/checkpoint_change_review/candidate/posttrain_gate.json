@@ -1,0 +1,6 @@
+{
+  "decision": "hold",
+  "plain_summary": "The candidate improved mean score, while the recorded generation, stability, and selective-risk checks still required a hold.",
+  "schema": "prompt_control_lab.public_checkpoint_gate.v1",
+  "source": "../sft_checkpoint_pilot/gate_decisions.json"
+}

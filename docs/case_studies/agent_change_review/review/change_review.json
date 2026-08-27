@@ -1,0 +1,84 @@
+{
+  "artifacts": [
+    "comparison_validity.json",
+    "attribution.json",
+    "stability.json",
+    "decision_trace.json",
+    "human_feedback.json",
+    "report.md",
+    "report.html"
+  ],
+  "baseline_run": "../baseline",
+  "candidate_run": "../candidate",
+  "change_kind": "prompt_change",
+  "claim_boundary": "This review describes recorded associations and decision evidence. It does not establish a unique causal explanation.",
+  "coverage": {
+    "baseline_events": true,
+    "baseline_gate": false,
+    "baseline_manifest": true,
+    "baseline_metrics": true,
+    "candidate_events": true,
+    "candidate_gate": false,
+    "candidate_manifest": true,
+    "candidate_metrics": true
+  },
+  "decision": "needs_review",
+  "downstream_modified": false,
+  "enforcement": "observe_only",
+  "mode": "shadow",
+  "next_action": "Resolve the listed evidence gaps before promotion.",
+  "observations": {
+    "baseline_score": 1.0,
+    "candidate_gate": null,
+    "candidate_score": 1.0,
+    "metric_deltas": {
+      "mean_duration_seconds": {
+        "baseline": 57.384333333333,
+        "candidate": 54.955,
+        "delta": -2.4293333333329983,
+        "direction": "decrease"
+      },
+      "mean_score": {
+        "baseline": 1.0,
+        "candidate": 1.0,
+        "delta": 0.0,
+        "direction": "unchanged"
+      },
+      "mean_tool_calls": {
+        "baseline": 7.0,
+        "candidate": 6.2,
+        "delta": -0.7999999999999998,
+        "direction": "decrease"
+      },
+      "mean_total_tokens": {
+        "baseline": 192948.13333333333,
+        "candidate": 169150.43333333332,
+        "delta": -23797.70000000001,
+        "direction": "decrease"
+      },
+      "mean_touched_files": {
+        "baseline": 1.0,
+        "candidate": 1.0,
+        "delta": 0.0,
+        "direction": "unchanged"
+      },
+      "mean_unnecessary_file_edits": {
+        "baseline": 0.0,
+        "candidate": 0.0,
+        "delta": 0.0,
+        "direction": "unchanged"
+      },
+      "tests_pass_rate": {
+        "baseline": 1.0,
+        "candidate": 1.0,
+        "delta": 0.0,
+        "direction": "unchanged"
+      }
+    },
+    "stability_state": "insufficient_evidence"
+  },
+  "reasons": [
+    "Comparison validity or stability evidence needs human review."
+  ],
+  "schema": "prompt_control_lab.change_review.v1"
+}

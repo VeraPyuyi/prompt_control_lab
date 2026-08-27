@@ -154,9 +154,9 @@ def test_research_demo_generates_paper_diagnostics(
     assert "Hidden-state input" in report
     assert "soft-to-hard projection gap" in report
     assert "Riccati surrogate" in report
-    assert "Terminal sensitivity" in report
-    assert "Green certificate" in report
-    assert "Posterior certificate" in report
+    assert "Long-horizon goal influence" in report
+    assert "Local stability boundary" in report
+    assert "Local solution confidence range" in report
     report_html = (run_dir / "research_diagnostics.html").read_text(encoding="utf-8")
     assert "Research Diagnostics Report" in report_html
     assert "At a Glance" in report_html

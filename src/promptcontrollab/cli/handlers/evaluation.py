@@ -18,6 +18,7 @@ from promptcontrollab.core.config import (
     load_project_config,
 )
 from promptcontrollab.evaluation.artifact_export import export_report_zip
+from promptcontrollab.evaluation.change_review import review_changes
 from promptcontrollab.evaluation.evaluation import run_import_eval
 from promptcontrollab.evaluation.explain import generate_explanation
 from promptcontrollab.evaluation.gate import run_gate
@@ -55,6 +56,19 @@ def _cmd_compare_runs(args: argparse.Namespace) -> None:
         seed=args.seed,
         bootstrap_samples=args.bootstrap_samples,
         permutation_samples=args.permutation_samples,
+    )
+    print(json.dumps(payload, indent=2, ensure_ascii=False, sort_keys=True))
+
+
+def _cmd_review(args: argparse.Namespace) -> None:
+    """Execute the unified change review command handler."""
+
+    payload = review_changes(
+        baseline_dir=args.baseline,
+        candidate_dir=args.candidate,
+        out_dir=args.out,
+        kind=args.kind,
+        mode=args.mode,
     )
     print(json.dumps(payload, indent=2, ensure_ascii=False, sort_keys=True))
 

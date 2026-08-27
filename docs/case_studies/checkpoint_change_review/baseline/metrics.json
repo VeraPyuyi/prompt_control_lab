@@ -1,0 +1,13 @@
+{
+  "by_slice": {
+    "format_following": 0.0,
+    "gsm8k": 0.1328125
+  },
+  "count": 3,
+  "generation_mismatch": 0.572916666667,
+  "mean_latency_ms": 8963.940084239262,
+  "mean_score": 0.088541666667,
+  "mean_tokens": 147.338541666667,
+  "selective_aurc": 0.871227659274,
+  "trajectory_drift": 8.395504777982
+}

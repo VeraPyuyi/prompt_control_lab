@@ -1,4 +1,5 @@
 """Control-run, provenance, and certificate data readers."""
+# ruff: noqa: RUF001
 
 from __future__ import annotations
 
@@ -11,6 +12,11 @@ from typing import Any, cast
 
 from promptcontrollab.control.control_protocol import REDACTED, redact_sensitive
 from promptcontrollab.core.files import JsonDict
+from promptcontrollab.diagnostics.presentation import (
+    diagnostic_metric_label,
+    diagnostic_status_label,
+    get_diagnostic_presentation,
+)
 from promptcontrollab.integrations.ui.data.common import _mapping
 from promptcontrollab.integrations.ui.data.constants import PROMPT_REACH_ARTIFACTS
 
@@ -78,18 +84,6 @@ def control_certificate_interpretation_rows(
 
     diagnostics_value = detail.get("diagnostics")
     diagnostics = diagnostics_value if isinstance(diagnostics_value, dict) else {}
-    labels = {
-        "en": {
-            "terminal_sensitivity": "Terminal sensitivity",
-            "green_certificate": "Green certificate",
-            "posterior_certificate": "Posterior certificate",
-        },
-        "zh": {
-            "terminal_sensitivity": "终端敏感度",
-            "green_certificate": "Green 边界证书",
-            "posterior_certificate": "局部后验证书",
-        },
-    }
     lang = "zh" if language == "zh" else "en"
     roles = {
         "terminal_sensitivity": "stability",
@@ -102,20 +96,29 @@ def control_certificate_interpretation_rows(
         if not isinstance(value, dict) or not value:
             continue
         level = str(value.get("certificate_level") or "insufficient_evidence")
+        status = str(value.get("check_state") or "unknown")
+        presentation = get_diagnostic_presentation(name, lang)
         rows.append(
             {
                 "adapter": name,
-                "diagnostic": labels[lang][name],
+                "diagnostic": presentation["label"],
+                "technical_name": presentation["technical_name"],
+                "function": presentation["purpose"],
+                "question": presentation["question"],
                 "role": roles[name],
-                "status": value.get("check_state") or "unknown",
+                "status": status,
+                "status_label": diagnostic_status_label(status, lang),
                 "confidence": _certificate_confidence(level),
                 "certificate_level": level,
-                "observed": value.get("observation") or _certificate_observation(name, value),
-                "explains": value.get("explanation") or "A scoped control signal was recorded.",
+                "certificate_level_label": diagnostic_status_label(level, lang),
+                "observed": value.get("observation")
+                or _localized_certificate_observation(name, value, lang),
+                "explains": value.get("explanation")
+                or _certificate_explanation(status, level, presentation, lang),
                 "does_not_prove": value.get("claim_boundary")
-                or "This result does not prove the full language model.",
+                or presentation["claim_boundary"],
                 "next_action": value.get("next_action")
-                or "Retain the artifact and inspect its premise record.",
+                or _certificate_next_action(status, presentation, lang),
             }
         )
     return rows
@@ -205,19 +208,77 @@ def _certificate_confidence(level: str) -> str:
     }.get(level, "unknown")
 
 
-def _certificate_observation(name: str, payload: JsonDict) -> str:
-    """Normalize certificate observation values for dashboard use."""
+def _localized_certificate_observation(
+    name: str,
+    payload: JsonDict,
+    language: str,
+) -> str:
+    """Render certificate measurements with localized display labels."""
+
+    values: list[tuple[str, object]]
     if name == "terminal_sensitivity":
-        return f"decay_rate={payload.get('decay_rate')}; R2={payload.get('r_squared')}"
-    if name == "green_certificate":
-        return (
-            f"spectral_gap={payload.get('hyperbolicity_margin')}; "
-            f"sigma_min={payload.get('boundary_sigma_min')}"
-        )
-    return (
-        f"h={payload.get('h')}; radius={payload.get('existence_radius')}; "
-        f"margin={payload.get('neighborhood_margin')}"
+        values = [
+            ("decay_rate", payload.get("decay_rate")),
+            ("r_squared", payload.get("r_squared")),
+        ]
+    elif name == "green_certificate":
+        values = [
+            ("hyperbolicity_margin", payload.get("hyperbolicity_margin")),
+            ("boundary_sigma_min", payload.get("boundary_sigma_min")),
+        ]
+    else:
+        values = [
+            ("h", payload.get("h")),
+            ("existence_radius", payload.get("existence_radius")),
+            ("neighborhood_margin", payload.get("neighborhood_margin")),
+        ]
+    present = [(key, value) for key, value in values if value is not None]
+    if not present:
+        return "未记录可显示指标。" if language == "zh" else "No display metric was recorded."
+    return "; ".join(
+        f"{diagnostic_metric_label(key, language)}={value}" for key, value in present
     )
+
+
+def _certificate_explanation(
+    status: str,
+    level: str,
+    presentation: JsonDict,
+    language: str,
+) -> object:
+    """Choose a non-contradictory fallback when an artifact omits its explanation."""
+
+    if status == "conditions_not_met":
+        return (
+            "记录的条件未满足；这说明当前证据边界，不能据此断言解不存在。"
+            if language == "zh"
+            else "The recorded conditions were not met; this marks an evidence boundary and "
+            "does not establish non-existence."
+        )
+    if status in {"missing", "invalid"} or level == "insufficient_evidence":
+        return (
+            "当前输入不足或无效，暂时不能解释该局部性质。"
+            if language == "zh"
+            else "The current input is missing or invalid, so this local property cannot yet "
+            "be interpreted."
+        )
+    return presentation["meaning"]
+
+
+def _certificate_next_action(
+    status: str,
+    presentation: JsonDict,
+    language: str,
+) -> object:
+    """Return a status-aware fallback action while preserving artifact actions first."""
+
+    if status == "conditions_not_met":
+        return (
+            "检查未满足的前提、边界矩阵和数值余量后重新运行。"
+            if language == "zh"
+            else "Inspect the unmet premise, boundary matrices, and numerical margins, then rerun."
+        )
+    return presentation["next_action"]
 
 
 def prompt_reach_interpretation_rows(
@@ -526,6 +587,7 @@ def deepseek_harness_view(detail: JsonDict) -> JsonDict:
     provider_result = _mapping(safe.get("provider_result"))
     stability = _mapping(safe.get("stability"))
     attribution = _mapping(safe.get("attribution"))
+    change_review = _mapping(safe.get("change_review"))
     decision = _mapping(safe.get("decision"))
     audit = _mapping(safe.get("audit") or safe.get("audit_result"))
     return {
@@ -549,7 +611,7 @@ def deepseek_harness_view(detail: JsonDict) -> JsonDict:
         },
         "changes": _change_rows(events, audit),
         "guard_signals": _guard_signal_rows(events, stability),
-        "recommendation": _recommendation_view(decision, preflight),
+        "recommendation": _recommendation_view(change_review or decision, preflight),
         "report_links": _report_link_rows(safe),
     }
 

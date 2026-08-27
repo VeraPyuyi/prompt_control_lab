@@ -8,6 +8,8 @@ import json
 import os
 import subprocess
 import sys
+import threading
+import webbrowser
 from pathlib import Path
 
 from promptcontrollab.cli.common import _config_path, _print_command_payload
@@ -17,6 +19,7 @@ from promptcontrollab.core.config import (
 )
 from promptcontrollab.core.errors import PromptControlLabError
 from promptcontrollab.core.files import JsonDict, read_json
+from promptcontrollab.core.network import is_loopback_host
 from promptcontrollab.integrations.doctor import format_doctor, run_doctor
 from promptcontrollab.integrations.ecosystem_demo import (
     run_ecosystem_demo,
@@ -305,7 +308,11 @@ def _cmd_doctor(args: argparse.Namespace) -> None:
 
 
 def _cmd_ui(args: argparse.Namespace) -> None:
-    """Execute the ui command handler."""
+    """Launch the React cockpit or the compatibility Streamlit dashboard."""
+    if not is_loopback_host(args.host):
+        raise PromptControlLabError(
+            "The unauthenticated local UI can bind only to a loopback host."
+        )
     project_config, project_config_path = load_project_config()
     runs_dir = (
         args.runs or _config_path(project_config, project_config_path, "runs_dir") or Path("runs")
@@ -316,9 +323,8 @@ def _cmd_ui(args: argparse.Namespace) -> None:
         "guard_policy",
     )
     default_view = get_config_str(project_config, "ui.default_view", "workflows")
-    missing = [
-        module for module in ["streamlit", "plotly"] if importlib.util.find_spec(module) is None
-    ]
+    required = ["streamlit", "plotly"] if args.legacy_streamlit else ["fastapi", "uvicorn"]
+    missing = [module for module in required if importlib.util.find_spec(module) is None]
     if missing:
         msg = (
             f"pcl ui requires optional UI dependencies ({', '.join(missing)} missing). "
@@ -326,36 +332,55 @@ def _cmd_ui(args: argparse.Namespace) -> None:
             '`pip install -e ".[ui]"` or `uv pip install -e ".[ui]"`.'
         )
         raise PromptControlLabError(msg)
-    app_path = (
-        Path(__file__).resolve().parents[2]
-        / "integrations"
-        / "ui"
-        / "app.py"
-    )
-    if not app_path.is_file():
-        raise PromptControlLabError(f"Streamlit app entry point is missing: {app_path}")
     env = os.environ.copy()
     env["PCL_UI_RUNS"] = str(runs_dir)
     env["PCL_UI_POLICY"] = str(policy_path) if policy_path is not None else ""
     env["PCL_UI_LANGUAGE"] = args.language
     env["PCL_UI_DEFAULT_VIEW"] = default_view
     env["PCL_UI_CONFIG"] = str(project_config_path) if project_config_path is not None else ""
-    command = [
-        sys.executable,
-        "-m",
-        "streamlit",
-        "run",
-        str(app_path),
-        f"--server.address={args.host}",
-        f"--server.port={args.port}",
-        f"--server.headless={str(args.no_browser).lower()}",
-        "--browser.gatherUsageStats=false",
-        "--client.toolbarMode=viewer",
-    ]
+    if args.legacy_streamlit:
+        app_path = Path(__file__).resolve().parents[2] / "integrations" / "ui" / "app.py"
+        if not app_path.is_file():
+            raise PromptControlLabError(f"Streamlit app entry point is missing: {app_path}")
+        command = [
+            sys.executable,
+            "-m",
+            "streamlit",
+            "run",
+            str(app_path),
+            f"--server.address={args.host}",
+            f"--server.port={args.port}",
+            f"--server.headless={str(args.no_browser).lower()}",
+            "--browser.gatherUsageStats=false",
+            "--client.toolbarMode=viewer",
+        ]
+        service = "Streamlit"
+    else:
+        command = [
+            sys.executable,
+            "-m",
+            "uvicorn",
+            "promptcontrollab.integrations.web_api:create_app",
+            "--factory",
+            "--host",
+            str(args.host),
+            "--port",
+            str(args.port),
+        ]
+        service = "Workflow cockpit"
+        if not args.no_browser:
+            browser_host = "127.0.0.1" if args.host in {"0.0.0.0", "localhost"} else args.host
+            timer = threading.Timer(
+                1.0,
+                webbrowser.open,
+                args=(f"http://{browser_host}:{args.port}",),
+            )
+            timer.daemon = True
+            timer.start()
     try:
         subprocess.run(command, env=env, check=True)
     except KeyboardInterrupt:
         return
     except subprocess.CalledProcessError as exc:
-        msg = f"Streamlit exited with status {exc.returncode}"
+        msg = f"{service} exited with status {exc.returncode}"
         raise PromptControlLabError(msg) from exc

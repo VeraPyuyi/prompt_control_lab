@@ -327,7 +327,7 @@ def _render_research_overview_tab(
         empty_state(st, text["research_empty"], text["research_demo_command"])
         return
 
-    rows = research_diagnostic_rows(detail)
+    rows = research_diagnostic_rows(detail, language)
     counts = research_status_counts(detail)
     available = counts.get("available", 0)
     artifacts = detail.get("artifacts")

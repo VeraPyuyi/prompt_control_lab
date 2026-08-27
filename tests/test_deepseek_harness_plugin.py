@@ -208,7 +208,9 @@ def test_package_metadata_is_native_plugin_package() -> None:
 def test_ci_installs_and_checks_harness_contract_dependencies() -> None:
     workflow = (ROOT / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8")
 
-    assert "cache-dependency-path: plugins/deepseek-harness/package-lock.json" in workflow
+    assert "cache-dependency-path: |" in workflow
+    assert "frontend/package-lock.json" in workflow
+    assert "plugins/deepseek-harness/package-lock.json" in workflow
     assert "working-directory: plugins/deepseek-harness" in workflow
     assert "run: npm ci" in workflow
     assert "run: npm run check" in workflow

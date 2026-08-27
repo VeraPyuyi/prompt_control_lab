@@ -54,6 +54,8 @@ posttrain = [
   "datasets>=2.19"
 ]
 ui = [
+  "fastapi>=0.110",
+  "uvicorn>=0.29",
   "streamlit>=1.40",
   "plotly>=5.24"
 ]
@@ -65,7 +67,9 @@ bot = [
 ]
 dev = [
   "build>=1.2",
+  "fastapi>=0.110",
   "hatchling>=1.24",
+  "httpx>=0.27",
   "mypy>=1.10",
   "numpy>=1.24,<2.0",
   "pytest>=8.0",
@@ -99,6 +103,7 @@ include = [
   "/docs",
   "/deploy",
   "/examples",
+  "/frontend",
   "/plugins/deepseek-harness/COMPATIBILITY.md",
   "/plugins/deepseek-harness/README.md",
   "/plugins/deepseek-harness/README.zh.md",
@@ -117,6 +122,9 @@ include = [
 ]
 exclude = [
   "/docs/assets/demo/*.mp4",
+  "/frontend/dist",
+  "/frontend/node_modules",
+  "/frontend/*.tsbuildinfo",
   "**/__pycache__",
   "**/*.pyc",
 ]

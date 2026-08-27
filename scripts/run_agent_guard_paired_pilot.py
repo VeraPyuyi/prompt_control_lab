@@ -317,6 +317,8 @@ TASKS: tuple[PilotTask, ...] = (
 
 CSV_FIELDS = [
     "task_id",
+    "base_task_id",
+    "trial",
     "agent",
     "task_type",
     "raw_prompt_summary",
@@ -333,6 +335,16 @@ CSV_FIELDS = [
     "guarded_human_corrections",
     "raw_prompt_tokens",
     "guarded_prompt_tokens",
+    "raw_input_tokens",
+    "guarded_input_tokens",
+    "raw_cached_input_tokens",
+    "guarded_cached_input_tokens",
+    "raw_output_tokens",
+    "guarded_output_tokens",
+    "raw_total_tokens",
+    "guarded_total_tokens",
+    "raw_tool_calls",
+    "guarded_tool_calls",
     "raw_duration_seconds",
     "guarded_duration_seconds",
     "notes",
@@ -350,30 +362,24 @@ def main() -> int:
         type=Path,
         default=REPO_ROOT / "docs" / "case_studies" / "agent_guard_paired_pilot.csv",
     )
-    parser.add_argument("--limit", type=int, default=len(TASKS))
+    parser.add_argument("--limit", type=int, default=10)
+    parser.add_argument("--trials", type=int, default=3)
     parser.add_argument("--timeout", type=int, default=420)
     parser.add_argument("--proxy", default=_default_proxy())
     parser.add_argument("--policy", type=Path, default=REPO_ROOT / "examples" / "guard.policy.yaml")
     parser.add_argument("--codex-model", default=None)
     args = parser.parse_args()
 
+    args.out = args.out.resolve(strict=False)
+    args.csv = args.csv.resolve(strict=False)
+    args.policy = args.policy.resolve(strict=False)
     selected_tasks = TASKS[: max(0, min(args.limit, len(TASKS)))]
     args.out.mkdir(parents=True, exist_ok=True)
     args.csv.parent.mkdir(parents=True, exist_ok=True)
 
     rows: list[JsonDict] = []
     details: list[JsonDict] = []
-    for task in selected_tasks:
-        print(f"[pilot] {task.task_id} raw", flush=True)
-        raw = _run_side(
-            task,
-            side="raw",
-            prompt=task.raw_prompt,
-            root=args.out,
-            timeout=args.timeout,
-            proxy=args.proxy,
-            codex_model=args.codex_model,
-        )
+    for task_index, task in enumerate(selected_tasks):
         guarded_result = guard_prompt(
             task.raw_prompt,
             context=empty_prompt_context(),
@@ -385,34 +391,55 @@ def main() -> int:
             policy_path=args.policy,
         ).to_json()
         guarded_prompt = str(guarded_result["improved_prompt"])
-        print(f"[pilot] {task.task_id} guarded", flush=True)
-        guarded = _run_side(
-            task,
-            side="guarded",
-            prompt=guarded_prompt,
-            root=args.out,
-            timeout=args.timeout,
-            proxy=args.proxy,
-            codex_model=args.codex_model,
-        )
-        row = _row(task, raw=raw, guarded=guarded, guarded_prompt=guarded_prompt)
-        rows.append(row)
-        details.append(
-            {
-                "task": {
-                    "task_id": task.task_id,
-                    "task_type": task.task_type,
-                    "raw_prompt": task.raw_prompt,
-                    "expected_paths": list(task.expected_paths),
-                },
-                "guard": guarded_result,
-                "raw": raw,
-                "guarded": guarded,
-            }
-        )
-        _write_csv(args.csv, rows)
-        _write_json(args.out / "agent_guard_paired_pilot_details.json", details)
-        _write_json(args.out / "agent_guard_paired_pilot_summary.json", _summary(rows, details))
+        for trial in range(1, max(0, args.trials) + 1):
+            prompts = {"raw": task.raw_prompt, "guarded": guarded_prompt}
+            sides: dict[str, JsonDict] = {}
+            order = (
+                ("raw", "guarded")
+                if (task_index + trial) % 2 == 0
+                else ("guarded", "raw")
+            )
+            for side in order:
+                print(f"[pilot] {task.task_id} trial={trial} {side}", flush=True)
+                sides[side] = _run_side(
+                    task,
+                    side=side,
+                    trial=trial,
+                    prompt=prompts[side],
+                    root=args.out,
+                    timeout=args.timeout,
+                    proxy=args.proxy,
+                    codex_model=args.codex_model,
+                )
+            row = _row(
+                task,
+                trial=trial,
+                raw=sides["raw"],
+                guarded=sides["guarded"],
+                guarded_prompt=guarded_prompt,
+            )
+            rows.append(row)
+            details.append(
+                {
+                    "task": {
+                        "task_id": task.task_id,
+                        "task_type": task.task_type,
+                        "trial": trial,
+                        "raw_prompt": task.raw_prompt,
+                        "expected_paths": list(task.expected_paths),
+                    },
+                    "execution_order": list(order),
+                    "guard": guarded_result,
+                    "raw": sides["raw"],
+                    "guarded": sides["guarded"],
+                }
+            )
+            _write_csv(args.csv, rows)
+            _write_json(args.out / "agent_guard_paired_pilot_details.json", details)
+            _write_json(
+                args.out / "agent_guard_paired_pilot_summary.json",
+                _summary(rows, details),
+            )
 
     _write_csv(args.csv, rows)
     _write_json(args.csv.with_suffix(".summary.json"), _summary(rows, details))
@@ -424,17 +451,18 @@ def _run_side(
     task: PilotTask,
     *,
     side: str,
+    trial: int,
     prompt: str,
     root: Path,
     timeout: int,
     proxy: str | None,
     codex_model: str | None,
 ) -> JsonDict:
-    worktree = root / "workspaces" / f"{task.task_id}-{side}"
+    worktree = root / "workspaces" / f"{task.task_id}-trial-{trial:02d}-{side}"
     if worktree.exists():
         _remove_tree(worktree)
     _create_repo(task, worktree)
-    logs = root / "logs" / task.task_id / side
+    logs = root / "logs" / task.task_id / f"trial-{trial:02d}" / side
     logs.mkdir(parents=True, exist_ok=True)
     last_message = logs / "last_message.txt"
     stdout_path = logs / "stdout.txt"
@@ -448,6 +476,7 @@ def _run_side(
     command.extend(
         [
             "exec",
+            "--json",
             "--cd",
             str(worktree),
             "--ephemeral",
@@ -499,8 +528,10 @@ def _run_side(
     ]
     changed_lines = _changed_lines(worktree, touched_files)
     success = bool(test_result["passed"])
+    usage = _codex_usage(str(completed.stdout or ""))
     return {
         "side": side,
+        "trial": trial,
         "worktree": str(worktree),
         "prompt": prompt,
         "codex_returncode": completed.returncode,
@@ -517,6 +548,8 @@ def _run_side(
         "unnecessary_file_edits": len(unexpected),
         "changed_lines": changed_lines,
         "human_corrections": 0,
+        "usage": usage,
+        "tool_calls": _codex_tool_call_count(str(completed.stdout or "")),
         "last_message_path": str(last_message),
         "stdout_path": str(stdout_path),
         "stderr_path": str(stderr_path),
@@ -605,6 +638,7 @@ def _changed_lines(repo: Path, touched_files: list[str]) -> list[JsonDict]:
 def _row(
     task: PilotTask,
     *,
+    trial: int,
     raw: JsonDict,
     guarded: JsonDict,
     guarded_prompt: str,
@@ -616,8 +650,12 @@ def _row(
         f"raw_code={raw['codex_returncode']}; guarded_code={guarded['codex_returncode']}; "
         f"raw_timeout={raw['codex_timed_out']}; guarded_timeout={guarded['codex_timed_out']}"
     )
+    raw_usage = _mapping(raw.get("usage"))
+    guarded_usage = _mapping(guarded.get("usage"))
     return {
-        "task_id": task.task_id,
+        "task_id": f"{task.task_id}-trial-{trial:02d}",
+        "base_task_id": task.task_id,
+        "trial": trial,
         "agent": "codex-local-exec",
         "task_type": task.task_type,
         "raw_prompt_summary": task.raw_prompt,
@@ -634,6 +672,16 @@ def _row(
         "guarded_human_corrections": guarded["human_corrections"],
         "raw_prompt_tokens": estimate_tokens(task.raw_prompt),
         "guarded_prompt_tokens": estimate_tokens(guarded_prompt),
+        "raw_input_tokens": raw_usage.get("input_tokens"),
+        "guarded_input_tokens": guarded_usage.get("input_tokens"),
+        "raw_cached_input_tokens": raw_usage.get("cached_input_tokens"),
+        "guarded_cached_input_tokens": guarded_usage.get("cached_input_tokens"),
+        "raw_output_tokens": raw_usage.get("output_tokens"),
+        "guarded_output_tokens": guarded_usage.get("output_tokens"),
+        "raw_total_tokens": raw_usage.get("total_tokens"),
+        "guarded_total_tokens": guarded_usage.get("total_tokens"),
+        "raw_tool_calls": raw["tool_calls"],
+        "guarded_tool_calls": guarded["tool_calls"],
         "raw_duration_seconds": raw["duration_seconds"],
         "guarded_duration_seconds": guarded["duration_seconds"],
         "notes": notes,
@@ -648,6 +696,9 @@ def _summary(rows: list[JsonDict], details: list[JsonDict]) -> JsonDict:
     guarded_tests = sum(row["guarded_tests_passed"] == "true" for row in rows)
     return {
         "sample_size": total,
+        "task_count": len({str(row["base_task_id"]) for row in rows}),
+        "trials_per_task": max((int(row["trial"]) for row in rows), default=0),
+        "agent_executions": total * 2,
         "agent": "codex-local-exec",
         "raw_success": raw_success,
         "guarded_success": guarded_success,
@@ -663,13 +714,20 @@ def _summary(rows: list[JsonDict], details: list[JsonDict]) -> JsonDict:
         ),
         "raw_avg_prompt_tokens": _avg(row["raw_prompt_tokens"] for row in rows),
         "guarded_avg_prompt_tokens": _avg(row["guarded_prompt_tokens"] for row in rows),
+        "raw_avg_total_tokens": _avg_present(row.get("raw_total_tokens") for row in rows),
+        "guarded_avg_total_tokens": _avg_present(
+            row.get("guarded_total_tokens") for row in rows
+        ),
+        "raw_avg_tool_calls": _avg(row["raw_tool_calls"] for row in rows),
+        "guarded_avg_tool_calls": _avg(row["guarded_tool_calls"] for row in rows),
         "raw_avg_duration_seconds": _avg(row["raw_duration_seconds"] for row in rows),
         "guarded_avg_duration_seconds": _avg(row["guarded_duration_seconds"] for row in rows),
         "task_ids": [row["task_id"] for row in rows],
         "limitations": [
-            "Small local fixture pilot, not a universal benchmark.",
+            "Small repeated local fixture pilot, not a universal benchmark.",
             "No human correction turns were provided after failed runs.",
             "Tasks are isolated Python pytest fixtures, not full production PRs.",
+            "Full-run token usage is reported only when the Codex JSON event stream provides it.",
         ],
         "detail_count": len(details),
     }
@@ -730,10 +788,99 @@ def _safe_int(value: str) -> int:
         return 0
 
 
+def _codex_usage(stdout: str) -> JsonDict:
+    """Return the last complete token-usage record from a Codex JSONL stream."""
+
+    last: JsonDict = {}
+    for event in _jsonl_objects(stdout):
+        for candidate in _usage_candidates(event):
+            normalized = _normalize_usage(candidate)
+            if normalized:
+                last = normalized
+    return last
+
+
+def _codex_tool_call_count(stdout: str) -> int:
+    """Count completed tool-like items without double-counting start events."""
+
+    count = 0
+    tool_types = {
+        "command_execution",
+        "file_change",
+        "mcp_tool_call",
+        "web_search",
+    }
+    for event in _jsonl_objects(stdout):
+        if event.get("type") not in {"item.completed", "tool.completed"}:
+            continue
+        item = event.get("item")
+        item_type = item.get("type") if isinstance(item, dict) else event.get("tool_type")
+        if item_type in tool_types:
+            count += 1
+    return count
+
+
+def _jsonl_objects(text: str) -> list[JsonDict]:
+    rows: list[JsonDict] = []
+    for line in text.splitlines():
+        try:
+            value = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        if isinstance(value, dict):
+            rows.append(value)
+    return rows
+
+
+def _usage_candidates(value: object) -> list[JsonDict]:
+    candidates: list[JsonDict] = []
+    if isinstance(value, dict):
+        usage = value.get("usage")
+        if isinstance(usage, dict):
+            candidates.append(usage)
+        for nested in value.values():
+            candidates.extend(_usage_candidates(nested))
+    elif isinstance(value, list):
+        for nested in value:
+            candidates.extend(_usage_candidates(nested))
+    return candidates
+
+
+def _normalize_usage(value: JsonDict) -> JsonDict:
+    aliases = {
+        "input_tokens": ("input_tokens", "prompt_tokens"),
+        "cached_input_tokens": ("cached_input_tokens", "cached_prompt_tokens"),
+        "output_tokens": ("output_tokens", "completion_tokens"),
+        "total_tokens": ("total_tokens",),
+    }
+    result: JsonDict = {}
+    for target, keys in aliases.items():
+        raw = next((value[key] for key in keys if key in value), None)
+        if isinstance(raw, int) and not isinstance(raw, bool) and raw >= 0:
+            result[target] = raw
+    if "total_tokens" not in result and {
+        "input_tokens",
+        "output_tokens",
+    }.issubset(result):
+        result["total_tokens"] = int(result["input_tokens"]) + int(result["output_tokens"])
+    return result
+
+
+def _mapping(value: object) -> JsonDict:
+    return value if isinstance(value, dict) else {}
+
+
 def _avg(values: object) -> float:
     items = [float(value) for value in values]
     if not items:
         return 0.0
+    return round(sum(items) / len(items), 2)
+
+
+def _avg_present(values: object) -> float | None:
+    items = [float(value) for value in values if isinstance(value, int | float)]
+    if not items:
+        return None
     return round(sum(items) / len(items), 2)
 
 
@@ -742,7 +889,7 @@ def _default_proxy() -> str | None:
         value = os.getenv(key)
         if value:
             return value
-    return "http://127.0.0.1:7897"
+    return None
 
 
 if __name__ == "__main__":

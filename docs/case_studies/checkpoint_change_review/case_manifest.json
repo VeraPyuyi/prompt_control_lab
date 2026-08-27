@@ -1,0 +1,37 @@
+{
+  "checkpoint_count": 9,
+  "claim_boundary": "This aggregate comparison preserves the real pilot observations. It does not establish a unique causal training mechanism.",
+  "comparison": "aggregate_initial_to_final",
+  "decision": "hold",
+  "display": {
+    "boundary": {
+      "en": "A higher aggregate score does not override the recorded stability, generation-mismatch, or selective-risk hold signals.",
+      "zh": "\u603b\u4f53\u5206\u6570\u63d0\u9ad8\u4e0d\u80fd\u8986\u76d6\u5df2\u8bb0\u5f55\u7684\u7a33\u5b9a\u6027\u3001\u751f\u6210\u9519\u914d\u548c\u9009\u62e9\u6027\u98ce\u9669\u963b\u65ad\u9879\u3002"
+    },
+    "category": "checkpoint",
+    "evidence_level": "real_three_seed_pilot",
+    "featured": true,
+    "order": 3,
+    "review_path": "review",
+    "summary": {
+      "en": "Compare initial and final checkpoints across three seeds and nine recorded checkpoints.",
+      "zh": "\u6bd4\u8f83\u4e09\u4e2a Seed\u3001\u4e5d\u4e2a\u5df2\u8bb0\u5f55 Checkpoint \u7684\u521d\u59cb\u4e0e\u6700\u7ec8\u72b6\u6001\u3002"
+    },
+    "technical_change_kind": "checkpoint_change",
+    "title": {
+      "en": "Checkpoint promotion review",
+      "zh": "Checkpoint \u53d1\u5e03\u5ba1\u67e5"
+    }
+  },
+  "next_action": "Inspect the candidate gate decision trace before promotion.",
+  "observed": {
+    "baseline_mean_score": 0.088541666667,
+    "candidate_generation_mismatch": 0.467013888889,
+    "candidate_mean_score": 0.194444444444,
+    "candidate_selective_aurc": 0.667432288825,
+    "candidate_trajectory_drift": 8.825874485396
+  },
+  "schema": "prompt_control_lab.checkpoint_change_review_case.v1",
+  "seed_count": 3,
+  "source": "../sft_checkpoint_pilot/checkpoint_metrics.csv"
+}

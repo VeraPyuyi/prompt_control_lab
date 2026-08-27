@@ -56,20 +56,23 @@ def _first_screen(text: str) -> str:
     return text.split(marker, 1)[0]
 
 
-def test_readme_first_screens_lead_with_the_local_diagnostic_control_loop() -> None:
+def test_readme_first_screens_lead_with_change_review_and_local_control() -> None:
     english = _read(README_EN)
     chinese = _read(README_ZH)
     first_en = _first_screen(english)
     first_zh = _first_screen(chinese)
 
     assert english.startswith(
-        "# PromptControlLab\n\n**The local evidence, diagnosis, and control loop"
+        "# PromptControlLab\n**The local Change Review layer"
     )
     assert chinese.startswith(
-        "# PromptControlLab\n\n**Prompt、Checkpoint 与 AI Agent 的本地证据、诊断和控制闭环。**"
+        "# PromptControlLab\n"
+        "**面向 Prompt、模型、Checkpoint 与 AI Agent 的本地 Change Review 决策层。**"
     )
     for first in (first_en, first_zh):
         assert "2-Minute" in first or "2 分钟" in first
+        assert "pcl review" in first
+        assert "pcl trace import" in first
         assert "pcl control" in first
         assert "--authorization inspect" in first
         assert "DeepSeek Harness" in first
@@ -86,8 +89,8 @@ def test_readme_first_screens_lead_with_the_local_diagnostic_control_loop() -> N
         assert "prompt_control_lab.control_event.v1" in first
         assert "PEOC" not in first
 
-    assert "Before / Run / Mechanism / Stability / Training Gate / Evidence Scope" in first_en
-    assert "机制解释 / 稳定性 / 训练门禁 / 证据边界" in first_zh
+    assert "Change Review / Before / Run / Why / After / Decision / History" in first_en
+    assert "变更审查 / 执行前 / 运行 / 原因 / 执行后 / 决策 / 历史" in first_zh
 
     assert "Control-theoretic diagnostics and reproducible evidence" not in english
     assert "面向 prompt 优化的控制论诊断与可复现证据工具" not in chinese
@@ -272,18 +275,21 @@ def test_benchmark_docs_explain_exactly_what_accuracy_means() -> None:
         assert "performance" in text.lower() or "性能" in text
 
 
-def test_ui_docs_keep_the_control_story_and_advanced_boundary() -> None:
-    expected = "Before -> Run -> Why -> After -> Decision -> History -> Advanced"
-    expected_zh = "执行前 -> 运行中 -> 原因 -> 执行后 -> 决策 -> 历史 -> 高级"
+def test_ui_docs_keep_the_change_review_story_and_diagnostic_boundary() -> None:
+    expected = (
+        "Change Review -> Before -> Run -> Why -> After -> Decision -> History -> "
+        "Stability & Confidence"
+    )
+    expected_zh = "变更审查 -> 执行前 -> 运行 -> 原因 -> 执行后 -> 决策 -> 历史 -> 稳定性与可信度"
     english = _read(ROOT / "docs" / "control_ui.en.md")
     chinese = _read(ROOT / "docs" / "control_ui.zh.md")
 
     assert expected in english
     assert expected_zh in chinese
+    assert "Long-horizon goal influence" in english
+    assert "最终目标影响" in chinese
     for text in (english, chinese):
         assert "pcl ui --runs runs" in text
-        assert "PEOC" in text
-        assert text.find("PEOC") > text.find("Advanced")
         assert "causal" in text.lower() or "因果" in text
         assert "safety proof" in text.lower() or "安全证明" in text
 

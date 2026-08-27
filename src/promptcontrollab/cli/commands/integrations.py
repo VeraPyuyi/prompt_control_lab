@@ -225,13 +225,18 @@ def _register_doctor(subcommands: argparse._SubParsersAction[argparse.ArgumentPa
 
 def _register_ui(subcommands: argparse._SubParsersAction[argparse.ArgumentParser]) -> None:
     """Register the ``ui`` command parser."""
-    ui_parser = subcommands.add_parser("ui", help="Launch the local Streamlit dashboard.")
+    ui_parser = subcommands.add_parser("ui", help="Launch the local workflow cockpit.")
     ui_parser.add_argument("--runs", type=Path, default=None, help="Runs directory.")
     ui_parser.add_argument("--policy", type=Path, default=None, help="Optional guard policy.")
     ui_parser.add_argument("--host", default="localhost", help="Host address.")
     ui_parser.add_argument("--port", type=int, default=8501, help="Port number.")
     ui_parser.add_argument("--language", choices=["en", "zh"], default="en")
     ui_parser.add_argument("--no-browser", action="store_true", help="Do not open a browser.")
+    ui_parser.add_argument(
+        "--legacy-streamlit",
+        action="store_true",
+        help="Launch the compatibility Streamlit dashboard instead of the React cockpit.",
+    )
     ui_parser.set_defaults(func=_cmd_ui)
 
 

@@ -1,0 +1,13 @@
+{
+  "run_id": "agent-pilot-guarded",
+  "schema": "prompt_control_lab.stability_report.v1",
+  "signals": {
+    "confidence": "low",
+    "evidence_scope": "aggregate_independent_runs",
+    "sample_count": 30,
+    "success_rate": 1.0,
+    "tests_pass_rate": 1.0
+  },
+  "state": "insufficient_evidence",
+  "summary": "Repeated-run outcomes were recorded, but aggregate samples do not establish within-run convergence, oscillation, or divergence."
+}

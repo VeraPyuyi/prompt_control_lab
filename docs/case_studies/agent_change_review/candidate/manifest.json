@@ -1,0 +1,15 @@
+{
+  "agent": {
+    "name": "codex-local-exec"
+  },
+  "capture": "aggregate_public_safe",
+  "claim_boundary": "These are real Agent executions on controlled coding fixtures. They do not establish performance on production repositories or other Agent versions.",
+  "evidence_origin": "real_repeated_agent_processes",
+  "metric": "paired_task_success",
+  "prompt": {
+    "prompt_hash": "guarded-set-v1"
+  },
+  "run_id": "agent-pilot-guarded",
+  "schema": "prompt_control_lab.public_agent_execution_run.v1",
+  "split_hash": "controlled-coding-fixtures-v1"
+}

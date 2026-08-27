@@ -12,6 +12,8 @@ from promptcontrollab.cli.handlers.preflight import (
 )
 from promptcontrollab.control.control_bridge import serve_stdio
 from promptcontrollab.control.control_workflow import AUTHORIZATIONS, preview_guard, run_control
+from promptcontrollab.control.trace_ingest import import_trace_file
+from promptcontrollab.control.trace_receiver import serve_trace_http
 from promptcontrollab.core.config import (
     load_project_config,
 )
@@ -108,3 +110,24 @@ def _cmd_bridge_serve(args: argparse.Namespace) -> None:
         msg = f"Unsupported bridge transport: {args.transport}"
         raise ValueError(msg)
     serve_stdio(runs_root=args.runs_root)
+
+
+def _cmd_trace_import(args: argparse.Namespace) -> None:
+    """Import external trace records into a redacted shadow control run."""
+
+    result = import_trace_file(
+        input_path=args.input,
+        format_name=args.format,
+        out_dir=args.out,
+    )
+    print(json.dumps(result, ensure_ascii=False, sort_keys=True))
+
+
+def _cmd_trace_serve(args: argparse.Namespace) -> None:
+    """Serve the dependency-free local OTLP JSON shadow receiver."""
+
+    print(
+        f"PromptControlLab trace receiver listening on http://{args.host}:{args.port}/v1/traces"
+    )
+    print(f"Shadow artifacts: {args.out}")
+    serve_trace_http(host=args.host, port=args.port, out_dir=args.out)
