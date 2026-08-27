@@ -1,0 +1,4632 @@
+"""Streamlit app for the local prompt_control_lab dashboard."""
+# ruff: noqa: E501,RUF001
+
+from __future__ import annotations
+
+import base64
+import html
+import importlib
+import json
+import os
+from collections.abc import Callable
+from pathlib import Path
+from typing import Any, cast
+
+from promptcontrollab.core.files import JsonDict
+from promptcontrollab.integrations.hf_demo import (
+    DemoSession,
+    cleanup_expired_sessions,
+    is_hf_demo,
+    prepare_demo_session,
+    store_uploaded_artifact,
+    validate_uploaded_artifact,
+)
+from promptcontrollab.integrations.ui.charts import (
+    control_event_timeline,
+    control_signal_bar,
+    file_breakdown_bar,
+    green_boundary_margin,
+    history_category_timeline,
+    history_numeric_trend,
+    research_diagnostic_bar,
+    risk_category_bar,
+    score_delta_ci,
+    slice_score_heatmap,
+    terminal_sensitivity_decay,
+)
+from promptcontrollab.integrations.ui.components import (
+    badge,
+    dashboard_css,
+    empty_state,
+    evidence_ladder_html,
+    metric_cards,
+    paper_card_html,
+    prompt_diff,
+    recommendation_card_html,
+    research_evidence_map_html,
+    stat_card_html,
+)
+from promptcontrollab.integrations.ui.data import (
+    audit_detail_sections,
+    changed_line_rows,
+    claim_check_summary,
+    claim_evidence_ladder,
+    control_certificate_interpretation_rows,
+    decision_trace_interpretation_rows,
+    deepseek_harness_view,
+    ecosystem_demo_rows,
+    ecosystem_evidence_matrix_rows,
+    ecosystem_market_map_rows,
+    ecosystem_market_readiness,
+    ecosystem_scorecard_rows,
+    evidence_card_rows,
+    evidence_gap_action_rows,
+    evidence_gap_rows,
+    evidence_gate_rows,
+    evidence_gate_summary,
+    evidence_matrix_rows,
+    external_bridge_summary,
+    filter_history_rows,
+    first_comparison,
+    green_certificate_rows,
+    guard_download_payloads,
+    history_rows,
+    interpretability_rows,
+    list_runs,
+    load_run_detail,
+    model_rows,
+    peoc_limitation_rows,
+    peoc_method_rows,
+    peoc_status_summary,
+    peoc_trajectory_rows,
+    posterior_certificate_metrics,
+    prompt_asset_rows,
+    prompt_asset_summary,
+    prompt_optimizer_gap_rows,
+    prompt_reach_interpretation_rows,
+    research_at_a_glance_rows,
+    research_diagnostic_rows,
+    research_evidence_map,
+    research_gap_plan_rows,
+    research_gap_script_rows,
+    research_gap_status_rows,
+    research_insight_rows,
+    research_overview_path,
+    research_status_counts,
+    scaffold_check_action_rows,
+    scaffold_check_issue_rows,
+    scaffold_check_summary,
+    slice_rows,
+    terminal_sensitivity_rows,
+)
+from promptcontrollab.integrations.ui.workflows import (
+    build_agent_run_workflow,
+    create_demo_artifacts_workflow,
+    export_report_zip_workflow,
+    run_analyze_workflow,
+    run_audit_workflow,
+    run_evidence_card_workflow,
+    run_external_evidence_workflow,
+    run_gate_workflow,
+    run_guard_workflow,
+    run_import_external_workflow,
+    run_pr_summary_workflow,
+    save_guard_outputs,
+)
+from promptcontrollab.preflight.prompt_context import load_prompt_context
+from promptcontrollab.preflight.prompt_guard import guard_prompt
+from promptcontrollab.preflight.tool_choice import (
+    adoption_path_rows as _tool_choice_adoption_path_rows,
+)
+from promptcontrollab.preflight.tool_choice import (
+    choose_tool_for_need,
+    market_gap_action_rows,
+    render_tool_choice_markdown,
+    tool_choice_lanes,
+)
+
+DEFAULT_PRIMARY_VIEW = "before"
+PRIMARY_VIEW_ORDER = (
+    "before",
+    "run",
+    "mechanism",
+    "stability",
+    "training",
+    "evidence",
+    "decision",
+    "history",
+)
+PRIMARY_VIEW_LABELS = {
+    "en": {
+        "before": "Before",
+        "run": "Run",
+        "mechanism": "Mechanism",
+        "stability": "Stability",
+        "training": "Training Gate",
+        "evidence": "Evidence Scope",
+        "decision": "Decision",
+        "history": "History",
+    },
+    "zh": {
+        "before": "执行前",
+        "run": "运行中",
+        "mechanism": "机制解释",
+        "stability": "稳定性",
+        "training": "训练门禁",
+        "evidence": "证据边界",
+        "decision": "决策",
+        "history": "历史",
+    },
+}
+
+HF_DEMO_TEXT = {
+    "en": {
+        "mode": "Public demo: CPU-only, session-isolated, and no external model calls.",
+        "subtitle": (
+            "Public demo artifacts are stored only in an isolated temporary server-side session; "
+            "no external model requests are made."
+        ),
+        "upload_title": "Import a session artifact",
+        "upload_help": "JSON or JSONL only, up to 5 MB. Files stay in this temporary session.",
+        "upload_run": "Run name",
+        "upload_button": "Validate and import",
+        "upload_ok": "Imported into this session",
+        "restricted": "Local write, Git, provider, plugin, bridge, and training workflows are disabled in the public demo.",
+        "guard_memory": "The public demo keeps this Prompt in browser-session memory and does not save it as a server artifact.",
+    },
+    "zh": {
+        "mode": "公共演示：仅使用 Space CPU，会话相互隔离，不调用任何外部模型。",
+        "subtitle": (
+            "公共演示 artifact 仅保存在隔离的临时服务器会话中；不会调用任何外部模型。"
+        ),
+        "upload_title": "导入当前会话的 artifact",
+        "upload_help": "仅支持不超过 5 MB 的 JSON 或 JSONL；文件只保存在当前临时会话。",
+        "upload_run": "Run 名称",
+        "upload_button": "校验并导入",
+        "upload_ok": "已导入当前会话",
+        "restricted": "公共演示已禁用本地写入工作流、Git、外部 Provider、插件、Bridge 和训练功能。",
+        "guard_memory": "公共演示只在浏览器会话内存中使用这条 Prompt，不会把原文保存为服务器 artifact。",
+    },
+}
+
+INTERPRETATION_LABELS = {
+    "en": {
+        "observed": "Observed",
+        "explains": "Explains",
+        "does_not_prove": "Does not prove",
+        "next_action": "Next action",
+        "status": "Status",
+        "confidence": "Confidence",
+    },
+    "zh": {
+        "observed": "观察到了什么",
+        "explains": "可以解释什么",
+        "does_not_prove": "不能证明什么",
+        "next_action": "下一步行动",
+        "status": "状态",
+        "confidence": "置信度",
+    },
+}
+LEGACY_VIEW_GROUPS = {
+    "before": ("guard", "tutorial"),
+    "run": ("workflows",),
+    "mechanism": (),
+    "stability": ("drift", "audit"),
+    "training": ("posttrain",),
+    "evidence": ("research",),
+    "decision": ("report",),
+    "history": ("history",),
+}
+LEGACY_VIEW_ALIASES = {
+    "guard": "before",
+    "tutorial": "before",
+    "workflows": "run",
+    "why": "mechanism",
+    "drift": "stability",
+    "audit": "stability",
+    "after": "stability",
+    "report": "decision",
+    "research": "evidence",
+    "advanced": "evidence",
+}
+
+CONTROL_TEXT = {
+    "en": {
+        "navigation": "Primary navigation",
+        "before_title": "Before execution",
+        "before_caption": "Preflight and prompt-gate evidence for the selected control run.",
+        "run_title": "Run evidence",
+        "run_caption": "Ordered public session, turn, tool, and provider metadata.",
+        "why_title": "Mechanism interpretation",
+        "why_caption": "Observed factors and diagnostic associations, without causal claims.",
+        "after_title": "Stability and execution evidence",
+        "after_caption": "Trajectory, uncertainty, file changes, and recorded test outcomes.",
+        "training_title": "Post-training checkpoint gate",
+        "training_caption": "Checkpoint promotion based on performance and diagnostic evidence.",
+        "evidence_title": "Evidence scope and claim boundary",
+        "evidence_caption": "What is observed, what it can explain, and what remains unsupported.",
+        "decision_title": "Decision",
+        "decision_caption": "Current recommendation and locally available reports.",
+        "advanced_title": "Evidence scope",
+        "advanced_caption": (
+            "PEOC and server evidence are interpreted as bounded diagnostics, not causal or "
+            "safety proof."
+        ),
+        "missing": "No control-run artifacts are available for the selected run.",
+        "run_id": "Run ID",
+        "session_id": "Harness session",
+        "status": "Status",
+        "authorization": "Authorization",
+        "agent": "Agent",
+        "prompt_gate": "Prompt gate",
+        "tool_gates": "Tool gates",
+        "risk": "Risk",
+        "review": "Review required",
+        "timeline": "Session and turn timeline",
+        "provider_model": "Provider and model",
+        "provider": "Provider",
+        "requested_model": "Requested model",
+        "observed_model": "Observed model",
+        "provenance": "Model provenance evidence",
+        "usage": "Usage and latency",
+        "input_tokens": "Input tokens",
+        "output_tokens": "Output tokens",
+        "total_tokens": "Total tokens",
+        "cached_tokens": "Cached tokens",
+        "cost": "Recorded cost",
+        "latency": "Latency (ms)",
+        "repeated_tools": "Repeated tool calls",
+        "attribution": "Observed attribution factors",
+        "guard_signals": "Harness guard signals",
+        "no_guard_signals": "No Harness repeat-tool or timeout signal was recorded.",
+        "stability": "Observable stability",
+        "confidence": "Confidence",
+        "observed_events": "Observed events",
+        "signals": "Observable signal counts",
+        "changes": "File and test changes",
+        "recommendation": "Current recommendation",
+        "reports": "Report links",
+        "no_reports": "No local control report is available yet.",
+        "legacy_guard": "Guard prompt",
+        "legacy_tutorial": "Tutorial",
+        "legacy_workflows": "Workflows",
+        "legacy_drift": "Model drift",
+        "legacy_audit": "Agent diff audit",
+        "legacy_report": "Evaluation report",
+        "legacy_research": "PEOC and research diagnostics",
+    },
+    "zh": {
+        "navigation": "主导航",
+        "before_title": "执行前",
+        "before_caption": "所选 control run 的预检与 prompt gate 证据。",
+        "run_title": "运行证据",
+        "run_caption": "按顺序展示公开的 session、turn、工具与 provider 元数据。",
+        "why_title": "机制解释",
+        "why_caption": "展示可观察因素和诊断关联，不作未经验证的因果主张。",
+        "after_title": "稳定性与执行证据",
+        "after_caption": "展示轨迹、不确定性、文件变更与已记录测试结果。",
+        "training_title": "后训练 Checkpoint 门禁",
+        "training_caption": "结合性能与诊断证据判断 checkpoint 是否值得晋级。",
+        "evidence_title": "证据范围与结论边界",
+        "evidence_caption": "说明观察到了什么、能解释什么，以及仍然不能证明什么。",
+        "decision_title": "决策",
+        "decision_caption": "当前建议与本地可用报告。",
+        "advanced_title": "证据边界",
+        "advanced_caption": "PEOC 与服务器证据按有界诊断解释，不构成因果证明或安全证明。",
+        "missing": "所选 run 暂无 control-run artifact。",
+        "run_id": "Run ID",
+        "session_id": "Harness session",
+        "status": "状态",
+        "authorization": "授权范围",
+        "agent": "Agent",
+        "prompt_gate": "Prompt gate",
+        "tool_gates": "工具 gate",
+        "risk": "风险",
+        "review": "需要复核",
+        "timeline": "Session 与 turn 时间线",
+        "provider_model": "Provider 与模型",
+        "provider": "Provider",
+        "requested_model": "请求模型",
+        "observed_model": "观测模型",
+        "provenance": "模型来源证据",
+        "usage": "Token、成本与延迟",
+        "input_tokens": "输入 token",
+        "output_tokens": "输出 token",
+        "total_tokens": "总 token",
+        "cached_tokens": "缓存 token",
+        "cost": "记录成本",
+        "latency": "延迟（毫秒）",
+        "repeated_tools": "重复工具调用",
+        "attribution": "可观察归因因素",
+        "guard_signals": "Harness guard 信号",
+        "no_guard_signals": "未记录 Harness 重复工具或超时信号。",
+        "stability": "可观察稳定性",
+        "confidence": "置信度",
+        "observed_events": "观测事件数",
+        "signals": "可观察信号计数",
+        "changes": "文件与测试变更",
+        "recommendation": "当前建议",
+        "reports": "报告链接",
+        "no_reports": "尚无本地 control report。",
+        "legacy_guard": "Prompt 守护",
+        "legacy_tutorial": "教程",
+        "legacy_workflows": "工作流",
+        "legacy_drift": "模型漂移",
+        "legacy_audit": "Agent diff 审计",
+        "legacy_report": "评测报告",
+        "legacy_research": "PEOC 与研究诊断",
+    },
+}
+
+TEXT = {
+    "en": {
+        "title": "PromptControlLab Control Runs",
+        "subtitle": (
+            "Local preflight, observable execution evidence, and bounded recommendations. "
+            "No artifacts are uploaded."
+        ),
+        "research": "Research Overview",
+        "research_title": "Control diagnostics for prompt optimization",
+        "research_subtitle": (
+            "Real PEOC bundle evidence first, followed by current-run tri-split, statistics, "
+            "soft-hard, trajectory, Riccati, and time-varying control diagnostics."
+        ),
+        "peoc_real_title": "Imported evidence from the real PEOC replication bundle",
+        "peoc_real_badge": "REAL PEOC BUNDLE",
+        "peoc_manifest": "Source manifest",
+        "peoc_imported_note": (
+            "These are verified imported summaries from an existing PEOC replication bundle, "
+            "not diagnostics freshly executed by this dashboard."
+        ),
+        "peoc_available": "Available",
+        "peoc_partial": "Partial",
+        "peoc_failed": "Failed validation",
+        "peoc_unusable": "Unusable",
+        "peoc_missing": "Missing",
+        "peoc_full_support": "Full research support",
+        "peoc_claim_scope": "Full-research claim",
+        "peoc_recommendation": "Recommendation",
+        "peoc_yes": "yes",
+        "peoc_no": "no",
+        "peoc_hard_methods": "Withheld hard-prompt method results",
+        "peoc_hard_methods_note": (
+            "{row_count} valid aggregate rows across {model_count} models, "
+            "{task_count} tasks, and {method_count} methods. "
+            "They show task-dependent outcomes, not universal optimizer superiority."
+        ),
+        "peoc_trajectory": "Trajectory evidence",
+        "peoc_trajectory_note": (
+            "The selected stationary/heterogeneous pair compares empirical decay and fit quality."
+        ),
+        "peoc_stage_validation": "Stage-heterogeneity validation",
+        "peoc_stage_failed": (
+            "Validation failed. This is retained as negative evidence and cannot support "
+            "a positive stage-control claim."
+        ),
+        "peoc_limitations": "Missing, unusable, or failed evidence",
+        "peoc_report": "Detailed bounded case study",
+        "peoc_report_guidance": (
+            "Open research_case_study.html from this run directory for the complete local report."
+        ),
+        "research_empty": "No research diagnostics found for this run.",
+        "research_demo_command": "pcl research-quickstart --out runs/research-demo --open-report",
+        "research_pipeline": "Research workflow",
+        "research_at_a_glance": "At a glance",
+        "research_overview_graphic": "Research overview graphic",
+        "research_insights": "Plain-language interpretation",
+        "research_evidence_map": "Research evidence map",
+        "research_diagnostics": "Fresh current-run diagnostics",
+        "research_coverage": "Fresh diagnostic coverage",
+        "paper_protocol": "Protocol hygiene",
+        "diagnostic_coverage": "Diagnostics ready",
+        "artifact_evidence": "Evidence artifacts",
+        "evidence_card": "Evidence card",
+        "evidence_card_missing": "No evidence_card.json found yet.",
+        "evidence_card_command": "pcl evidence-card --run <selected-run>",
+        "evidence_gate": "Evidence gate",
+        "evidence_gate_missing": "No evidence_gate_result.json found yet.",
+        "evidence_gate_command": "pcl evidence-gate --run <selected-run> --strict",
+        "evidence_gate_status": "Evidence gate status",
+        "evidence_gate_required": "Required checks",
+        "claim_check": "Claim check",
+        "claim_ladder": "Evidence ladder",
+        "claim_check_missing": "No claim_check.json found yet.",
+        "claim_check_command": "pcl claim-check --run <selected-run> --claim full-research",
+        "claim_check_status": "Claim status",
+        "claim_check_requested": "Requested claim",
+        "claim_check_tier": "Evidence tier",
+        "claim_check_safe": "Safe claim",
+        "claim_check_reason": "Reason",
+        "claim_check_next_missing": "Missing for next tier",
+        "ecosystem_bridge": "Ecosystem bridge",
+        "ecosystem_scorecard": "Ecosystem scorecard",
+        "ecosystem_evidence_matrix": "PCL-added evidence matrix",
+        "ecosystem_market_readiness": "Market readiness",
+        "ecosystem_market_readiness_note": (
+            "Action summary from the positioning matrix: where PCL should lead, learn, "
+            "and avoid overbuilding."
+        ),
+        "ecosystem_market_map": "Extended market map",
+        "ecosystem_market_map_note": (
+            "Positioning references only; these rows are not imported evidence bundles."
+        ),
+        "ecosystem_demo": "Ecosystem demo bundles",
+        "prompt_assets": "Prompt optimizer assets",
+        "prompt_assets_summary": "Imported prompt candidates",
+        "prompt_assets_gap_plan": "Evidence gaps before claiming improvement",
+        "prompt_assets_missing": "No prompt-optimizer asset import found.",
+        "scaffold_check": "Eval scaffold check",
+        "scaffold_check_missing": "No scaffold_check.json found yet.",
+        "scaffold_check_command": "pcl scaffold-check --run <selected-run>",
+        "scaffold_status": "Scaffold status",
+        "scaffold_issues": "Scaffold issues",
+        "scaffold_next_actions": "Scaffold next actions",
+        "evidence_gap_diagnosis": "Paper evidence gap diagnosis",
+        "evidence_gap_actions": "How to close these gaps",
+        "research_gap_plan": "Research gap plan",
+        "research_gap_scripts": "Review-first command scripts",
+        "research_gap_status": "Research gap closure status",
+        "ecosystem_bridge_missing": "No external evidence bridge artifact found.",
+        "external_tools": "External tools",
+        "pcl_added_evidence": "PCL-added evidence",
+        "missing_evidence": "Missing evidence",
+        "bridge_next_actions": "Bridge next actions",
+        "evidence_recommendation": "Evidence recommendation",
+        "evidence_summary": "Evidence summary",
+        "evidence_sections": "Evidence card sections",
+        "hidden_state_input": "Hidden-state input",
+        "research_boundary": (
+            "These diagnostics make prompt experiments easier to inspect. They are not "
+            "a proof of full language-model stability or universal prompt improvement."
+        ),
+        "tri_split": "Tri-split",
+        "paired_stats": "Paired stats",
+        "soft_hard": "Soft-hard",
+        "trajectory_diag": "Trajectory",
+        "riccati_diag": "Riccati",
+        "tv_soft_diag": "TV-soft",
+        "runs": "Runs directory",
+        "policy": "Guard policy",
+        "guard": "Guard Prompt",
+        "workflows": "Workflows",
+        "tutorial": "Tutorial",
+        "tutorial_intro": (
+            "Follow the cards below from top to bottom. Each card shows what to do, "
+            "what artifact you get, what the result means, and what to do next."
+        ),
+        "tutorial_framework_note": "",
+        "tutorial_operation": "Operation",
+        "tutorial_result": "What you get",
+        "tutorial_meaning": "What it means",
+        "tutorial_next_step": "Next step",
+        "tutorial_command": "CLI equivalent",
+        "tutorial_steps": "Steps",
+        "onboarding_title": "Choose the fastest path",
+        "onboarding_goal": "Goal",
+        "onboarding_start": "Start here",
+        "onboarding_next": "Then",
+        "ecosystem_choice_title": "Which tool should I use first?",
+        "ecosystem_choice_start": "Starting point",
+        "ecosystem_choice_use": "Use first",
+        "ecosystem_choice_add": "Add PCL when...",
+        "tool_choice_need": "Describe your need",
+        "tool_choice_placeholder": "security evals, prompt writing, observability, research evidence...",
+        "tool_choice_recommendation": "Recommendation",
+        "tool_choice_why": "Why",
+        "tool_choice_commands": "Suggested PCL commands",
+        "tool_choice_avoid": "Avoid",
+        "tool_choice_gap_actions": "From market gap to PCL command",
+        "tool_choice_gap_input": "External result",
+        "tool_choice_gap_gap": "Evidence gap",
+        "tool_choice_gap_command": "Run next",
+        "tool_choice_gap_open": "Open first",
+        "tool_choice_download_json": "Download tool_choice.json",
+        "tool_choice_download_md": "Download tool_choice.md",
+        "adoption_path_title": "Five-minute adoption path",
+        "adoption_path_minute": "Minute",
+        "adoption_path_action": "Do this",
+        "adoption_path_result": "You should get",
+        "execution_mode": "Execution mode",
+        "overwrite": "Overwrite existing artifacts",
+        "allow_external_outputs": "Allow writing outside runs directory",
+        "write_boundary": (
+            "Workflow writes should stay under the selected runs directory. "
+            "External output paths are warned and blocked in auto mode unless explicitly allowed."
+        ),
+        "confirm_write": "Confirm write",
+        "run_action": "Run",
+        "create_demo": "Create demo artifacts",
+        "workflow_preview": "Preview",
+        "workflow_result": "Workflow result",
+        "guard_workflow": "Guard prompt",
+        "analyze_workflow": "Run analyze",
+        "gate_workflow": "Run gate",
+        "evidence_card_workflow": "Build evidence card",
+        "import_workflow": "Import external run",
+        "external_evidence_workflow": "External evidence bundle",
+        "audit_workflow": "Run audit-diff",
+        "agent_run_workflow": "Build agent-run",
+        "pr_summary_workflow": "Generate PR summary",
+        "export_workflow": "Export report zip",
+        "external_tool": "External tool",
+        "external_input": "External export",
+        "baseline_input": "Baseline export",
+        "candidate_input": "Candidate export",
+        "score_name": "Score name",
+        "provider": "Provider",
+        "model": "Model",
+        "prompt_id": "Prompt ID",
+        "name_filter": "Name filter",
+        "experiment_filter": "Experiment filter",
+        "asset_id": "Asset ID",
+        "method": "Method",
+        "baseline_prompt_id": "Baseline prompt ID",
+        "candidate_prompt_id": "Candidate prompt ID",
+        "baseline_name": "Baseline name",
+        "candidate_name": "Candidate name",
+        "baseline_experiment": "Baseline experiment",
+        "candidate_experiment": "Candidate experiment",
+        "split_hash": "Split hash",
+        "bootstrap_samples": "Bootstrap samples",
+        "permutation_samples": "Permutation samples",
+        "out_dir": "Output directory",
+        "data_path": "Task JSONL",
+        "baseline_predictions": "Baseline predictions",
+        "candidate_predictions": "Candidate predictions",
+        "metric": "Metric",
+        "policy_path": "Policy path",
+        "run_dir": "Run directory",
+        "repo": "Repository",
+        "before": "Before ref",
+        "after": "After ref",
+        "tests_run": "Recorded tests",
+        "audit_dir": "Audit directory",
+        "agent": "Agent",
+        "agent_run_path": "agent_run.json path",
+        "markdown_path": "Markdown path",
+        "json_path": "JSON path",
+        "zip_path": "Zip path",
+        "report": "Run Report",
+        "drift": "Model Drift",
+        "audit": "Agent Diff Audit",
+        "history": "History",
+        "prompt": "Prompt",
+        "run_guard": "Run guard",
+        "selected_run": "Selected run",
+        "missing_run": "No run directories found.",
+        "empty_run": "This run has no recognized artifacts.",
+        "decision": "Decision",
+        "risk": "Risk",
+        "review": "Required review",
+        "categories": "Risk categories",
+        "violations": "Policy violations",
+        "token_cost": "Estimated token cost",
+        "diff": "Prompt diff",
+        "recommendation": "Recommendation",
+        "gate": "Gate status",
+        "candidate_score": "Candidate score",
+        "comparison_validity": "Comparison validity",
+        "prompt_only": "Prompt-only",
+        "mean_delta": "Mean delta",
+        "p_value": "p-value",
+        "model_provenance": "Model provenance",
+        "drift_risk": "Drift risk",
+        "audit_review": "Human review required",
+        "dangerous_paths": "Dangerous paths",
+        "changed_files": "Changed files",
+        "profile": "Profile",
+        "mode": "Mode",
+        "token_mode": "Token mode",
+        "max_tokens": "Max tokens",
+        "guarded_prompt": "Guarded prompt",
+        "save_guard": "Save guard artifacts",
+        "save_guard_dir": "Guard save directory",
+        "saved_guard": "Saved guard artifacts",
+        "download_guard_json": "Download guard_result.json",
+        "download_improved_prompt": "Download improved_prompt.txt",
+        "risk_chart": "Risk Categories",
+        "count": "count",
+        "category": "category",
+        "none": "none",
+        "score_ci": "Score Delta CI",
+        "slice_scores": "Slice Scores",
+        "baseline": "baseline",
+        "candidate": "candidate",
+        "model_timeline": "Model timeline",
+        "no_model": "No model provenance recorded.",
+        "no_audit": "No audit_result.json found.",
+        "public_api": "Public API",
+        "tests_passed": "Tests passed",
+        "file_breakdown": "Touched Files Breakdown",
+        "file_kind": "kind",
+        "source_files": "source",
+        "test_files": "tests",
+        "docs_files": "docs",
+        "config_files": "config",
+        "path": "path",
+        "no_history": "No history_index.json found.",
+        "run_timeline": "Run timeline",
+        "gate_trend": "Gate trend",
+        "score_trend": "Score trend",
+        "risk_trend": "Risk trend",
+        "review_trend": "Review trend",
+        "prompt_identity": "Prompt identity",
+        "model_changes": "Model/provider changes",
+        "audit_details": "Audit details",
+        "secret_findings": "Secret findings",
+        "dependency_files": "Dependency files",
+        "lockfiles": "Lockfiles",
+        "workflow_files": "Workflow files",
+        "deleted_test_files": "Deleted test files",
+        "unexpected_files": "Unexpected files",
+        "test_results": "Test results",
+        "changed_lines": "Changed lines",
+        "file": "file",
+        "added": "added",
+        "deleted": "deleted",
+        "only_review_required": "Only review-required runs",
+        "only_high_risk": "Only high-risk runs",
+        "provider_filter": "Provider filter",
+        "model_filter": "Model filter",
+        "risk_categories": "Risk categories",
+    },
+    "zh": {
+        "title": "PromptControlLab Control Runs",
+        "subtitle": "本地预检、可观察执行证据和有边界的建议。不会上传 prompt、代码或 artifact。",
+        "research": "研究总览",
+        "research_title": "Prompt 优化的控制论诊断工作台",
+        "research_subtitle": (
+            "先看真实 PEOC 复现包证据，再查看当前 run 的三段切分、成对统计、软转硬、"
+            "轨迹、Riccati 和时变控制诊断。"
+        ),
+        "peoc_real_title": "从真实 PEOC 复现包导入的研究证据",
+        "peoc_real_badge": "真实 PEOC 证据包",
+        "peoc_manifest": "来源清单",
+        "peoc_imported_note": (
+            "这里展示的是经过校验后导入的既有 PEOC 复现实验摘要，"
+            "不是本仪表盘刚刚重新运行出的诊断。"
+        ),
+        "peoc_available": "可用",
+        "peoc_partial": "部分可用",
+        "peoc_failed": "验证失败",
+        "peoc_unusable": "不可用",
+        "peoc_missing": "缺失",
+        "peoc_full_support": "完整研究支持",
+        "peoc_claim_scope": "完整研究主张",
+        "peoc_recommendation": "建议",
+        "peoc_yes": "是",
+        "peoc_no": "否",
+        "peoc_hard_methods": "Withheld hard prompt 方法结果",
+        "peoc_hard_methods_note": (
+            "共 {row_count} 条有效汇总记录，覆盖 {model_count} 个模型、"
+            "{task_count} 个任务和 {method_count} 种方法。"
+            "结果随任务变化，不能说明某一种优化器普遍更好。"
+        ),
+        "peoc_trajectory": "轨迹证据",
+        "peoc_trajectory_note": "选中的平稳/异质任务对比展示经验衰减率和拟合质量。",
+        "peoc_stage_validation": "阶段异质性验证",
+        "peoc_stage_failed": (
+            "该验证没有通过。系统将它保留为负面证据，不能用来支持正向的阶段控制主张。"
+        ),
+        "peoc_limitations": "缺失、不可用或验证失败的证据",
+        "peoc_report": "完整边界化案例报告",
+        "peoc_report_guidance": (
+            "请在当前 run 目录中打开 research_case_study.html，查看完整本地报告。"
+        ),
+        "research_empty": "当前 run 还没有研究诊断 artifact。",
+        "research_demo_command": (
+            "pcl research-quickstart --out runs/research-demo --language zh --open-report"
+        ),
+        "research_pipeline": "研究流程",
+        "research_at_a_glance": "一眼看懂",
+        "research_overview_graphic": "研究总览图",
+        "research_insights": "直白解释",
+        "research_evidence_map": "研究证据地图",
+        "research_diagnostics": "当前 run 新执行的诊断",
+        "research_coverage": "新执行诊断覆盖情况",
+        "paper_protocol": "协议洁净度",
+        "diagnostic_coverage": "已完成诊断",
+        "artifact_evidence": "证据 artifact",
+        "evidence_card": "证据卡",
+        "evidence_card_missing": "当前还没有 evidence_card.json。",
+        "evidence_card_command": "pcl evidence-card --run <选中的 run>",
+        "evidence_gate": "证据门禁",
+        "evidence_gate_missing": "当前还没有 evidence_gate_result.json。",
+        "evidence_gate_command": "pcl evidence-gate --run <选中的 run> --strict",
+        "evidence_gate_status": "证据门禁状态",
+        "evidence_gate_required": "必要检查",
+        "claim_check": "主张检查",
+        "claim_ladder": "证据阶梯",
+        "claim_check_missing": "当前还没有 claim_check.json。",
+        "claim_check_command": "pcl claim-check --run <选中的 run> --claim full-research",
+        "claim_check_status": "主张状态",
+        "claim_check_requested": "请求主张",
+        "claim_check_tier": "证据层级",
+        "claim_check_safe": "安全主张",
+        "claim_check_reason": "原因",
+        "claim_check_next_missing": "下一层级缺失证据",
+        "ecosystem_bridge": "生态桥接",
+        "ecosystem_scorecard": "生态证据总览",
+        "ecosystem_evidence_matrix": "PCL 补充证据矩阵",
+        "ecosystem_market_readiness": "市场就绪度",
+        "ecosystem_market_readiness_note": (
+            "从定位矩阵提炼出的行动摘要：PCL 应该领先什么、学习什么、避免重复建设什么。"
+        ),
+        "ecosystem_market_map": "扩展市场地图",
+        "ecosystem_market_map_note": "仅作定位参考；这些行不是已导入的证据包。",
+        "ecosystem_demo": "生态 demo 证据包",
+        "prompt_assets": "Prompt optimizer 资产",
+        "prompt_assets_summary": "已导入的 prompt 候选",
+        "prompt_assets_gap_plan": "声称优化有效前缺少的证据",
+        "prompt_assets_missing": "当前还没有 prompt-optimizer 资产导入 artifact。",
+        "scaffold_check": "评测 scaffold 检查",
+        "scaffold_check_missing": "当前还没有 scaffold_check.json。",
+        "scaffold_check_command": "pcl scaffold-check --run <选中的 run>",
+        "scaffold_status": "Scaffold 状态",
+        "scaffold_issues": "Scaffold 问题",
+        "scaffold_next_actions": "Scaffold 下一步",
+        "evidence_gap_diagnosis": "论文证据缺口诊断",
+        "evidence_gap_actions": "如何补齐这些缺口",
+        "research_gap_plan": "研究证据缺口计划",
+        "research_gap_scripts": "Review-first 命令脚本",
+        "research_gap_status": "研究缺口补齐状态",
+        "ecosystem_bridge_missing": "当前还没有外部证据桥接 artifact。",
+        "external_tools": "外部工具",
+        "pcl_added_evidence": "PCL 补充证据",
+        "missing_evidence": "缺失证据",
+        "bridge_next_actions": "桥接后下一步",
+        "evidence_recommendation": "证据推荐",
+        "evidence_summary": "证据摘要",
+        "evidence_sections": "证据卡分段",
+        "hidden_state_input": "hidden-state 输入",
+        "research_boundary": (
+            "这些诊断让 prompt 实验更容易被检查和复现，但它们不是完整语言模型稳定性"
+            "或通用 prompt 提升的数学证明。"
+        ),
+        "tri_split": "三段切分",
+        "paired_stats": "成对统计",
+        "soft_hard": "软转硬",
+        "trajectory_diag": "轨迹诊断",
+        "riccati_diag": "Riccati",
+        "tv_soft_diag": "TV-soft",
+        "runs": "Runs 目录",
+        "policy": "Guard 策略",
+        "guard": "Prompt 守护",
+        "workflows": "工作流",
+        "tutorial": "教程",
+        "tutorial_intro": (
+            "建议从上到下阅读。每个卡片都会说明：怎么操作、会得到什么文件、"
+            "这个结果说明什么问题，以及下一步该怎么做。"
+        ),
+        "tutorial_framework_note": "",
+        "tutorial_operation": "操作",
+        "tutorial_result": "得到什么",
+        "tutorial_meaning": "说明什么问题",
+        "tutorial_next_step": "下一步",
+        "tutorial_command": "CLI 等价命令",
+        "tutorial_steps": "操作步骤",
+        "onboarding_title": "先选最快路径",
+        "onboarding_goal": "目标",
+        "onboarding_start": "从这里开始",
+        "onboarding_next": "然后",
+        "ecosystem_choice_title": "我应该先用哪个工具？",
+        "ecosystem_choice_start": "你的起点",
+        "ecosystem_choice_use": "先用",
+        "ecosystem_choice_add": "什么时候加入 PCL",
+        "tool_choice_need": "描述你的目标",
+        "tool_choice_placeholder": "安全评测、prompt 写作、观测、研究证据……",
+        "tool_choice_recommendation": "推荐",
+        "tool_choice_why": "为什么",
+        "tool_choice_commands": "建议使用的 PCL 命令",
+        "tool_choice_avoid": "不要做",
+        "tool_choice_gap_actions": "从市场缺口到 PCL 命令",
+        "tool_choice_gap_input": "外部结果",
+        "tool_choice_gap_gap": "证据缺口",
+        "tool_choice_gap_command": "下一步运行",
+        "tool_choice_gap_open": "先打开",
+        "tool_choice_download_json": "下载 tool_choice.json",
+        "tool_choice_download_md": "下载 tool_choice.md",
+        "adoption_path_title": "5 分钟采用路径",
+        "adoption_path_minute": "分钟",
+        "adoption_path_action": "操作",
+        "adoption_path_result": "应该得到什么",
+        "execution_mode": "执行模式",
+        "overwrite": "覆盖已有 artifact",
+        "allow_external_outputs": "允许写入 runs 目录之外",
+        "write_boundary": (
+            "工作流默认应写入当前 runs 目录下。"
+            "外部输出路径会提示风险, 并在 auto 模式下被阻止, 除非显式允许。"
+        ),
+        "confirm_write": "确认写入",
+        "run_action": "运行",
+        "create_demo": "创建 demo artifact",
+        "workflow_preview": "预览",
+        "workflow_result": "工作流结果",
+        "guard_workflow": "守护 Prompt",
+        "analyze_workflow": "运行 analyze",
+        "gate_workflow": "运行 gate",
+        "evidence_card_workflow": "生成证据卡",
+        "import_workflow": "导入外部 run",
+        "external_evidence_workflow": "生成外部证据包",
+        "audit_workflow": "运行 audit-diff",
+        "agent_run_workflow": "生成 agent-run",
+        "pr_summary_workflow": "生成 PR summary",
+        "export_workflow": "导出报告 zip",
+        "external_tool": "外部工具",
+        "external_input": "外部导出文件",
+        "baseline_input": "Baseline 导出文件",
+        "candidate_input": "Candidate 导出文件",
+        "score_name": "分数字段名",
+        "provider": "Provider",
+        "model": "模型",
+        "prompt_id": "Prompt ID",
+        "name_filter": "Name 过滤",
+        "experiment_filter": "Experiment 过滤",
+        "asset_id": "Asset ID",
+        "method": "Method",
+        "baseline_prompt_id": "Baseline prompt ID",
+        "candidate_prompt_id": "Candidate prompt ID",
+        "baseline_name": "Baseline 名称",
+        "candidate_name": "Candidate 名称",
+        "baseline_experiment": "Baseline 实验名",
+        "candidate_experiment": "Candidate 实验名",
+        "split_hash": "Split hash",
+        "bootstrap_samples": "Bootstrap 采样数",
+        "permutation_samples": "Permutation 采样数",
+        "out_dir": "输出目录",
+        "data_path": "任务 JSONL",
+        "baseline_predictions": "Baseline predictions",
+        "candidate_predictions": "Candidate predictions",
+        "metric": "指标",
+        "policy_path": "策略路径",
+        "run_dir": "Run 目录",
+        "repo": "仓库",
+        "before": "Before ref",
+        "after": "After ref",
+        "tests_run": "已记录测试",
+        "audit_dir": "Audit 目录",
+        "agent": "Agent",
+        "agent_run_path": "agent_run.json 路径",
+        "markdown_path": "Markdown 路径",
+        "json_path": "JSON 路径",
+        "zip_path": "Zip 路径",
+        "report": "运行报告",
+        "drift": "模型漂移",
+        "audit": "Agent 改动审计",
+        "history": "历史",
+        "prompt": "提示词",
+        "run_guard": "运行守护",
+        "selected_run": "选择 run",
+        "missing_run": "没有找到 run 目录。",
+        "empty_run": "这个 run 没有识别到 artifact。",
+        "decision": "决策",
+        "risk": "风险",
+        "review": "需要人工复核",
+        "categories": "风险类别",
+        "violations": "策略违规",
+        "token_cost": "估算 token 成本",
+        "diff": "Prompt 差异",
+        "recommendation": "部署建议",
+        "gate": "门禁状态",
+        "candidate_score": "候选分数",
+        "comparison_validity": "比较有效性",
+        "prompt_only": "Prompt-only",
+        "mean_delta": "均值差异",
+        "p_value": "p-value",
+        "model_provenance": "模型来源",
+        "drift_risk": "漂移风险",
+        "audit_review": "需要人工复核",
+        "dangerous_paths": "危险路径",
+        "changed_files": "改动文件",
+        "profile": "场景",
+        "mode": "模式",
+        "token_mode": "Token 模式",
+        "max_tokens": "最大 Token",
+        "guarded_prompt": "守护后的提示词",
+        "save_guard": "保存 guard artifact",
+        "save_guard_dir": "Guard 保存目录",
+        "saved_guard": "已保存 guard artifact",
+        "download_guard_json": "下载 guard_result.json",
+        "download_improved_prompt": "下载 improved_prompt.txt",
+        "risk_chart": "风险类别",
+        "count": "数量",
+        "category": "类别",
+        "none": "无",
+        "score_ci": "分数差异置信区间",
+        "slice_scores": "任务切片分数",
+        "baseline": "基线",
+        "candidate": "候选",
+        "model_timeline": "模型时间线",
+        "no_model": "没有记录模型来源。",
+        "no_audit": "没有找到 audit_result.json。",
+        "public_api": "公共 API",
+        "tests_passed": "测试通过",
+        "file_breakdown": "改动文件类型",
+        "file_kind": "类型",
+        "source_files": "源码",
+        "test_files": "测试",
+        "docs_files": "文档",
+        "config_files": "配置",
+        "path": "路径",
+        "no_history": "没有找到 history_index.json。",
+        "run_timeline": "Run 时间线",
+        "gate_trend": "门禁趋势",
+        "score_trend": "分数趋势",
+        "risk_trend": "风险趋势",
+        "review_trend": "复核趋势",
+        "prompt_identity": "Prompt 身份",
+        "model_changes": "模型 / provider 变化",
+        "audit_details": "审计明细",
+        "secret_findings": "疑似密钥",
+        "dependency_files": "依赖文件",
+        "lockfiles": "锁文件",
+        "workflow_files": "Workflow 文件",
+        "deleted_test_files": "删除的测试文件",
+        "unexpected_files": "意外文件",
+        "test_results": "测试结果",
+        "changed_lines": "改动行数",
+        "file": "文件",
+        "added": "新增",
+        "deleted": "删除",
+        "only_review_required": "只看需要复核的 run",
+        "only_high_risk": "只看高风险 run",
+        "provider_filter": "Provider 过滤",
+        "model_filter": "模型过滤",
+        "risk_categories": "风险类别",
+    },
+}
+
+CHOICE_OPTIONS = {
+    "execution_mode": [
+        ("confirm", "confirm", "确认后执行"),
+        ("auto", "auto", "自动执行"),
+        ("command", "command", "只生成命令"),
+    ],
+    "profile": [
+        ("coding", "coding", "编程"),
+        ("general", "general", "通用"),
+        ("research", "research", "研究"),
+    ],
+    "guard_mode": [
+        ("suggest", "suggest", "给出建议"),
+        ("auto", "auto", "自动改写"),
+        ("gate", "gate", "门禁检查"),
+    ],
+    "token_mode": [
+        ("balanced", "balanced", "平衡省 token"),
+        ("aggressive", "aggressive", "激进省 token"),
+    ],
+    "tests_passed": [
+        ("unknown", "unknown", "未知"),
+        ("true", "true", "通过"),
+        ("false", "false", "失败"),
+    ],
+    "external_tool": [
+        ("auto", "auto", "自动识别"),
+        ("promptfoo", "promptfoo", "Promptfoo"),
+        ("langfuse", "langfuse", "Langfuse"),
+        ("langsmith", "langsmith", "LangSmith"),
+        ("deepeval", "deepeval", "DeepEval"),
+    ],
+    "import_tool": [
+        ("auto", "auto", "自动识别"),
+        ("promptfoo", "promptfoo", "Promptfoo"),
+        ("langfuse", "langfuse", "Langfuse"),
+        ("langsmith", "langsmith", "LangSmith"),
+        ("deepeval", "deepeval", "DeepEval"),
+        ("prompt-optimizer", "prompt-optimizer", "prompt-optimizer"),
+    ],
+}
+
+TUTORIAL_IMAGES = {
+    "overview": ("tutorial_overview.svg", "tutorial_overview.zh.svg"),
+    "guard": ("tutorial_guard.svg", "tutorial_guard.zh.svg"),
+    "report": ("tutorial_report.svg", "tutorial_report.zh.svg"),
+    "audit_history": ("tutorial_audit_history.svg", "tutorial_audit_history.zh.svg"),
+}
+
+TUTORIAL_SCREENSHOTS = {
+    "workflows": ("tutorial_workflows.en.png", "tutorial_workflows.zh.png"),
+    "guard": ("tutorial_guard.en.png", "tutorial_guard.zh.png"),
+    "report": ("tutorial_report.en.png", "tutorial_report.zh.png"),
+    "model_drift": ("tutorial_model_drift.en.png", "tutorial_model_drift.zh.png"),
+    "audit": ("tutorial_audit.en.png", "tutorial_audit.zh.png"),
+    "history": ("tutorial_history.en.png", "tutorial_history.zh.png"),
+}
+
+TUTORIAL_SECTION_SCREENSHOTS = {
+    "guard": "guard",
+    "workflows": "workflows",
+    "report": "report",
+    "drift": "model_drift",
+    "audit": "audit",
+    "history": "history",
+    "import_external": "workflows",
+    "project_defaults": "workflows",
+    "export_pr": "workflows",
+}
+
+TUTORIAL_STEPS = {
+    "en": {
+        "guard": [
+            "Open the Guard Prompt tab.",
+            "Paste the prompt the agent would run.",
+            "Choose the coding profile and your guard policy.",
+            "Click Run guard, then read the decision, risk categories, and improved prompt.",
+        ],
+        "workflows": [
+            "Open the Workflows tab.",
+            "Keep Execution mode on confirm for the first run.",
+            "Click Create demo artifacts and confirm the files that will be written.",
+            "Use the generated run in Run Report, Audit, and History.",
+        ],
+        "import_external": [
+            "Open Workflows and expand Import external run.",
+            "Choose auto, Promptfoo, Langfuse, LangSmith, DeepEval, or prompt-optimizer.",
+            "Select the export file and output directory, then run in confirm mode first.",
+            "Open the generated run, evidence card, scaffold check, or prompt asset gap plan.",
+        ],
+        "report": [
+            "Select a run in the sidebar.",
+            "Open Run Report.",
+            "Read the recommendation, gate status, score delta, confidence interval, and model provenance.",
+            "Use fixed or broken examples to decide what to inspect next.",
+        ],
+        "drift": [
+            "Open Model Drift after selecting a run.",
+            "Check baseline and candidate provider/model values.",
+            "If drift is unknown, run model-drift between two run directories.",
+            "Treat model mismatch as a comparison-validity warning.",
+        ],
+        "audit": [
+            "Run audit-diff after an agent changes the repository.",
+            "Open Agent Diff Audit and inspect touched files, changed lines, and dangerous paths.",
+            "Check dependency, workflow, secret-like, deleted-test, and unexpected-file sections.",
+            "Require human review before merging high-risk changes.",
+        ],
+        "history": [
+            "Run history index over the runs directory.",
+            "Open History and filter by review-required, high-risk, provider, or model.",
+            "Read score, gate, risk, and model trends together.",
+            "Use the table to open the run that needs attention.",
+        ],
+        "project_defaults": [
+            "Create or edit .promptcontrol.yaml at the repository root.",
+            "Set guard_policy, gate_policy, runs_dir, expected_paths, and test_commands.",
+            "Restart or refresh the UI so sidebar defaults reflect the project file.",
+            "Override any default from the CLI or UI when a run needs a one-off value.",
+        ],
+        "export_pr": [
+            "Open Workflows and select PR summary or export report zip.",
+            "Review the output path before confirming the write.",
+            "Attach pr_summary.md to a pull request, or archive the report zip with the run.",
+            "Keep the JSON artifact for later automation.",
+        ],
+    },
+    "zh": {
+        "guard": [
+            "打开“Prompt 守护”页。",
+            "粘贴准备交给 Agent 执行的 prompt。",
+            "选择“编程”场景和团队 guard policy。",
+            "点击“运行守护”，查看决策、风险类别和改写后的 prompt。",
+        ],
+        "workflows": [
+            "打开“工作流”页。",
+            "第一次使用时保持“确认后执行”模式。",
+            "点击“创建演示数据”，先检查将写入的文件，再确认执行。",
+            "用生成的 run 去查看“运行报告”“审计”和“历史”。",
+        ],
+        "import_external": [
+            "打开“工作流”，展开“导入外部 run”。",
+            "选择自动识别、Promptfoo、Langfuse、LangSmith、DeepEval 或 prompt-optimizer。",
+            "选择导出文件和输出目录，第一次先用“确认后执行”。",
+            "打开生成的 run、证据卡、scaffold check 或 prompt asset gap plan。",
+        ],
+        "report": [
+            "在侧边栏选择一个 run。",
+            "打开“运行报告”页。",
+            "查看部署建议、gate 状态、分数差、置信区间和模型来源。",
+            "根据修复样本和失败样本决定下一步检查哪里。",
+        ],
+        "drift": [
+            "选择 run 后打开“模型漂移”页。",
+            "检查 baseline 和 candidate 的 provider/model 是否一致。",
+            "如果没有 drift artifact，按页面提示运行 model-drift。",
+            "如果模型不一致，把它当成 prompt-only 比较有效性的风险。",
+        ],
+        "audit": [
+            "Agent 改完代码后运行 audit-diff。",
+            "打开“Agent 改动审计”，查看改动文件、行数和危险路径。",
+            "继续检查依赖、workflow、疑似密钥、删除测试和意外文件。",
+            "高风险改动合并前需要人工复核。",
+        ],
+        "history": [
+            "对 runs 目录运行 history index。",
+            "打开“历史”，按需要复核、高风险、provider 或 model 过滤。",
+            "把分数、gate、风险和模型趋势放在一起看。",
+            "从表格中找到需要进一步检查的 run。",
+        ],
+        "project_defaults": [
+            "在仓库根目录创建或编辑 .promptcontrol.yaml。",
+            "写入 guard_policy、gate_policy、runs_dir、expected_paths 和 test_commands。",
+            "刷新 UI，让侧边栏默认值跟随项目配置。",
+            "需要临时覆盖时，再用 CLI 或 UI 显式传入新值。",
+        ],
+        "export_pr": [
+            "打开“工作流”，选择生成 PR summary 或导出 report zip。",
+            "确认写入路径，再执行导出。",
+            "把 pr_summary.md 放进 PR，或把 report zip 和 run 一起归档。",
+            "保留 JSON artifact，方便后续自动化。",
+        ],
+    },
+}
+
+ONBOARDING_PATHS = {
+    "en": [
+        {
+            "goal": "I am new and want to see the product first.",
+            "start": "Workflows -> Create demo artifacts",
+            "next": "Open Run Report, Model Drift, Audit, and History with real local artifacts.",
+        },
+        {
+            "goal": "I need the paper-derived prompt optimization diagnostics.",
+            "start": "Research Overview -> `pcl research-quickstart`",
+            "next": "Check evidence card, claim-check, gap-status, soft-hard, trajectory, Riccati, and tv-soft readiness.",
+        },
+        {
+            "goal": "I already have eval outputs from Promptfoo, Langfuse, or LangSmith.",
+            "start": "Workflows -> Import external run, or CLI `pcl start --choice import`",
+            "next": "Then build an evidence card, run scaffold-check, or upgrade to evidence-audit.",
+        },
+        {
+            "goal": "I want to stop vague or risky coding-agent prompts before they run.",
+            "start": "Guard Prompt -> choose coding profile and team policy",
+            "next": "Save `guard_result.json`, copy the improved prompt, or install IDE/CLI adapters.",
+        },
+        {
+            "goal": "I need to review what an agent changed in a repository.",
+            "start": "Agent Diff Audit -> `pcl audit-diff`",
+            "next": "Generate a PR summary, build `agent_run.json`, and track the run in History.",
+        },
+    ],
+    "zh": [
+        {
+            "goal": "我是新用户，想先看产品长什么样。",
+            "start": "工作流 -> 创建演示数据",
+            "next": "用真实本地 artifacts 打开运行报告、模型漂移、审计和历史。",
+        },
+        {
+            "goal": "我需要论文里的 prompt optimization 诊断能力。",
+            "start": "研究总览 -> `pcl research-quickstart`",
+            "next": "检查 evidence card、claim-check、gap-status、soft-hard、trajectory、Riccati 和 tv-soft 是否就绪。",
+        },
+        {
+            "goal": "我已经有 Promptfoo、Langfuse 或 LangSmith 的评测导出。",
+            "start": "工作流 -> 导入外部 run，或 CLI `pcl start --choice import`",
+            "next": "然后生成 evidence card、运行 scaffold-check，或升级到 evidence-audit。",
+        },
+        {
+            "goal": "我想在 coding agent 执行前拦住模糊或高风险 prompt。",
+            "start": "Prompt 守护 -> 选择编程场景和团队策略",
+            "next": "保存 `guard_result.json`，复制改写后的 prompt，或安装 IDE/CLI adapter。",
+        },
+        {
+            "goal": "我需要复查 agent 到底改了哪些代码。",
+            "start": "Agent 改动审计 -> `pcl audit-diff`",
+            "next": "生成 PR summary，构建 `agent_run.json`，并在历史页持续追踪。",
+        },
+    ],
+}
+
+TUTORIAL_SECTIONS = {
+    "en": [
+        {
+            "id": "guard",
+            "image": "guard",
+            "title": "1. Guard a prompt before an agent runs",
+            "operation": "Open Guard Prompt, paste the instruction, choose a profile and policy, then run guard.",
+            "result": "`guard_result.json`, an improved prompt, risk level, policy violations, and token estimate.",
+            "meaning": "You can see whether the prompt is vague, risky, too broad, or missing files/tests.",
+            "next_step": "Send the improved prompt to Claude Code, Cursor, Codex, or keep editing it.",
+            "command": "pcl guard --prompt \"Fix this bug\" --profile coding --policy examples/guard.policy.yaml --json",
+        },
+        {
+            "id": "workflows",
+            "image": "overview",
+            "title": "2. Create demo artifacts from the UI",
+            "operation": "Open Workflows and click Create demo artifacts.",
+            "result": "A local demo project, `runs/demo`, reports, gate result, and `history_index.json`.",
+            "meaning": "The dashboard has real artifacts to render, so every tab becomes easier to inspect.",
+            "next_step": "Switch to Run Report or History and inspect the generated data.",
+            "command": "pcl init --path demo && cd demo && pcl analyze --config promptcontrol.example.yaml --out runs/quick",
+        },
+        {
+            "id": "import_external",
+            "image": "overview",
+            "title": "3. Import external eval or prompt assets",
+            "operation": "Open Workflows, expand Import external run, choose the source tool, and select the export file.",
+            "result": "`manifest.json`, `predictions.jsonl`/`metrics.json`, or prompt-optimizer asset and gap-plan artifacts.",
+            "meaning": "Promptfoo, Langfuse, LangSmith, DeepEval, and prompt-optimizer outputs can enter the PCL evidence workflow without rebuilding their platforms.",
+            "next_step": "Run scaffold-check, build an evidence card, or run evidence-audit when you have baseline/candidate exports.",
+            "command": "pcl start --choice import --tool auto --input results.json --out runs/from-external",
+        },
+        {
+            "id": "report",
+            "image": "report",
+            "title": "4. Analyze, gate, and read the report",
+            "operation": "Run analyze from Workflows or CLI, then run gate with a policy.",
+            "result": "`metrics.json`, `stats.json`, `explanation.json`, `gate_result.json`, and report files.",
+            "meaning": "You can judge whether the candidate prompt improved reliably and passed policy.",
+            "next_step": "Keep the prompt, revise it, or inspect failed slices and examples.",
+            "command": "pcl analyze --config promptcontrol.example.yaml --out runs/quick && pcl gate --run runs/quick --policy examples/gate.policy.yaml",
+        },
+        {
+            "id": "drift",
+            "image": "report",
+            "title": "5. Check model provenance and drift",
+            "operation": "Open Model Drift or run model-drift between two run directories.",
+            "result": "`model_drift.json` with provider/model comparison and drift risk.",
+            "meaning": "If models changed, the comparison is not a clean prompt-only comparison.",
+            "next_step": "Pin model ids or rerun baseline/candidate under the same model.",
+            "command": "pcl model-drift --run runs/current --history runs/previous --out runs/current/model_drift.json",
+        },
+        {
+            "id": "audit",
+            "image": "audit_history",
+            "title": "6. Audit what the coding agent changed",
+            "operation": "Run audit-diff against two git refs after an agent finishes.",
+            "result": "`audit_result.json` and `audit_summary.md` with files, line counts, risks, and tests.",
+            "meaning": "You can see whether the agent touched dangerous paths, dependencies, workflows, or tests.",
+            "next_step": "Review high-risk files before merging, then build an agent-run manifest.",
+            "command": "pcl audit-diff --before HEAD~1 --after HEAD --out runs/audit",
+        },
+        {
+            "id": "history",
+            "image": "audit_history",
+            "title": "7. Build local run history",
+            "operation": "Index a runs directory after several analyses or audits.",
+            "result": "`history_index.json` with model, score, gate, prompt, and risk timeline data.",
+            "meaning": "You can spot score regressions, model changes, and risky agent runs over time.",
+            "next_step": "Use History filters to show only high-risk or review-required runs.",
+            "command": "pcl history index --runs runs/ --out runs/history_index.json",
+        },
+        {
+            "id": "project_defaults",
+            "image": "overview",
+            "title": "8. Use project defaults",
+            "operation": "Keep `.promptcontrol.yaml` in the repo root for policies, runs, paths, and tests.",
+            "result": "Shorter commands because guard, gate, audit-diff, and UI can read local defaults.",
+            "meaning": "Teams can share the same policy and expected paths without copy-pasting flags.",
+            "next_step": "Edit `.promptcontrol.yaml` when the project policy changes.",
+            "command": "pcl guard --prompt \"Fix this bug\" --profile coding",
+        },
+        {
+            "id": "export_pr",
+            "image": "audit_history",
+            "title": "9. Export and summarize for review",
+            "operation": "Generate a PR summary or export a report zip from Workflows.",
+            "result": "`pr_summary.md/json` or a zip containing recognized run artifacts.",
+            "meaning": "Reviewers get a compact, shareable summary without reading every JSON file.",
+            "next_step": "Attach the summary to a PR or archive the zip with the run.",
+            "command": "pcl export-report --run runs/quick --out runs/quick/report.zip",
+        },
+    ],
+    "zh": [
+        {
+            "id": "guard",
+            "image": "guard",
+            "title": "1. 在 Agent 执行前守护 Prompt",
+            "operation": "打开“Prompt 守护”，粘贴指令，选择场景和策略，然后运行守护。",
+            "result": "`guard_result.json`、改写后的 prompt、风险等级、策略违规和 token 估算。",
+            "meaning": "你可以判断 prompt 是否模糊、危险、范围太宽，或缺少目标文件和测试计划。",
+            "next_step": "把改写后的 prompt 发给 Claude Code、Cursor、Codex，或继续手动调整。",
+            "command": "pcl guard --prompt \"修复这个 bug\" --profile coding --policy examples/guard.policy.yaml --json",
+        },
+        {
+            "id": "workflows",
+            "image": "overview",
+            "title": "2. 一键创建演示数据",
+            "operation": "打开“工作流”，点击“创建演示数据”。",
+            "result": "本地 demo 项目、`runs/demo`、报告、gate 结果和 `history_index.json`。",
+            "meaning": "仪表盘会有真实 artifacts 可读，所有页面都能立刻看到示例。",
+            "next_step": "切到“运行报告”或“历史”，查看刚生成的数据。",
+            "command": "pcl init --path demo && cd demo && pcl analyze --config promptcontrol.example.yaml --out runs/quick",
+        },
+        {
+            "id": "report",
+            "image": "report",
+            "title": "3. 运行评测、门禁并阅读报告",
+            "operation": "在“工作流”里运行 analyze，或用 CLI 运行 analyze，再用策略运行 gate。",
+            "result": "`metrics.json`、`stats.json`、`explanation.json`、`gate_result.json` 和报告文件。",
+            "meaning": "你可以判断 candidate prompt 是否真的更好，以及是否通过团队策略。",
+            "next_step": "保留 prompt、继续修改，或检查退化的 slice 和失败样本。",
+            "command": "pcl analyze --config promptcontrol.example.yaml --out runs/quick && pcl gate --run runs/quick --policy examples/gate.policy.yaml",
+        },
+        {
+            "id": "drift",
+            "image": "report",
+            "title": "4. 检查模型来源和漂移",
+            "operation": "打开“模型漂移”，或对两个 run 目录运行 model-drift。",
+            "result": "`model_drift.json`，记录 provider/model 对比和漂移风险。",
+            "meaning": "如果模型变了，这次比较就不是干净的 prompt-only 比较。",
+            "next_step": "固定模型 id，或在同一模型下重新跑 baseline/candidate。",
+            "command": "pcl model-drift --run runs/current --history runs/previous --out runs/current/model_drift.json",
+        },
+        {
+            "id": "audit",
+            "image": "audit_history",
+            "title": "5. 审计编程 Agent 改了什么",
+            "operation": "Agent 运行后，对两个 git ref 执行 audit-diff。",
+            "result": "`audit_result.json` 和 `audit_summary.md`，包含文件、行数、风险和测试记录。",
+            "meaning": "你能看到 Agent 是否改了危险路径、依赖、workflow 或测试文件。",
+            "next_step": "合并前优先复查高风险文件，再生成 agent-run manifest。",
+            "command": "pcl audit-diff --before HEAD~1 --after HEAD --out runs/audit",
+        },
+        {
+            "id": "history",
+            "image": "audit_history",
+            "title": "6. 建立本地运行历史",
+            "operation": "当你有多次分析或审计后，对 runs 目录建立索引。",
+            "result": "`history_index.json`，记录模型、分数、gate、prompt 和风险时间线。",
+            "meaning": "你可以发现分数退化、模型变化和高风险 Agent 运行。",
+            "next_step": "用“历史”页面过滤只看高风险或需要复核的 run。",
+            "command": "pcl history index --runs runs/ --out runs/history_index.json",
+        },
+        {
+            "id": "project_defaults",
+            "image": "overview",
+            "title": "7. 使用项目默认配置",
+            "operation": "在仓库根目录保留 `.promptcontrol.yaml`，记录策略、runs、路径和测试默认值。",
+            "result": "guard、gate、audit-diff 和 UI 可以自动读取默认值，命令更短。",
+            "meaning": "团队不用反复复制参数，也能共享同一套策略和预期路径。",
+            "next_step": "当项目策略变化时，更新 `.promptcontrol.yaml`。",
+            "command": "pcl guard --prompt \"修复这个 bug\" --profile coding",
+        },
+        {
+            "id": "export_pr",
+            "image": "audit_history",
+            "title": "8. 导出报告并生成 PR 摘要",
+            "operation": "在“工作流”里生成 PR summary，或导出 report zip。",
+            "result": "`pr_summary.md/json`，或一个包含 run artifacts 的 zip。",
+            "meaning": "Reviewer 不用逐个打开 JSON，也能快速看到结论和风险。",
+            "next_step": "把 summary 放进 PR，或把 zip 和本次 run 一起归档。",
+            "command": "pcl export-report --run runs/quick --out runs/quick/report.zip",
+        },
+    ],
+}
+
+TEXT["zh"].update(
+    {
+        "title": "prompt_control_lab 本地仪表盘",
+        "subtitle": "本地执行前检查、模型溯源和 agent 审计视图。不会上传 prompt、代码或 artifact。",
+        "runs": "Runs 目录",
+        "policy": "Guard 策略",
+        "guard": "Prompt 守护",
+        "workflows": "工作流",
+        "tutorial": "教程",
+        "tutorial_intro": "建议从上到下阅读。每个卡片都会说明：怎么操作、会得到什么文件、结果说明什么问题，以及下一步怎么做。",
+        "tutorial_framework_note": "",
+        "tutorial_operation": "操作",
+        "tutorial_result": "得到什么",
+        "tutorial_meaning": "说明什么问题",
+        "tutorial_next_step": "下一步",
+        "tutorial_command": "CLI 等价命令",
+        "onboarding_title": "先选最快路径",
+        "onboarding_goal": "目标",
+        "onboarding_start": "从这里开始",
+        "onboarding_next": "然后",
+        "execution_mode": "执行模式",
+        "overwrite": "覆盖已有 artifact",
+        "allow_external_outputs": "允许写入 runs 目录之外",
+        "write_boundary": "工作流默认应该写入当前 runs 目录下。外部输出路径会提示风险，并在自动执行模式下被阻止，除非显式允许。",
+        "confirm_write": "确认写入",
+        "run_action": "运行",
+        "create_demo": "创建演示数据",
+        "workflow_preview": "预览",
+        "workflow_result": "工作流结果",
+        "guard_workflow": "守护 Prompt",
+        "analyze_workflow": "运行 analyze",
+        "gate_workflow": "运行 gate",
+        "audit_workflow": "运行 audit-diff",
+        "agent_run_workflow": "生成 agent-run",
+        "pr_summary_workflow": "生成 PR summary",
+        "export_workflow": "导出报告 zip",
+        "out_dir": "输出目录",
+        "data_path": "任务 JSONL",
+        "baseline_predictions": "Baseline 预测文件",
+        "candidate_predictions": "Candidate 预测文件",
+        "metric": "指标",
+        "policy_path": "策略路径",
+        "run_dir": "Run 目录",
+        "repo": "仓库",
+        "before": "Before ref",
+        "after": "After ref",
+        "tests_run": "已记录测试",
+        "audit_dir": "Audit 目录",
+        "agent": "Agent",
+        "agent_run_path": "agent_run.json 路径",
+        "markdown_path": "Markdown 路径",
+        "json_path": "JSON 路径",
+        "zip_path": "Zip 路径",
+        "report": "运行报告",
+        "drift": "模型漂移",
+        "audit": "Agent 改动审计",
+        "history": "历史",
+        "prompt": "提示词",
+        "run_guard": "运行守护",
+        "selected_run": "选择 run",
+        "missing_run": "没有找到 run 目录。",
+        "empty_run": "这个 run 没有识别到 artifact。",
+        "decision": "决策",
+        "risk": "风险",
+        "review": "需要人工复核",
+        "categories": "风险类别",
+        "violations": "策略违规",
+        "token_cost": "估算 token 成本",
+        "diff": "Prompt 差异",
+        "recommendation": "部署建议",
+        "gate": "门禁状态",
+        "candidate_score": "候选分数",
+        "comparison_validity": "比较有效性",
+        "prompt_only": "Prompt-only",
+        "mean_delta": "均值差异",
+        "p_value": "p-value",
+        "model_provenance": "模型来源",
+        "drift_risk": "漂移风险",
+        "audit_review": "需要人工复核",
+        "dangerous_paths": "危险路径",
+        "changed_files": "改动文件",
+        "profile": "场景",
+        "mode": "模式",
+        "token_mode": "Token 模式",
+        "max_tokens": "最大 Token",
+        "guarded_prompt": "守护后的提示词",
+        "save_guard": "保存 guard artifact",
+        "save_guard_dir": "Guard 保存目录",
+        "saved_guard": "已保存 guard artifact",
+        "download_guard_json": "下载 guard_result.json",
+        "download_improved_prompt": "下载 improved_prompt.txt",
+        "risk_chart": "风险类别",
+        "count": "数量",
+        "category": "类别",
+        "none": "无",
+        "score_ci": "分数差异置信区间",
+        "slice_scores": "任务切片分数",
+        "baseline": "基线",
+        "candidate": "候选",
+        "model_timeline": "模型时间线",
+        "no_model": "没有记录模型来源。",
+        "no_audit": "没有找到 audit_result.json。",
+        "public_api": "公共 API",
+        "tests_passed": "测试通过",
+        "file_breakdown": "改动文件类型",
+        "file_kind": "类型",
+        "source_files": "源码",
+        "test_files": "测试",
+        "docs_files": "文档",
+        "config_files": "配置",
+        "path": "路径",
+        "no_history": "没有找到 history_index.json。",
+        "run_timeline": "Run 时间线",
+        "gate_trend": "门禁趋势",
+        "score_trend": "分数趋势",
+        "risk_trend": "风险趋势",
+        "review_trend": "复核趋势",
+        "prompt_identity": "Prompt 身份",
+        "model_changes": "模型 / provider 变化",
+        "audit_details": "审计明细",
+        "secret_findings": "疑似密钥",
+        "dependency_files": "依赖文件",
+        "lockfiles": "锁文件",
+        "workflow_files": "Workflow 文件",
+        "deleted_test_files": "删除的测试文件",
+        "unexpected_files": "意外文件",
+        "test_results": "测试结果",
+        "changed_lines": "改动行数",
+        "file": "文件",
+        "added": "新增",
+        "deleted": "删除",
+        "only_review_required": "只看需要复核的 run",
+        "only_high_risk": "只看高风险 run",
+        "provider_filter": "Provider 过滤",
+        "model_filter": "模型过滤",
+        "risk_categories": "风险类别",
+    }
+)
+
+CHOICE_OPTIONS.update(
+    {
+        "execution_mode": [
+            ("confirm", "confirm", "确认后执行"),
+            ("auto", "auto", "自动执行"),
+            ("command", "command", "只生成命令"),
+        ],
+        "profile": [
+            ("coding", "coding", "编程"),
+            ("general", "general", "通用"),
+            ("research", "research", "研究"),
+        ],
+        "guard_mode": [
+            ("suggest", "suggest", "给出建议"),
+            ("auto", "auto", "自动改写"),
+            ("gate", "gate", "门禁检查"),
+        ],
+        "token_mode": [
+            ("balanced", "balanced", "平衡省 token"),
+            ("aggressive", "aggressive", "激进省 token"),
+        ],
+        "tests_passed": [
+            ("unknown", "unknown", "未知"),
+            ("true", "true", "通过"),
+            ("false", "false", "失败"),
+        ],
+        "external_tool": [
+            ("auto", "auto", "自动识别"),
+            ("promptfoo", "promptfoo", "Promptfoo"),
+            ("langfuse", "langfuse", "Langfuse"),
+            ("langsmith", "langsmith", "LangSmith"),
+            ("deepeval", "deepeval", "DeepEval"),
+        ],
+        "import_tool": [
+            ("auto", "auto", "自动识别"),
+            ("promptfoo", "promptfoo", "Promptfoo"),
+            ("langfuse", "langfuse", "Langfuse"),
+            ("langsmith", "langsmith", "LangSmith"),
+            ("deepeval", "deepeval", "DeepEval"),
+            ("prompt-optimizer", "prompt-optimizer", "prompt-optimizer"),
+        ],
+    }
+)
+
+TUTORIAL_SECTIONS["zh"] = [
+    {
+        "id": "guard",
+        "image": "guard",
+        "title": "1. 在 Agent 执行前守护 Prompt",
+        "operation": "打开“Prompt 守护”，粘贴指令，选择场景和策略，然后运行守护。",
+        "result": "`guard_result.json`、改写后的 prompt、风险等级、策略违规和 token 估算。",
+        "meaning": "你可以判断 prompt 是否模糊、危险、范围太宽，或缺少目标文件和测试计划。",
+        "next_step": "把改写后的 prompt 发给 Claude Code、Cursor、Codex，或继续手动调整。",
+        "command": "pcl guard --prompt \"修复这个 bug\" --profile coding --policy examples/guard.policy.yaml --json",
+    },
+    {
+        "id": "workflows",
+        "image": "overview",
+        "title": "2. 一键创建演示数据",
+        "operation": "打开“工作流”，点击“创建演示数据”。",
+        "result": "本地 demo 项目、`runs/demo`、报告、gate 结果和 `history_index.json`。",
+        "meaning": "仪表盘会有真实 artifact 可读，每个 tab 都更容易理解。",
+        "next_step": "切到“运行报告”或“历史”，检查刚生成的数据。",
+        "command": "pcl init --path demo && cd demo && pcl analyze --config promptcontrol.example.yaml --out runs/quick",
+    },
+    {
+        "id": "import_external",
+        "image": "overview",
+        "title": "3. 导入外部评测或 prompt 资产",
+        "operation": "打开“工作流”，展开“导入外部 run”，选择来源工具和导出文件。",
+        "result": "`manifest.json`、`predictions.jsonl` / `metrics.json`，或 prompt-optimizer 资产和 gap plan。",
+        "meaning": "Promptfoo、Langfuse、LangSmith、DeepEval 和 prompt-optimizer 的结果可以进入 PCL 证据流程，不需要重造它们的平台。",
+        "next_step": "运行 scaffold-check，生成 evidence card；如果有 baseline/candidate 导出，再运行 evidence-audit。",
+        "command": "pcl start --choice import --tool auto --input results.json --out runs/from-external",
+    },
+    {
+        "id": "report",
+        "image": "report",
+        "title": "4. 评测、门禁和报告",
+        "operation": "在工作流或 CLI 里运行 analyze，然后用策略运行 gate。",
+        "result": "`metrics.json`、`stats.json`、`explanation.json`、`gate_result.json` 和报告文件。",
+        "meaning": "你可以判断候选 prompt 是否可靠提升，并且是否通过团队门禁。",
+        "next_step": "保留 prompt、继续改写，或检查失败切片和样本。",
+        "command": "pcl analyze --config promptcontrol.example.yaml --out runs/quick && pcl gate --run runs/quick --policy examples/gate.policy.yaml",
+    },
+    {
+        "id": "drift",
+        "image": "report",
+        "title": "5. 检查模型来源和漂移",
+        "operation": "打开“模型漂移”，或在两个 run 目录之间运行 model-drift。",
+        "result": "`model_drift.json`，包含 provider/model 对比和漂移风险。",
+        "meaning": "如果模型变了，这次比较就不是干净的 prompt-only 比较。",
+        "next_step": "固定模型 id，或在同一模型下重新跑 baseline/candidate。",
+        "command": "pcl model-drift --run runs/current --history runs/previous --out runs/current/model_drift.json",
+    },
+    {
+        "id": "audit",
+        "image": "audit_history",
+        "title": "6. 审计编程 Agent 改了什么",
+        "operation": "Agent 完成后，对两个 git ref 运行 audit-diff。",
+        "result": "`audit_result.json` 和 `audit_summary.md`，包含文件、行数、风险和测试记录。",
+        "meaning": "你可以看到 agent 是否改了危险路径、依赖、workflow 或测试。",
+        "next_step": "合并前复核高风险文件，然后生成 agent-run manifest。",
+        "command": "pcl audit-diff --before HEAD~1 --after HEAD --out runs/audit",
+    },
+    {
+        "id": "history",
+        "image": "audit_history",
+        "title": "7. 建立本地运行历史",
+        "operation": "多次 analyze 或 audit 后，对 runs 目录建立索引。",
+        "result": "`history_index.json`，包含模型、分数、gate、prompt 和风险时间线。",
+        "meaning": "你可以发现分数回退、模型变化和高风险 agent run。",
+        "next_step": "用“历史”过滤器只看高风险或需要复核的 run。",
+        "command": "pcl history index --runs runs/ --out runs/history_index.json",
+    },
+    {
+        "id": "project_defaults",
+        "image": "overview",
+        "title": "8. 使用项目默认配置",
+        "operation": "在仓库根目录保留 `.promptcontrol.yaml`，记录策略、runs、路径和测试命令。",
+        "result": "guard、gate、audit-diff 和 UI 可以读取本地默认值，命令更短。",
+        "meaning": "团队可以共享同一套策略和预期路径，不用反复复制参数。",
+        "next_step": "项目策略变化时，更新 `.promptcontrol.yaml`。",
+        "command": "pcl guard --prompt \"修复这个 bug\" --profile coding",
+    },
+    {
+        "id": "export_pr",
+        "image": "audit_history",
+        "title": "9. 导出并生成审查摘要",
+        "operation": "从工作流生成 PR summary，或导出报告 zip。",
+        "result": "`pr_summary.md/json`，或一个包含 run artifacts 的 zip。",
+        "meaning": "Reviewer 不用逐个打开 JSON，也能快速看到结论和风险。",
+        "next_step": "把 summary 放进 PR，或把 zip 和本次 run 一起归档。",
+        "command": "pcl export-report --run runs/quick --out runs/quick/report.zip",
+    },
+]
+
+
+def main() -> None:
+    """Run the Streamlit dashboard."""
+
+    st = _streamlit()
+    st.set_page_config(page_title="prompt_control_lab", layout="wide")
+    _hide_streamlit_chrome(st)
+    st.markdown(dashboard_css(), unsafe_allow_html=True)
+    query = _query_params(st)
+    language = _sidebar_language(st, query)
+    text = TEXT[language]
+    deployment_mode = os.environ.get("PCL_DEPLOYMENT_MODE", "local")
+    if is_hf_demo(deployment_mode):
+        session = _prepare_hf_demo_session(st)
+        runs_dir = session.runs_dir
+        default_policy = os.environ.get("PCL_UI_POLICY", "")
+        policy_path = Path(default_policy) if default_policy else None
+        execution_mode = "confirm"
+        overwrite = False
+        allow_external_outputs = False
+        st.sidebar.info(HF_DEMO_TEXT[language]["mode"])
+        _render_hf_demo_upload(st, session, language)
+    else:
+        runs_dir = Path(
+            str(st.sidebar.text_input(text["runs"], os.environ.get("PCL_UI_RUNS", "runs")))
+        )
+        default_policy = os.environ.get("PCL_UI_POLICY", "")
+        policy_raw = st.sidebar.text_input(text["policy"], default_policy)
+        policy_path = Path(policy_raw) if policy_raw else None
+        project_config = os.environ.get("PCL_UI_CONFIG", "")
+        if project_config:
+            st.sidebar.caption(f"Project config: {project_config}")
+        execution_label = str(
+            st.sidebar.selectbox(
+                text["execution_mode"],
+                _choice_labels("execution_mode", language),
+                index=0,
+            )
+        )
+        execution_mode = _choice_value("execution_mode", execution_label, language)
+        overwrite = bool(st.sidebar.checkbox(text["overwrite"], value=False))
+        allow_external_outputs = bool(
+            st.sidebar.checkbox(text["allow_external_outputs"], value=False)
+        )
+    hero_subtitle = (
+        HF_DEMO_TEXT[language]["subtitle"]
+        if is_hf_demo(deployment_mode)
+        else text["subtitle"]
+    )
+    st.markdown(
+        (
+            '<section class="pcl-hero">'
+            f"<h1>{html.escape(text['title'])}</h1>"
+            f"<p>{html.escape(hero_subtitle)}</p>"
+            "</section>"
+        ),
+        unsafe_allow_html=True,
+    )
+
+    runs = list_runs(runs_dir)
+    detail = _select_run(st, runs, text)
+    requested_view = str(
+        query.get("view") or os.environ.get("PCL_UI_DEFAULT_VIEW", DEFAULT_PRIMARY_VIEW)
+    )
+    default_view = _resolve_primary_view(requested_view)
+    views = _ordered_views(default_view)
+    labels = primary_view_labels(language)
+    selected_label = str(
+        st.radio(
+            CONTROL_TEXT[language]["navigation"],
+            labels,
+            index=views.index(default_view),
+            horizontal=True,
+            label_visibility="collapsed",
+        )
+    )
+    selected_view = views[labels.index(selected_label)]
+    _render_view(
+        st,
+        selected_view,
+        text,
+        language,
+        policy_path,
+        detail,
+        query,
+        runs_dir,
+        execution_mode,
+        overwrite,
+        allow_external_outputs,
+        deployment_mode,
+    )
+
+
+def _render_view(
+    st: Any,
+    name: str,
+    text: dict[str, str],
+    language: str,
+    policy_path: Path | None,
+    detail: JsonDict,
+    query: JsonDict,
+    runs_dir: Path,
+    execution_mode: str,
+    overwrite: bool,
+    allow_external_outputs: bool,
+    deployment_mode: str = "local",
+) -> None:
+    primary = _resolve_primary_view(name)
+    if primary == "before":
+        _render_before_view(
+            st,
+            text,
+            language,
+            policy_path,
+            detail,
+            query,
+            runs_dir,
+            overwrite,
+            deployment_mode,
+        )
+    elif primary == "run":
+        _render_run_view(
+            st,
+            text,
+            language,
+            policy_path,
+            detail,
+            runs_dir,
+            execution_mode,
+            overwrite,
+            allow_external_outputs,
+            deployment_mode=deployment_mode,
+        )
+    elif primary == "mechanism":
+        _render_mechanism_view(st, language, detail)
+    elif primary == "stability":
+        _render_stability_view(st, text, language, detail)
+    elif primary == "training":
+        _render_training_gate_view(st, language, detail)
+    elif primary == "evidence":
+        _render_evidence_scope_view(st, text, language, detail)
+    elif primary == "decision":
+        _render_decision_view(st, text, language, detail)
+    elif primary == "history":
+        _render_history_tab(st, text, detail)
+
+
+def _render_before_view(
+    st: Any,
+    text: dict[str, str],
+    language: str,
+    policy_path: Path | None,
+    detail: JsonDict,
+    query: JsonDict,
+    runs_dir: Path,
+    overwrite: bool,
+    deployment_mode: str = "local",
+) -> None:
+    control_text = CONTROL_TEXT[language]
+    view = deepseek_harness_view(detail)
+    identity = _dict(view.get("identity"))
+    st.subheader(control_text["before_title"])
+    st.caption(control_text["before_caption"])
+    if not _dict(detail.get("control_run")):
+        st.info(control_text["missing"])
+    else:
+        metric_cards(
+            st,
+            [
+                (control_text["run_id"], identity.get("run_id")),
+                (control_text["status"], identity.get("status")),
+                (control_text["authorization"], identity.get("authorization")),
+                (control_text["agent"], identity.get("agent")),
+            ],
+        )
+        prompt_gates = [
+            cast(JsonDict, row)
+            for row in _list(view.get("gates"))
+            if isinstance(row, dict) and row.get("scope") == "prompt"
+        ]
+        if prompt_gates:
+            st.markdown(f"### {control_text['prompt_gate']}")
+            st.dataframe(prompt_gates, use_container_width=True, hide_index=True)
+    demo_mode = is_hf_demo(deployment_mode)
+    guard_tab, tutorial_tab = st.tabs(
+        [control_text["legacy_guard"], control_text["legacy_tutorial"]]
+    )
+    with guard_tab:
+        _render_guard_tab(
+            st,
+            text,
+            language,
+            policy_path,
+            runs_dir,
+            _truthy(query.get("demo")),
+            overwrite,
+            persistence_enabled=not demo_mode,
+        )
+    with tutorial_tab:
+        _render_tutorial_tab(st, text, language)
+
+
+def _render_run_view(
+    st: Any,
+    text: dict[str, str],
+    language: str,
+    policy_path: Path | None,
+    detail: JsonDict,
+    runs_dir: Path,
+    execution_mode: str,
+    overwrite: bool,
+    allow_external_outputs: bool,
+    *,
+    deployment_mode: str = "local",
+) -> None:
+    control_text = CONTROL_TEXT[language]
+    view = deepseek_harness_view(detail)
+    timeline = [cast(JsonDict, row) for row in _list(view.get("timeline")) if isinstance(row, dict)]
+    st.subheader(control_text["run_title"])
+    st.caption(control_text["run_caption"])
+    if not timeline and not _dict(detail.get("control_run")):
+        st.info(control_text["missing"])
+    else:
+        identity = _dict(view.get("identity"))
+        metric_cards(
+            st,
+            [
+                (control_text["run_id"], identity.get("run_id")),
+                (control_text["session_id"], identity.get("session_id")),
+                (control_text["status"], identity.get("status")),
+                (control_text["agent"], identity.get("agent")),
+            ],
+        )
+        if timeline:
+            st.markdown(f"### {control_text['timeline']}")
+            st.plotly_chart(
+                control_event_timeline(timeline, title=control_text["timeline"]),
+                use_container_width=True,
+                config={"displayModeBar": False},
+            )
+            st.dataframe(timeline, use_container_width=True, hide_index=True)
+        tool_gates = [
+            cast(JsonDict, row)
+            for row in _list(view.get("gates"))
+            if isinstance(row, dict) and row.get("scope") == "tool"
+        ]
+        if tool_gates:
+            st.markdown(f"### {control_text['tool_gates']}")
+            st.dataframe(tool_gates, use_container_width=True, hide_index=True)
+        provider = _dict(view.get("provider"))
+        st.markdown(f"### {control_text['provider_model']}")
+        metric_cards(
+            st,
+            [
+                (control_text["provider"], provider.get("provider")),
+                (control_text["requested_model"], provider.get("requested_model")),
+                (control_text["observed_model"], provider.get("observed_model")),
+            ],
+        )
+        provenance = [
+            cast(JsonDict, row)
+            for row in _list(provider.get("provenance"))
+            if isinstance(row, dict)
+        ]
+        if provenance:
+            st.markdown(f"#### {control_text['provenance']}")
+            st.dataframe(provenance, use_container_width=True, hide_index=True)
+        usage = _dict(view.get("usage"))
+        st.markdown(f"### {control_text['usage']}")
+        metric_cards(
+            st,
+            [
+                (control_text["input_tokens"], usage.get("input_tokens")),
+                (control_text["output_tokens"], usage.get("output_tokens")),
+                (control_text["total_tokens"], usage.get("total_tokens")),
+                (control_text["cached_tokens"], usage.get("cached_tokens")),
+                (control_text["cost"], usage.get("cost")),
+                (control_text["latency"], usage.get("latency_ms")),
+            ],
+        )
+        repeated = [
+            cast(JsonDict, row)
+            for row in _list(view.get("repeated_tool_calls"))
+            if isinstance(row, dict)
+        ]
+        if repeated:
+            st.markdown(f"### {control_text['repeated_tools']}")
+            st.dataframe(repeated, use_container_width=True, hide_index=True)
+    if is_hf_demo(deployment_mode):
+        st.info(HF_DEMO_TEXT[language]["restricted"])
+    else:
+        with st.expander(control_text["legacy_workflows"], expanded=False):
+            _render_workflows_tab(
+                st,
+                text,
+                language,
+                policy_path,
+                detail,
+                runs_dir,
+                execution_mode,
+                overwrite,
+                allow_external_outputs,
+            )
+
+
+def _render_why_view(st: Any, language: str, detail: JsonDict) -> None:
+    control_text = CONTROL_TEXT[language]
+    view = deepseek_harness_view(detail)
+    attribution = _dict(view.get("attribution"))
+    st.subheader(control_text["why_title"])
+    st.caption(control_text["why_caption"])
+    if not _dict(detail.get("control_run")):
+        st.info(control_text["missing"])
+        return
+    metric_cards(
+        st,
+        [(control_text["attribution"], attribution.get("status"))],
+    )
+    if attribution.get("summary"):
+        st.info(str(attribution["summary"]))
+    factors = [
+        cast(JsonDict, row)
+        for row in _list(attribution.get("factors"))
+        if isinstance(row, dict)
+    ]
+    if factors:
+        st.dataframe(factors, use_container_width=True, hide_index=True)
+    guard_signals = [
+        cast(JsonDict, row)
+        for row in _list(view.get("guard_signals"))
+        if isinstance(row, dict)
+    ]
+    st.markdown(f"### {control_text['guard_signals']}")
+    if guard_signals:
+        st.dataframe(guard_signals, use_container_width=True, hide_index=True)
+    else:
+        st.caption(control_text["no_guard_signals"])
+    recommendation = _dict(view.get("recommendation"))
+    st.caption(str(recommendation.get("boundary") or ""))
+
+
+def _render_mechanism_view(st: Any, language: str, detail: JsonDict) -> None:
+    _render_why_view(st, language, detail)
+    prompt_rows = [
+        row
+        for row in prompt_reach_interpretation_rows(detail, language)
+        if row.get("role") in {"mechanism", "boundary"}
+    ]
+    report_rows = [
+        row
+        for row in interpretability_rows(detail)
+        if row.get("role") in {"mechanism", "boundary"}
+    ]
+    rows = _merge_interpretation_records(
+        control_certificate_interpretation_rows(detail, language),
+        _merge_interpretation_records(prompt_rows, report_rows),
+    )
+    title = "Mechanism and boundary findings" if language == "en" else "机制与适用边界"
+    if rows:
+        _render_interpretation_records(st, rows, language, title=title)
+
+
+def _render_after_view(
+    st: Any,
+    text: dict[str, str],
+    language: str,
+    detail: JsonDict,
+) -> None:
+    control_text = CONTROL_TEXT[language]
+    view = deepseek_harness_view(detail)
+    stability = _dict(view.get("stability"))
+    st.subheader(control_text["after_title"])
+    st.caption(control_text["after_caption"])
+    if not _dict(detail.get("control_run")):
+        st.info(control_text["missing"])
+    else:
+        metric_cards(
+            st,
+            [
+                (control_text["stability"], stability.get("state")),
+                (control_text["confidence"], stability.get("confidence")),
+                (control_text["observed_events"], stability.get("observed_events")),
+            ],
+        )
+        if stability.get("summary"):
+            st.info(str(stability["summary"]))
+        signal_rows = [
+            cast(JsonDict, row)
+            for row in _list(stability.get("signal_counts"))
+            if isinstance(row, dict)
+        ]
+        if signal_rows:
+            st.plotly_chart(
+                control_signal_bar(signal_rows, title=control_text["signals"]),
+                use_container_width=True,
+                config={"displayModeBar": False},
+            )
+        changes = [
+            cast(JsonDict, row)
+            for row in _list(view.get("changes"))
+            if isinstance(row, dict)
+        ]
+        if changes:
+            st.markdown(f"### {control_text['changes']}")
+            st.dataframe(changes, use_container_width=True, hide_index=True)
+    with st.expander(control_text["legacy_drift"], expanded=False):
+        _render_model_drift_tab(st, text, detail)
+    with st.expander(control_text["legacy_audit"], expanded=False):
+        _render_audit_tab(st, text, detail)
+
+
+def _render_stability_view(
+    st: Any,
+    text: dict[str, str],
+    language: str,
+    detail: JsonDict,
+) -> None:
+    _render_after_view(st, text, language, detail)
+    prompt_rows = [
+        row
+        for row in prompt_reach_interpretation_rows(detail, language)
+        if row.get("role") in {"stability", "uncertainty"}
+    ]
+    report_rows = [
+        row
+        for row in interpretability_rows(detail)
+        if row.get("role") in {"stability", "uncertainty"}
+    ]
+    certificate_rows = control_certificate_interpretation_rows(detail, language)
+    rows = _merge_interpretation_records(
+        certificate_rows,
+        _merge_interpretation_records(prompt_rows, report_rows),
+    )
+    title = "Stability and uncertainty findings" if language == "en" else "稳定性与不确定性"
+    if rows:
+        _render_interpretation_records(st, rows, language, title=title)
+    terminal_rows = terminal_sensitivity_rows(detail)
+    if terminal_rows:
+        st.plotly_chart(
+            terminal_sensitivity_decay(
+                terminal_rows,
+                title=(
+                    "Terminal sensitivity by boundary distance"
+                    if language == "en"
+                    else "终端敏感度随边界距离变化"
+                ),
+            ),
+            use_container_width=True,
+            config={"displayModeBar": False},
+        )
+    green_rows = green_certificate_rows(detail)
+    if green_rows:
+        st.plotly_chart(
+            green_boundary_margin(
+                green_rows,
+                title=(
+                    "Scaled boundary minimum singular value"
+                    if language == "en"
+                    else "缩放边界矩阵最小奇异值"
+                ),
+            ),
+            use_container_width=True,
+            config={"displayModeBar": False},
+        )
+    posterior = posterior_certificate_metrics(detail)
+    if any(value is not None for value in posterior.values()):
+        metric_cards(
+            st,
+            [
+                ("Posterior h" if language == "en" else "后验 h", posterior.get("h")),
+                (
+                    "Existence radius" if language == "en" else "存在半径",
+                    posterior.get("existence_radius"),
+                ),
+                (
+                    "Neighborhood margin" if language == "en" else "邻域余量",
+                    posterior.get("neighborhood_margin"),
+                ),
+                (
+                    "Certificate level" if language == "en" else "证书等级",
+                    posterior.get("certificate_level"),
+                ),
+            ],
+        )
+
+
+def _render_training_gate_view(st: Any, language: str, detail: JsonDict) -> None:
+    control_text = CONTROL_TEXT[language]
+    gate = _dict(detail.get("posttrain_gate"))
+    comparison = _dict(detail.get("checkpoint_comparison"))
+    attribution = _dict(detail.get("mechanism_attribution"))
+    trace_rows = decision_trace_interpretation_rows(detail, language)
+    st.subheader(control_text["training_title"])
+    st.caption(control_text["training_caption"])
+    if not gate and not trace_rows:
+        command = (
+            "pcl posttrain-gate --baseline runs/checkpoint-000 "
+            "--candidate runs/checkpoint-500 --policy examples/posttrain.policy.yaml "
+            "--out runs/posttrain-gate"
+        )
+        st.info("No post-training gate artifact is available." if language == "en" else "当前没有后训练门禁结果。")
+        st.code(command, language="bash")
+        return
+    paired = _dict(comparison.get("paired_statistics"))
+    resources = _dict(comparison.get("resources"))
+    metric_cards(
+        st,
+        [
+            ("Decision" if language == "en" else "决策", gate.get("decision")),
+            ("Score delta" if language == "en" else "分数变化", comparison.get("score_delta")),
+            (
+                "Paired CI" if language == "en" else "配对置信区间",
+                paired.get("bootstrap_ci"),
+            ),
+            (
+                "Token change" if language == "en" else "Token 变化",
+                resources.get("token_increase_ratio"),
+            ),
+            (
+                "Latency change" if language == "en" else "延迟变化",
+                resources.get("latency_increase_ratio"),
+            ),
+            (
+                "Missing evidence" if language == "en" else "缺失证据",
+                len(_list(gate.get("missing_artifacts")))
+                + len(_list(gate.get("invalid_evidence"))),
+            ),
+        ],
+    )
+    st.info(str(gate.get("plain_summary") or ""))
+    certificate_summary = _dict(gate.get("certificate_summary"))
+    certificate_checks = _dict(certificate_summary.get("checks"))
+    if certificate_summary:
+        st.markdown("### Control certificates" if language == "en" else "### 控制证书")
+        metric_cards(
+            st,
+            [
+                (
+                    "Overall state" if language == "en" else "总体状态",
+                    certificate_summary.get("overall_state"),
+                ),
+                (
+                    "Highest level" if language == "en" else "最高等级",
+                    certificate_summary.get("highest_recorded_level"),
+                ),
+                (
+                    "Minimum required" if language == "en" else "策略最低要求",
+                    certificate_summary.get("minimum_required_level") or "not configured",
+                ),
+            ],
+        )
+        if certificate_checks:
+            st.dataframe(
+                [
+                    {
+                        "certificate": name,
+                        "state": _dict(raw).get("check_state")
+                        or _dict(raw).get("observed"),
+                        "level": _dict(raw).get("certificate_level"),
+                        "passed": _dict(raw).get("passed"),
+                        "message": _dict(raw).get("message"),
+                    }
+                    for name, raw in certificate_checks.items()
+                ],
+                use_container_width=True,
+                hide_index=True,
+            )
+    checks = _dict(gate.get("checks"))
+    if checks:
+        st.dataframe(
+            [
+                {
+                    "check": name,
+                    "passed": _dict(raw).get("passed"),
+                    "severity": _dict(raw).get("severity"),
+                    "message": _dict(raw).get("message"),
+                }
+                for name, raw in checks.items()
+            ],
+            use_container_width=True,
+            hide_index=True,
+        )
+    findings = _list(attribution.get("findings"))
+    if findings:
+        st.markdown("### Mechanism attribution" if language == "en" else "### 机制归因")
+        st.dataframe(findings, use_container_width=True, hide_index=True)
+    if trace_rows:
+        _render_interpretation_records(
+            st,
+            trace_rows,
+            language,
+            title="Decision trace" if language == "en" else "决策轨迹",
+        )
+    st.caption(str(gate.get("claim_boundary") or ""))
+
+
+def _render_decision_view(
+    st: Any,
+    text: dict[str, str],
+    language: str,
+    detail: JsonDict,
+) -> None:
+    control_text = CONTROL_TEXT[language]
+    view = deepseek_harness_view(detail)
+    recommendation = _dict(view.get("recommendation"))
+    reasons = [str(item) for item in _list(recommendation.get("reasons"))]
+    st.subheader(control_text["decision_title"])
+    st.caption(control_text["decision_caption"])
+    st.markdown(
+        recommendation_card_html(
+            decision=str(recommendation.get("decision") or "insufficient_evidence"),
+            next_action=str(recommendation.get("next_action") or ""),
+            reasons=reasons,
+            boundary=str(recommendation.get("boundary") or ""),
+            label=control_text["recommendation"],
+        ),
+        unsafe_allow_html=True,
+    )
+    links = [
+        cast(JsonDict, row)
+        for row in _list(view.get("report_links"))
+        if isinstance(row, dict)
+    ]
+    st.markdown(f"### {control_text['reports']}")
+    if links:
+        rendered_links = " · ".join(
+            f"[{html.escape(str(row.get('name') or 'report'))}]({row.get('href')})"
+            for row in links
+        )
+        st.markdown(rendered_links)
+        st.dataframe(
+            [{"report": row.get("name"), "path": row.get("path")} for row in links],
+            use_container_width=True,
+            hide_index=True,
+        )
+    else:
+        st.caption(control_text["no_reports"])
+    with st.expander(control_text["legacy_report"], expanded=False):
+        _render_report_tab(st, text, detail)
+
+
+def _render_advanced_view(
+    st: Any,
+    text: dict[str, str],
+    language: str,
+    detail: JsonDict,
+) -> None:
+    control_text = CONTROL_TEXT[language]
+    st.subheader(control_text["advanced_title"])
+    st.caption(control_text["advanced_caption"])
+    matrix = evidence_matrix_rows(detail)
+    if matrix:
+        st.dataframe(matrix, use_container_width=True, hide_index=True)
+    findings = _merge_interpretation_records(
+        control_certificate_interpretation_rows(detail, language),
+        _merge_interpretation_records(
+            prompt_reach_interpretation_rows(detail, language),
+            interpretability_rows(detail),
+        ),
+    )
+    if findings:
+        _render_interpretation_records(
+            st,
+            findings,
+            language,
+            title="Explanation records" if language == "en" else "可解释性记录",
+        )
+    with st.expander(control_text["legacy_research"], expanded=True):
+        _render_research_overview_tab(st, text, detail, language)
+
+
+def _render_evidence_scope_view(
+    st: Any,
+    text: dict[str, str],
+    language: str,
+    detail: JsonDict,
+) -> None:
+    _render_advanced_view(st, text, language, detail)
+
+
+def _render_interpretation_records(
+    st: Any,
+    rows: list[JsonDict],
+    language: str,
+    *,
+    title: str | None = None,
+) -> None:
+    """Render bounded diagnostic findings with one shared bilingual structure."""
+
+    labels = INTERPRETATION_LABELS[language]
+    if title:
+        st.markdown(f"### {title}")
+    for row in rows:
+        name = str(row.get("adapter") or "diagnostic")
+        status = str(row.get("status") or "unknown")
+        confidence = str(row.get("confidence") or "unknown")
+        st.markdown(f"#### `{name}`")
+        st.markdown(
+            f"**{labels['status']}:** {html.escape(status)} · "
+            f"**{labels['confidence']}:** {html.escape(confidence)}"
+        )
+        for key in ("observed", "explains", "does_not_prove", "next_action"):
+            value = row.get(key)
+            rendered = _interpretation_value(value)
+            st.markdown(f"**{labels[key]}:** {html.escape(rendered)}")
+
+
+def _merge_interpretation_records(
+    primary: list[JsonDict],
+    secondary: list[JsonDict],
+) -> list[JsonDict]:
+    """Prefer direct diagnostic artifacts and append non-duplicate report findings."""
+
+    rows: list[JsonDict] = []
+    seen: set[str] = set()
+    for row in [*primary, *secondary]:
+        identity = str(row.get("adapter") or row.get("dimension") or "")
+        if identity and identity in seen:
+            continue
+        if identity:
+            seen.add(identity)
+        rows.append(row)
+    return rows
+
+
+def _interpretation_value(value: object) -> str:
+    if value is None or value == "":
+        return "unknown"
+    if isinstance(value, dict | list):
+        return json.dumps(value, ensure_ascii=False, sort_keys=True, default=str)
+    return str(value)
+
+
+def _hide_streamlit_chrome(st: Any) -> None:
+    st.markdown(
+        """
+<style>
+#MainMenu {visibility: hidden;}
+header {visibility: hidden;}
+footer {visibility: hidden;}
+[data-testid="stToolbar"] {display: none !important;}
+[data-testid="stDecoration"] {display: none !important;}
+</style>
+""",
+        unsafe_allow_html=True,
+    )
+
+
+def _sidebar_language(st: Any, query: JsonDict) -> str:
+    default = str(query.get("lang") or os.environ.get("PCL_UI_LANGUAGE", "en"))
+    selected = st.sidebar.selectbox(
+        "Language / 语言",
+        ["English", "中文"],
+        index=0 if default == "en" else 1,
+    )
+    return "zh" if selected == "中文" else "en"
+
+
+def _query_params(st: Any) -> JsonDict:
+    try:
+        raw = st.query_params
+    except Exception:
+        return {}
+    if hasattr(raw, "to_dict"):
+        raw = raw.to_dict()
+    if not isinstance(raw, dict):
+        return {}
+    return {str(key): _first_query_value(value) for key, value in raw.items()}
+
+
+def _first_query_value(value: object) -> str:
+    if isinstance(value, list) and value:
+        return str(value[0])
+    return str(value)
+
+
+def _truthy(value: object) -> bool:
+    return str(value).lower() in {"1", "true", "yes", "on"}
+
+
+def _choice_labels(group: str, language: str) -> list[str]:
+    """Return localized labels while keeping workflow values stable."""
+
+    index = 2 if language == "zh" else 1
+    return [str(item[index]) for item in CHOICE_OPTIONS[group]]
+
+
+def _choice_value(group: str, label: str, language: str) -> str:
+    """Map a localized UI label back to the stable internal enum value."""
+
+    label_index = 2 if language == "zh" else 1
+    for item in CHOICE_OPTIONS[group]:
+        if label == item[label_index]:
+            return str(item[0])
+    return label
+
+
+def tutorial_sections(language: str) -> list[JsonDict]:
+    """Return tutorial cards for the selected language."""
+
+    sections = TUTORIAL_SECTIONS.get(language) or TUTORIAL_SECTIONS["en"]
+    steps = TUTORIAL_STEPS.get(language) or TUTORIAL_STEPS["en"]
+    enriched: list[JsonDict] = []
+    for section in sections:
+        item: JsonDict = dict(section)
+        section_id = str(item.get("id") or "")
+        item["screenshot"] = TUTORIAL_SECTION_SCREENSHOTS.get(section_id, "workflows")
+        item["steps"] = list(steps.get(section_id, []))
+        enriched.append(item)
+    return enriched
+
+
+def onboarding_paths(language: str) -> list[JsonDict]:
+    """Return role/goal-based starting paths for first-time UI users."""
+
+    rows = ONBOARDING_PATHS.get(language) or ONBOARDING_PATHS["en"]
+    return [dict(row) for row in rows]
+
+
+def ecosystem_choice_rows(language: str) -> list[JsonDict]:
+    """Return a compact map from adjacent tools to PCL's evidence layer."""
+
+    rows: list[JsonDict] = []
+    for lane in tool_choice_lanes():
+        use_first = str(lane.get("use_first") or "")
+        tools = ["LangSmith", "Langfuse"] if use_first == "LangSmith or Langfuse" else [use_first]
+        for tool in tools:
+            rows.append(
+                {
+                    "start": str(
+                        (lane.get("when_zh") if language == "zh" else lane.get("when"))
+                        or lane.get("when", "")
+                    ),
+                    "tool": "PCL" if tool == "prompt_control_lab" else tool,
+                    "pcl": str(
+                        (
+                            lane.get("pcl_short_zh")
+                            if language == "zh"
+                            else lane.get("pcl_short")
+                        )
+                        or lane.get("pcl_short", "")
+                    ),
+                }
+            )
+    return rows
+
+
+def adoption_path_rows(language: str) -> list[JsonDict]:
+    """Return the shared five-minute adoption path for UI rendering."""
+
+    return _tool_choice_adoption_path_rows(language)
+
+
+def tutorial_gallery_items(language: str) -> list[JsonDict]:
+    """Return always-visible tutorial image cards for the selected language."""
+
+    if language == "zh":
+        return [
+            {"title": "工作流：一键生成和导出", "image": "workflows"},
+            {"title": "守护：执行前检查风险", "image": "guard"},
+            {"title": "报告：用证据做决策", "image": "report"},
+            {"title": "模型漂移：确认比较是否干净", "image": "model_drift"},
+            {"title": "审计：看清 Agent 改动", "image": "audit"},
+            {"title": "历史：追踪 run 趋势", "image": "history"},
+        ]
+    return [
+        {"title": "Workflows: run and export locally", "image": "workflows"},
+        {"title": "Guard: check risk first", "image": "guard"},
+        {"title": "Report: decide with evidence", "image": "report"},
+        {"title": "Model drift: validate comparisons", "image": "model_drift"},
+        {"title": "Audit: inspect agent changes", "image": "audit"},
+        {"title": "History: track run trends", "image": "history"},
+    ]
+
+
+def _tutorial_asset_path(image_key: str, language: str) -> Path:
+    filenames = TUTORIAL_IMAGES.get(image_key) or TUTORIAL_IMAGES["overview"]
+    filename = filenames[1] if language == "zh" else filenames[0]
+    return Path(__file__).resolve().parents[3] / "docs" / "assets" / filename
+
+
+def _tutorial_screenshot_path(image_key: str, language: str) -> Path:
+    filenames = TUTORIAL_SCREENSHOTS.get(image_key) or TUTORIAL_SCREENSHOTS["workflows"]
+    filename = filenames[1] if language == "zh" else filenames[0]
+    return Path(__file__).resolve().parents[3] / "docs" / "assets" / filename
+
+
+def _ordered_views(first: str) -> list[str]:
+    del first
+    return list(PRIMARY_VIEW_ORDER)
+
+
+def primary_view_labels(language: str) -> list[str]:
+    """Return primary control-run navigation labels in fixed lifecycle order."""
+
+    labels = PRIMARY_VIEW_LABELS.get(language, PRIMARY_VIEW_LABELS["en"])
+    return [labels[view] for view in PRIMARY_VIEW_ORDER]
+
+
+def legacy_sections_for(view: str) -> tuple[str, ...]:
+    """Return preserved legacy renderers nested under one primary view."""
+
+    return LEGACY_VIEW_GROUPS.get(view, ())
+
+
+def _resolve_primary_view(value: str) -> str:
+    if value in PRIMARY_VIEW_ORDER:
+        return value
+    return LEGACY_VIEW_ALIASES.get(value, DEFAULT_PRIMARY_VIEW)
+
+
+def _select_run(st: Any, runs: list[JsonDict], text: dict[str, str]) -> JsonDict:
+    if not runs:
+        empty_state(
+            st,
+            text["missing_run"],
+            "pcl init --path demo && "
+            "pcl analyze --config promptcontrol.example.yaml --out runs/quick",
+        )
+        return {"has_artifacts": False, "empty_state": text["missing_run"], "name": ""}
+    names = [str(item["name"]) for item in runs]
+    selected = st.sidebar.selectbox(text["selected_run"], names)
+    match = next(item for item in runs if item["name"] == selected)
+    return load_run_detail(Path(str(match["path"])))
+
+
+def _render_peoc_evidence_section(
+    st: Any,
+    text: dict[str, str],
+    detail: JsonDict,
+    language: str,
+) -> bool:
+    """Render imported PEOC evidence without treating it as a fresh run."""
+
+    summary = peoc_status_summary(detail, language)
+    if not summary.get("has_real_evidence"):
+        return False
+
+    st.markdown(
+        f'<div class="pcl-section-title">{html.escape(text["peoc_real_title"])}</div>',
+        unsafe_allow_html=True,
+    )
+    st.markdown(badge(text["peoc_real_badge"], "verified import"))
+    manifest_hash = str(summary.get("manifest_sha256") or "unknown")
+    st.caption(f'{text["peoc_manifest"]}: {manifest_hash}')
+    st.info(text["peoc_imported_note"])
+
+    metric_cards(
+        st,
+        [
+            (text["peoc_available"], summary.get("available", 0)),
+            (text["peoc_partial"], summary.get("partial", 0)),
+            (text["peoc_failed"], summary.get("failed_validation", 0)),
+            (text["peoc_unusable"], summary.get("unusable", 0)),
+            (text["peoc_missing"], summary.get("missing", 0)),
+        ],
+    )
+    claim = claim_check_summary(detail)
+    evidence = detail.get("evidence_card")
+    evidence_dict = evidence if isinstance(evidence, dict) else {}
+    full_support = summary.get("full_research_support") is True
+    metric_cards(
+        st,
+        [
+            (
+                text["peoc_full_support"],
+                text["peoc_yes"] if full_support else text["peoc_no"],
+            ),
+            (text["peoc_claim_scope"], claim.get("status") or summary.get("claim_status")),
+            (
+                text["peoc_recommendation"],
+                evidence_dict.get("recommendation") or summary.get("claim_status"),
+            ),
+        ],
+    )
+    statement = str(summary.get("statement") or "")
+    if full_support:
+        st.info(statement)
+    else:
+        st.warning(statement)
+
+    method_rows = peoc_method_rows(detail)
+    if method_rows:
+        st.markdown(
+            f'<div class="pcl-section-title">{html.escape(text["peoc_hard_methods"])}</div>',
+            unsafe_allow_html=True,
+        )
+        st.caption(_peoc_hard_methods_note(text["peoc_hard_methods_note"], method_rows))
+        _peoc_table_clearance(st)
+        st.dataframe(
+            _peoc_table_rows(method_rows, "methods", language),
+            use_container_width=True,
+        )
+
+    trajectory_rows = peoc_trajectory_rows(detail)
+    if trajectory_rows:
+        st.markdown(
+            f'<div class="pcl-section-title">{html.escape(text["peoc_trajectory"])}</div>',
+            unsafe_allow_html=True,
+        )
+        st.caption(text["peoc_trajectory_note"])
+        _peoc_table_clearance(st)
+        st.dataframe(
+            _peoc_table_rows(trajectory_rows, "trajectory", language),
+            use_container_width=True,
+        )
+
+    stage = _peoc_stage_validation(detail)
+    if stage:
+        st.markdown(
+            f'<div class="pcl-section-title">{html.escape(text["peoc_stage_validation"])}</div>',
+            unsafe_allow_html=True,
+        )
+        if str(stage.get("status")) == "failed_validation" or str(
+            stage.get("verdict")
+        ).upper() == "FAIL":
+            st.warning(text["peoc_stage_failed"])
+        st.dataframe(
+            _peoc_table_rows([stage], "stage", language),
+            use_container_width=True,
+        )
+
+    limitation_rows = peoc_limitation_rows(detail, language)
+    if limitation_rows:
+        st.markdown(
+            f'<div class="pcl-section-title">{html.escape(text["peoc_limitations"])}</div>',
+            unsafe_allow_html=True,
+        )
+        st.dataframe(
+            _peoc_table_rows(limitation_rows, "limitations", language),
+            use_container_width=True,
+        )
+
+    run_path = detail.get("path")
+    if isinstance(run_path, str) and run_path:
+        report_path = (Path(run_path) / "research_case_study.html").resolve()
+        if report_path.exists():
+            st.markdown(
+                f'<div class="pcl-section-title">{html.escape(text["peoc_report"])}</div>',
+                unsafe_allow_html=True,
+            )
+            st.caption(text["peoc_report_guidance"])
+            st.markdown(f'[{text["peoc_report"]}]({report_path.as_uri()})')
+            st.code(str(report_path))
+    return True
+
+
+def _peoc_stage_validation(detail: JsonDict) -> JsonDict:
+    evidence = detail.get("peoc_evidence")
+    evidence_dict = evidence if isinstance(evidence, dict) else {}
+    stage_dict: JsonDict = {}
+    if evidence_dict:
+        sections = evidence_dict.get("sections")
+        sections_dict = sections if isinstance(sections, dict) else {}
+        stage = sections_dict.get("stage_heterogeneity")
+        stage_dict = stage if isinstance(stage, dict) else {}
+    else:
+        case = detail.get("peoc_case_study")
+        case_dict = case if isinstance(case, dict) else {}
+        stage = case_dict.get("stage_validation")
+        stage_dict = stage if isinstance(stage, dict) else {}
+    if not stage_dict:
+        return {}
+    observations = stage_dict.get("observations")
+    observations_dict = observations if isinstance(observations, dict) else {}
+    data = observations_dict.get("data")
+    data_dict = data if isinstance(data, dict) else {}
+    result: JsonDict = {
+        "status": stage_dict.get("status") or "unknown",
+        "verdict": _first_not_none(
+            stage_dict.get("verdict"),
+            observations_dict.get("verdict"),
+            data_dict.get("verdict"),
+            "unknown",
+        ),
+        "held_spearman_rho": _first_not_none(
+            stage_dict.get("held_spearman_rho"),
+            observations_dict.get("held_spearman_rho"),
+            data_dict.get("held_spearman_rho"),
+        ),
+        "held_bootstrap_ci": _first_not_none(
+            stage_dict.get("held_bootstrap_ci"),
+            observations_dict.get("held_bootstrap_ci"),
+            data_dict.get("held_bootstrap_ci"),
+        ),
+        "n_calib": _first_not_none(
+            stage_dict.get("n_calib"),
+            observations_dict.get("n_calib"),
+            data_dict.get("n_calib"),
+        ),
+        "n_held": _first_not_none(
+            stage_dict.get("n_held"),
+            observations_dict.get("n_held"),
+            data_dict.get("n_held"),
+        ),
+    }
+    return {key: value for key, value in result.items() if value is not None}
+
+
+def _peoc_hard_methods_note(template: str, rows: list[JsonDict]) -> str:
+    return template.format(
+        row_count=len(rows),
+        model_count=len({str(row.get("model")) for row in rows if row.get("model")}),
+        task_count=len({str(row.get("task")) for row in rows if row.get("task")}),
+        method_count=len({str(row.get("method")) for row in rows if row.get("method")}),
+    )
+
+
+def _first_not_none(*values: object) -> object:
+    return next((value for value in values if value is not None), None)
+
+
+def _peoc_table_clearance(st: Any) -> None:
+    st.markdown(
+        "<style>"
+        ".pcl-table-clearance{height:4px;}"
+        "@media(max-width:640px){.pcl-table-clearance{height:48px;}}"
+        "</style><div class=\"pcl-table-clearance\"></div>",
+        unsafe_allow_html=True,
+    )
+
+
+def _peoc_table_rows(rows: list[JsonDict], kind: str, language: str) -> list[JsonDict]:
+    labels: dict[str, dict[str, str]] = {
+        "methods": {
+            "model": "模型" if language == "zh" else "Model",
+            "task": "任务" if language == "zh" else "Task",
+            "method": "方法" if language == "zh" else "Method",
+            "n": "样本数" if language == "zh" else "N",
+            "mean": "平均准确率" if language == "zh" else "Mean accuracy",
+            "sd": "标准差" if language == "zh" else "SD",
+            "budget": "预算" if language == "zh" else "Budget",
+            "T": "T",
+            "L0": "L0",
+        },
+        "trajectory": {
+            "lane": "任务类型" if language == "zh" else "Lane",
+            "model": "模型" if language == "zh" else "Model",
+            "seed": "随机种子" if language == "zh" else "Seed",
+            "alpha_emp_mean": "经验衰减率" if language == "zh" else "Empirical decay",
+            "R2_mean": "平均 R²" if language == "zh" else "Mean R²",
+            "hidden_dim": "隐藏维度" if language == "zh" else "Hidden dimension",
+            "samples": "轨迹数" if language == "zh" else "Traces",
+            "source": "来源" if language == "zh" else "Source",
+        },
+        "stage": {
+            "status": "状态" if language == "zh" else "Status",
+            "verdict": "结论" if language == "zh" else "Verdict",
+            "held_spearman_rho": "留出集 Spearman rho" if language == "zh" else "Held Spearman rho",
+            "held_bootstrap_ci": "留出集 bootstrap CI" if language == "zh" else "Held bootstrap CI",
+            "n_calib": "校准单元数" if language == "zh" else "Calibration cells",
+            "n_held": "留出单元数" if language == "zh" else "Held cells",
+        },
+        "limitations": {
+            "section": "研究部分" if language == "zh" else "Section",
+            "status": "状态" if language == "zh" else "Status",
+            "origin": "证据来源" if language == "zh" else "Origin",
+            "limitation": "为什么不能支持结论" if language == "zh" else "Why it cannot support the claim",
+        },
+    }
+    selected = labels.get(kind, {})
+    return [
+        {selected.get(key, key): value for key, value in row.items()}
+        for row in rows
+    ]
+
+
+def _render_research_overview_tab(
+    st: Any,
+    text: dict[str, str],
+    detail: JsonDict,
+    language: str,
+) -> None:
+    st.markdown(f'<div class="pcl-section-title">{html.escape(text["research_title"])}</div>', unsafe_allow_html=True)
+    st.caption(text["research_subtitle"])
+    _render_peoc_evidence_section(st, text, detail, language)
+    _render_tool_choice_advisor(st, text, language)
+
+    diagnostics = detail.get("diagnostics")
+    has_diagnostics = isinstance(diagnostics, dict) and bool(diagnostics)
+    if not detail.get("has_artifacts") and not has_diagnostics:
+        empty_state(st, text["research_empty"], text["research_demo_command"])
+        return
+
+    rows = research_diagnostic_rows(detail)
+    counts = research_status_counts(detail)
+    available = counts.get("available", 0)
+    artifacts = detail.get("artifacts")
+    artifact_count = len(artifacts) if isinstance(artifacts, list) else 0
+    protocol_ready = "yes" if detail.get("splits") or detail.get("manifest") else "partial"
+    stats_ready = "yes" if detail.get("first_comparison") or detail.get("stats") else "missing"
+    evidence_card = detail.get("evidence_card")
+    evidence_dict = evidence_card if isinstance(evidence_card, dict) else {}
+    evidence_recommendation = evidence_dict.get("recommendation", "missing")
+    evidence_gate = evidence_gate_summary(detail)
+    evidence_gate_status = evidence_gate.get("status", "missing")
+    claim_check = claim_check_summary(detail)
+    claim_status = claim_check.get("status", "missing")
+    claim_ladder = claim_evidence_ladder(detail)
+    bridge = external_bridge_summary(detail)
+    scorecard_rows = ecosystem_scorecard_rows(detail)
+    scorecard_matrix_rows = ecosystem_evidence_matrix_rows(detail)
+    scorecard_market_rows = ecosystem_market_map_rows(detail)
+    scorecard_market_readiness = ecosystem_market_readiness(detail)
+    ecosystem_rows = ecosystem_demo_rows(detail)
+    asset_summary = prompt_asset_summary(detail)
+    asset_rows = prompt_asset_rows(detail)
+    asset_gap_rows = prompt_optimizer_gap_rows(detail)
+    scaffold_summary = scaffold_check_summary(detail)
+    scaffold_issue_rows = scaffold_check_issue_rows(detail)
+    scaffold_action_rows = scaffold_check_action_rows(detail)
+    gap_rows = evidence_gap_rows(detail)
+    gap_action_rows = evidence_gap_action_rows(detail)
+    gap_plan_rows = research_gap_plan_rows(detail)
+    gap_script_rows = research_gap_script_rows(detail)
+    gap_status_rows = research_gap_status_rows(detail)
+    evidence_map = research_evidence_map(detail)
+
+    st.markdown(
+        '<div class="pcl-grid">'
+        + stat_card_html(text["paper_protocol"], protocol_ready, text["tri_split"])
+        + stat_card_html(
+            text["diagnostic_coverage"],
+            f"{available}/{len(rows)}",
+            text["research_diagnostics"],
+        )
+        + stat_card_html(text["artifact_evidence"], artifact_count, "JSON / HTML / Markdown")
+        + stat_card_html(text["paired_stats"], stats_ready, "bootstrap CI / p-value")
+        + stat_card_html(
+            text["evidence_recommendation"],
+            evidence_recommendation,
+            text["evidence_card"],
+        )
+        + stat_card_html(
+            text["evidence_gate_status"],
+            str(evidence_gate_status),
+            text["evidence_gate_required"],
+        )
+        + stat_card_html(
+            text["claim_check_status"],
+            str(claim_status),
+            str(claim_check.get("requested_claim") or text["claim_check"]),
+        )
+        + stat_card_html(
+            text["ecosystem_bridge"],
+            str(bridge.get("tool") or "none"),
+            f"{bridge.get('pcl_added_count', 0)} {text['pcl_added_evidence']}",
+        )
+        + stat_card_html(
+            text["prompt_assets"],
+            str(asset_summary.get("asset_count", 0) if asset_summary else 0),
+            str(asset_summary.get("evaluation_status") or text["prompt_assets_missing"]),
+        )
+        + "</div>",
+        unsafe_allow_html=True,
+    )
+    glance_rows = research_at_a_glance_rows(detail, language)
+    if glance_rows:
+        st.markdown(
+            f'<div class="pcl-section-title">{html.escape(text["research_at_a_glance"])}</div>',
+            unsafe_allow_html=True,
+        )
+        st.dataframe(glance_rows, use_container_width=True)
+    overview_path = research_overview_path(detail)
+    if overview_path is not None:
+        st.markdown(
+            f'<div class="pcl-section-title">{html.escape(text["research_overview_graphic"])}</div>',
+            unsafe_allow_html=True,
+        )
+        _render_svg(st, overview_path)
+    insight_rows = research_insight_rows(detail, language)
+    if insight_rows:
+        st.markdown(
+            f'<div class="pcl-section-title">{html.escape(text["research_insights"])}</div>',
+            unsafe_allow_html=True,
+        )
+        st.dataframe(
+            _research_insight_display_rows(insight_rows, language),
+            use_container_width=True,
+        )
+    map_html = research_evidence_map_html(evidence_map)
+    if map_html:
+        st.markdown(
+            f'<div class="pcl-section-title">{html.escape(text["research_evidence_map"])}</div>'
+            + map_html,
+            unsafe_allow_html=True,
+        )
+    _render_research_pipeline(st, text)
+
+    if scorecard_rows:
+        st.markdown(
+            f'<div class="pcl-section-title">{html.escape(text["ecosystem_scorecard"])}</div>',
+            unsafe_allow_html=True,
+        )
+        scorecard = detail.get("ecosystem_scorecard")
+        scorecard_dict = scorecard if isinstance(scorecard, dict) else {}
+        st.caption(str(scorecard_dict.get("positioning", "")))
+        if scorecard_matrix_rows:
+            st.markdown(
+                f'<div class="pcl-section-title">{html.escape(text["ecosystem_evidence_matrix"])}</div>',
+                unsafe_allow_html=True,
+            )
+            st.dataframe(scorecard_matrix_rows, use_container_width=True)
+        if scorecard_market_readiness:
+            st.markdown(
+                f'<div class="pcl-section-title">{html.escape(text["ecosystem_market_readiness"])}</div>',
+                unsafe_allow_html=True,
+            )
+            st.caption(text["ecosystem_market_readiness_note"])
+            _render_market_readiness_summary(st, scorecard_market_readiness, language)
+        if scorecard_market_rows:
+            st.markdown(
+                f'<div class="pcl-section-title">{html.escape(text["ecosystem_market_map"])}</div>',
+                unsafe_allow_html=True,
+            )
+            st.caption(text["ecosystem_market_map_note"])
+            st.dataframe(
+                _market_map_display_rows(scorecard_market_rows, language),
+                use_container_width=True,
+            )
+        st.dataframe(scorecard_rows, use_container_width=True)
+
+    if ecosystem_rows:
+        st.markdown(
+            f'<div class="pcl-section-title">{html.escape(text["ecosystem_demo"])}</div>',
+            unsafe_allow_html=True,
+        )
+        st.dataframe(ecosystem_rows, use_container_width=True)
+
+    if asset_rows:
+        st.markdown(
+            f'<div class="pcl-section-title">{html.escape(text["prompt_assets"])}</div>',
+            unsafe_allow_html=True,
+        )
+        st.caption(str(asset_summary.get("boundary", "")))
+        metric_cards(
+            st,
+            [
+                (
+                    text["prompt_assets_summary"],
+                    str(asset_summary.get("asset_count", 0)),
+                ),
+                (
+                    text["evidence_summary"],
+                    str(asset_summary.get("evaluation_status", "")),
+                ),
+            ],
+        )
+        source_tool = str(asset_summary.get("source_tool", ""))
+        source_sha = str(asset_summary.get("source_sha256", ""))
+        if source_tool or source_sha:
+            st.caption(f"{source_tool} {source_sha[:24]}".strip())
+        st.dataframe(asset_rows, use_container_width=True)
+        if asset_gap_rows:
+            st.markdown(
+                f'<div class="pcl-section-title">{html.escape(text["prompt_assets_gap_plan"])}</div>',
+                unsafe_allow_html=True,
+            )
+            st.dataframe(asset_gap_rows, use_container_width=True)
+        st.markdown(
+            f'<div class="pcl-section-title">{html.escape(text["scaffold_check"])}</div>',
+            unsafe_allow_html=True,
+        )
+        if scaffold_summary:
+            st.caption(str(scaffold_summary.get("boundary", "")))
+            metric_cards(
+                st,
+                [
+                    (text["scaffold_status"], str(scaffold_summary.get("status", ""))),
+                    (text["scaffold_issues"], str(scaffold_summary.get("issue_count", 0))),
+                    ("tasks", str(scaffold_summary.get("task_count", 0))),
+                    ("prompts", str(scaffold_summary.get("prompt_file_count", 0))),
+                ],
+            )
+            if scaffold_issue_rows:
+                st.dataframe(scaffold_issue_rows, use_container_width=True)
+            if scaffold_action_rows:
+                st.markdown(
+                    f'<div class="pcl-section-title">{html.escape(text["scaffold_next_actions"])}</div>',
+                    unsafe_allow_html=True,
+                )
+                st.dataframe(scaffold_action_rows, use_container_width=True)
+        else:
+            empty_state(st, text["scaffold_check_missing"], text["scaffold_check_command"])
+
+    if gap_rows:
+        st.markdown(
+            f'<div class="pcl-section-title">{html.escape(text["evidence_gap_diagnosis"])}</div>',
+            unsafe_allow_html=True,
+        )
+        st.dataframe(gap_rows, use_container_width=True)
+    if gap_action_rows:
+        st.markdown(
+            f'<div class="pcl-section-title">{html.escape(text["evidence_gap_actions"])}</div>',
+            unsafe_allow_html=True,
+        )
+        st.dataframe(gap_action_rows, use_container_width=True)
+    if gap_plan_rows:
+        st.markdown(
+            f'<div class="pcl-section-title">{html.escape(text["research_gap_plan"])}</div>',
+            unsafe_allow_html=True,
+        )
+        plan = detail.get("research_gap_plan")
+        plan_dict = plan if isinstance(plan, dict) else {}
+        st.caption(str(plan_dict.get("boundary", "")))
+        st.dataframe(gap_plan_rows, use_container_width=True)
+    if gap_script_rows:
+        st.markdown(
+            f'<div class="pcl-section-title">{html.escape(text["research_gap_scripts"])}</div>',
+            unsafe_allow_html=True,
+        )
+        st.dataframe(gap_script_rows, use_container_width=True)
+    if gap_status_rows:
+        st.markdown(
+            f'<div class="pcl-section-title">{html.escape(text["research_gap_status"])}</div>',
+            unsafe_allow_html=True,
+        )
+        status = detail.get("research_gap_status")
+        status_dict = status if isinstance(status, dict) else {}
+        st.caption(
+            f"{status_dict.get('status', '')}: "
+            f"{status_dict.get('complete_count', 0)}/{status_dict.get('action_count', 0)}"
+        )
+        st.dataframe(gap_status_rows, use_container_width=True)
+
+    _render_external_bridge_section(st, text, bridge)
+
+    st.markdown(
+        f'<div class="pcl-section-title">{html.escape(text["evidence_gate"])}</div>',
+        unsafe_allow_html=True,
+    )
+    if evidence_gate:
+        st.write(f"**{text['evidence_summary']}:** {evidence_gate.get('summary', '')}")
+        gate_rows = evidence_gate_rows(detail)
+        if gate_rows:
+            st.dataframe(gate_rows, use_container_width=True)
+    else:
+        empty_state(st, text["evidence_gate_missing"], text["evidence_gate_command"])
+
+    st.markdown(
+        f'<div class="pcl-section-title">{html.escape(text["evidence_card"])}</div>',
+        unsafe_allow_html=True,
+    )
+    if evidence_dict:
+        st.write(f"**{text['evidence_summary']}:** {evidence_dict.get('summary', '')}")
+        evidence_rows = evidence_card_rows(detail)
+        if evidence_rows:
+            st.dataframe(evidence_rows, use_container_width=True)
+    else:
+        empty_state(st, text["evidence_card_missing"], text["evidence_card_command"])
+
+    st.markdown(
+        f'<div class="pcl-section-title">{html.escape(text["claim_check"])}</div>',
+        unsafe_allow_html=True,
+    )
+    if claim_check:
+        ladder_html = evidence_ladder_html(claim_ladder)
+        if ladder_html:
+            st.markdown(
+                f'<div class="pcl-section-title">{html.escape(text["claim_ladder"])}</div>'
+                + ladder_html,
+                unsafe_allow_html=True,
+            )
+        claim_rows = [
+            {"field": text["claim_check_requested"], "value": claim_check.get("requested_claim", "")},
+            {"field": text["claim_check_status"], "value": claim_check.get("status", "")},
+            {"field": text["claim_check_tier"], "value": claim_check.get("evidence_tier", "")},
+            {"field": text["claim_check_safe"], "value": claim_check.get("safe_claim", "")},
+            {"field": text["claim_check_reason"], "value": claim_check.get("reason", "")},
+            {
+                "field": text["claim_check_next_missing"],
+                "value": ", ".join(str(item) for item in claim_check.get("next_tier_missing", [])),
+            },
+        ]
+        st.dataframe(claim_rows, use_container_width=True)
+    else:
+        empty_state(st, text["claim_check_missing"], text["claim_check_command"])
+
+    st.markdown(f'<div class="pcl-section-title">{html.escape(text["research_diagnostics"])}</div>', unsafe_allow_html=True)
+    st.plotly_chart(
+        research_diagnostic_bar(rows, title=text["research_coverage"]),
+        use_container_width=True,
+    )
+    st.dataframe(rows, use_container_width=True)
+
+    st.markdown(
+        '<div class="pcl-grid">'
+        + paper_card_html(text["soft_hard"], "soft prompt -> hard token projection risk")
+        + paper_card_html(text["hidden_state_input"], "HuggingFace/local hidden-state artifact source")
+        + paper_card_html(text["trajectory_diag"], "hidden-state drift, decay, and turnpike-like signal")
+        + paper_card_html(text["riccati_diag"], "finite-dimensional surrogate stability check")
+        + paper_card_html(text["tv_soft_diag"], "static / time-varying / shuffled / random comparison")
+        + "</div>",
+        unsafe_allow_html=True,
+    )
+    st.info(text["research_boundary"])
+
+
+def _render_research_pipeline(st: Any, text: dict[str, str]) -> None:
+    steps = [
+        (text["tri_split"], "train / validation / withheld"),
+        (text["paired_stats"], "paired CI + permutation test"),
+        (text["soft_hard"], "projection gap"),
+        (text["hidden_state_input"], "HF/local states"),
+        (text["trajectory_diag"], "state trajectory"),
+        (text["riccati_diag"], "surrogate stability"),
+        (text["tv_soft_diag"], "control lane"),
+    ]
+    html_steps = "".join(
+        (
+            '<div class="pcl-pipeline-step">'
+            f"<strong>{html.escape(title)}</strong>"
+            f"<span>{html.escape(caption)}</span>"
+            "</div>"
+        )
+        for title, caption in steps
+    )
+    st.markdown(
+        f'<div class="pcl-section-title">{html.escape(text["research_pipeline"])}</div>'
+        f'<div class="pcl-pipeline">{html_steps}</div>',
+        unsafe_allow_html=True,
+    )
+
+
+def _research_insight_display_rows(rows: list[JsonDict], language: str) -> list[JsonDict]:
+    labels = {
+        "en": {
+            "diagnostic": "Diagnostic",
+            "checks": "Checks",
+            "result": "Result",
+            "interpretation": "Interpretation",
+            "next_action": "Next action",
+        },
+        "zh": {
+            "diagnostic": "诊断",
+            "checks": "检查什么",
+            "result": "当前结果",
+            "interpretation": "说明什么",
+            "next_action": "下一步",
+        },
+    }
+    selected = labels["zh"] if language == "zh" else labels["en"]
+    ordered_keys = ["diagnostic", "checks", "result", "interpretation", "next_action"]
+    return [
+        {selected[key]: str(row.get(key, "")) for key in ordered_keys}
+        for row in rows
+    ]
+
+
+def _market_map_display_rows(rows: list[JsonDict], language: str) -> list[JsonDict]:
+    labels = {
+        "en": {
+            "tool": "Tool",
+            "strong_lane": "Strong lane",
+            "pcl_should_learn": "What PCL should learn",
+            "pcl_still_owns": "What PCL still owns",
+            "pcl_product_move": "PCL product move",
+            "priority": "Priority",
+            "status": "Status",
+        },
+        "zh": {
+            "tool": "工具",
+            "strong_lane": "强项",
+            "pcl_should_learn": "PCL 应该学习什么",
+            "pcl_still_owns": "PCL 仍然负责什么",
+            "pcl_product_move": "PCL 下一步产品动作",
+            "priority": "优先级",
+            "status": "状态",
+        },
+    }
+    selected = labels["zh"] if language == "zh" else labels["en"]
+    ordered_keys = [
+        "tool",
+        "strong_lane",
+        "pcl_should_learn",
+        "pcl_still_owns",
+        "pcl_product_move",
+        "priority",
+        "status",
+    ]
+    return [
+        {
+            selected[key]: _market_map_display_value(
+                tool=str(row.get("tool", "")),
+                key=key,
+                value=row.get(key, ""),
+                language=language,
+            )
+            for key in ordered_keys
+        }
+        for row in rows
+    ]
+
+
+def _render_market_readiness_summary(
+    st: Any,
+    readiness: JsonDict,
+    language: str,
+) -> None:
+    status = str(readiness.get("status") or "")
+    positioning = str(readiness.get("recommended_positioning") or "")
+    st.markdown(
+        '<div class="pcl-grid">'
+        + stat_card_html(
+            "Status" if language != "zh" else "状态",
+            status,
+            "early signal" if language != "zh" else "早期信号",
+        )
+        + stat_card_html(
+            "Next moves" if language != "zh" else "下一步动作",
+            str(len(_market_readiness_next_move_rows(readiness, language))),
+            "P1 / P2",
+        )
+        + "</div>",
+        unsafe_allow_html=True,
+    )
+    if positioning:
+        st.caption(positioning)
+    columns = st.columns(2)
+    with columns[0]:
+        st.markdown("**Best first users**" if language != "zh" else "**优先用户**")
+        for item in _string_items(readiness.get("best_first_users")):
+            st.markdown(f"- {item}")
+    with columns[1]:
+        st.markdown("**Do not build**" if language != "zh" else "**暂时不要做**")
+        for item in _string_items(readiness.get("do_not_build")):
+            st.markdown(f"- {item}")
+    next_moves = _market_readiness_next_move_rows(readiness, language)
+    if next_moves:
+        st.dataframe(next_moves, use_container_width=True)
+
+
+def _market_readiness_next_move_rows(
+    readiness: JsonDict,
+    language: str,
+) -> list[JsonDict]:
+    labels = {
+        "en": {"priority": "Priority", "tool": "Tool", "move": "Next move"},
+        "zh": {"priority": "优先级", "tool": "工具", "move": "下一步动作"},
+    }
+    selected = labels["zh"] if language == "zh" else labels["en"]
+    raw_moves = readiness.get("next_moves")
+    if not isinstance(raw_moves, list):
+        return []
+    rows: list[JsonDict] = []
+    for item in raw_moves:
+        if not isinstance(item, dict):
+            continue
+        rows.append(
+            {
+                selected["priority"]: _market_map_display_value(
+                    tool=str(item.get("tool", "")),
+                    key="priority",
+                    value=item.get("priority", ""),
+                    language=language,
+                ),
+                selected["tool"]: str(item.get("tool", "")),
+                selected["move"]: str(item.get("move", "")),
+            }
+        )
+    return rows
+
+
+def _string_items(value: object) -> list[str]:
+    if not isinstance(value, list):
+        return []
+    return [str(item) for item in value if str(item)]
+
+
+def _market_map_display_value(
+    *,
+    tool: str,
+    key: str,
+    value: object,
+    language: str,
+) -> str:
+    raw = str(value or "")
+    if key == "priority":
+        priority_labels = {
+            "P1": {"en": "P1 - near-term", "zh": "P1 - 近期优先"},
+            "P2": {"en": "P2 - next", "zh": "P2 - 下一阶段"},
+            "P3": {"en": "P3 - later", "zh": "P3 - 后续观察"},
+        }
+        mapped_priority = priority_labels.get(raw)
+        if mapped_priority:
+            return mapped_priority["zh" if language == "zh" else "en"]
+        return raw
+    if key == "status":
+        labels = {
+            "positioning_only_not_imported": {
+                "en": "Positioning only (not imported)",
+                "zh": "定位参考 - 未导入",
+            },
+            "historical_sunset_reference_not_imported": {
+                "en": "Historical/sunset reference (not imported)",
+                "zh": "历史/已停止服务参考 - 未导入",
+            },
+        }
+        mapped = labels.get(raw)
+        if mapped:
+            return mapped["zh" if language == "zh" else "en"]
+        return raw
+    if language != "zh" or key == "tool":
+        return raw
+    zh_rows = {
+        "Braintrust": {
+            "strong_lane": "评测数据集、实验、trace 与人工 review 工作流。",
+            "pcl_should_learn": "快速实验体验和适合 reviewer 的对比页面。",
+            "pcl_still_owns": "prompt 优化主张的论文诊断证据。",
+            "pcl_product_move": "优化 reviewer 工作流和实验对比体验。",
+        },
+        "Arize Phoenix": {
+            "strong_lane": "开源 observability、trace、评测和检索分析。",
+            "pcl_should_learn": "trace-first 调试和丰富的本地排查视图。",
+            "pcl_still_owns": "prompt-only 有效性、控制论诊断和 soft-hard 风险报告。",
+            "pcl_product_move": "深化 trace / audit UI，但不扩张成完整 tracing 平台。",
+        },
+        "OpenAI Evals": {
+            "strong_lane": "标准化评测 harness 和可复用 benchmark 定义。",
+            "pcl_should_learn": "可移植 eval schema，以及清楚的任务/结果分离。",
+            "pcl_still_owns": "tri-split 协议、prompt 身份和围绕 eval 输出的证据卡。",
+            "pcl_product_move": "保持 import 与 scaffold 契约对 eval harness 友好。",
+        },
+        "Humanloop": {
+            "strong_lane": "历史 prompt 管理与评测工作流参考。",
+            "pcl_should_learn": "prompt 生命周期、registry 语言和 review 工作流。",
+            "pcl_still_owns": "本地研究诊断和 provenance-first 导出 artifact。",
+            "pcl_product_move": "保持本地 registry 语言清楚，不做托管平台膨胀。",
+        },
+    }
+    return zh_rows.get(tool, {}).get(key, raw)
+
+
+def _render_external_bridge_section(
+    st: Any,
+    text: dict[str, str],
+    bridge: JsonDict,
+) -> None:
+    st.markdown(
+        f'<div class="pcl-section-title">{html.escape(text["ecosystem_bridge"])}</div>',
+        unsafe_allow_html=True,
+    )
+    if not bridge:
+        empty_state(st, text["ecosystem_bridge_missing"], "pcl evidence-from --help")
+        return
+    rows = [
+        {"field": text["external_tools"], "value": ", ".join(_strings(bridge.get("detected_tools")))},
+        {"field": text["recommendation"], "value": bridge.get("recommendation", "")},
+        {"field": text["comparison_validity"], "value": bridge.get("validity", "")},
+        {"field": text["claim_check_status"], "value": bridge.get("claim_check_status", "")},
+        {
+            "field": text["claim_check_requested"],
+            "value": bridge.get("claim_check_requested_claim", ""),
+        },
+        {
+            "field": text["pcl_added_evidence"],
+            "value": ", ".join(_strings(bridge.get("pcl_added_evidence"))),
+        },
+        {
+            "field": text["missing_evidence"],
+            "value": ", ".join(_strings(bridge.get("missing_evidence"))),
+        },
+        {
+            "field": text["bridge_next_actions"],
+            "value": " | ".join(_strings(bridge.get("next_actions"))),
+        },
+    ]
+    st.dataframe(rows, use_container_width=True)
+
+
+def _render_tool_choice_advisor(st: Any, text: dict[str, str], language: str) -> None:
+    """Render a small adjacent-tool advisor in the research overview."""
+
+    st.markdown(
+        f'<div class="pcl-section-title">{html.escape(text["ecosystem_choice_title"])}</div>',
+        unsafe_allow_html=True,
+    )
+    default_need = "prompt writing" if language == "en" else "prompt 写作"
+    if hasattr(st, "text_input"):
+        need = str(
+            st.text_input(
+                text["tool_choice_need"],
+                default_need,
+                placeholder=text["tool_choice_placeholder"],
+                key="tool-choice-need",
+            )
+        ).strip()
+    else:
+        need = default_need
+    if not need:
+        return
+    recommendation = choose_tool_for_need(need)
+    pcl_adds = (
+        recommendation.get("pcl_adds_zh")
+        if language == "zh"
+        else recommendation.get("pcl_adds")
+    ) or recommendation.get("pcl_adds", "")
+    why = (
+        recommendation.get("why_zh") if language == "zh" else recommendation.get("why")
+    ) or recommendation.get("why", "")
+    avoid = (
+        recommendation.get("avoid_zh") if language == "zh" else recommendation.get("avoid")
+    ) or recommendation.get("avoid", "")
+    action_key = "market_gap_action_zh" if language == "zh" else "market_gap_action"
+    selected_action = recommendation.get(action_key)
+    selected_action = selected_action if isinstance(selected_action, dict) else {}
+    use_first = _tool_choice_use_first(recommendation, language)
+    matched_lane = _tool_choice_matched_lane(recommendation, language)
+    st.markdown(
+        '<div class="pcl-grid">'
+        + stat_card_html(
+            text["tool_choice_recommendation"],
+            use_first,
+            matched_lane,
+        )
+        + stat_card_html(
+            "PCL",
+            str(pcl_adds),
+            str(recommendation.get("confidence") or ""),
+        )
+        + "</div>",
+        unsafe_allow_html=True,
+    )
+    rows = [
+        {"field": text["tool_choice_why"], "value": why},
+        {
+            "field": text["tool_choice_gap_command"],
+            "value": str(selected_action.get("command") or ""),
+        },
+        {
+            "field": text["tool_choice_gap_open"],
+            "value": str(selected_action.get("open") or ""),
+        },
+        {"field": text["tool_choice_avoid"], "value": avoid},
+    ]
+    st.dataframe(rows, use_container_width=True)
+    commands = recommendation.get("commands")
+    command_list = [str(command) for command in commands] if isinstance(commands, list) else []
+    if command_list:
+        st.caption(text["tool_choice_commands"])
+        st.code("\n".join(command_list), language="bash")
+    st.caption(text["adoption_path_title"])
+    st.dataframe(
+        [
+            {
+                text["adoption_path_minute"]: row.get("minute", ""),
+                text["adoption_path_action"]: row.get("action", ""),
+                text["adoption_path_result"]: row.get("result", ""),
+            }
+            for row in adoption_path_rows(language)
+        ],
+        use_container_width=True,
+    )
+    gap_rows = [
+        {
+            text["tool_choice_gap_input"]: row.get("input", ""),
+            text["tool_choice_gap_gap"]: row.get("gap", ""),
+            text["tool_choice_gap_command"]: row.get("command", ""),
+            text["tool_choice_gap_open"]: row.get("open", ""),
+        }
+        for row in market_gap_action_rows(language=language)
+    ]
+    if gap_rows:
+        st.caption(text["tool_choice_gap_actions"])
+        st.dataframe(gap_rows, use_container_width=True)
+    if hasattr(st, "download_button"):
+        st.download_button(
+            text["tool_choice_download_json"],
+            data=json.dumps(recommendation, ensure_ascii=False, indent=2, sort_keys=True),
+            file_name="tool_choice.json",
+            mime="application/json",
+        )
+        st.download_button(
+            text["tool_choice_download_md"],
+            data=render_tool_choice_markdown(recommendation, language=language),
+            file_name="tool_choice.md",
+            mime="text/markdown",
+        )
+
+
+def _tool_choice_use_first(recommendation: JsonDict, language: str) -> str:
+    if language == "zh":
+        return str(recommendation.get("use_first_zh") or recommendation.get("use_first") or "")
+    return str(recommendation.get("use_first") or "")
+
+
+def _tool_choice_matched_lane(recommendation: JsonDict, language: str) -> str:
+    lane_id = str(recommendation.get("matched", "") or "")
+    label = (
+        str(
+            recommendation.get("matched_label_zh")
+            or recommendation.get("matched_label")
+            or lane_id
+        )
+        if language == "zh"
+        else str(recommendation.get("matched_label") or lane_id)
+    )
+    return f"{label} ({lane_id})" if lane_id and label != lane_id else label
+
+
+def _render_tutorial_tab(st: Any, text: dict[str, str], language: str) -> None:
+    st.markdown(text["tutorial_intro"])
+    st.markdown(
+        f'<div class="pcl-section-title">{html.escape(text["onboarding_title"])}</div>',
+        unsafe_allow_html=True,
+    )
+    st.dataframe(
+        [
+            {
+                text["onboarding_goal"]: row.get("goal", ""),
+                text["onboarding_start"]: row.get("start", ""),
+                text["onboarding_next"]: row.get("next", ""),
+            }
+            for row in onboarding_paths(language)
+        ],
+        use_container_width=True,
+    )
+    st.markdown(
+        f'<div class="pcl-section-title">{html.escape(text["ecosystem_choice_title"])}</div>',
+        unsafe_allow_html=True,
+    )
+    st.caption(text["adoption_path_title"])
+    st.dataframe(
+        [
+            {
+                text["adoption_path_minute"]: row.get("minute", ""),
+                text["adoption_path_action"]: row.get("action", ""),
+                text["adoption_path_result"]: row.get("result", ""),
+            }
+            for row in adoption_path_rows(language)
+        ],
+        use_container_width=True,
+    )
+    st.dataframe(
+        [
+            {
+                text["ecosystem_choice_start"]: row.get("start", ""),
+                text["ecosystem_choice_use"]: row.get("tool", ""),
+                text["ecosystem_choice_add"]: row.get("pcl", ""),
+            }
+            for row in ecosystem_choice_rows(language)
+        ],
+        use_container_width=True,
+    )
+    overview = _tutorial_asset_path("overview", language)
+    if overview.exists():
+        _render_image(st, overview)
+    _render_tutorial_gallery(st, language)
+
+    for section in tutorial_sections(language):
+        title = str(section.get("title", ""))
+        expanded = section.get("id") in {"guard", "workflows"}
+        with st.expander(title, expanded=expanded):
+            screenshot_key = str(section.get("screenshot") or "workflows")
+            image_path = _tutorial_screenshot_path(screenshot_key, language)
+            if image_path.exists():
+                _render_image(st, image_path)
+            steps = section.get("steps") or []
+            if isinstance(steps, list) and steps:
+                st.markdown(f"**{text['tutorial_steps']}**")
+                for index, step in enumerate(steps, start=1):
+                    st.markdown(f"{index}. {step}")
+            st.markdown(f"**{text['tutorial_operation']}**: {section.get('operation', '')}")
+            st.markdown(f"**{text['tutorial_result']}**: {section.get('result', '')}")
+            st.markdown(f"**{text['tutorial_meaning']}**: {section.get('meaning', '')}")
+            st.markdown(f"**{text['tutorial_next_step']}**: {section.get('next_step', '')}")
+            st.caption(text["tutorial_command"])
+            st.code(str(section.get("command", "")), language="bash")
+
+
+def _render_tutorial_gallery(st: Any, language: str) -> None:
+    columns = st.columns(2)
+    for index, item in enumerate(tutorial_gallery_items(language)):
+        with columns[index % 2]:
+            st.markdown(f"**{item['title']}**")
+            path = _tutorial_screenshot_path(str(item["image"]), language)
+            if path.exists():
+                _render_image(st, path)
+
+
+def _render_svg(st: Any, path: Path) -> None:
+    _render_image(st, path)
+
+
+def _render_image(st: Any, path: Path) -> None:
+    mime_type = "image/png" if path.suffix.lower() == ".png" else "image/svg+xml"
+    encoded = base64.b64encode(path.read_bytes()).decode("ascii")
+    st.markdown(
+        (
+            f'<img src="data:{mime_type};base64,{encoded}" '
+            'style="width: 100%; max-width: 1100px; border-radius: 8px;" '
+            f'alt="{path.stem}">'
+        ),
+        unsafe_allow_html=True,
+    )
+
+
+def _render_workflows_tab(
+    st: Any,
+    text: dict[str, str],
+    language: str,
+    policy_path: Path | None,
+    detail: JsonDict,
+    runs_dir: Path,
+    execution_mode: str,
+    overwrite: bool,
+    allow_external_outputs: bool,
+) -> None:
+    run_path = Path(str(detail.get("path") or runs_dir / "quick"))
+    st.info(text["write_boundary"])
+    demo_confirmed = _confirm_checkbox(st, text, execution_mode, "wf_demo_confirm")
+    if st.button(text["create_demo"], key="wf_create_demo"):
+        _render_workflow_result(
+            st,
+            text,
+            lambda: create_demo_artifacts_workflow(
+                runs_dir=runs_dir,
+                execution_mode=execution_mode,
+                confirmed=demo_confirmed,
+                overwrite=overwrite,
+                safe_root=runs_dir,
+                allow_external_outputs=allow_external_outputs,
+            ),
+        )
+    with st.expander(text["guard_workflow"], expanded=True):
+        prompt = st.text_area(
+            text["prompt"],
+            "Fix this bug in auth/session.py and run tests.",
+            height=100,
+            key="wf_guard_prompt",
+        )
+        out_dir = Path(st.text_input(text["out_dir"], str(runs_dir / "guard"), key="wf_guard_out"))
+        confirmed = _confirm_checkbox(st, text, execution_mode, "wf_guard_confirm")
+        if st.button(text["run_action"], key="wf_guard_run"):
+            _render_workflow_result(
+                st,
+                text,
+                lambda: run_guard_workflow(
+                    prompt=prompt,
+                    out_dir=out_dir,
+                    execution_mode=execution_mode,
+                    confirmed=confirmed,
+                    overwrite=overwrite,
+                    policy_path=policy_path,
+                    language=language,
+                    safe_root=runs_dir,
+                    allow_external_outputs=allow_external_outputs,
+                ),
+            )
+
+    with st.expander(text["analyze_workflow"]):
+        data_path = Path(st.text_input(text["data_path"], "examples/tasks.jsonl", key="wf_data"))
+        baseline_path = Path(
+            st.text_input(
+                text["baseline_predictions"],
+                "examples/predictions_baseline.jsonl",
+                key="wf_baseline",
+            )
+        )
+        candidate_path = Path(
+            st.text_input(
+                text["candidate_predictions"],
+                "examples/predictions_candidate.jsonl",
+                key="wf_candidate",
+            )
+        )
+        out_dir = Path(
+            st.text_input(text["out_dir"], str(runs_dir / "quick"), key="wf_analyze_out")
+        )
+        metric = st.text_input(text["metric"], "exact_match", key="wf_metric")
+        confirmed = _confirm_checkbox(st, text, execution_mode, "wf_analyze_confirm")
+        if st.button(text["run_action"], key="wf_analyze_run"):
+            _render_workflow_result(
+                st,
+                text,
+                lambda: run_analyze_workflow(
+                    data_path=data_path,
+                    baseline_predictions_path=baseline_path,
+                    candidate_predictions_path=candidate_path,
+                    out_dir=out_dir,
+                    execution_mode=execution_mode,
+                    confirmed=confirmed,
+                    overwrite=overwrite,
+                    policy_path=policy_path,
+                    metric=metric,
+                    safe_root=runs_dir,
+                    allow_external_outputs=allow_external_outputs,
+                ),
+            )
+
+    with st.expander(text["gate_workflow"]):
+        selected_run_dir = Path(st.text_input(text["run_dir"], str(run_path), key="wf_gate_run"))
+        gate_policy = Path(
+            st.text_input(
+                text["policy_path"],
+                str(policy_path or Path("examples/gate.policy.yaml")),
+                key="wf_gate_policy",
+            )
+        )
+        confirmed = _confirm_checkbox(st, text, execution_mode, "wf_gate_confirm")
+        if st.button(text["run_action"], key="wf_gate_run_button"):
+            _render_workflow_result(
+                st,
+                text,
+                lambda: run_gate_workflow(
+                    run_dir=selected_run_dir,
+                    policy_path=gate_policy,
+                    execution_mode=execution_mode,
+                    confirmed=confirmed,
+                    overwrite=overwrite,
+                    safe_root=runs_dir,
+                    allow_external_outputs=allow_external_outputs,
+                ),
+            )
+
+    with st.expander(text["evidence_card_workflow"]):
+        selected_run_dir = Path(
+            st.text_input(text["run_dir"], str(run_path), key="wf_evidence_run")
+        )
+        markdown_path = _optional_path(
+            st.text_input(
+                text["markdown_path"],
+                str(selected_run_dir / "evidence_card.md"),
+                key="wf_evidence_md",
+            )
+        )
+        json_path = _optional_path(
+            st.text_input(
+                text["json_path"],
+                str(selected_run_dir / "evidence_card.json"),
+                key="wf_evidence_json",
+            )
+        )
+        confirmed = _confirm_checkbox(st, text, execution_mode, "wf_evidence_confirm")
+        if st.button(text["run_action"], key="wf_evidence_run_button"):
+            _render_workflow_result(
+                st,
+                text,
+                lambda: run_evidence_card_workflow(
+                    run_dir=selected_run_dir,
+                    markdown_path=markdown_path,
+                    json_path=json_path,
+                    execution_mode=execution_mode,
+                    confirmed=confirmed,
+                    overwrite=overwrite,
+                    safe_root=runs_dir,
+                    allow_external_outputs=allow_external_outputs,
+                ),
+            )
+
+    with st.expander(text["import_workflow"]):
+        tool_label = str(
+            st.selectbox(
+                text["external_tool"],
+                _choice_labels("import_tool", language),
+                key="wf_import_tool",
+            )
+        )
+        import_tool = str(_choice_value("import_tool", tool_label, language))
+        input_path = Path(
+            st.text_input(
+                text["external_input"],
+                "results.json",
+                key="wf_import_input",
+            )
+        )
+        out_dir = Path(
+            st.text_input(
+                text["out_dir"],
+                str(runs_dir / "from-external"),
+                key="wf_import_out",
+            )
+        )
+        columns = st.columns(4)
+        prompt_id = columns[0].text_input(text["prompt_id"], "", key="wf_import_prompt_id")
+        name_filter = columns[1].text_input(text["name_filter"], "", key="wf_import_name")
+        experiment_filter = columns[2].text_input(
+            text["experiment_filter"],
+            "",
+            key="wf_import_experiment",
+        )
+        score_name = columns[3].text_input(text["score_name"], "", key="wf_import_score")
+        columns = st.columns(4)
+        provider = columns[0].text_input(text["provider"], "", key="wf_import_provider")
+        model = columns[1].text_input(text["model"], "", key="wf_import_model")
+        method = columns[2].text_input(text["method"], "", key="wf_import_method")
+        asset_id = columns[3].text_input(text["asset_id"], "", key="wf_import_asset_id")
+        confirmed = _confirm_checkbox(st, text, execution_mode, "wf_import_confirm")
+        if st.button(text["run_action"], key="wf_import_run_button"):
+            _render_workflow_result(
+                st,
+                text,
+                lambda: run_import_external_workflow(
+                    tool=import_tool,
+                    input_path=input_path,
+                    out_dir=out_dir,
+                    execution_mode=execution_mode,
+                    confirmed=confirmed,
+                    overwrite=overwrite,
+                    prompt_id=prompt_id.strip() or None,
+                    name=name_filter.strip() or None,
+                    experiment=experiment_filter.strip() or None,
+                    score_name=score_name.strip() or None,
+                    provider=provider.strip() or None,
+                    model=model.strip() or None,
+                    method=method.strip() or None,
+                    asset_id=asset_id.strip() or None,
+                    safe_root=runs_dir,
+                    allow_external_outputs=allow_external_outputs,
+                ),
+            )
+
+    with st.expander(text["external_evidence_workflow"]):
+        tool_label = str(
+            st.selectbox(
+                text["external_tool"],
+                _choice_labels("external_tool", language),
+                key="wf_external_tool",
+            )
+        )
+        external_tool = str(_choice_value("external_tool", tool_label, language))
+        baseline_input = Path(
+            st.text_input(
+                text["baseline_input"],
+                "results.json",
+                key="wf_external_baseline_input",
+            )
+        )
+        candidate_input = Path(
+            st.text_input(
+                text["candidate_input"],
+                "results.json",
+                key="wf_external_candidate_input",
+            )
+        )
+        out_dir = Path(
+            st.text_input(
+                text["out_dir"],
+                str(runs_dir / "external-evidence"),
+                key="wf_external_out",
+            )
+        )
+        columns = st.columns(3)
+        baseline_prompt_id = columns[0].text_input(
+            text["baseline_prompt_id"],
+            "baseline",
+            key="wf_external_baseline_prompt_id",
+        )
+        candidate_prompt_id = columns[1].text_input(
+            text["candidate_prompt_id"],
+            "candidate",
+            key="wf_external_candidate_prompt_id",
+        )
+        score_name = columns[2].text_input(
+            text["score_name"],
+            "",
+            key="wf_external_score_name",
+        )
+        columns = st.columns(3)
+        provider = columns[0].text_input(text["provider"], "", key="wf_external_provider")
+        model = columns[1].text_input(text["model"], "", key="wf_external_model")
+        split_hash = columns[2].text_input(text["split_hash"], "", key="wf_external_split_hash")
+        columns = st.columns(2)
+        bootstrap_samples = int(
+            columns[0].number_input(
+                text["bootstrap_samples"],
+                min_value=1,
+                value=100,
+                key="wf_external_bootstrap",
+            )
+        )
+        permutation_samples = int(
+            columns[1].number_input(
+                text["permutation_samples"],
+                min_value=1,
+                value=100,
+                key="wf_external_permutation",
+            )
+        )
+        confirmed = _confirm_checkbox(st, text, execution_mode, "wf_external_confirm")
+        if st.button(text["run_action"], key="wf_external_run_button"):
+            _render_workflow_result(
+                st,
+                text,
+                lambda: run_external_evidence_workflow(
+                    tool=external_tool,
+                    baseline_input=baseline_input,
+                    candidate_input=candidate_input,
+                    out_dir=out_dir,
+                    execution_mode=execution_mode,
+                    confirmed=confirmed,
+                    overwrite=overwrite,
+                    score_name=score_name.strip() or None,
+                    provider=provider.strip() or None,
+                    model=model.strip() or None,
+                    baseline_prompt_id=baseline_prompt_id.strip() or None,
+                    candidate_prompt_id=candidate_prompt_id.strip() or None,
+                    split_hash=split_hash.strip() or None,
+                    bootstrap_samples=bootstrap_samples,
+                    permutation_samples=permutation_samples,
+                    safe_root=runs_dir,
+                    allow_external_outputs=allow_external_outputs,
+                ),
+            )
+
+    with st.expander(text["audit_workflow"]):
+        repo = Path(st.text_input(text["repo"], ".", key="wf_audit_repo"))
+        before = st.text_input(text["before"], "HEAD~1", key="wf_audit_before")
+        after = st.text_input(text["after"], "HEAD", key="wf_audit_after")
+        out_dir = Path(st.text_input(text["out_dir"], str(runs_dir / "audit"), key="wf_audit_out"))
+        tests_run = _split_lines(st.text_area(text["tests_run"], "", key="wf_tests_run"))
+        tests_passed_label = str(
+            st.selectbox(
+                text["tests_passed"],
+                _choice_labels("tests_passed", language),
+                key="wf_tests_passed",
+            )
+        )
+        tests_passed = _optional_bool_label(
+            _choice_value("tests_passed", tests_passed_label, language)
+        )
+        confirmed = _confirm_checkbox(st, text, execution_mode, "wf_audit_confirm")
+        if st.button(text["run_action"], key="wf_audit_run"):
+            _render_workflow_result(
+                st,
+                text,
+                lambda: run_audit_workflow(
+                    repo=repo,
+                    before=before,
+                    after=after,
+                    out_dir=out_dir,
+                    execution_mode=execution_mode,
+                    confirmed=confirmed,
+                    overwrite=overwrite,
+                    tests_run=tests_run,
+                    tests_passed=tests_passed,
+                    safe_root=runs_dir,
+                    allow_external_outputs=allow_external_outputs,
+                ),
+            )
+
+    with st.expander(text["agent_run_workflow"]):
+        selected_run_dir = Path(st.text_input(text["run_dir"], str(run_path), key="wf_agent_run"))
+        audit_dir = Path(
+            st.text_input(text["audit_dir"], str(runs_dir / "audit"), key="wf_agent_audit")
+        )
+        agent = st.text_input(text["agent"], "codex", key="wf_agent")
+        out_path = Path(
+            st.text_input(
+                text["agent_run_path"],
+                str(selected_run_dir / "agent_run.json"),
+                key="wf_agent_out",
+            )
+        )
+        confirmed = _confirm_checkbox(st, text, execution_mode, "wf_agent_confirm")
+        if st.button(text["run_action"], key="wf_agent_run_button"):
+            _render_workflow_result(
+                st,
+                text,
+                lambda: build_agent_run_workflow(
+                    run_dir=selected_run_dir,
+                    audit_dir=audit_dir,
+                    agent=agent,
+                    out_path=out_path,
+                    execution_mode=execution_mode,
+                    confirmed=confirmed,
+                    overwrite=overwrite,
+                    policy=str(policy_path) if policy_path is not None else None,
+                    safe_root=runs_dir,
+                    allow_external_outputs=allow_external_outputs,
+                ),
+            )
+
+    with st.expander(text["pr_summary_workflow"]):
+        audit_path = _optional_path(
+            st.text_input(
+                text["audit_dir"],
+                str(runs_dir / "audit" / "audit_result.json"),
+                key="wf_pr_audit",
+            )
+        )
+        gate_path = _optional_path(
+            st.text_input(
+                text["run_dir"],
+                str(run_path / "gate_result.json"),
+                key="wf_pr_gate",
+            )
+        )
+        agent_run_path = _optional_path(
+            st.text_input(
+                text["agent_run_path"],
+                str(run_path / "agent_run.json"),
+                key="wf_pr_agent",
+            )
+        )
+        markdown_path = _optional_path(
+            st.text_input(text["markdown_path"], str(run_path / "pr_summary.md"), key="wf_pr_md")
+        )
+        json_path = _optional_path(
+            st.text_input(text["json_path"], str(run_path / "pr_summary.json"), key="wf_pr_json")
+        )
+        confirmed = _confirm_checkbox(st, text, execution_mode, "wf_pr_confirm")
+        if st.button(text["run_action"], key="wf_pr_run"):
+            _render_workflow_result(
+                st,
+                text,
+                lambda: run_pr_summary_workflow(
+                    audit_path=audit_path,
+                    gate_path=gate_path,
+                    agent_run_path=agent_run_path,
+                    markdown_path=markdown_path,
+                    json_path=json_path,
+                    execution_mode=execution_mode,
+                    confirmed=confirmed,
+                    overwrite=overwrite,
+                    safe_root=runs_dir,
+                    allow_external_outputs=allow_external_outputs,
+                ),
+            )
+
+    with st.expander(text["export_workflow"]):
+        selected_run_dir = Path(st.text_input(text["run_dir"], str(run_path), key="wf_zip_run"))
+        zip_path = Path(
+            st.text_input(text["zip_path"], str(selected_run_dir / "report.zip"), key="wf_zip")
+        )
+        confirmed = _confirm_checkbox(st, text, execution_mode, "wf_zip_confirm")
+        if st.button(text["run_action"], key="wf_zip_run_button"):
+            _render_workflow_result(
+                st,
+                text,
+                lambda: export_report_zip_workflow(
+                    run_dir=selected_run_dir,
+                    zip_path=zip_path,
+                    execution_mode=execution_mode,
+                    confirmed=confirmed,
+                    overwrite=overwrite,
+                    safe_root=runs_dir,
+                    allow_external_outputs=allow_external_outputs,
+                ),
+            )
+
+
+def _render_guard_tab(
+    st: Any,
+    text: dict[str, str],
+    language: str,
+    policy_path: Path | None,
+    runs_dir: Path,
+    run_demo: bool = False,
+    overwrite: bool = False,
+    persistence_enabled: bool = True,
+) -> None:
+    prompt = st.text_area(
+        text["prompt"],
+        "Fix this bug in auth/session.py and run tests.",
+        height=140,
+    )
+    columns = st.columns(4)
+    profile_label = str(
+        columns[0].selectbox(text["profile"], _choice_labels("profile", language))
+    )
+    mode_label = str(
+        columns[1].selectbox(text["mode"], _choice_labels("guard_mode", language))
+    )
+    token_mode_label = str(
+        columns[2].selectbox(text["token_mode"], _choice_labels("token_mode", language))
+    )
+    profile = _choice_value("profile", profile_label, language)
+    mode = _choice_value("guard_mode", mode_label, language)
+    token_mode = _choice_value("token_mode", token_mode_label, language)
+    max_tokens_raw = columns[3].number_input(text["max_tokens"], min_value=0, value=0)
+    max_tokens = int(max_tokens_raw) if max_tokens_raw else None
+    if persistence_enabled:
+        save_guard = bool(st.checkbox(text["save_guard"], value=False))
+        save_dir = Path(
+            st.text_input(
+                text["save_guard_dir"],
+                str(runs_dir / "guard-ui"),
+                disabled=not save_guard,
+            )
+        )
+    else:
+        save_guard = False
+        save_dir = runs_dir / "guard-ui"
+        st.caption(HF_DEMO_TEXT[language]["guard_memory"])
+    if st.button(text["run_guard"], type="primary") or run_demo:
+        result = guard_prompt(
+            prompt,
+            context=load_prompt_context(None),
+            mode=str(mode),
+            profile=str(profile),
+            token_mode=str(token_mode),
+            max_tokens=max_tokens,
+            language=language,
+            policy_path=policy_path,
+        ).to_json()
+        metric_cards(
+            st,
+            [
+                (text["decision"], result.get("action")),
+                (text["risk"], result.get("risk_level")),
+                (text["review"], result.get("required_review")),
+            ],
+        )
+        st.markdown(badge(text["categories"], ", ".join(_strings(result.get("risk_categories")))))
+        st.markdown(badge(text["violations"], len(_list(result.get("policy_violations")))))
+        categories = _category_count(_strings(result.get("risk_categories")))
+        st.plotly_chart(
+            risk_category_bar(
+                categories,
+                title=text["risk_chart"],
+                category_label=text["category"],
+                count_label=text["count"],
+                none_label=text["none"],
+            ),
+            use_container_width=True,
+        )
+        st.subheader(text["token_cost"])
+        st.json(result.get("token_report", {}))
+        st.subheader(text["diff"])
+        st.code(prompt_diff(prompt, str(result.get("improved_prompt", ""))), language="diff")
+        st.text_area(text["guarded_prompt"], str(result.get("improved_prompt", "")), height=180)
+        downloads = guard_download_payloads(result)
+        download_cols = st.columns(2)
+        download_cols[0].download_button(
+            text["download_guard_json"],
+            downloads["guard_result.json"],
+            file_name="guard_result.json",
+            mime="application/json",
+        )
+        download_cols[1].download_button(
+            text["download_improved_prompt"],
+            downloads["improved_prompt.txt"],
+            file_name="improved_prompt.txt",
+            mime="text/plain",
+        )
+        if save_guard:
+            outputs = [
+                save_dir / "guard_result.json",
+                save_dir / "improved_prompt.txt",
+                save_dir / "guarded_prompt.txt",
+            ]
+            existing = [path for path in outputs if path.exists()]
+            if existing and not overwrite:
+                st.warning("Output artifacts already exist; enable overwrite to replace them.")
+            else:
+                written = save_guard_outputs(result, out_dir=save_dir)
+                st.success(f"{text['saved_guard']}: {', '.join(str(path) for path in written)}")
+
+
+def _render_report_tab(st: Any, text: dict[str, str], detail: JsonDict) -> None:
+    if not detail.get("has_artifacts"):
+        empty_state(st, text["empty_run"], str(detail.get("empty_state", "")))
+        return
+    explanation = _dict(detail.get("explanation"))
+    gate = _dict(detail.get("gate"))
+    validity = _dict(detail.get("comparison_validity"))
+    comparison = _dict(detail.get("first_comparison")) or first_comparison(
+        _dict(detail.get("stats"))
+    )
+    metric_cards(
+        st,
+        [
+            (
+                text["recommendation"],
+                _recommendation_label(explanation.get("deployment_recommendation")),
+            ),
+            (text["gate"], gate.get("status", "-")),
+            (text["candidate_score"], detail.get("candidate_score")),
+            (text["comparison_validity"], validity.get("validity", "-")),
+            (text["prompt_only"], validity.get("prompt_only_comparison", "-")),
+        ],
+    )
+    metric_cards(
+        st,
+        [
+            (text["mean_delta"], comparison.get("mean_delta")),
+            (text["p_value"], comparison.get("permutation_p_value")),
+        ],
+    )
+    if comparison:
+        st.plotly_chart(
+            score_delta_ci(comparison, title=text["score_ci"], mean_label=text["mean_delta"]),
+            use_container_width=True,
+        )
+    if validity:
+        issues = [
+            *_list(validity.get("blocking_issues")),
+            *_list(validity.get("review_items")),
+        ]
+        if issues:
+            st.warning("\n".join(str(issue) for issue in issues))
+    rows = slice_rows(detail)
+    if rows:
+        st.plotly_chart(
+            slice_score_heatmap(
+                rows,
+                title=text["slice_scores"],
+                baseline_label=text["baseline"],
+                candidate_label=text["candidate"],
+            ),
+            use_container_width=True,
+        )
+        st.dataframe(rows, use_container_width=True)
+    st.subheader(text["model_provenance"])
+    rows = model_rows(detail)
+    if rows:
+        st.dataframe(rows, use_container_width=True)
+    else:
+        st.info(text["no_model"])
+
+
+def _render_model_drift_tab(st: Any, text: dict[str, str], detail: JsonDict) -> None:
+    if not detail.get("has_artifacts"):
+        empty_state(st, text["empty_run"], str(detail.get("empty_state", "")))
+        return
+    drift = _dict(detail.get("model_drift"))
+    rows = model_rows(detail)
+    metric_cards(st, [(text["drift_risk"], drift.get("risk", "unknown"))])
+    if drift:
+        st.json(drift)
+    else:
+        st.code(
+            "pcl model-drift --run runs/current --history runs/previous "
+            "--out runs/current/model_drift.json",
+            language="bash",
+        )
+    if rows:
+        st.dataframe(rows, use_container_width=True)
+    history = _dict(detail.get("history_index"))
+    runs = history.get("runs")
+    if isinstance(runs, list) and runs:
+        st.subheader(text["model_timeline"])
+        st.dataframe(_history_model_rows(runs), use_container_width=True)
+
+
+def _render_audit_tab(st: Any, text: dict[str, str], detail: JsonDict) -> None:
+    audit = _dict(detail.get("audit"))
+    if not audit:
+        empty_state(
+            st,
+            text["no_audit"],
+            "pcl audit-diff --before HEAD~1 --after HEAD --out runs/audit",
+        )
+        return
+    metric_cards(
+        st,
+        [
+            (text["changed_files"], audit.get("touched_files")),
+            (text["audit_review"], audit.get("human_review_required")),
+            (text["public_api"], audit.get("public_api_changed")),
+            (text["tests_passed"], audit.get("tests_passed")),
+        ],
+    )
+    st.plotly_chart(
+        file_breakdown_bar(
+            audit,
+            title=text["file_breakdown"],
+            kind_label=text["file_kind"],
+            count_label=text["count"],
+            source_label=text["source_files"],
+            tests_label=text["test_files"],
+            docs_label=text["docs_files"],
+            config_label=text["config_files"],
+        ),
+        use_container_width=True,
+    )
+    changed_line_table = changed_line_rows(audit)
+    if changed_line_table:
+        st.subheader(text["changed_lines"])
+        st.dataframe(changed_line_table, use_container_width=True)
+    dangerous = _strings(audit.get("dangerous_paths"))
+    if dangerous:
+        st.error(text["dangerous_paths"])
+        st.dataframe([{text["path"]: path} for path in dangerous], use_container_width=True)
+    changed = _strings(audit.get("changed_files"))
+    if changed:
+        st.dataframe([{text["path"]: path} for path in changed], use_container_width=True)
+    sections = audit_detail_sections(audit)
+    detail_labels = {
+        "secret_findings": text["secret_findings"],
+        "dependency_files_changed": text["dependency_files"],
+        "lockfiles_changed": text["lockfiles"],
+        "workflow_files_changed": text["workflow_files"],
+        "deleted_test_files": text["deleted_test_files"],
+        "unexpected_files": text["unexpected_files"],
+        "test_results": text["test_results"],
+    }
+    if any(sections.values()):
+        st.subheader(text["audit_details"])
+    for key, label in detail_labels.items():
+        rows = sections.get(key, [])
+        if rows:
+            st.markdown(f"**{label}**")
+            st.dataframe(rows, use_container_width=True)
+
+
+def _render_history_tab(st: Any, text: dict[str, str], detail: JsonDict) -> None:
+    history = _dict(detail.get("history_index"))
+    runs = history.get("runs")
+    if not isinstance(runs, list) or not runs:
+        empty_state(
+            st,
+            text["no_history"],
+            "pcl history index --runs runs/ --out runs/history_index.json",
+        )
+        return
+    rows = history_rows(detail)
+    filters = st.columns(4)
+    only_review_required = bool(filters[0].checkbox(text["only_review_required"], value=False))
+    only_high_risk = bool(filters[1].checkbox(text["only_high_risk"], value=False))
+    provider_filter = str(filters[2].text_input(text["provider_filter"], ""))
+    model_filter = str(filters[3].text_input(text["model_filter"], ""))
+    rows = filter_history_rows(
+        rows,
+        only_review_required=only_review_required,
+        only_high_risk=only_high_risk,
+        provider=provider_filter,
+        model=model_filter,
+    )
+    st.subheader(text["run_timeline"])
+    st.dataframe(rows, use_container_width=True)
+    st.plotly_chart(
+        history_numeric_trend(
+            rows,
+            y_key="mean_score",
+            title=text["score_trend"],
+            value_label=text["candidate_score"],
+        ),
+        use_container_width=True,
+    )
+    st.plotly_chart(
+        history_category_timeline(
+            rows,
+            y_key="gate_status",
+            title=text["gate_trend"],
+            category_label=text["gate"],
+        ),
+        use_container_width=True,
+    )
+    st.plotly_chart(
+        history_category_timeline(
+            rows,
+            y_key="risk_level",
+            title=text["risk_trend"],
+            category_label=text["risk"],
+        ),
+        use_container_width=True,
+    )
+    st.plotly_chart(
+        history_category_timeline(
+            rows,
+            y_key="review_required",
+            title=text["review_trend"],
+            category_label=text["review"],
+        ),
+        use_container_width=True,
+    )
+    st.subheader(text["model_changes"])
+    st.dataframe(
+        [
+            {
+                "run": row.get("run"),
+                "provider": row.get("provider"),
+                "model": row.get("model"),
+                "prompt_hash": row.get("prompt_hash"),
+            }
+            for row in rows
+        ],
+        use_container_width=True,
+    )
+    gate_counts = _category_count([str(row.get("gate_status", "unknown")) for row in rows])
+    st.plotly_chart(
+        risk_category_bar(
+            gate_counts,
+            title=text["gate_trend"],
+            category_label=text["gate"],
+            count_label=text["count"],
+            none_label=text["none"],
+        ),
+        use_container_width=True,
+    )
+    risk_counts: dict[str, int] = {}
+    for row in rows:
+        for category in _strings(row.get("risk_categories")):
+            risk_counts[category] = risk_counts.get(category, 0) + 1
+    st.plotly_chart(
+        risk_category_bar(
+            risk_counts,
+            title=text["risk_categories"],
+            category_label=text["category"],
+            count_label=text["count"],
+            none_label=text["none"],
+        ),
+        use_container_width=True,
+    )
+
+
+def _history_row(item: JsonDict) -> JsonDict:
+    model = _dict(item.get("model"))
+    prompt = _dict(item.get("prompt_identity"))
+    return {
+        "run": item.get("run_name"),
+        "gate_status": item.get("gate_status"),
+        "mean_score": item.get("mean_score"),
+        "provider": model.get("provider"),
+        "model": model.get("model_id"),
+        "prompt_hash": prompt.get("prompt_hash"),
+        "risk_categories": item.get("risk_categories", []),
+    }
+
+
+def _history_model_rows(runs: list[object]) -> list[JsonDict]:
+    rows: list[JsonDict] = []
+    for item in runs:
+        if not isinstance(item, dict):
+            continue
+        rows.append(_history_row(item))
+    return rows
+
+
+def _streamlit() -> Any:
+    return cast(Any, importlib.import_module("streamlit"))
+
+
+def _prepare_hf_demo_session(st: Any) -> DemoSession:
+    """Return the isolated artifact workspace owned by this Streamlit session."""
+
+    base_dir = Path(os.environ.get("PCL_UI_RUNS", "/tmp/prompt_control_lab"))
+    state = st.session_state
+    session_id = state.get("pcl_hf_demo_session_id")
+    if not isinstance(session_id, str):
+        cleanup_expired_sessions(base_dir)
+        session_id = None
+    seed_raw = os.environ.get("PCL_HF_DEMO_SOURCE", "")
+    seed = Path(seed_raw) if seed_raw and session_id is None else None
+    session = prepare_demo_session(base_dir, seed_runs=seed, session_id=session_id)
+    state["pcl_hf_demo_session_id"] = session.session_id
+    return session
+
+
+def _render_hf_demo_upload(st: Any, session: DemoSession, language: str) -> None:
+    """Render the bounded JSON/JSONL importer for one public-demo session."""
+
+    labels = HF_DEMO_TEXT[language]
+    with st.sidebar.expander(labels["upload_title"], expanded=False):
+        st.caption(labels["upload_help"])
+        run_name = st.text_input(labels["upload_run"], "uploaded-run", key="hf_upload_run")
+        uploaded = st.file_uploader(
+            labels["upload_title"],
+            type=["json", "jsonl"],
+            accept_multiple_files=False,
+            key="hf_artifact_upload",
+            label_visibility="collapsed",
+        )
+        if st.button(labels["upload_button"], key="hf_upload_button"):
+            if uploaded is None:
+                st.warning(labels["upload_help"])
+                return
+            try:
+                content = uploaded.getvalue()
+                metadata = validate_uploaded_artifact(uploaded.name, content)
+                output = store_uploaded_artifact(
+                    session,
+                    run_name=run_name,
+                    filename=uploaded.name,
+                    content=content,
+                )
+            except (OSError, UnicodeError, ValueError) as exc:
+                st.error(str(exc))
+                return
+            st.success(f"{labels['upload_ok']}: {output.relative_to(session.root)}")
+            st.json(
+                {
+                    "format": metadata["format"],
+                    "record_count": metadata["record_count"],
+                    "size_bytes": metadata["size_bytes"],
+                }
+            )
+
+
+def _dict(value: object) -> JsonDict:
+    return value if isinstance(value, dict) else {}
+
+
+def _list(value: object) -> list[object]:
+    return value if isinstance(value, list) else []
+
+
+def _strings(value: object) -> list[str]:
+    return [str(item) for item in _list(value)]
+
+
+def _category_count(items: list[str]) -> dict[str, int]:
+    counts: dict[str, int] = {}
+    for item in items:
+        counts[item] = counts.get(item, 0) + 1
+    return counts
+
+
+def _recommendation_label(value: object) -> object:
+    if isinstance(value, dict):
+        return value.get("label") or value.get("recommendation") or value.get("verdict")
+    return value
+
+
+def _confirm_checkbox(
+    st: Any,
+    text: dict[str, str],
+    execution_mode: str,
+    key: str,
+) -> bool:
+    if execution_mode != "confirm":
+        return False
+    return bool(st.checkbox(text["confirm_write"], value=False, key=key))
+
+
+def _render_workflow_result(
+    st: Any,
+    text: dict[str, str],
+    callback: Callable[[], JsonDict],
+) -> None:
+    try:
+        result = callback()
+    except Exception as exc:
+        st.error(str(exc))
+        return
+    title = (
+        text["workflow_preview"]
+        if result.get("status") == "preview"
+        else text["workflow_result"]
+    )
+    st.subheader(title)
+    warnings = result.get("path_warnings")
+    if isinstance(warnings, list) and warnings:
+        for warning in warnings:
+            st.warning(str(warning))
+    st.json(result)
+
+
+def _optional_path(value: str) -> Path | None:
+    stripped = value.strip()
+    return Path(stripped) if stripped else None
+
+
+def _split_lines(value: str) -> list[str]:
+    return [line.strip() for line in value.splitlines() if line.strip()]
+
+
+def _optional_bool_label(value: object) -> bool | None:
+    if value == "true":
+        return True
+    if value == "false":
+        return False
+    return None
+
+
+if __name__ == "__main__":
+    main()

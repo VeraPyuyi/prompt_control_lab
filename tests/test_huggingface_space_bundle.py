@@ -6,9 +6,9 @@ from zipfile import ZIP_DEFLATED, ZipFile
 
 import pytest
 
-from promptcontrollab.hf_space import build_space_bundle
-from promptcontrollab.ui.app import HF_DEMO_TEXT
-from promptcontrollab.ui.data import load_run_detail
+from promptcontrollab.integrations.hf_space import build_space_bundle
+from promptcontrollab.integrations.ui.app import HF_DEMO_TEXT
+from promptcontrollab.integrations.ui.data import load_run_detail
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 
@@ -70,6 +70,7 @@ def test_build_space_bundle_copies_only_curated_assets_and_records_source(tmp_pa
     assert manifest["package_version"] == "0.2.0a1"
     assert manifest["demo_data_version"] == "1"
     assert (output / "wheels" / wheel.name).is_file()
+    assert (output / "README.zh.md").is_file()
     written = json.loads((output / "space_manifest.json").read_text(encoding="utf-8"))
     assert written == manifest
     assert not (output / "tests").exists()
@@ -125,7 +126,7 @@ def test_space_bundle_rejects_files_not_declared_by_the_source_manifest(
     root = tmp_path / "project"
     source = root / "deploy" / "huggingface"
     source.mkdir(parents=True)
-    for name in ("Dockerfile", "app.py", "README.md"):
+    for name in ("Dockerfile", "app.py", "README.md", "README.zh.md"):
         (source / name).write_text(name, encoding="utf-8")
     (source / "demo_runs").mkdir()
     (source / "demo_runs" / "expected.json").write_text('{"value":1}', encoding="utf-8")

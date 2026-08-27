@@ -32,7 +32,7 @@ from promptcontrollab.core.config import (
 from promptcontrollab.core.doctor import format_doctor, run_doctor
 from promptcontrollab.core.errors import PromptControlLabError
 from promptcontrollab.core.files import JsonDict, ensure_dir, read_json, write_json
-from promptcontrollab.ecosystem_demo import run_ecosystem_demo, write_ecosystem_scorecard
+from promptcontrollab.integrations.ecosystem_demo import run_ecosystem_demo, write_ecosystem_scorecard
 from promptcontrollab.evaluation.artifact_export import export_report_zip
 from promptcontrollab.evaluation.evaluation import run_import_eval
 from promptcontrollab.evaluation.explain import generate_explanation
@@ -58,7 +58,7 @@ from promptcontrollab.external_evidence import (
     verify_source_inputs,
 )
 from promptcontrollab.green_certificate import analyze_green_certificate
-from promptcontrollab.harness_integration import (
+from promptcontrollab.integrations.harness_integration import (
     doctor_harness,
     finalize_harness_run,
     initialize_harness_project,
@@ -79,7 +79,7 @@ from promptcontrollab.peoc_import import (
     PeocSourceOverrides,
     import_peoc_bundle,
 )
-from promptcontrollab.plugin_installer import install_plugin
+from promptcontrollab.integrations.plugin_installer import install_plugin
 from promptcontrollab.posterior_certificate import analyze_posterior_certificate
 from promptcontrollab.posttrain_export import export_posttrain_pilot
 from promptcontrollab.posttrain_gate import run_posttrain_gate
@@ -112,7 +112,7 @@ from promptcontrollab.preflight.tool_choice import (
 )
 from promptcontrollab.provenance.model_drift import run_model_drift
 from promptcontrollab.provenance.model_identity import detect_model_identity
-from promptcontrollab.providers import (
+from promptcontrollab.integrations.providers import (
     call_provider,
     doctor_provider,
     inspect_provider,
@@ -135,7 +135,7 @@ from promptcontrollab.server_evidence import (
     validate_evidence_destination,
 )
 from promptcontrollab.soft_hard import analyze_soft_hard
-from promptcontrollab.templates import write_example_project, write_external_examples
+from promptcontrollab.integrations.templates import write_example_project, write_external_examples
 from promptcontrollab.terminal_sensitivity import analyze_terminal_sensitivity
 from promptcontrollab.trajectory import analyze_trajectory
 from promptcontrollab.tv_soft import summarize_tv_soft

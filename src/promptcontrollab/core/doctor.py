@@ -13,7 +13,7 @@ from pathlib import Path
 from promptcontrollab.core.files import JsonDict
 from promptcontrollab.evaluation.workflow import run_quick_analysis
 from promptcontrollab.preflight.guard_policy import load_guard_policy
-from promptcontrollab.templates import write_example_project
+from promptcontrollab.integrations.templates import write_example_project
 
 
 def run_doctor(*, repo_root: Path | None = None) -> JsonDict:

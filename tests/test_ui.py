@@ -11,15 +11,15 @@ import pytest
 
 from promptcontrollab.cli import main
 from promptcontrollab.report_model import ReportModel
-from promptcontrollab.ui import charts
-from promptcontrollab.ui.components import (
+from promptcontrollab.integrations.ui import charts
+from promptcontrollab.integrations.ui.components import (
     dashboard_css,
     evidence_ladder_html,
     metric_cards,
     research_evidence_map_html,
     stat_card_html,
 )
-from promptcontrollab.ui.data import (
+from promptcontrollab.integrations.ui.data import (
     audit_detail_sections,
     changed_line_rows,
     claim_check_summary,
@@ -1083,7 +1083,7 @@ def test_metric_cards_use_responsive_escaped_grid() -> None:
 def test_peoc_research_section_renders_imported_evidence_and_failures(
     tmp_path: Path,
 ) -> None:
-    from promptcontrollab.ui import app
+    from promptcontrollab.integrations.ui import app
 
     run = tmp_path / "runs" / "peoc-real"
     _write_json(run / "peoc_evidence.json", _peoc_fixture())
@@ -1242,7 +1242,7 @@ def test_research_at_a_glance_rows_are_localized(tmp_path: Path) -> None:
 
 
 def test_research_insight_display_rows_localize_column_names() -> None:
-    from promptcontrollab.ui import app
+    from promptcontrollab.integrations.ui import app
 
     rows = [
         {
@@ -1597,7 +1597,7 @@ def test_ui_loads_comparison_validity_artifact(tmp_path: Path) -> None:
 
 
 def test_ui_has_history_view_order_and_text() -> None:
-    from promptcontrollab.ui import app
+    from promptcontrollab.integrations.ui import app
 
     assert "research" in app.TEXT["en"]
     assert "research" in app.TEXT["zh"]
@@ -1623,7 +1623,7 @@ def test_ui_has_history_view_order_and_text() -> None:
 
 
 def test_ui_choice_labels_are_localized_but_keep_internal_values() -> None:
-    from promptcontrollab.ui import app
+    from promptcontrollab.integrations.ui import app
 
     assert app._choice_labels("execution_mode", "zh") == [
         "确认后执行",
@@ -1641,7 +1641,7 @@ def test_ui_choice_labels_are_localized_but_keep_internal_values() -> None:
 
 
 def test_ui_tutorial_sections_are_complete_and_localized() -> None:
-    from promptcontrollab.ui import app
+    from promptcontrollab.integrations.ui import app
 
     expected_ids = {
         "guard",
@@ -1672,7 +1672,7 @@ def test_ui_tutorial_sections_are_complete_and_localized() -> None:
 
 
 def test_ui_tutorial_onboarding_paths_cover_main_user_goals() -> None:
-    from promptcontrollab.ui import app
+    from promptcontrollab.integrations.ui import app
 
     en_paths = app.onboarding_paths("en")
     zh_paths = app.onboarding_paths("zh")
@@ -1700,7 +1700,7 @@ def test_ui_tutorial_onboarding_paths_cover_main_user_goals() -> None:
 
 
 def test_ui_ecosystem_choice_rows_explain_adjacent_tool_paths() -> None:
-    from promptcontrollab.ui import app
+    from promptcontrollab.integrations.ui import app
 
     en_rows = app.ecosystem_choice_rows("en")
     zh_rows = app.ecosystem_choice_rows("zh")
@@ -1737,7 +1737,7 @@ def test_ui_ecosystem_choice_rows_explain_adjacent_tool_paths() -> None:
 
 
 def test_ui_tool_choice_advisor_recommends_promptfoo_for_security() -> None:
-    from promptcontrollab.ui import app
+    from promptcontrollab.integrations.ui import app
 
     calls: list[dict[str, object]] = []
     frames: list[object] = []
@@ -1791,7 +1791,7 @@ def test_ui_tool_choice_advisor_recommends_promptfoo_for_security() -> None:
 
 
 def test_ui_tool_choice_advisor_supports_chinese_prompt_writing() -> None:
-    from promptcontrollab.ui import app
+    from promptcontrollab.integrations.ui import app
 
     calls: list[dict[str, object]] = []
     code_blocks: list[str] = []
@@ -1838,7 +1838,7 @@ def test_ui_tool_choice_advisor_supports_chinese_prompt_writing() -> None:
 
 
 def test_ui_market_map_display_rows_use_human_headers() -> None:
-    from promptcontrollab.ui import app
+    from promptcontrollab.integrations.ui import app
 
     rows = [
         {
@@ -1882,7 +1882,7 @@ def test_ui_market_map_display_rows_use_human_headers() -> None:
 
 
 def test_ui_market_readiness_next_moves_use_human_headers() -> None:
-    from promptcontrollab.ui import app
+    from promptcontrollab.integrations.ui import app
 
     readiness = {
         "next_moves": [
@@ -1910,7 +1910,7 @@ def test_ui_market_readiness_next_moves_use_human_headers() -> None:
 
 
 def test_ui_tutorial_gallery_exposes_visible_images() -> None:
-    from promptcontrollab.ui import app
+    from promptcontrollab.integrations.ui import app
 
     gallery = app.tutorial_gallery_items("zh")
 
@@ -1990,7 +1990,7 @@ def test_ecosystem_scorecard_svg_assets_exist_and_are_linked() -> None:
 
 
 def test_tutorial_svg_renderer_reads_utf8_svg(tmp_path: Path) -> None:
-    from promptcontrollab.ui import app
+    from promptcontrollab.integrations.ui import app
 
     svg = tmp_path / "tutorial.zh.svg"
     svg.write_text(
@@ -2016,7 +2016,7 @@ def test_research_overview_tab_renders_generated_svg(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    from promptcontrollab.ui import app
+    from promptcontrollab.integrations.ui import app
 
     run = tmp_path / "runs" / "research-demo"
     _write_json(
@@ -2087,7 +2087,7 @@ def test_research_overview_tab_renders_generated_svg(
 
 
 def test_tutorial_svg_renderer_uses_data_uri_not_raw_svg(tmp_path: Path) -> None:
-    from promptcontrollab.ui import app
+    from promptcontrollab.integrations.ui import app
 
     svg = tmp_path / "tutorial.zh.svg"
     svg.write_text(
@@ -2108,7 +2108,7 @@ def test_tutorial_svg_renderer_uses_data_uri_not_raw_svg(tmp_path: Path) -> None
 
 
 def test_tutorial_png_renderer_uses_data_uri(tmp_path: Path) -> None:
-    from promptcontrollab.ui import app
+    from promptcontrollab.integrations.ui import app
 
     png = tmp_path / "tutorial.zh.png"
     png.write_bytes(b"\x89PNG\r\n\x1a\nfake")
@@ -2126,7 +2126,7 @@ def test_tutorial_png_renderer_uses_data_uri(tmp_path: Path) -> None:
 
 
 def test_ui_hides_streamlit_native_chrome() -> None:
-    from promptcontrollab.ui import app
+    from promptcontrollab.integrations.ui import app
 
     calls: list[dict[str, object]] = []
 

@@ -9,8 +9,8 @@ from urllib.request import Request
 
 import pytest
 
-import promptcontrollab.providers as providers_module
-from promptcontrollab.providers import (
+import promptcontrollab.integrations.providers as providers_module
+from promptcontrollab.integrations.providers import (
     ProviderError,
     ProviderResponse,
     call_provider,
@@ -36,7 +36,7 @@ def _capture_transport(
         calls.append((request, timeout))
         return _json_response(payload), headers or {}
 
-    monkeypatch.setattr("promptcontrollab.providers._perform_request", fake_transport)
+    monkeypatch.setattr("promptcontrollab.integrations.providers._perform_request", fake_transport)
     return calls
 
 
@@ -560,7 +560,7 @@ def test_doctor_is_offline_by_default_and_requires_explicit_model_for_live(
     def unexpected_transport(request: Request, timeout: float) -> tuple[bytes, Mapping[str, str]]:
         raise AssertionError("offline doctor must not call the network")
 
-    monkeypatch.setattr("promptcontrollab.providers._perform_request", unexpected_transport)
+    monkeypatch.setattr("promptcontrollab.integrations.providers._perform_request", unexpected_transport)
 
     offline = doctor_provider("openai")
     assert offline["status"] == "ready"
@@ -609,7 +609,7 @@ def test_http_errors_are_clear_without_exposing_api_key(
             fp=None,
         )
 
-    monkeypatch.setattr("promptcontrollab.providers._perform_request", failed_transport)
+    monkeypatch.setattr("promptcontrollab.integrations.providers._perform_request", failed_transport)
 
     with pytest.raises(ProviderError) as caught:
         call_provider(provider="openai", model="gpt-test", prompt="Hello")
@@ -637,7 +637,7 @@ def test_invalid_model_base_url_and_response_fail_clearly(
     def invalid_json(request: Request, timeout: float) -> tuple[bytes, Mapping[str, str]]:
         return b"not-json", {}
 
-    monkeypatch.setattr("promptcontrollab.providers._perform_request", invalid_json)
+    monkeypatch.setattr("promptcontrollab.integrations.providers._perform_request", invalid_json)
     with pytest.raises(ProviderError, match="invalid JSON"):
         call_provider(provider="openai", model="gpt-test", prompt="Hello")
 
@@ -659,7 +659,7 @@ def test_non_standard_json_constants_are_rejected_during_decode(
     ) -> tuple[bytes, Mapping[str, str]]:
         return response_bytes, {}
 
-    monkeypatch.setattr("promptcontrollab.providers._perform_request", constant_response)
+    monkeypatch.setattr("promptcontrollab.integrations.providers._perform_request", constant_response)
 
     with pytest.raises(ProviderError, match="invalid JSON") as caught:
         call_provider(provider="openai", model="gpt-test", prompt="Hello")
@@ -683,7 +683,7 @@ def test_overflowed_json_number_is_rejected_as_non_finite(
             {},
         )
 
-    monkeypatch.setattr("promptcontrollab.providers._perform_request", overflow_response)
+    monkeypatch.setattr("promptcontrollab.integrations.providers._perform_request", overflow_response)
 
     with pytest.raises(ProviderError, match="finite JSON numbers"):
         call_provider(provider="openai", model="gpt-test", prompt="Hello")
@@ -811,7 +811,7 @@ def test_transport_installs_redirect_rejecting_handler(monkeypatch: pytest.Monke
         installed_handlers.extend(handlers)
         return opener
 
-    monkeypatch.setattr("promptcontrollab.providers.urllib.request.build_opener", fake_build_opener)
+    monkeypatch.setattr("promptcontrollab.integrations.providers.urllib.request.build_opener", fake_build_opener)
     request = Request(
         "https://provider.example.test/v1/chat/completions",
         headers={"Authorization": "Bearer private"},
@@ -838,7 +838,7 @@ def test_transport_rejects_declared_oversized_response(
     response = _FakeResponse(b"{}", content_length=providers_module._MAX_RESPONSE_BYTES + 1)
     opener = _FakeOpener(response)
     monkeypatch.setattr(
-        "promptcontrollab.providers.urllib.request.build_opener",
+        "promptcontrollab.integrations.providers.urllib.request.build_opener",
         lambda *handlers: opener,
     )
 
@@ -854,7 +854,7 @@ def test_transport_uses_bounded_read_and_rejects_undeclared_oversized_response(
     response = _FakeResponse(b"x" * (providers_module._MAX_RESPONSE_BYTES + 1))
     opener = _FakeOpener(response)
     monkeypatch.setattr(
-        "promptcontrollab.providers.urllib.request.build_opener",
+        "promptcontrollab.integrations.providers.urllib.request.build_opener",
         lambda *handlers: opener,
     )
 

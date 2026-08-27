@@ -6,8 +6,8 @@ from pathlib import Path
 
 import pytest
 
-from promptcontrollab import harness_integration
-from promptcontrollab.harness_integration import (
+from promptcontrollab.integrations import harness_integration
+from promptcontrollab.integrations.harness_integration import (
     HARNESS_COMMIT,
     HARNESS_VERSION,
     finalize_harness_run,
@@ -111,10 +111,10 @@ def test_harness_doctor_is_offline_and_checks_local_contract(
         return subprocess.CompletedProcess(command, 0, stdout="v22.19.0\n", stderr="")
 
     monkeypatch.setattr(
-        "promptcontrollab.harness_integration.shutil.which",
+        "promptcontrollab.integrations.harness_integration.shutil.which",
         lambda name: "node.exe",
     )
-    monkeypatch.setattr("promptcontrollab.harness_integration.subprocess.run", fake_run)
+    monkeypatch.setattr("promptcontrollab.integrations.harness_integration.subprocess.run", fake_run)
 
     result = harness_integration.doctor_harness(tmp_path)
 

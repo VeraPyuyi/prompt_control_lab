@@ -7,11 +7,11 @@ from typing import Any
 
 import pytest
 
-from promptcontrollab.ui.data import list_runs, load_run_detail
+from promptcontrollab.integrations.ui.data import list_runs, load_run_detail
 
 
 def test_control_navigation_has_fixed_order_and_before_default() -> None:
-    from promptcontrollab.ui import app
+    from promptcontrollab.integrations.ui import app
 
     assert app.PRIMARY_VIEW_ORDER == (
         "before",
@@ -30,7 +30,7 @@ def test_control_navigation_has_fixed_order_and_before_default() -> None:
 
 
 def test_control_navigation_labels_are_localized() -> None:
-    from promptcontrollab.ui import app
+    from promptcontrollab.integrations.ui import app
 
     assert app.primary_view_labels("en") == [
         "Before",
@@ -55,7 +55,7 @@ def test_control_navigation_labels_are_localized() -> None:
 
 
 def test_legacy_research_and_peoc_render_under_evidence_scope() -> None:
-    from promptcontrollab.ui import app
+    from promptcontrollab.integrations.ui import app
 
     assert app.legacy_sections_for("before") == ("guard", "tutorial")
     assert app.legacy_sections_for("run") == ("workflows",)
@@ -74,7 +74,7 @@ def test_legacy_research_and_peoc_render_under_evidence_scope() -> None:
 def test_interpretability_and_posttrain_artifacts_are_loaded_for_core_views(
     tmp_path: Path,
 ) -> None:
-    from promptcontrollab.ui.data import evidence_matrix_rows, interpretability_rows
+    from promptcontrollab.integrations.ui.data import evidence_matrix_rows, interpretability_rows
 
     run = tmp_path / "runs" / "diagnostic"
     _write_json(
@@ -124,7 +124,7 @@ def test_interpretability_and_posttrain_artifacts_are_loaded_for_core_views(
 def test_prompt_reach_artifacts_and_decision_trace_are_loaded_and_normalized(
     tmp_path: Path,
 ) -> None:
-    from promptcontrollab.ui.data import (
+    from promptcontrollab.integrations.ui.data import (
         decision_trace_interpretation_rows,
         prompt_reach_interpretation_rows,
     )
@@ -209,7 +209,7 @@ def test_prompt_reach_artifacts_and_decision_trace_are_loaded_and_normalized(
 
 
 def test_four_part_interpretation_renderer_uses_bilingual_labels() -> None:
-    from promptcontrollab.ui import app
+    from promptcontrollab.integrations.ui import app
 
     class FakeStreamlit:
         def __init__(self) -> None:
@@ -244,7 +244,7 @@ def test_four_part_interpretation_renderer_uses_bilingual_labels() -> None:
 def test_core_diagnostic_views_route_prompt_reach_and_trace_to_four_part_renderer(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    from promptcontrollab.ui import app
+    from promptcontrollab.integrations.ui import app
 
     rendered: list[tuple[str, list[str]]] = []
 
@@ -422,7 +422,7 @@ def test_control_artifact_loading_tolerates_missing_files(tmp_path: Path) -> Non
 
 
 def test_display_helpers_remove_hidden_reasoning_prompts_and_credentials() -> None:
-    from promptcontrollab.ui.data import redact_for_display, safe_display_text
+    from promptcontrollab.integrations.ui.data import redact_for_display, safe_display_text
 
     payload = {
         "api_key": "sk-private-value-1234567890",
@@ -450,7 +450,7 @@ def test_display_helpers_remove_hidden_reasoning_prompts_and_credentials() -> No
 
 
 def test_deepseek_harness_view_derives_observable_control_run_evidence(tmp_path: Path) -> None:
-    from promptcontrollab.ui.data import deepseek_harness_view
+    from promptcontrollab.integrations.ui.data import deepseek_harness_view
 
     run = tmp_path / "run"
     _write(run / "report.md", "# Report\n")
@@ -606,7 +606,7 @@ def test_deepseek_harness_view_derives_observable_control_run_evidence(tmp_path:
 def test_control_event_timeline_chart_uses_sequence_and_phase(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    from promptcontrollab.ui import charts
+    from promptcontrollab.integrations.ui import charts
 
     captured: dict[str, Any] = {}
 
@@ -638,7 +638,7 @@ def test_control_event_timeline_chart_uses_sequence_and_phase(
 def test_control_signal_chart_renders_bounded_observable_counts(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    from promptcontrollab.ui import charts
+    from promptcontrollab.integrations.ui import charts
 
     captured: dict[str, Any] = {}
 
@@ -671,7 +671,7 @@ def test_control_signal_chart_renders_bounded_observable_counts(
 def test_streamlit_entry_selects_before_from_fixed_primary_navigation(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    from promptcontrollab.ui import app
+    from promptcontrollab.integrations.ui import app
 
     rendered: list[str] = []
 
@@ -754,7 +754,7 @@ def test_streamlit_entry_selects_before_from_fixed_primary_navigation(
 
 
 def test_recommendation_card_escapes_values_and_preserves_evidence_boundary() -> None:
-    from promptcontrollab.ui.components import recommendation_card_html
+    from promptcontrollab.integrations.ui.components import recommendation_card_html
 
     rendered = recommendation_card_html(
         decision="needs_review<script>",

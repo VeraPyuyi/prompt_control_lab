@@ -10,6 +10,6 @@ os.environ.setdefault("PCL_UI_RUNS", "/tmp/prompt_control_lab")
 os.environ.setdefault("PCL_UI_DEFAULT_VIEW", "before")
 os.environ.setdefault("PCL_HF_DEMO_SOURCE", "/app/demo_runs")
 
-from promptcontrollab.ui.app import main
+from promptcontrollab.integrations.ui.app import main
 
 main()

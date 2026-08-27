@@ -7,8 +7,8 @@ from pathlib import Path
 
 from promptcontrollab.cli import main
 from promptcontrollab.files import JsonDict, read_json
-from promptcontrollab.ui.data import load_run_detail
-from promptcontrollab.ui.workflows import (
+from promptcontrollab.integrations.ui.data import load_run_detail
+from promptcontrollab.integrations.ui.workflows import (
     build_agent_run_workflow,
     create_demo_artifacts_workflow,
     export_report_zip_workflow,

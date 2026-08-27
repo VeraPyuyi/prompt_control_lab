@@ -586,7 +586,7 @@ def test_harness_bridge_supports_pending_prompt_gate_events_status_and_finalize(
     tmp_path: Path,
 ) -> None:
     from promptcontrollab.control_bridge import ControlBridge
-    from promptcontrollab.harness_integration import HARNESS_COMMIT, HARNESS_VERSION
+    from promptcontrollab.integrations.harness_integration import HARNESS_COMMIT, HARNESS_VERSION
 
     project = tmp_path / "project"
     runs_root = project / ".promptcontrol" / "runs"
@@ -786,7 +786,7 @@ def test_harness_finalized_resume_allocates_one_fresh_idempotent_run(
     tmp_path: Path,
 ) -> None:
     from promptcontrollab.control_bridge import ControlBridge
-    from promptcontrollab.harness_integration import HARNESS_COMMIT, HARNESS_VERSION
+    from promptcontrollab.integrations.harness_integration import HARNESS_COMMIT, HARNESS_VERSION
 
     runs_root = tmp_path / "project" / ".promptcontrol" / "runs"
     bridge = ControlBridge(runs_root)
@@ -856,7 +856,7 @@ def test_harness_auto_recover_requires_config_policy_and_positive_bound(
     from promptcontrollab.control import control_bridge
     from promptcontrollab.control.control_bridge import ControlBridge
     from promptcontrollab.control.control_protocol import StabilityReport
-    from promptcontrollab.harness_integration import HARNESS_COMMIT, HARNESS_VERSION
+    from promptcontrollab.integrations.harness_integration import HARNESS_COMMIT, HARNESS_VERSION
 
     project = tmp_path / "project"
     runs_root = project / ".promptcontrol" / "runs"
@@ -966,7 +966,7 @@ def test_harness_auto_recover_requires_config_policy_and_positive_bound(
 
 def test_harness_session_start_rejects_mismatched_path_root(tmp_path: Path) -> None:
     from promptcontrollab.control_bridge import ControlBridge
-    from promptcontrollab.harness_integration import HARNESS_COMMIT, HARNESS_VERSION
+    from promptcontrollab.integrations.harness_integration import HARNESS_COMMIT, HARNESS_VERSION
 
     runs_root = tmp_path / "project" / ".promptcontrol" / "runs"
     bridge = ControlBridge(runs_root)

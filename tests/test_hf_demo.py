@@ -7,14 +7,14 @@ from pathlib import Path
 
 import pytest
 
-from promptcontrollab.hf_demo import (
+from promptcontrollab.integrations.hf_demo import (
     HF_DEMO_MAX_UPLOAD_BYTES,
     cleanup_expired_sessions,
     prepare_demo_session,
     store_uploaded_artifact,
     validate_uploaded_artifact,
 )
-from promptcontrollab.ui.workflows import run_analyze_workflow, run_guard_workflow
+from promptcontrollab.integrations.ui.workflows import run_analyze_workflow, run_guard_workflow
 
 
 def test_hf_demo_upload_accepts_bounded_json_and_jsonl() -> None:
@@ -120,7 +120,7 @@ def test_hf_demo_upload_enforces_cumulative_session_quota(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    from promptcontrollab import hf_demo
+    from promptcontrollab.integrations import hf_demo
 
     session = prepare_demo_session(tmp_path / "runtime", session_id="quota-session")
     payload = json.dumps({"summary": "x" * 120}).encode("utf-8")
@@ -147,7 +147,7 @@ def test_hf_demo_upload_enforces_cumulative_byte_and_global_quotas(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    from promptcontrollab import hf_demo
+    from promptcontrollab.integrations import hf_demo
 
     base = tmp_path / "runtime"
     first = prepare_demo_session(base, session_id="quota-first")
@@ -186,7 +186,7 @@ def test_hf_demo_quota_check_and_write_share_one_process_lock(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    from promptcontrollab import hf_demo
+    from promptcontrollab.integrations import hf_demo
 
     session = prepare_demo_session(tmp_path / "runtime", session_id="locked-session")
     original_quota_check = hf_demo._enforce_storage_quotas
@@ -270,7 +270,7 @@ def test_hf_demo_backend_allows_guard_but_blocks_other_workflows_and_external_wr
 def test_hf_demo_run_view_does_not_render_local_workflow_controls(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    from promptcontrollab.ui import app
+    from promptcontrollab.integrations.ui import app
 
     class FakeStreamlit:
         def subheader(self, _value: object) -> None:
@@ -303,7 +303,7 @@ def test_hf_demo_run_view_does_not_render_local_workflow_controls(
 def test_before_view_uses_tabs_instead_of_nesting_tutorial_expanders(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    from promptcontrollab.ui import app
+    from promptcontrollab.integrations.ui import app
 
     rendered: list[str] = []
 

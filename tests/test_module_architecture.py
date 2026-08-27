@@ -70,6 +70,15 @@ CANONICAL_IMPLEMENTATIONS = {
         "control_workflow",
     ),
     "audit": ("agent_run", "audit_diff", "claim_check", "github_app", "pr_summary"),
+    "integrations": (
+        "ecosystem_demo",
+        "harness_integration",
+        "hf_demo",
+        "hf_space",
+        "plugin_installer",
+        "providers",
+        "templates",
+    ),
 }
 
 
@@ -103,6 +112,18 @@ def test_cli_entrypoint_remains_public() -> None:
     assert callable(cli.main)
     assert callable(cli.build_parser)
     assert callable(cli._reconfigure_windows_pipe)
+
+
+def test_ui_implementation_lives_under_integrations() -> None:
+    """Keep the old UI package as a compatibility-only import surface."""
+
+    canonical = PACKAGE_ROOT / "integrations" / "ui"
+    legacy = PACKAGE_ROOT / "ui"
+    for module_name in ("app", "charts", "components", "data", "workflows"):
+        assert (canonical / f"{module_name}.py").is_file()
+        facade = legacy / f"{module_name}.py"
+        assert facade.is_file()
+        assert "Backward-compatible facade" in facade.read_text(encoding="utf-8")
 
 
 @pytest.mark.parametrize(

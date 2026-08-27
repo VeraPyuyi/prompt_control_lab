@@ -6,15 +6,32 @@ from importlib import import_module
 from typing import Any
 
 _EXPORTS = {
-    "call_provider": ("promptcontrollab.providers", "call_provider"),
-    "doctor_harness": ("promptcontrollab.harness_integration", "doctor_harness"),
-    "doctor_provider": ("promptcontrollab.providers", "doctor_provider"),
+    "ProviderError": ("promptcontrollab.integrations.providers", "ProviderError"),
+    "ProviderResponse": ("promptcontrollab.integrations.providers", "ProviderResponse"),
+    "ProviderSpec": ("promptcontrollab.integrations.providers", "ProviderSpec"),
+    "assess_harness_run_acceptance": (
+        "promptcontrollab.integrations.harness_integration",
+        "assess_harness_run_acceptance",
+    ),
+    "build_space_bundle": ("promptcontrollab.integrations.hf_space", "build_space_bundle"),
+    "call_provider": ("promptcontrollab.integrations.providers", "call_provider"),
+    "doctor_harness": ("promptcontrollab.integrations.harness_integration", "doctor_harness"),
+    "doctor_provider": ("promptcontrollab.integrations.providers", "doctor_provider"),
     "initialize_harness_project": (
-        "promptcontrollab.harness_integration",
+        "promptcontrollab.integrations.harness_integration",
         "initialize_harness_project",
     ),
-    "install_plugin": ("promptcontrollab.plugin_installer", "install_plugin"),
-    "list_providers": ("promptcontrollab.providers", "list_providers"),
+    "install_plugin": ("promptcontrollab.integrations.plugin_installer", "install_plugin"),
+    "inspect_provider": ("promptcontrollab.integrations.providers", "inspect_provider"),
+    "list_providers": ("promptcontrollab.integrations.providers", "list_providers"),
+    "run_ecosystem_demo": (
+        "promptcontrollab.integrations.ecosystem_demo",
+        "run_ecosystem_demo",
+    ),
+    "write_example_project": (
+        "promptcontrollab.integrations.templates",
+        "write_example_project",
+    ),
 }
 
 __all__ = sorted(_EXPORTS)

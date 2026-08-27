@@ -1,2 +1,3 @@
-"""Local dashboard helpers for prompt_control_lab."""
+"""Backward-compatible package facade for :mod:`promptcontrollab.integrations.ui`."""
 
+__all__: list[str] = []

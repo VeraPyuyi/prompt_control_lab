@@ -6,8 +6,8 @@ from pathlib import Path
 import pytest
 
 from promptcontrollab.cli import main
-from promptcontrollab.plugin_installer import install_plugin
-from promptcontrollab.providers import ProviderResponse
+from promptcontrollab.integrations.plugin_installer import install_plugin
+from promptcontrollab.integrations.providers import ProviderResponse
 
 
 def test_providers_cli_lists_and_inspects_without_exposing_key(
@@ -39,7 +39,7 @@ def test_providers_doctor_is_offline_unless_live_is_explicit(
         called = True
         raise AssertionError("offline doctor must not call provider")
 
-    monkeypatch.setattr("promptcontrollab.providers.call_provider", fake_call)
+    monkeypatch.setattr("promptcontrollab.integrations.providers.call_provider", fake_call)
     assert main(["providers", "doctor", "deepseek", "--json"]) == 0
     payload = json.loads(capsys.readouterr().out)
     assert payload["live_checked"] is False
@@ -298,7 +298,7 @@ def test_install_plugin_deepseek_harness_default_and_all_layout(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.setattr("promptcontrollab.plugin_installer.Path.home", lambda: tmp_path)
+    monkeypatch.setattr("promptcontrollab.integrations.plugin_installer.Path.home", lambda: tmp_path)
 
     installed = install_plugin("deepseek-harness")
     default_target = tmp_path / ".prompt_control_lab" / "deepseek-harness"
