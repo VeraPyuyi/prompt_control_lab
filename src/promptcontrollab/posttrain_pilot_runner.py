@@ -20,8 +20,8 @@ from itertools import groupby
 from pathlib import Path
 from typing import Any
 
-from promptcontrollab.errors import PromptControlLabError
-from promptcontrollab.files import JsonDict, ensure_dir, stable_digest, write_json
+from promptcontrollab.core.errors import PromptControlLabError
+from promptcontrollab.core.files import JsonDict, ensure_dir, stable_digest, write_json
 from promptcontrollab.posttrain_gate import run_posttrain_gate
 from promptcontrollab.posttrain_pilot import (
     PilotInputs,

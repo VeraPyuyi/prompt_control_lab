@@ -9,11 +9,11 @@ import json
 from pathlib import Path
 from typing import Any, cast
 
-from promptcontrollab.files import JsonDict, ensure_dir, read_json, write_json, write_jsonl
-from promptcontrollab.metrics import summarize_predictions
-from promptcontrollab.model_identity import detect_model_identity
-from promptcontrollab.schemas import PredictionRecord
-from promptcontrollab.version import __version__
+from promptcontrollab.core.files import JsonDict, ensure_dir, read_json, write_json, write_jsonl
+from promptcontrollab.core.schemas import PredictionRecord
+from promptcontrollab.core.version import __version__
+from promptcontrollab.evaluation.metrics import summarize_predictions
+from promptcontrollab.provenance.model_identity import detect_model_identity
 
 
 def ingest_auto_results(

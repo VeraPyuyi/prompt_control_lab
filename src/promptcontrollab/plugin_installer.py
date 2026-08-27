@@ -7,7 +7,7 @@ from importlib import resources
 from pathlib import Path
 from typing import Any
 
-from promptcontrollab.files import JsonDict
+from promptcontrollab.core.files import JsonDict
 
 PLUGIN_CHOICES = {
     "codex",

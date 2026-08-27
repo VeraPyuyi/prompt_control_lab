@@ -4,8 +4,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from promptcontrollab.evaluation import load_scored_predictions
-from promptcontrollab.files import JsonDict, ensure_dir, write_json
+from promptcontrollab.core.files import JsonDict, ensure_dir, write_json
+from promptcontrollab.evaluation.evaluation import load_scored_predictions
 
 
 def summarize_tv_soft(

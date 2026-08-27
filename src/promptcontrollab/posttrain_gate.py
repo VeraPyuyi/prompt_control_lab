@@ -8,8 +8,8 @@ from importlib import resources
 from pathlib import Path
 from typing import Any, cast
 
-from promptcontrollab.config import read_simple_yaml
-from promptcontrollab.files import JsonDict, ensure_dir, read_json, write_json
+from promptcontrollab.core.config import read_simple_yaml
+from promptcontrollab.core.files import JsonDict, ensure_dir, read_json, write_json
 
 _REQUIRED_ARTIFACTS = (
     "manifest.json",

@@ -12,7 +12,7 @@ from datetime import datetime, timezone
 from decimal import Decimal, InvalidOperation
 from pathlib import Path
 
-from promptcontrollab.files import JsonDict, read_json, stable_digest, write_json
+from promptcontrollab.core.files import JsonDict, read_json, stable_digest, write_json
 
 
 @dataclass(frozen=True)

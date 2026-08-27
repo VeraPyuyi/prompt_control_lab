@@ -9,7 +9,7 @@ from collections import defaultdict
 from dataclasses import dataclass
 from pathlib import Path
 
-from promptcontrollab.files import JsonDict
+from promptcontrollab.core.files import JsonDict
 
 _STRUCTURED_SUFFIXES = {".json", ".jsonl"}
 _BINARY_SUFFIXES = {".npz", ".pt", ".pth", ".pkl", ".pickle"}

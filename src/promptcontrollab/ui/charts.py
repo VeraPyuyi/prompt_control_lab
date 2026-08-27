@@ -5,7 +5,7 @@ from __future__ import annotations
 import importlib
 from typing import Any, cast
 
-from promptcontrollab.files import JsonDict
+from promptcontrollab.core.files import JsonDict
 from promptcontrollab.ui.data import first_comparison
 
 

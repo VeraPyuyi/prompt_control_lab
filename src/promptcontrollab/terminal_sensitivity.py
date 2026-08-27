@@ -8,8 +8,8 @@ import math
 from pathlib import Path
 from typing import Any, cast
 
-from promptcontrollab.files import JsonDict, ensure_dir, read_jsonl, write_json
-from promptcontrollab.optional import require_module
+from promptcontrollab.core.files import JsonDict, ensure_dir, read_jsonl, write_json
+from promptcontrollab.core.optional import require_module
 
 _NUMERICAL_FLOOR = 1e-15
 

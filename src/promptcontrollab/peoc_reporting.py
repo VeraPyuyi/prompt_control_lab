@@ -5,7 +5,7 @@ from __future__ import annotations
 import html
 import re
 
-from promptcontrollab.files import JsonDict
+from promptcontrollab.core.files import JsonDict
 
 _LANGUAGES = {"en", "zh"}
 

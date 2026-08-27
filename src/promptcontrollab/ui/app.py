@@ -12,7 +12,7 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import Any, cast
 
-from promptcontrollab.files import JsonDict
+from promptcontrollab.core.files import JsonDict
 from promptcontrollab.hf_demo import (
     DemoSession,
     cleanup_expired_sessions,
@@ -21,12 +21,12 @@ from promptcontrollab.hf_demo import (
     store_uploaded_artifact,
     validate_uploaded_artifact,
 )
-from promptcontrollab.prompt_context import load_prompt_context
-from promptcontrollab.prompt_guard import guard_prompt
-from promptcontrollab.tool_choice import (
+from promptcontrollab.preflight.prompt_context import load_prompt_context
+from promptcontrollab.preflight.prompt_guard import guard_prompt
+from promptcontrollab.preflight.tool_choice import (
     adoption_path_rows as _tool_choice_adoption_path_rows,
 )
-from promptcontrollab.tool_choice import (
+from promptcontrollab.preflight.tool_choice import (
     choose_tool_for_need,
     market_gap_action_rows,
     render_tool_choice_markdown,

@@ -11,8 +11,8 @@ from importlib import resources
 from pathlib import Path
 from typing import cast
 
-from promptcontrollab.control_protocol import redact_sensitive
-from promptcontrollab.control_workflow import (
+from promptcontrollab.control.control_protocol import redact_sensitive
+from promptcontrollab.control.control_workflow import (
     ControlSession,
     append_control_event,
     finalize_control_session,
@@ -21,7 +21,7 @@ from promptcontrollab.control_workflow import (
     perform_preflight,
     start_control_session,
 )
-from promptcontrollab.files import JsonDict, read_json, read_jsonl, stable_digest, write_json
+from promptcontrollab.core.files import JsonDict, read_json, read_jsonl, stable_digest, write_json
 
 HARNESS_VERSION = "0.1.1-rc.2"
 HARNESS_COMMIT = "b150a551b8d465e31e418e1b2eaf5e79bbb7d28e"
@@ -192,7 +192,7 @@ def _doctor_compatibility_lock(path: Path) -> JsonDict:
 
 def _doctor_python_bridge(runs_root: Path) -> JsonDict:
     try:
-        from promptcontrollab.control_bridge import ControlBridge
+        from promptcontrollab.control.control_bridge import ControlBridge
 
         health = ControlBridge(runs_root).dispatch("health", {})
     except (OSError, TypeError, ValueError) as exc:

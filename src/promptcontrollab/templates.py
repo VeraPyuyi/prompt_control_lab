@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from promptcontrollab.files import ensure_dir
+from promptcontrollab.core.files import ensure_dir
 
 TASKS_JSONL = """\
 {"id":"arith-1","input":"What is 2 + 2?","expected":"4","slice":"arithmetic"}

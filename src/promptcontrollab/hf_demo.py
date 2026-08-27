@@ -13,7 +13,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import NoReturn, cast
 
-from promptcontrollab.files import JsonDict
+from promptcontrollab.core.files import JsonDict
 
 HF_DEMO_MODE = "hf_demo"
 HF_DEMO_MAX_UPLOAD_BYTES = 5 * 1024 * 1024

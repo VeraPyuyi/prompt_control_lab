@@ -9,10 +9,10 @@ from collections.abc import Mapping
 from pathlib import Path
 from typing import Any, cast
 
-from promptcontrollab.claim_check import CLAIM_LABELS, CLAIM_REQUIREMENTS, TIER_ORDER
-from promptcontrollab.control_protocol import REDACTED, redact_sensitive
-from promptcontrollab.files import JsonDict, read_json
-from promptcontrollab.report_model import ReportModel
+from promptcontrollab.audit.claim_check import CLAIM_LABELS, CLAIM_REQUIREMENTS, TIER_ORDER
+from promptcontrollab.control.control_protocol import REDACTED, redact_sensitive
+from promptcontrollab.core.files import JsonDict, read_json
+from promptcontrollab.evaluation.report_model import ReportModel
 
 CONTROL_ARTIFACTS = (
     "control_run.json",

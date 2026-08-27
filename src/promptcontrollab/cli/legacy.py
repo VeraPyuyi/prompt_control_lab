@@ -14,11 +14,13 @@ import webbrowser
 from collections.abc import Sequence
 from pathlib import Path
 
-from promptcontrollab.agent_run import build_agent_run_manifest
-from promptcontrollab.artifact_export import export_report_zip
-from promptcontrollab.audit_diff import run_audit_diff
-from promptcontrollab.claim_check import run_claim_check
-from promptcontrollab.config import (
+from promptcontrollab.audit.agent_run import build_agent_run_manifest
+from promptcontrollab.audit.audit_diff import run_audit_diff
+from promptcontrollab.audit.claim_check import run_claim_check
+from promptcontrollab.audit.pr_summary import write_pr_summary
+from promptcontrollab.control.control_bridge import serve_stdio
+from promptcontrollab.control.control_workflow import AUTHORIZATIONS, preview_guard, run_control
+from promptcontrollab.core.config import (
     get_config_bool,
     get_config_float,
     get_config_int,
@@ -27,23 +29,34 @@ from promptcontrollab.config import (
     get_config_str,
     load_project_config,
 )
-from promptcontrollab.control_bridge import serve_stdio
-from promptcontrollab.control_workflow import AUTHORIZATIONS, preview_guard, run_control
-from promptcontrollab.doctor import format_doctor, run_doctor
+from promptcontrollab.core.doctor import format_doctor, run_doctor
+from promptcontrollab.core.errors import PromptControlLabError
+from promptcontrollab.core.files import JsonDict, ensure_dir, read_json, write_json
 from promptcontrollab.ecosystem_demo import run_ecosystem_demo, write_ecosystem_scorecard
-from promptcontrollab.errors import PromptControlLabError
-from promptcontrollab.evaluation import run_import_eval
+from promptcontrollab.evaluation.artifact_export import export_report_zip
+from promptcontrollab.evaluation.evaluation import run_import_eval
+from promptcontrollab.evaluation.explain import generate_explanation
+from promptcontrollab.evaluation.gate import run_gate
+from promptcontrollab.evaluation.history import compare_history, index_history
+from promptcontrollab.evaluation.reporting import generate_report
+from promptcontrollab.evaluation.run_comparison import compare_runs
+from promptcontrollab.evaluation.splitting import load_tasks, make_split, write_split
+from promptcontrollab.evaluation.statistics import compare_prediction_files
+from promptcontrollab.evaluation.validity import run_comparison_validity
+from promptcontrollab.evaluation.workflow import (
+    config_metric,
+    load_analyze_config,
+    resolve_analyze_paths,
+    run_quick_analysis,
+)
 from promptcontrollab.evidence_card import write_evidence_card
 from promptcontrollab.evidence_gate import run_evidence_gate
-from promptcontrollab.explain import generate_explanation
 from promptcontrollab.external_evidence import (
     attach_evidence_gate_to_audit,
     build_external_evidence,
     build_external_evidence_audit,
     verify_source_inputs,
 )
-from promptcontrollab.files import JsonDict, ensure_dir, read_json, write_json
-from promptcontrollab.gate import run_gate
 from promptcontrollab.green_certificate import analyze_green_certificate
 from promptcontrollab.harness_integration import (
     doctor_harness,
@@ -53,7 +66,6 @@ from promptcontrollab.harness_integration import (
     resolve_harness_report,
 )
 from promptcontrollab.hf_hidden import extract_hidden_states
-from promptcontrollab.history import compare_history, index_history
 from promptcontrollab.ingest import (
     ingest_auto_results,
     ingest_deepeval_results,
@@ -62,8 +74,6 @@ from promptcontrollab.ingest import (
     ingest_prompt_optimizer_assets,
     ingest_promptfoo_results,
 )
-from promptcontrollab.model_drift import run_model_drift
-from promptcontrollab.model_identity import detect_model_identity
 from promptcontrollab.peoc_import import (
     PeocImportOptions,
     PeocSourceOverrides,
@@ -87,18 +97,27 @@ from promptcontrollab.posttrain_pilot_data import (
     prepare_sft_pilot_data_from_huggingface,
 )
 from promptcontrollab.posttrain_pilot_runner import execute_sft_pilot
-from promptcontrollab.pr_summary import write_pr_summary
-from promptcontrollab.prompt_context import load_prompt_context
-from promptcontrollab.prompt_diff import render_prompt_diff
-from promptcontrollab.prompt_guard import guard_prompt
-from promptcontrollab.prompt_improver import improve_prompt
+from promptcontrollab.preflight.prompt_context import load_prompt_context
+from promptcontrollab.preflight.prompt_diff import render_prompt_diff
+from promptcontrollab.preflight.prompt_guard import guard_prompt
+from promptcontrollab.preflight.prompt_improver import improve_prompt
+from promptcontrollab.preflight.scaffold_check import write_scaffold_check
+from promptcontrollab.preflight.tool_choice import (
+    adoption_path_rows,
+    choose_tool_for_need,
+    format_tool_choice,
+    market_gap_action_rows,
+    render_tool_choice_markdown,
+    tool_choice_lanes,
+)
+from promptcontrollab.provenance.model_drift import run_model_drift
+from promptcontrollab.provenance.model_identity import detect_model_identity
 from promptcontrollab.providers import (
     call_provider,
     doctor_provider,
     inspect_provider,
     list_providers,
 )
-from promptcontrollab.reporting import generate_report
 from promptcontrollab.research_workflow import (
     run_research_diagnostics,
     verify_research_bundle_index,
@@ -108,8 +127,6 @@ from promptcontrollab.research_workflow import (
     write_research_gap_status,
 )
 from promptcontrollab.riccati import analyze_riccati
-from promptcontrollab.run_comparison import compare_runs
-from promptcontrollab.scaffold_check import write_scaffold_check
 from promptcontrollab.server_evidence import (
     EvidenceImportOptions,
     import_evidence_manifest,
@@ -118,27 +135,10 @@ from promptcontrollab.server_evidence import (
     validate_evidence_destination,
 )
 from promptcontrollab.soft_hard import analyze_soft_hard
-from promptcontrollab.splitting import load_tasks, make_split, write_split
-from promptcontrollab.statistics import compare_prediction_files
 from promptcontrollab.templates import write_example_project, write_external_examples
 from promptcontrollab.terminal_sensitivity import analyze_terminal_sensitivity
-from promptcontrollab.tool_choice import (
-    adoption_path_rows,
-    choose_tool_for_need,
-    format_tool_choice,
-    market_gap_action_rows,
-    render_tool_choice_markdown,
-    tool_choice_lanes,
-)
 from promptcontrollab.trajectory import analyze_trajectory
 from promptcontrollab.tv_soft import summarize_tv_soft
-from promptcontrollab.validity import run_comparison_validity
-from promptcontrollab.workflow import (
-    config_metric,
-    load_analyze_config,
-    resolve_analyze_paths,
-    run_quick_analysis,
-)
 
 _PEOC_DOWNSTREAM_ARTIFACTS = (
     "evidence_card.json",
@@ -3216,7 +3216,7 @@ def _cmd_pr_summary(args: argparse.Namespace) -> None:
 
 
 def _cmd_github_app_serve(args: argparse.Namespace) -> None:
-    from promptcontrollab.github_app import serve_github_app
+    from promptcontrollab.audit.github_app import serve_github_app
 
     serve_github_app(host=args.host, port=args.port)
 

@@ -7,9 +7,9 @@ from pathlib import Path
 
 import pytest
 
-from promptcontrollab import doctor
-from promptcontrollab.audit_diff import _parse_external_secret_output
+from promptcontrollab.audit.audit_diff import _parse_external_secret_output
 from promptcontrollab.cli import main
+from promptcontrollab.core import doctor
 
 
 def test_cli_audit_diff_reports_agent_run_risks(tmp_path: Path) -> None:
@@ -369,7 +369,7 @@ def test_cli_audit_diff_missing_external_secret_scanner_is_clear(
     _write(repo / "src" / "app.py", "def existing() -> str:\n    return 'changed'\n")
     _git(repo, "add", ".")
     _git(repo, "commit", "-m", "change")
-    monkeypatch.setattr("promptcontrollab.audit_diff.shutil.which", lambda _name: None)
+    monkeypatch.setattr("promptcontrollab.audit.audit_diff.shutil.which", lambda _name: None)
 
     assert (
         main(
@@ -523,7 +523,7 @@ def test_cli_doctor_json_outputs_stable_checks(capsys: pytest.CaptureFixture[str
 def test_doctor_python_version_fails_below_supported_minimum(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.setattr("promptcontrollab.doctor.sys.version_info", (3, 9, 18))
+    monkeypatch.setattr("promptcontrollab.core.doctor.sys.version_info", (3, 9, 18))
 
     payload = doctor._check_python_version()
 

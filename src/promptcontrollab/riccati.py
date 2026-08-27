@@ -5,8 +5,8 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any, cast
 
-from promptcontrollab.files import JsonDict, ensure_dir, write_json
-from promptcontrollab.optional import require_module
+from promptcontrollab.core.files import JsonDict, ensure_dir, write_json
+from promptcontrollab.core.optional import require_module
 
 
 def analyze_riccati(

@@ -7,15 +7,17 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import cast
 
-from promptcontrollab.agent_run import build_agent_run_manifest
-from promptcontrollab.artifact_export import export_report_zip
-from promptcontrollab.audit_diff import run_audit_diff
+from promptcontrollab.audit.agent_run import build_agent_run_manifest
+from promptcontrollab.audit.audit_diff import run_audit_diff
+from promptcontrollab.audit.pr_summary import write_pr_summary
+from promptcontrollab.core.files import JsonDict, ensure_dir, write_json
+from promptcontrollab.evaluation.artifact_export import export_report_zip
+from promptcontrollab.evaluation.gate import run_gate
+from promptcontrollab.evaluation.history import index_history
+from promptcontrollab.evaluation.workflow import run_quick_analysis
 from promptcontrollab.evidence_card import write_evidence_card
 from promptcontrollab.external_evidence import ExternalTool, build_external_evidence
-from promptcontrollab.files import JsonDict, ensure_dir, write_json
-from promptcontrollab.gate import run_gate
 from promptcontrollab.hf_demo import is_hf_demo, require_hf_demo_workflow
-from promptcontrollab.history import index_history
 from promptcontrollab.ingest import (
     ingest_auto_results,
     ingest_deepeval_results,
@@ -24,11 +26,9 @@ from promptcontrollab.ingest import (
     ingest_prompt_optimizer_assets,
     ingest_promptfoo_results,
 )
-from promptcontrollab.pr_summary import write_pr_summary
-from promptcontrollab.prompt_context import load_prompt_context
-from promptcontrollab.prompt_guard import guard_prompt
+from promptcontrollab.preflight.prompt_context import load_prompt_context
+from promptcontrollab.preflight.prompt_guard import guard_prompt
 from promptcontrollab.templates import write_example_project
-from promptcontrollab.workflow import run_quick_analysis
 
 ExecutionRunner = Callable[[], JsonDict]
 

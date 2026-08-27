@@ -12,7 +12,7 @@ import shutil
 from pathlib import Path
 from zipfile import ZIP_DEFLATED, ZipFile, ZipInfo
 
-from promptcontrollab.files import JsonDict
+from promptcontrollab.core.files import JsonDict
 
 _VERSION_RE = re.compile(r'^version\s*=\s*"([^"]+)"$', re.MULTILINE)
 _FORBIDDEN_BUNDLE_SUFFIXES = frozenset({".mp4", ".pt", ".pth", ".pkl", ".pickle", ".npz"})

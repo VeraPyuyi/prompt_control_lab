@@ -74,7 +74,7 @@ def test_control_model_authorization_calls_provider_and_persists_safe_evidence(
         assert kwargs["prompt"] == "Explain the result."
         return response
 
-    monkeypatch.setattr("promptcontrollab.cli.call_provider", fake_call)
+    monkeypatch.setattr("promptcontrollab.cli.legacy.call_provider", fake_call)
     out = tmp_path / "control"
     assert (
         main(
@@ -182,7 +182,7 @@ def test_control_model_preflight_gate_never_calls_provider(
         called = True
         raise AssertionError(f"provider must not be called: {kwargs}")
 
-    monkeypatch.setattr("promptcontrollab.cli.call_provider", unexpected_call)
+    monkeypatch.setattr("promptcontrollab.cli.legacy.call_provider", unexpected_call)
     out = tmp_path / f"control-{severity}"
 
     assert (

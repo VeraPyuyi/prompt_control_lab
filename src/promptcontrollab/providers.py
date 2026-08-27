@@ -19,8 +19,8 @@ from dataclasses import dataclass
 from hashlib import sha256
 from typing import NoReturn, cast
 
-from promptcontrollab.errors import PromptControlLabError
-from promptcontrollab.files import JsonDict
+from promptcontrollab.core.errors import PromptControlLabError
+from promptcontrollab.core.files import JsonDict
 
 
 class ProviderError(PromptControlLabError):

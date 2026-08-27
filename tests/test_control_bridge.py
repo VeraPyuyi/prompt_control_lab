@@ -853,9 +853,9 @@ def test_harness_auto_recover_requires_config_policy_and_positive_bound(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    from promptcontrollab import control_bridge
-    from promptcontrollab.control_bridge import ControlBridge
-    from promptcontrollab.control_protocol import StabilityReport
+    from promptcontrollab.control import control_bridge
+    from promptcontrollab.control.control_bridge import ControlBridge
+    from promptcontrollab.control.control_protocol import StabilityReport
     from promptcontrollab.harness_integration import HARNESS_COMMIT, HARNESS_VERSION
 
     project = tmp_path / "project"

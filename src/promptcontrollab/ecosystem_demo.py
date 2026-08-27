@@ -6,8 +6,8 @@ import html
 from dataclasses import dataclass
 from pathlib import Path
 
+from promptcontrollab.core.files import JsonDict, ensure_dir, read_json, write_json
 from promptcontrollab.external_evidence import ExternalTool, build_external_evidence
-from promptcontrollab.files import JsonDict, ensure_dir, read_json, write_json
 from promptcontrollab.ingest import ingest_prompt_optimizer_assets
 from promptcontrollab.research_workflow import run_research_diagnostics
 

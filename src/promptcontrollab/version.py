@@ -1,4 +1,9 @@
-"""Package version."""
+"""Backward-compatible facade for :mod:`promptcontrollab.core.version`."""
 
-__version__ = "0.2.0a1"
+from promptcontrollab.core.version import (
+    __version__,
+)
 
+__all__ = [
+    "__version__",
+]

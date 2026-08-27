@@ -8,7 +8,8 @@ import shutil
 from pathlib import Path
 from typing import Literal
 
-from promptcontrollab.files import JsonDict, ensure_dir, read_json, write_json
+from promptcontrollab.core.files import JsonDict, ensure_dir, read_json, write_json
+from promptcontrollab.evaluation.run_comparison import compare_runs
 from promptcontrollab.ingest import (
     ingest_auto_results,
     ingest_deepeval_results,
@@ -22,7 +23,6 @@ from promptcontrollab.research_workflow import (
     write_research_bundle_index,
     write_research_gap_status,
 )
-from promptcontrollab.run_comparison import compare_runs
 
 ExternalTool = Literal["auto", "promptfoo", "langfuse", "langsmith", "deepeval"]
 

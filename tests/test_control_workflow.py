@@ -6,7 +6,7 @@ from typing import Any
 
 import pytest
 
-from promptcontrollab import control_workflow
+from promptcontrollab.control import control_workflow
 from promptcontrollab.control_events import EventLog
 from promptcontrollab.control_index import RunIndex
 from promptcontrollab.control_protocol import ControlEvent

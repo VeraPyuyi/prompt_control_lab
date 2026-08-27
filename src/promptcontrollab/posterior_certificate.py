@@ -6,7 +6,7 @@ import html
 import math
 from pathlib import Path
 
-from promptcontrollab.files import JsonDict, ensure_dir, read_json, write_json
+from promptcontrollab.core.files import JsonDict, ensure_dir, read_json, write_json
 
 
 def analyze_posterior_certificate(*, input_path: Path, out_dir: Path) -> JsonDict:

@@ -7,7 +7,7 @@ from collections import Counter
 from pathlib import Path
 from statistics import mean
 
-from promptcontrollab.files import JsonDict, read_json, write_json
+from promptcontrollab.core.files import JsonDict, read_json, write_json
 from promptcontrollab.posttrain_pilot import aggregate_pilot_decisions
 
 

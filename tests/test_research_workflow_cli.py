@@ -225,7 +225,7 @@ def test_research_quickstart_runs_diagnose_and_can_open_bundle(
         opened_urls.append(url)
         return True
 
-    monkeypatch.setattr("promptcontrollab.cli.webbrowser.open", fake_open)
+    monkeypatch.setattr("promptcontrollab.cli.legacy.webbrowser.open", fake_open)
     run_dir = tmp_path / "research-quickstart"
 
     assert main(["research-quickstart", "--out", str(run_dir), "--open-report"]) == 0

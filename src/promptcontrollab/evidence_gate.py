@@ -5,8 +5,8 @@ from __future__ import annotations
 import html
 from pathlib import Path
 
+from promptcontrollab.core.files import JsonDict, read_json, write_json
 from promptcontrollab.external_evidence import verify_source_inputs
-from promptcontrollab.files import JsonDict, read_json, write_json
 from promptcontrollab.research_workflow import verify_research_bundle_index
 
 DYNAMIC_BUNDLE_ARTIFACTS = {

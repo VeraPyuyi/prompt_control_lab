@@ -34,7 +34,7 @@ def test_cli_extract_hidden_writes_npz_and_metadata(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    from promptcontrollab import cli
+    from promptcontrollab.cli import legacy as cli
 
     prompts = tmp_path / "prompts.txt"
     out_path = tmp_path / "hidden_states.npz"

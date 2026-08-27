@@ -6,8 +6,8 @@ import html
 from collections.abc import Sequence
 from pathlib import Path
 
-from promptcontrollab.files import JsonDict, ensure_dir, write_json
-from promptcontrollab.report_model import ReportModel
+from promptcontrollab.core.files import JsonDict, ensure_dir, write_json
+from promptcontrollab.evaluation.report_model import ReportModel
 
 
 def build_evidence_card(run_dir: Path) -> JsonDict:

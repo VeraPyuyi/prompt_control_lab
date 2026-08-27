@@ -13,7 +13,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-from promptcontrollab.files import JsonDict, ensure_dir, stable_digest
+from promptcontrollab.core.files import JsonDict, ensure_dir, stable_digest
 
 _STAGES = ("initial", "mid", "final")
 _GATE_STAGES = ("mid", "final")

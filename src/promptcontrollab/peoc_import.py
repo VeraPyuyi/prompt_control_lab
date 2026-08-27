@@ -14,12 +14,12 @@ from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import TypeGuard, cast
 
-from promptcontrollab.files import JsonDict
+from promptcontrollab.core.files import JsonDict
+from promptcontrollab.core.version import __version__
 from promptcontrollab.peoc_reporting import (
     render_peoc_case_study_html,
     render_peoc_case_study_markdown,
 )
-from promptcontrollab.version import __version__
 
 HARD_SUMMARY = Path(
     "experiments/redesign_v2/results_server_pull_20260524/"

@@ -1880,7 +1880,7 @@ def test_cli_quickstart_can_open_report(
         opened_urls.append(url)
         return True
 
-    monkeypatch.setattr("promptcontrollab.cli.webbrowser.open", fake_open)
+    monkeypatch.setattr("promptcontrollab.cli.legacy.webbrowser.open", fake_open)
     demo = tmp_path / "quickstart-open"
 
     assert main(["quickstart", "--out", str(demo), "--open-report"]) == 0

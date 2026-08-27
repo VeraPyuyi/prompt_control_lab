@@ -8,22 +8,22 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, cast
 
-from promptcontrollab.claim_check import run_claim_check
-from promptcontrollab.evaluation import run_import_eval
+from promptcontrollab.audit.claim_check import run_claim_check
+from promptcontrollab.core.files import JsonDict, ensure_dir, read_json, write_json, write_jsonl
+from promptcontrollab.core.optional import require_module
+from promptcontrollab.core.version import __version__
+from promptcontrollab.evaluation.evaluation import run_import_eval
+from promptcontrollab.evaluation.splitting import load_tasks, make_split, write_split
+from promptcontrollab.evaluation.statistics import compare_prediction_files
+from promptcontrollab.evaluation.validity import run_comparison_validity
 from promptcontrollab.evidence_card import write_evidence_card
-from promptcontrollab.files import JsonDict, ensure_dir, read_json, write_json, write_jsonl
 from promptcontrollab.green_certificate import analyze_green_certificate
-from promptcontrollab.optional import require_module
 from promptcontrollab.posterior_certificate import analyze_posterior_certificate
 from promptcontrollab.riccati import analyze_riccati
 from promptcontrollab.soft_hard import analyze_soft_hard
-from promptcontrollab.splitting import load_tasks, make_split, write_split
-from promptcontrollab.statistics import compare_prediction_files
 from promptcontrollab.terminal_sensitivity import analyze_terminal_sensitivity
 from promptcontrollab.trajectory import analyze_trajectory
 from promptcontrollab.tv_soft import summarize_tv_soft
-from promptcontrollab.validity import run_comparison_validity
-from promptcontrollab.version import __version__
 
 PAPER_MAPPING: list[JsonDict] = [
     {

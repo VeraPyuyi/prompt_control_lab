@@ -8,7 +8,7 @@ import json
 from collections.abc import Iterable, Mapping
 from pathlib import Path
 
-from promptcontrollab.files import JsonDict, ensure_dir, stable_digest, write_json
+from promptcontrollab.core.files import JsonDict, ensure_dir, stable_digest, write_json
 
 GSM8K_DATASET_ID = "openai/gsm8k"
 GSM8K_DATASET_REVISION = "740312add88f781978c0658806c59bc2815b9866"
