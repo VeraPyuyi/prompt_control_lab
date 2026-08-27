@@ -120,11 +120,16 @@ def test_ui_implementation_lives_under_integrations() -> None:
 
     canonical = PACKAGE_ROOT / "integrations" / "ui"
     legacy = PACKAGE_ROOT / "ui"
-    for module_name in ("app", "charts", "components", "data", "workflows"):
+    for module_name in ("app", "charts", "components", "workflows"):
         assert (canonical / f"{module_name}.py").is_file()
         facade = legacy / f"{module_name}.py"
         assert facade.is_file()
         assert "Backward-compatible facade" in facade.read_text(encoding="utf-8")
+
+    assert (canonical / "data" / "__init__.py").is_file()
+    data_facade = legacy / "data.py"
+    assert data_facade.is_file()
+    assert "Backward-compatible facade" in data_facade.read_text(encoding="utf-8")
 
 
 @pytest.mark.parametrize(
