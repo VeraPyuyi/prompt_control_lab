@@ -29,7 +29,7 @@ from promptcontrollab.core.config import (
     get_config_str,
     load_project_config,
 )
-from promptcontrollab.core.doctor import format_doctor, run_doctor
+from promptcontrollab.integrations.doctor import format_doctor, run_doctor
 from promptcontrollab.core.errors import PromptControlLabError
 from promptcontrollab.core.files import JsonDict, ensure_dir, read_json, write_json
 from promptcontrollab.integrations.ecosystem_demo import run_ecosystem_demo, write_ecosystem_scorecard

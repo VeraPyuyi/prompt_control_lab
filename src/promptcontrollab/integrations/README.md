@@ -23,6 +23,7 @@ pcl install-plugin deepseek-harness
 pcl install-plugin all --target ./installed-templates
 pcl ui --runs runs --language en
 pcl github-app serve --host 0.0.0.0 --port 8080
+pcl doctor --json
 ```
 
 ## Python API
@@ -34,12 +35,13 @@ from promptcontrollab.integrations import (
     build_space_bundle,
     call_provider,
     doctor_harness,
+    run_doctor,
     install_plugin,
     list_providers,
 )
 ```
 
-Supporting APIs initialize and replay Harness sessions, validate the Hugging Face demo boundary, load UI data, and execute allowlisted UI workflows.
+Supporting APIs initialize and replay Harness sessions, validate the Hugging Face demo boundary, load UI data, and execute allowlisted UI workflows. The installation doctor lives here because it composes policies, templates, quick analysis, plugins, and optional integrations.
 
 ## Inputs/Artifacts
 

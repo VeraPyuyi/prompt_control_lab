@@ -16,6 +16,7 @@ _EXPORTS = {
     "build_space_bundle": ("promptcontrollab.integrations.hf_space", "build_space_bundle"),
     "call_provider": ("promptcontrollab.integrations.providers", "call_provider"),
     "doctor_harness": ("promptcontrollab.integrations.harness_integration", "doctor_harness"),
+    "format_doctor": ("promptcontrollab.integrations.doctor", "format_doctor"),
     "doctor_provider": ("promptcontrollab.integrations.providers", "doctor_provider"),
     "initialize_harness_project": (
         "promptcontrollab.integrations.harness_integration",
@@ -24,6 +25,7 @@ _EXPORTS = {
     "install_plugin": ("promptcontrollab.integrations.plugin_installer", "install_plugin"),
     "inspect_provider": ("promptcontrollab.integrations.providers", "inspect_provider"),
     "list_providers": ("promptcontrollab.integrations.providers", "list_providers"),
+    "run_doctor": ("promptcontrollab.integrations.doctor", "run_doctor"),
     "run_ecosystem_demo": (
         "promptcontrollab.integrations.ecosystem_demo",
         "run_ecosystem_demo",

@@ -23,6 +23,7 @@ pcl install-plugin deepseek-harness
 pcl install-plugin all --target ./installed-templates
 pcl ui --runs runs --language zh
 pcl github-app serve --host 0.0.0.0 --port 8080
+pcl doctor --json
 ```
 
 ## Python API
@@ -34,12 +35,13 @@ from promptcontrollab.integrations import (
     build_space_bundle,
     call_provider,
     doctor_harness,
+    run_doctor,
     install_plugin,
     list_providers,
 )
 ```
 
-辅助 API 用于初始化和重放 Harness Session、验证 Hugging Face Demo 边界、读取 UI 数据和执行白名单内的 UI Workflow。
+辅助 API 用于初始化和重放 Harness Session、验证 Hugging Face Demo 边界、读取 UI 数据和执行白名单内的 UI Workflow。安装诊断位于此模块，因为它需要组合 Policy、模板、Quick Analysis、插件和可选集成能力。
 
 ## 输入与产物
 

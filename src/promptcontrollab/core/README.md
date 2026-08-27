@@ -2,23 +2,18 @@
 
 ## Purpose
 
-`promptcontrollab.core` contains shared infrastructure used by every feature domain: configuration, JSON and JSONL I/O, common schemas, errors, optional-dependency checks, version data, and environment diagnostics. It must remain independent of product-level modules.
+`promptcontrollab.core` contains shared infrastructure used by every feature domain: configuration, JSON and JSONL I/O, common schemas, errors, optional-dependency checks, and version data. It remains independent of product-level modules.
 
 ## Use cases
 
 - Load project defaults from `.promptcontrol.yaml`.
 - Read and write deterministic local artifacts.
 - Share typed task, prediction, and metric records.
-- Report missing optional dependencies and diagnose a local installation.
+- Report missing optional dependencies without importing product domains.
 
 ## CLI commands
 
-```bash
-pcl init --path demo
-pcl doctor --json
-```
-
-`init` creates a project scaffold that uses the configuration helpers. `doctor` checks the package, policies, plugins, UI, and optional research environment.
+Core has no standalone CLI command. User-facing commands consume these helpers through their owning domain.
 
 ## Python API
 
@@ -35,12 +30,12 @@ from promptcontrollab.core import (
 )
 ```
 
-Implementation modules include `config`, `files`, `schemas`, `errors`, `optional`, `doctor`, and `version`.
+Implementation modules include `config`, `files`, `schemas`, `errors`, `optional`, and `version`.
 
 ## Inputs/Artifacts
 
 - Inputs: `.promptcontrol.yaml`, JSON, JSONL, paths, and environment state.
-- Outputs: normalized configuration values, typed records, JSON/JSONL files, stable digests, and doctor result payloads.
+- Outputs: normalized configuration values, typed records, JSON/JSONL files, and stable digests.
 - Core helpers do not define domain-specific run artifacts.
 
 ## Dependencies
@@ -57,12 +52,11 @@ Core uses the Python standard library and the package's default dependency-free 
 
 - The YAML reader intentionally supports a small dependency-free subset, not the full YAML specification.
 - Stable digests identify serialized content; they are not signatures or authenticity proofs.
-- Doctor checks readiness and configuration, not the correctness of external services.
 
 ## Tests/Examples
 
-See configuration, file, schema, and doctor coverage under `tests/`. Run:
+See configuration, file, schema, and error coverage under `tests/`. Run:
 
 ```bash
-python -m pytest tests -k "config or files or schema or doctor"
+python -m pytest tests -k "config or files or schema or errors"
 ```

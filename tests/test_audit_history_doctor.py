@@ -9,7 +9,7 @@ import pytest
 
 from promptcontrollab.audit.audit_diff import _parse_external_secret_output
 from promptcontrollab.cli import main
-from promptcontrollab.core import doctor
+from promptcontrollab.integrations import doctor
 
 
 def test_cli_audit_diff_reports_agent_run_risks(tmp_path: Path) -> None:
@@ -523,7 +523,7 @@ def test_cli_doctor_json_outputs_stable_checks(capsys: pytest.CaptureFixture[str
 def test_doctor_python_version_fails_below_supported_minimum(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.setattr("promptcontrollab.core.doctor.sys.version_info", (3, 9, 18))
+    monkeypatch.setattr("promptcontrollab.integrations.doctor.sys.version_info", (3, 9, 18))
 
     payload = doctor._check_python_version()
 

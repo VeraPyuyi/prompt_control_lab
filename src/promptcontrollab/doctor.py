@@ -1,6 +1,6 @@
-"""Backward-compatible facade for :mod:`promptcontrollab.core.doctor`."""
+"""Backward-compatible facade for :mod:`promptcontrollab.integrations.doctor`."""
 
-from promptcontrollab.core.doctor import (
+from promptcontrollab.integrations.doctor import (
     format_doctor,
     run_doctor,
 )

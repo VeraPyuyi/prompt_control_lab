@@ -34,7 +34,7 @@ PUBLIC_COMPATIBILITY = (
 )
 
 CANONICAL_IMPLEMENTATIONS = {
-    "core": ("config", "doctor", "errors", "files", "optional", "schemas", "version"),
+    "core": ("config", "errors", "files", "optional", "schemas", "version"),
     "preflight": (
         "guard_policy",
         "prompt_context",
@@ -71,6 +71,7 @@ CANONICAL_IMPLEMENTATIONS = {
     ),
     "audit": ("agent_run", "audit_diff", "claim_check", "github_app", "pr_summary"),
     "integrations": (
+        "doctor",
         "ecosystem_demo",
         "harness_integration",
         "hf_demo",
