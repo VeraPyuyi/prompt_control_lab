@@ -20,7 +20,7 @@ CLI_DOMAINS = (
     "diagnostics",
     "integrations",
 )
-CLI_PARSER_SNAPSHOT_SHA256 = "fe377185bf8f5a9d439c407a7baeb8d9f184b5b0ddf17c2acd51dfb8c8d7ae2f"
+CLI_PARSER_SNAPSHOT_SHA256 = "62a1156f63f0fd05767e1e3de37d5cb01d4499281084bb7f6e0f8517583552c5"
 
 
 def _normalize_parser_value(value: Any) -> Any:
@@ -33,7 +33,7 @@ def _normalize_parser_value(value: Any) -> Any:
             strict=False
         ):
             return {"path": "<cwd>"}
-        return {"path": str(value)}
+        return {"path": value.as_posix()}
     if isinstance(value, type):
         return {"type": f"{value.__module__}.{value.__qualname__}"}
     if isinstance(value, dict):
@@ -129,3 +129,9 @@ def test_cli_parser_contract_matches_pre_split_snapshot() -> None:
     cli = importlib.import_module("promptcontrollab.cli")
     payload = json.dumps(_parser_snapshot(cli.build_parser()), ensure_ascii=False, indent=2) + "\n"
     assert hashlib.sha256(payload.encode("utf-8")).hexdigest() == CLI_PARSER_SNAPSHOT_SHA256
+
+
+def test_cli_parser_snapshot_normalizes_paths_across_platforms() -> None:
+    """Keep native path separators out of the portable parser contract."""
+
+    assert _normalize_parser_value(Path("runs") / "quick") == {"path": "runs/quick"}
