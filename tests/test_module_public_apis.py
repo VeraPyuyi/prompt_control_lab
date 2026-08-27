@@ -45,6 +45,12 @@ DOCUMENTED_IMPORTS = {
         "run_audit_diff",
         "run_claim_check",
     ),
+    "evidence": (
+        "EvidenceImportOptions",
+        "import_evidence_manifest",
+        "run_posttrain_gate",
+        "scan_evidence_root",
+    ),
     "diagnostics": (
         "analyze_green_certificate",
         "analyze_posterior_certificate",
@@ -59,6 +65,10 @@ DOCUMENTED_IMPORTS = {
         "list_providers",
         "run_doctor",
     ),
+    "cli": (
+        "build_parser",
+        "main",
+    ),
 }
 
 
@@ -72,3 +82,13 @@ def test_documented_canonical_imports_resolve() -> None:
             if not hasattr(module, symbol):
                 missing.append(f"promptcontrollab.{domain}.{symbol}")
     assert missing == []
+
+
+def test_canonical_packages_declare_explicit_public_surfaces() -> None:
+    """Require every documented canonical package to publish an explicit `__all__`."""
+
+    for domain, symbols in DOCUMENTED_IMPORTS.items():
+        module = importlib.import_module(f"promptcontrollab.{domain}")
+        public = getattr(module, "__all__", None)
+        assert isinstance(public, list), domain
+        assert set(symbols) <= set(public), domain
