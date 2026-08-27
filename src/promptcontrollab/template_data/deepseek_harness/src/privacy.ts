@@ -17,6 +17,7 @@ export class RetryAttemptTracker {
   }
 }
 
+/** Compute a tagged SHA-256 digest for redacted event identities. */
 export function sha256(value: string): string {
   return `sha256:${createHash('sha256').update(value, 'utf8').digest('hex')}`
 }
@@ -26,12 +27,14 @@ export function stableJsonDigest(value: string): string {
   return sha256(JSON.stringify(toStableJson(value)))
 }
 
+/** Bound feedback text before it can re-enter the agent context. */
 export function boundedText(value: unknown, maxChars: number): string {
   const text = typeof value === 'string' ? value : ''
   if (text.length <= maxChars) return text
   return `${text.slice(0, Math.max(0, maxChars - 1))}…`
 }
 
+/** Extract visible text blocks from a proposed Harness message batch. */
 export function extractPromptText(messages: readonly unknown[]): string {
   const parts: string[] = []
   for (const candidate of messages) {
@@ -51,6 +54,7 @@ export function shouldObserveSessionEvent(eventType: string): boolean {
   return eventType !== 'assistant/chunk'
 }
 
+/** Project a tool call into redacted metadata suitable for local persistence. */
 export function safeToolMetadata(exec: unknown): JsonObject {
   if (!isRecord(exec)) return {}
   const argumentsValue = toStableJson(exec.arguments)
@@ -65,6 +69,7 @@ export function safeToolMetadata(exec: unknown): JsonObject {
   })
 }
 
+/** Project a tool result into bounded status metadata without result content. */
 export function safeToolResult(result: unknown): JsonObject {
   if (!isRecord(result)) return {}
   const error = isRecord(result.error)
@@ -80,6 +85,7 @@ export function safeToolResult(result: unknown): JsonObject {
   })
 }
 
+/** Reduce a provider request failure to non-secret retry metadata. */
 export function safeRequestFailure(failure: unknown): JsonObject {
   if (!isRecord(failure)) return { kind: 'unknown' }
   return compact({
@@ -90,6 +96,7 @@ export function safeRequestFailure(failure: unknown): JsonObject {
   })
 }
 
+/** Convert a Harness session event into a redacted control observation. */
 export function safeSessionEvent(event: unknown): JsonObject {
   if (!isRecord(event)) return { event_type: 'unknown' }
   const eventType = stringValue(event.type) ?? 'unknown'
@@ -156,6 +163,7 @@ function collectStringValues(value: unknown): string[] {
   return []
 }
 
+/** Build a deterministic idempotency key for replay-safe event ingestion. */
 export function stableEventKey(sessionId: string, eventType: string, identity: unknown): string {
   return sha256(JSON.stringify([sessionId, eventType, toStableJson(identity)]))
 }

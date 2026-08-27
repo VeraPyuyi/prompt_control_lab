@@ -560,7 +560,10 @@ def test_doctor_is_offline_by_default_and_requires_explicit_model_for_live(
     def unexpected_transport(request: Request, timeout: float) -> tuple[bytes, Mapping[str, str]]:
         raise AssertionError("offline doctor must not call the network")
 
-    monkeypatch.setattr("promptcontrollab.integrations.providers._perform_request", unexpected_transport)
+    monkeypatch.setattr(
+        "promptcontrollab.integrations.providers._perform_request",
+        unexpected_transport,
+    )
 
     offline = doctor_provider("openai")
     assert offline["status"] == "ready"
@@ -609,7 +612,10 @@ def test_http_errors_are_clear_without_exposing_api_key(
             fp=None,
         )
 
-    monkeypatch.setattr("promptcontrollab.integrations.providers._perform_request", failed_transport)
+    monkeypatch.setattr(
+        "promptcontrollab.integrations.providers._perform_request",
+        failed_transport,
+    )
 
     with pytest.raises(ProviderError) as caught:
         call_provider(provider="openai", model="gpt-test", prompt="Hello")
@@ -659,7 +665,10 @@ def test_non_standard_json_constants_are_rejected_during_decode(
     ) -> tuple[bytes, Mapping[str, str]]:
         return response_bytes, {}
 
-    monkeypatch.setattr("promptcontrollab.integrations.providers._perform_request", constant_response)
+    monkeypatch.setattr(
+        "promptcontrollab.integrations.providers._perform_request",
+        constant_response,
+    )
 
     with pytest.raises(ProviderError, match="invalid JSON") as caught:
         call_provider(provider="openai", model="gpt-test", prompt="Hello")
@@ -683,7 +692,10 @@ def test_overflowed_json_number_is_rejected_as_non_finite(
             {},
         )
 
-    monkeypatch.setattr("promptcontrollab.integrations.providers._perform_request", overflow_response)
+    monkeypatch.setattr(
+        "promptcontrollab.integrations.providers._perform_request",
+        overflow_response,
+    )
 
     with pytest.raises(ProviderError, match="finite JSON numbers"):
         call_provider(provider="openai", model="gpt-test", prompt="Hello")
@@ -811,7 +823,10 @@ def test_transport_installs_redirect_rejecting_handler(monkeypatch: pytest.Monke
         installed_handlers.extend(handlers)
         return opener
 
-    monkeypatch.setattr("promptcontrollab.integrations.providers.urllib.request.build_opener", fake_build_opener)
+    monkeypatch.setattr(
+        "promptcontrollab.integrations.providers.urllib.request.build_opener",
+        fake_build_opener,
+    )
     request = Request(
         "https://provider.example.test/v1/chat/completions",
         headers={"Authorization": "Bearer private"},

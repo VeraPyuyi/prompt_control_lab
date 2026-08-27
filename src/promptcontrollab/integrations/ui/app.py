@@ -89,6 +89,53 @@ from promptcontrollab.integrations.ui.pages.tutorial import (
 )
 from promptcontrollab.integrations.ui.pages.workflows import _render_workflows_tab
 
+__all__ = [
+    "CHOICE_OPTIONS",
+    "CONTROL_TEXT",
+    "DEFAULT_PRIMARY_VIEW",
+    "HF_DEMO_TEXT",
+    "INTERPRETATION_LABELS",
+    "LEGACY_VIEW_ALIASES",
+    "LEGACY_VIEW_GROUPS",
+    "ONBOARDING_PATHS",
+    "PRIMARY_VIEW_LABELS",
+    "PRIMARY_VIEW_ORDER",
+    "TEXT",
+    "TUTORIAL_IMAGES",
+    "TUTORIAL_SCREENSHOTS",
+    "TUTORIAL_SECTION_SCREENSHOTS",
+    "TUTORIAL_SECTIONS",
+    "TUTORIAL_STEPS",
+    "_choice_labels",
+    "_choice_value",
+    "_hide_streamlit_chrome",
+    "_market_map_display_rows",
+    "_market_readiness_next_move_rows",
+    "_ordered_views",
+    "_render_before_view",
+    "_render_evidence_scope_view",
+    "_render_image",
+    "_render_interpretation_records",
+    "_render_mechanism_view",
+    "_render_peoc_evidence_section",
+    "_render_research_overview_tab",
+    "_render_run_view",
+    "_render_stability_view",
+    "_render_svg",
+    "_render_tool_choice_advisor",
+    "_render_training_gate_view",
+    "_research_insight_display_rows",
+    "_resolve_primary_view",
+    "adoption_path_rows",
+    "ecosystem_choice_rows",
+    "legacy_sections_for",
+    "main",
+    "onboarding_paths",
+    "primary_view_labels",
+    "tutorial_gallery_items",
+    "tutorial_sections",
+]
+
 
 def main() -> None:
     """Run the Streamlit dashboard."""

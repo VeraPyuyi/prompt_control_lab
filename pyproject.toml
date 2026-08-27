@@ -140,5 +140,5 @@ files = ["src/promptcontrollab", "tests"]
 warn_unused_configs = true
 
 [[tool.mypy.overrides]]
-module = ["numpy", "numpy.*", "scipy", "scipy.*"]
+module = ["numpy", "numpy.*"]
 ignore_missing_imports = true

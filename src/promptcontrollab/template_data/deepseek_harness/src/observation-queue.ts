@@ -6,6 +6,7 @@ interface QueueItem<T> {
   reject?: (error: unknown) => void
 }
 
+/** Serialize bounded observations while preserving critical lifecycle writes. */
 export class BoundedObservationQueue<T> {
   readonly capacity: number
   dropped = 0
@@ -29,6 +30,7 @@ export class BoundedObservationQueue<T> {
     this.onError = onError
   }
 
+  /** Enqueue a best-effort observation unless the bounded capacity is full. */
   enqueue(item: T): boolean {
     if (this.pendingObservations >= this.capacity) {
       this.dropped += 1
@@ -48,6 +50,7 @@ export class BoundedObservationQueue<T> {
     })
   }
 
+  /** Wait until all currently queued work has completed. */
   async flush(): Promise<void> {
     if (!this.active && this.items.length === 0) return
     await new Promise<void>(resolve => this.waiters.push(resolve))

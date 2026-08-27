@@ -61,6 +61,7 @@ export const Config: z<Config> = z.object({
   maxAutoRecoveries: z.number().default(1),
 })
 
+/** Resolve defaults and enforce safe numeric and bridge-failure settings. */
 export function resolveConfig(config: Config): ResolvedConfig {
   const resolved: ResolvedConfig = { ...DEFAULT_CONFIG, ...config }
   for (const [name, value] of [

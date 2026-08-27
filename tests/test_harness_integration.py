@@ -114,7 +114,10 @@ def test_harness_doctor_is_offline_and_checks_local_contract(
         "promptcontrollab.integrations.harness_integration.shutil.which",
         lambda name: "node.exe",
     )
-    monkeypatch.setattr("promptcontrollab.integrations.harness_integration.subprocess.run", fake_run)
+    monkeypatch.setattr(
+        "promptcontrollab.integrations.harness_integration.subprocess.run",
+        fake_run,
+    )
 
     result = harness_integration.doctor_harness(tmp_path)
 

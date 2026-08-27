@@ -139,7 +139,10 @@ class ControlBridge:
     def _harness_session_start(self, params: JsonDict) -> JsonDict:
         """Create a controlled Harness session after validating its safety contract."""
 
-        from promptcontrollab.integrations.harness_integration import HARNESS_COMMIT, HARNESS_VERSION
+        from promptcontrollab.integrations.harness_integration import (
+            HARNESS_COMMIT,
+            HARNESS_VERSION,
+        )
 
         session_id = _required_string(params, "session_id")
         source = _required_string(params, "source")

@@ -8,6 +8,12 @@ from pathlib import Path
 from typing import Literal
 
 from promptcontrollab.core.files import JsonDict, ensure_dir, read_json, write_json
+from promptcontrollab.diagnostics.research_workflow import (
+    run_research_diagnostics,
+    verify_research_bundle_index,
+    write_research_bundle_index,
+    write_research_gap_status,
+)
 from promptcontrollab.evaluation.run_comparison import compare_runs
 from promptcontrollab.evidence.external_rendering import (
     _render_bridge_summary,
@@ -29,12 +35,6 @@ from promptcontrollab.evidence.ingest import (
     ingest_langfuse_results,
     ingest_langsmith_results,
     ingest_promptfoo_results,
-)
-from promptcontrollab.diagnostics.research_workflow import (
-    run_research_diagnostics,
-    verify_research_bundle_index,
-    write_research_bundle_index,
-    write_research_gap_status,
 )
 
 ExternalTool = Literal["auto", "promptfoo", "langfuse", "langsmith", "deepeval"]
