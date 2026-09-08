@@ -68,6 +68,9 @@ pcl scaffold-check --run ./tmp-pcl-prompt-optimizer
 Expected result: the CLI is available, `pcl doctor` runs, and template installers
 can write Codex, Cursor, Claude Code, and GitHub Action templates. The prompt-optimizer bridge
 also writes `eval_scaffold/scaffold_check.json` and `.html` from the wheel-installed package.
+When the current directory is not a git checkout, `pcl doctor` still validates the packaged
+example guard policy, Claude Code hook template, Cursor rule, and demo report instead of
+warning that `examples/` or `plugins/` were missing.
 
 When the current environment already has the `research` extra installed, also
 verify the advanced diagnostic workflow from the built wheel:

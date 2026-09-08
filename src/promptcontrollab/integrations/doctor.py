@@ -8,11 +8,12 @@ import os
 import subprocess
 import sys
 import tempfile
+from importlib import resources
 from pathlib import Path
 
 from promptcontrollab.core.files import JsonDict
 from promptcontrollab.evaluation.workflow import run_quick_analysis
-from promptcontrollab.integrations.templates import write_example_project
+from promptcontrollab.integrations.templates import GUARD_POLICY_YAML, write_example_project
 from promptcontrollab.preflight.guard_policy import load_guard_policy
 
 
@@ -88,41 +89,99 @@ def _check_openai_key() -> JsonDict:
 
 def _check_guard_policy(root: Path) -> JsonDict:
     policy = root / "examples" / "guard.policy.yaml"
-    if not policy.exists():
-        return _check("guard_policy", "warning", f"{policy} was not found.")
+    if policy.exists():
+        return _parse_guard_policy(policy, "examples/guard.policy.yaml parses successfully.")
+    return _parse_packaged_guard_policy()
+
+
+def _parse_guard_policy(policy: Path, success_message: str) -> JsonDict:
     try:
         load_guard_policy(policy)
     except Exception as exc:
         return _check("guard_policy", "fail", f"Guard policy failed to parse: {exc}")
-    return _check("guard_policy", "pass", "examples/guard.policy.yaml parses successfully.")
+    return _check("guard_policy", "pass", success_message)
+
+
+def _parse_packaged_guard_policy() -> JsonDict:
+    try:
+        with tempfile.TemporaryDirectory() as raw:
+            policy = Path(raw) / "guard.policy.yaml"
+            policy.write_text(GUARD_POLICY_YAML, encoding="utf-8")
+            load_guard_policy(policy)
+    except Exception as exc:
+        return _check("guard_policy", "fail", f"Packaged guard policy failed to parse: {exc}")
+    return _check("guard_policy", "pass", "Packaged example guard policy parses successfully.")
 
 
 def _check_claude_hook(root: Path) -> JsonDict:
     hook = root / "plugins" / "claude-code" / "hooks" / "prompt_guard.py"
-    if not hook.exists():
-        return _check("claude_code_hook", "warning", "Claude Code hook script was not found.")
-    event = json.dumps({"prompt": "Fix this bug"})
-    return _run_subprocess_check(
-        "claude_code_hook",
-        [sys.executable, str(hook), "--mode", "suggest"],
-        input_text=event,
-        cwd=root,
-        success_message="Claude Code hook runs.",
+    if hook.exists():
+        event = json.dumps({"prompt": "Fix this bug"})
+        return _run_subprocess_check(
+            "claude_code_hook",
+            [sys.executable, str(hook), "--mode", "suggest"],
+            input_text=event,
+            cwd=root,
+            success_message="Claude Code hook runs.",
+        )
+    return _run_packaged_claude_hook()
+
+
+def _run_packaged_claude_hook() -> JsonDict:
+    source = (
+        resources.files("promptcontrollab.template_data")
+        .joinpath("claude_code")
+        .joinpath("prompt_guard.py")
     )
+    try:
+        with resources.as_file(source) as hook_path:
+            if not Path(hook_path).is_file():
+                return _check(
+                    "claude_code_hook",
+                    "warning",
+                    "Claude Code hook script was not found.",
+                )
+            return _run_subprocess_check(
+                "claude_code_hook",
+                [sys.executable, str(hook_path), "--mode", "suggest"],
+                input_text="Fix this bug",
+                cwd=Path.cwd(),
+                success_message="Packaged Claude Code hook runs.",
+            )
+    except (FileNotFoundError, ModuleNotFoundError, OSError) as exc:
+        return _check("claude_code_hook", "fail", f"Could not run check: {exc}")
 
 
 def _check_cursor_mcp(root: Path) -> JsonDict:
     server = root / "plugins" / "cursor" / "mcp_server.py"
-    if not server.exists():
-        return _check("cursor_mcp_server", "warning", "Cursor MCP server script was not found.")
-    request = json.dumps({"jsonrpc": "2.0", "id": 1, "method": "initialize", "params": {}}) + "\n"
-    return _run_subprocess_check(
-        "cursor_mcp_server",
-        [sys.executable, str(server)],
-        input_text=request,
-        cwd=root,
-        success_message="Cursor MCP server initializes.",
-    )
+    if server.exists():
+        request = (
+            json.dumps({"jsonrpc": "2.0", "id": 1, "method": "initialize", "params": {}}) + "\n"
+        )
+        return _run_subprocess_check(
+            "cursor_mcp_server",
+            [sys.executable, str(server)],
+            input_text=request,
+            cwd=root,
+            success_message="Cursor MCP server initializes.",
+        )
+    if _packaged_template_exists("cursor_rule", "prompt_control_lab.mdc"):
+        return _check(
+            "cursor_mcp_server",
+            "pass",
+            "Packaged Cursor rule is available; checkout MCP server is optional.",
+        )
+    return _check("cursor_mcp_server", "warning", "Cursor MCP server script was not found.")
+
+
+def _packaged_template_exists(*parts: str) -> bool:
+    try:
+        source = resources.files("promptcontrollab.template_data")
+        for part in parts:
+            source = source.joinpath(part)
+        return source.is_file()
+    except (FileNotFoundError, ModuleNotFoundError, OSError):
+        return False
 
 
 def _check_demo_report() -> JsonDict:

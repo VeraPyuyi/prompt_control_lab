@@ -520,6 +520,41 @@ def test_cli_doctor_json_outputs_stable_checks(capsys: pytest.CaptureFixture[str
     assert "optional_research_dependencies" in names
 
 
+def test_doctor_uses_checkout_examples_when_present() -> None:
+    payload = doctor.run_doctor(repo_root=Path.cwd())
+    checks = {item["name"]: item for item in payload["checks"]}
+
+    assert checks["guard_policy"]["status"] == "pass"
+    assert "examples/guard.policy.yaml" in checks["guard_policy"]["message"]
+    assert checks["claude_code_hook"]["status"] == "pass"
+    assert checks["claude_code_hook"]["message"] == "Claude Code hook runs."
+    assert checks["cursor_mcp_server"]["status"] == "pass"
+    assert checks["cursor_mcp_server"]["message"] == "Cursor MCP server initializes."
+    assert checks["demo_report"]["status"] == "pass"
+
+
+def test_doctor_uses_packaged_templates_outside_checkout(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    payload = doctor.run_doctor(repo_root=tmp_path)
+    checks = {item["name"]: item for item in payload["checks"]}
+
+    assert checks["python_version"]["status"] == "pass"
+    assert checks["package_import"]["status"] == "pass"
+    assert checks["cli_parser"]["status"] == "pass"
+    assert checks["guard_policy"]["status"] == "pass"
+    assert "Packaged example guard policy" in checks["guard_policy"]["message"]
+    assert checks["claude_code_hook"]["status"] == "pass"
+    assert "Packaged Claude Code hook" in checks["claude_code_hook"]["message"]
+    assert checks["cursor_mcp_server"]["status"] == "pass"
+    assert "Packaged Cursor rule" in checks["cursor_mcp_server"]["message"]
+    assert checks["demo_report"]["status"] == "pass"
+    for name in ["guard_policy", "claude_code_hook", "cursor_mcp_server"]:
+        assert "was not found" not in checks[name]["message"]
+
+
 def test_doctor_python_version_fails_below_supported_minimum(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
