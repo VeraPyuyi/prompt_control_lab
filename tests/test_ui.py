@@ -170,7 +170,7 @@ def test_cli_ui_reports_missing_streamlit(
     assert main(["ui", "--runs", "runs"]) == 2
 
     stderr = capsys.readouterr().err
-    assert "pip install -e \".[ui]\"" in stderr
+    assert "pip install promptcontrollab[ui]" in stderr
 
 
 def test_cli_ui_reports_missing_plotly(
@@ -189,7 +189,7 @@ def test_cli_ui_reports_missing_plotly(
     stderr = capsys.readouterr().err
     assert "plotly" in stderr
     assert "pandas" not in stderr
-    assert "pip install -e \".[ui]\"" in stderr
+    assert "pip install promptcontrollab[ui]" in stderr
 
 
 def test_cli_ui_launches_streamlit_with_environment(

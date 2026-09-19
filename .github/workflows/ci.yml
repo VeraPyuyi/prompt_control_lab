@@ -47,6 +47,20 @@ jobs:
           . .wheel-smoke/bin/activate
           python -m pip install --no-index --find-links dist promptcontrollab
           pcl --help
+          empty="$(mktemp -d)"
+          (cd "$empty" && pcl doctor --json > doctor.json)
+          python -c "
+          import json, pathlib, sys
+          payload = json.loads(pathlib.Path(sys.argv[1]).read_text())
+          checks = {item['name']: item for item in payload['checks']}
+          for name in ('guard_policy', 'claude_code_hook', 'cursor_rule_template', 'demo_report'):
+              check = checks[name]
+              if check['status'] != 'pass':
+                  raise SystemExit(name + ' failed: ' + check['message'])
+              if 'was not found' in check['message']:
+                  raise SystemExit(name + ' still looks checkout-only: ' + check['message'])
+          assert checks['cursor_mcp_server']['status'] == 'skipped', checks['cursor_mcp_server']
+          " "$empty/doctor.json"
           pcl install-plugin all --target .wheel-smoke/templates
           test -f .wheel-smoke/templates/codex/SKILL.md
           test -f .wheel-smoke/templates/cursor/prompt_control_lab.mdc

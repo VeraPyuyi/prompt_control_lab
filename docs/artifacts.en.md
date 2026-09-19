@@ -196,7 +196,9 @@ secret findings.
 
 Stores or prints local setup checks: Python version, package import, CLI parser, optional
 `OPENAI_API_KEY`, guard policy parsing, Claude Code hook, Cursor MCP server, demo report
-generation, and optional research dependencies.
+generation, and optional research dependencies. Checkout paths are used when present;
+otherwise doctor validates the packaged example policy, Claude Code hook template, Cursor
+rule, and demo report so a wheel install does not look broken.
 
 What it explains: whether the local installation is ready for normal CLI and plugin workflows,
 and where a user should look if setup failed.

@@ -64,6 +64,7 @@ Provider metadata and plugin installation use the default runtime. The UI requir
 - Provider support records public API behavior, not hidden model internals.
 - Thin editor adapters may depend on host capabilities and cannot intercept every prompt path.
 - The Hugging Face demo intentionally disables providers, Git changes, shell execution, plugin installation, and durable storage.
+- `pcl doctor` uses checkout `examples/` and `plugins/` when present, and packaged templates after a wheel install.
 
 ## Tests/Examples
 

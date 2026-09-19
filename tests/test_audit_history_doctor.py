@@ -520,6 +520,71 @@ def test_cli_doctor_json_outputs_stable_checks(capsys: pytest.CaptureFixture[str
     assert "optional_research_dependencies" in names
 
 
+def test_doctor_uses_checkout_examples_when_present() -> None:
+    payload = doctor.run_doctor(repo_root=Path.cwd())
+    checks = {item["name"]: item for item in payload["checks"]}
+
+    assert checks["guard_policy"]["status"] == "pass"
+    assert "examples/guard.policy.yaml" in checks["guard_policy"]["message"]
+    assert checks["claude_code_hook"]["status"] == "pass"
+    assert checks["claude_code_hook"]["message"] == "Claude Code hook runs."
+    assert checks["cursor_mcp_server"]["status"] == "pass"
+    assert checks["cursor_mcp_server"]["message"] == "Cursor MCP server initializes."
+    assert checks["demo_report"]["status"] == "pass"
+
+
+def test_doctor_uses_packaged_templates_outside_checkout(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    payload = doctor.run_doctor(repo_root=tmp_path)
+    checks = {item["name"]: item for item in payload["checks"]}
+
+    assert checks["python_version"]["status"] == "pass"
+    assert checks["package_import"]["status"] == "pass"
+    assert checks["cli_parser"]["status"] == "pass"
+    assert checks["guard_policy"]["status"] == "pass"
+    assert "Packaged example guard policy" in checks["guard_policy"]["message"]
+    assert checks["claude_code_hook"]["status"] == "pass"
+    assert "Packaged Claude Code hook" in checks["claude_code_hook"]["message"]
+    assert checks["cursor_mcp_server"]["status"] == "skipped"
+    assert "not run" in checks["cursor_mcp_server"]["message"]
+    assert checks["cursor_rule_template"]["status"] == "pass"
+    assert "template check only" in checks["cursor_rule_template"]["message"]
+    assert checks["demo_report"]["status"] == "pass"
+    for name in ["guard_policy", "claude_code_hook", "cursor_mcp_server"]:
+        assert "was not found" not in checks[name]["message"]
+
+
+def test_doctor_missing_template_package_returns_fail(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    def missing_package(_name: str) -> None:
+        raise ModuleNotFoundError("template package is missing")
+
+    monkeypatch.setattr("promptcontrollab.integrations.doctor.resources.files", missing_package)
+    assert doctor._run_packaged_claude_hook()["status"] == "fail"
+    assert doctor._check_cursor_rule()["status"] == "fail"
+
+
+@pytest.mark.parametrize("rule_content", [None, "", "   \n"])
+def test_doctor_missing_or_empty_bundled_resources_fail(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    rule_content: str | None,
+) -> None:
+    monkeypatch.setattr(
+        "promptcontrollab.integrations.doctor.resources.files", lambda _name: tmp_path
+    )
+    if rule_content is not None:
+        rule = tmp_path / "cursor_rule" / "prompt_control_lab.mdc"
+        rule.parent.mkdir()
+        rule.write_text(rule_content, encoding="utf-8")
+    assert doctor._run_packaged_claude_hook()["status"] == "fail"
+    assert doctor._check_cursor_rule()["status"] == "fail"
+
+
 def test_doctor_python_version_fails_below_supported_minimum(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
