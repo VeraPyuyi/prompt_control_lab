@@ -65,6 +65,7 @@ Provider 元数据和插件安装使用默认运行环境。React/FastAPI 工作
 - Provider 支持记录公开 API 行为，不识别隐藏模型内部实现。
 - 轻量编辑器 Adapter 受宿主能力限制，无法拦截所有 Prompt 路径。
 - Hugging Face Demo 会主动禁用 Provider、Git 修改、Shell 执行、插件安装和持久存储。
+- `pcl doctor` 在 checkout 中使用 `examples/` 和 `plugins/`；wheel 安装后改用打包模板。
 
 ## 测试与示例
 

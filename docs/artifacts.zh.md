@@ -285,6 +285,16 @@ provider / model，是否存在 alias 或未知模型导致的复现风险。这
 说明什么问题：coding agent 运行后改了哪些文件、增删多少行、是否触及 auth/payment/billing/
 workflow/dependency/secret/test 删除等风险区域，是否需要人工复核。
 
+## `pcl doctor` 输出
+
+由 `pcl doctor` 打印，也可写成 JSON。
+
+说明什么问题：当前安装是否可用于常规 CLI 和插件流程。它会检查 Python 版本、包导入、
+CLI parser、可选的 `OPENAI_API_KEY`、guard policy、Claude Code hook、Cursor MCP、
+demo report 和可选 research 依赖。如果当前目录里有 checkout 的 `examples/` 和
+`plugins/`，doctor 会使用这些路径；否则会验证打包进 wheel 的示例 policy、Claude Code
+hook 模板、Cursor rule 和 demo report，避免 wheel 安装看起来像坏掉。
+
 ## `agent_run.json`
 
 由 `pcl agent-run build` 写出。
