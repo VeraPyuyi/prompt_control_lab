@@ -29,6 +29,7 @@ def run_doctor(*, repo_root: Path | None = None) -> JsonDict:
         _check_guard_policy(root),
         _check_claude_hook(root),
         _check_cursor_mcp(root),
+        _check_cursor_rule(),
         _check_demo_report(),
         _check_optional_research_dependencies(),
     ]
@@ -128,60 +129,62 @@ def _check_claude_hook(root: Path) -> JsonDict:
 
 
 def _run_packaged_claude_hook() -> JsonDict:
-    source = (
-        resources.files("promptcontrollab.template_data")
-        .joinpath("claude_code")
-        .joinpath("prompt_guard.py")
-    )
     try:
-        with resources.as_file(source) as hook_path:
-            if not Path(hook_path).is_file():
-                return _check(
-                    "claude_code_hook",
-                    "warning",
-                    "Claude Code hook script was not found.",
-                )
+        source = (
+            resources.files("promptcontrollab.template_data")
+            .joinpath("claude_code")
+            .joinpath("prompt_guard.py")
+        )
+        with resources.as_file(source) as hook:
+            if not hook.is_file():
+                return _check("claude_code_hook", "fail", "Packaged Claude Code hook is missing.")
             return _run_subprocess_check(
                 "claude_code_hook",
-                [sys.executable, str(hook_path), "--mode", "suggest"],
+                [sys.executable, str(hook), "--mode", "suggest"],
                 input_text="Fix this bug",
                 cwd=Path.cwd(),
-                success_message="Packaged Claude Code hook runs.",
+                success_message="Packaged Claude Code hook runs on a local synthetic prompt.",
             )
     except (FileNotFoundError, ModuleNotFoundError, OSError) as exc:
-        return _check("claude_code_hook", "fail", f"Could not run check: {exc}")
+        return _check(
+            "claude_code_hook", "fail", f"Packaged Claude Code hook is unavailable: {exc}"
+        )
 
 
 def _check_cursor_mcp(root: Path) -> JsonDict:
     server = root / "plugins" / "cursor" / "mcp_server.py"
-    if server.exists():
-        request = (
-            json.dumps({"jsonrpc": "2.0", "id": 1, "method": "initialize", "params": {}}) + "\n"
-        )
-        return _run_subprocess_check(
-            "cursor_mcp_server",
-            [sys.executable, str(server)],
-            input_text=request,
-            cwd=root,
-            success_message="Cursor MCP server initializes.",
-        )
-    if _packaged_template_exists("cursor_rule", "prompt_control_lab.mdc"):
+    if not server.exists():
         return _check(
             "cursor_mcp_server",
-            "pass",
-            "Packaged Cursor rule is available; checkout MCP server is optional.",
+            "skipped",
+            "Optional checkout Cursor MCP server is absent; live initialization was not run.",
         )
-    return _check("cursor_mcp_server", "warning", "Cursor MCP server script was not found.")
+    request = json.dumps({"jsonrpc": "2.0", "id": 1, "method": "initialize", "params": {}}) + "\n"
+    return _run_subprocess_check(
+        "cursor_mcp_server",
+        [sys.executable, str(server)],
+        input_text=request,
+        cwd=root,
+        success_message="Cursor MCP server initializes.",
+    )
 
 
-def _packaged_template_exists(*parts: str) -> bool:
+def _check_cursor_rule() -> JsonDict:
     try:
-        source = resources.files("promptcontrollab.template_data")
-        for part in parts:
-            source = source.joinpath(part)
-        return source.is_file()
-    except (FileNotFoundError, ModuleNotFoundError, OSError):
-        return False
+        source = (
+            resources.files("promptcontrollab.template_data")
+            .joinpath("cursor_rule")
+            .joinpath("prompt_control_lab.mdc")
+        )
+        if not source.is_file() or not source.read_text(encoding="utf-8").strip():
+            return _check(
+                "cursor_rule_template", "fail", "Packaged Cursor rule is missing or empty."
+            )
+    except (FileNotFoundError, ModuleNotFoundError, OSError, UnicodeError) as exc:
+        return _check("cursor_rule_template", "fail", f"Packaged Cursor rule is unavailable: {exc}")
+    return _check(
+        "cursor_rule_template", "pass", "Packaged Cursor rule is available (template check only)."
+    )
 
 
 def _check_demo_report() -> JsonDict:
