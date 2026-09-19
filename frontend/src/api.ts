@@ -1,13 +1,33 @@
-import type { DiagnosticCatalog, Overview, RunSummary } from "./types";
+import type {
+  CheckpointImportResult,
+  CheckpointVisualization,
+  DiagnosticCatalog,
+  Overview,
+  RunSummary,
+} from "./types";
+import { getSessionToken } from "./experimentApi";
 
 type JsonRecord = Record<string, unknown>;
 
-async function requestJson<T>(path: string): Promise<T> {
+async function requestJson<T>(path: string, init?: RequestInit): Promise<T> {
+  const headers = new Headers(init?.headers);
+  headers.set("Accept", "application/json");
+  if (!["GET", "HEAD", "OPTIONS"].includes((init?.method ?? "GET").toUpperCase())) {
+    headers.set("X-PCL-Session", await getSessionToken());
+  }
   const response = await fetch(path, {
-    headers: { Accept: "application/json" },
+    ...init,
+    headers,
   });
   if (!response.ok) {
-    throw new Error(`Request failed with status ${response.status}`);
+    let detail = "";
+    try {
+      const payload = await response.json() as { detail?: unknown };
+      detail = typeof payload.detail === "string" ? `: ${payload.detail}` : "";
+    } catch {
+      // Keep the status-only fallback when the server does not return JSON.
+    }
+    throw new Error(`Request failed with status ${response.status}${detail}`);
   }
   return (await response.json()) as T;
 }
@@ -41,6 +61,22 @@ export async function fetchDiagnosticCatalog(
   );
   const nested = (payload as { diagnostics?: DiagnosticCatalog }).diagnostics;
   return nested ?? (payload as DiagnosticCatalog);
+}
+
+export function fetchCheckpointSeries(run: string): Promise<CheckpointVisualization> {
+  const params = new URLSearchParams({ run });
+  return requestJson<CheckpointVisualization>(`/api/checkpoint-series?${params.toString()}`);
+}
+
+export function importCheckpointRun(
+  name: string,
+  csvText: string,
+): Promise<CheckpointImportResult> {
+  return requestJson<CheckpointImportResult>("/api/checkpoint-runs", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ name, csv_text: csvText }),
+  });
 }
 
 function normalizeRun(row: JsonRecord): RunSummary {

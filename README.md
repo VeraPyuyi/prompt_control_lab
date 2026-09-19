@@ -1,8 +1,14 @@
 # PromptControlLab
-**The local Change Review layer for prompts, models, checkpoints, and AI agents.**
-> Public alpha source preview: `promptcontrollab 0.2.0a1`. Three bounded acceptance workflows are included. GitHub release artifacts and PyPI distribution are not yet published.
+**Evaluate prompts, search for improvements, and understand the evidence—all locally.**
+> `0.3.0a1` prerelease candidate. The local experiment workspace is integrated; see the [acceptance record](https://github.com/VeraPyuyi/prompt_control_lab/blob/main/docs/releases/0.3.0a1-validation.md) for verified and pending checks. Release publication is separate.
 
-PromptControlLab is an open-source, local-first framework for reviewing one recorded change: what changed, what was observed, which recorded factors most likely explain the difference, how reliable the evidence is, and whether the candidate should continue or ship. It combines prompt preflight, model and run provenance, reproducible evaluation, Agent diff audit, and bounded stability diagnostics in one reviewer-facing decision. 中文: [README.zh.md](https://github.com/VeraPyuyi/prompt_control_lab/blob/main/README.zh.md). Related paper: [*Horizon-Uniform Sensitivity and Decay of Terminal Reward Perturbations in Discrete-Time Pontryagin Systems*](https://arxiv.org/abs/2606.17762).
+## Start with an experiment
+
+From this checkout, install `python -m pip install -e ".[ui,optimize,research]"`, then run `pcl ui --runs runs --language en`. From a built wheel, install `python -m pip install "./promptcontrollab-0.3.0a1-py3-none-any.whl[ui,optimize,research]"`; Node and the source checkout are not needed to use the app.
+
+Choose **Try the offline example** for a preset synthetic comparison with no model calls. Next, edit prompts, upload CSV/JSONL data and either evaluate your selected model, import saved outputs, or run a bounded GEPA search. Compare conditions, effect, coverage and cost separately; export a portable report and replay it elsewhere.
+
+[Experiment guide](https://github.com/VeraPyuyi/prompt_control_lab/blob/main/docs/experiments.en.md) · [Five research tools](https://github.com/VeraPyuyi/prompt_control_lab/blob/main/examples/research-tools/README.md) · [Example configurations](https://github.com/VeraPyuyi/prompt_control_lab/blob/main/examples/experiments/README.md) · [中文指南](https://github.com/VeraPyuyi/prompt_control_lab/blob/main/docs/experiments.zh.md)
 
 ## 2-Minute Change Review
 
@@ -14,14 +20,7 @@ pcl ui --runs runs/checkpoint-review --language en
 
 The review runs in `shadow` mode: it reads recorded artifacts, writes a bounded explanation and decision trace, and never changes either source run. Use `pcl control --authorization inspect` when you need prompt preflight before execution.
 
-To normalize existing Agent telemetry first:
-
-```bash
-pcl trace import --input traces.jsonl --format auto --out runs/imported
-pcl review --baseline runs/old --candidate runs/imported --kind auto --out runs/change-review
-```
-
-Trace import accepts OpenTelemetry GenAI and OpenInference JSONL, deduplicates and orders events, and redacts sensitive fields by default.
+Normalize Agent telemetry with `pcl trace import --input traces.jsonl --format auto --out runs/imported`, then compare using `pcl review --baseline runs/old --candidate runs/imported --kind auto --out runs/change-review`. Trace import accepts OpenTelemetry GenAI and OpenInference JSONL, orders and deduplicates events, and redacts sensitive fields.
 
 ## Try on Hugging Face
 <p><a href="https://huggingface.co/spaces/VeraPyuyi/prompt-control-lab"><img src="https://img.shields.io/badge/🤗%20Try%20on-Hugging%20Face-yellow" alt="Try on Hugging Face"></a> <a href="https://huggingface.co/spaces/VeraPyuyi/prompt-control-lab"><img src="docs/assets/hf_space.en.png" alt="Hugging Face demo preview" width="760"></a></p>
@@ -29,7 +28,7 @@ The CPU-only public Space needs no API key: it offers offline Guard/improvement,
 
 ## Preview The Outputs
 <p><strong>Unified Change Review.</strong> Three flagship cases show the same workflow on an Agent, model, and checkpoint change. The 60-run Codex case records lower full-run token and tool use with equal completion; the Qwen/Mistral case keeps a close aggregate result at <code>needs_review</code> because task slices disagree and paired records are absent; the three-seed checkpoint case preserves <code>hold</code> despite a higher score.</p>
-<p><a href="docs/case_studies/agent_change_review/README.md">Agent workflow case</a> | <a href="docs/case_studies/model_change_review/README.md">Model change case</a> | <a href="docs/case_studies/checkpoint_change_review/README.md">Checkpoint case</a>.</p>
+<p><a href="docs/case_studies/agent_change_review/README.md">Agent workflow case</a> | <a href="docs/case_studies/model_change_review/README.md">Model change case</a> | <a href="docs/case_studies/checkpoint_change_review/README.md">Checkpoint case</a>.</p><p><a href="docs/case_studies/checkpoint_change_review/README.md"><img src="docs/case_studies/checkpoint_change_review/comparison.en.svg" alt="Checkpoint score, diagnostics, and release gate"></a></p><p><strong>What changed:</strong> aggregate initial and final checkpoints across three seeds. <strong>Observed:</strong> score rose from <code>0.0885</code> to <code>0.1944</code>; generation mismatch and selective risk decreased, while trajectory drift increased. <strong>Can explain / cannot prove:</strong> training stage is associated with a changed performance and risk profile, but not a unique causal mechanism or deployment safety. <strong>Next:</strong> preserve <code>hold</code> until the triggered stability, generation, and readout evidence is resolved or justified.</p>
 <p><strong>Quickstart report.</strong> The fixed synthetic fixture returns <code>needs_review</code>: the score is higher, but the CI crosses zero, prompt identity is incomplete, and the model alias is not pinned. Run <code>pcl quickstart --out demo --open-report</code>; this verifies the reporting path, not universal improvement.</p>
 <p><a href="docs/quickstart.en.md"><img src="docs/assets/quickstart_result.en.svg" alt="Quickstart report snapshot"></a></p>
 <p><strong>Research diagnosis.</strong> The real three-seed SFT pilot improved mean score and reduced generated tokens, yet returned <code>hold</code> because stability and generation/readout checks did not pass. Open the <a href="https://github.com/VeraPyuyi/prompt_control_lab/blob/main/docs/case_studies/sft_checkpoint_pilot/report.md">full report</a>, or run <code>pcl research-quickstart --out demo-research</code>.</p>

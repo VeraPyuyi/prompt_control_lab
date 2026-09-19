@@ -1,0 +1,27 @@
+{
+  "schema_version": "experiment/v1",
+  "name": "Live provider example: exact-number answer contract",
+  "operation": "run",
+  "data": [
+    {"id": "sum-01", "input": "Return the sum of 2 and 3.", "expected": "5"},
+    {"id": "sum-02", "input": "Return the sum of 5 and 6.", "expected": "11"},
+    {"id": "sum-03", "input": "Return the sum of 8 and 9.", "expected": "17"},
+    {"id": "sum-04", "input": "Return the sum of 11 and 12.", "expected": "23"},
+    {"id": "sum-05", "input": "Return the sum of 14 and 15.", "expected": "29"},
+    {"id": "sum-06", "input": "Return the sum of 17 and 18.", "expected": "35"}
+  ],
+  "baseline": {
+    "prompt": "Answer each arithmetic question using a complete explanatory sentence.",
+    "provider": "openai-compatible", "model": "replace-with-your-model-id",
+    "base_url": "http://127.0.0.1:8000/v1", "api_key_env": "PCL_EXPERIMENT_API_KEY",
+    "max_output_tokens": 64, "temperature": 0, "timeout": 30
+  },
+  "candidate": {
+    "prompt": "Compute the requested answer. Output only the integer, without any words or punctuation.",
+    "provider": "openai-compatible", "model": "replace-with-your-model-id",
+    "base_url": "http://127.0.0.1:8000/v1", "api_key_env": "PCL_EXPERIMENT_API_KEY",
+    "max_output_tokens": 64, "temperature": 0, "timeout": 30
+  },
+  "metric": "exact_match", "seed": 17, "max_concurrency": 2,
+  "budget": {"max_calls": 12, "max_output_tokens": 768, "max_seconds": 180}
+}

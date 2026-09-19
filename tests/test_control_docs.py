@@ -56,18 +56,18 @@ def _first_screen(text: str) -> str:
     return text.split(marker, 1)[0]
 
 
-def test_readme_first_screens_lead_with_change_review_and_local_control() -> None:
+def test_readme_first_screens_lead_with_experiments_and_keep_local_control() -> None:
     english = _read(README_EN)
     chinese = _read(README_ZH)
     first_en = _first_screen(english)
     first_zh = _first_screen(chinese)
 
     assert english.startswith(
-        "# PromptControlLab\n**The local Change Review layer"
+        "# PromptControlLab\n**Evaluate prompts, search for improvements"
     )
     assert chinese.startswith(
         "# PromptControlLab\n"
-        "**面向 Prompt、模型、Checkpoint 与 AI Agent 的本地 Change Review 决策层。**"
+        "**在本地评测提示词、搜索改进，并理解结果的依据。**"  # noqa: RUF001
     )
     for first in (first_en, first_zh):
         assert "2-Minute" in first or "2 分钟" in first

@@ -1,0 +1,31 @@
+{
+  "schema_version": "experiment/v1",
+  "name": "Synthetic fixture: predetermined exact-answer formatting difference",
+  "operation": "import",
+  "synthetic": true,
+  "data": [
+    {"id": "sum-1", "input": "Return the sum of 2 and 3.", "expected": "5"},
+    {"id": "sum-2", "input": "Return the sum of 5 and 6.", "expected": "11"},
+    {"id": "sum-3", "input": "Return the sum of 8 and 9.", "expected": "17"},
+    {"id": "sum-4", "input": "Return the sum of 11 and 12.", "expected": "23"}
+  ],
+  "baseline": {"prompt": "Synthetic conversational output fixture.", "provider": "imported", "model": "synthetic-fixture"},
+  "candidate": {"prompt": "Synthetic exact-number output fixture.", "provider": "imported", "model": "synthetic-fixture"},
+  "metric": "exact_match",
+  "predictions": {
+    "baseline": [
+      {"id": "sum-1", "output": "The sum is 5."},
+      {"id": "sum-2", "output": "The sum is 11."},
+      {"id": "sum-3", "output": "The sum is 17."},
+      {"id": "sum-4", "output": "The sum is 23."}
+    ],
+    "candidate": [
+      {"id": "sum-1", "output": "5"},
+      {"id": "sum-2", "output": "11"},
+      {"id": "sum-3", "output": "17"},
+      {"id": "sum-4", "output": "23"}
+    ]
+  },
+  "seed": 17,
+  "budget": {"max_calls": 0, "max_output_tokens": 0, "max_seconds": 30}
+}

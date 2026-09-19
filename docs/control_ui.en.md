@@ -30,6 +30,10 @@ The workflow order is fixed so an operator can review one decision from input to
 
 When `pcl ui --runs docs/case_studies` is used, Change Review begins with three curated case cards: **Agent workflow optimization**, **Model change review**, and **Checkpoint promotion review**. Selecting a card updates the URL and keeps Before, Why, After, Decision, and Stability & Confidence aligned to the same nested `review/` artifacts. The Agent card remains technically labeled `prompt_change`; the product title does not imply that two Agent identities were compared.
 
+## Local checkpoint CSV import
+
+The Run view can create a descriptive local checkpoint Run from a CSV. Required columns are `seed`, `checkpoint_id`, `mean_score`, and either `stage` (`initial`, `mid`, `final`) or numeric `step`. Optional generation mismatch, selective-risk, trajectory, cost, and alignment fields are allowlisted. Uploads are limited to 1 MB and 1,000 finite rows, remain below the configured `runs` directory, and never imply a release decision when gate, model, prompt, or split provenance is missing. The write interface is disabled in the Hugging Face demo.
+
 ## Review boundaries
 
 The UI explains recorded evidence; it does not create evidence that is absent from the artifacts. A visual trend is not causal proof, a green decision is not a safety proof, and a stability diagnostic is not a default control requirement. Export or share the versioned artifacts when a decision needs independent review.

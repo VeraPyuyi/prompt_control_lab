@@ -3,6 +3,8 @@ import {
   CheckCircle2,
   Clock3,
   FileSearch,
+  FlaskConical,
+  Microscope,
   History,
   Languages,
   ListChecks,
@@ -17,6 +19,8 @@ import { cn } from "../lib/utils";
 import { Button } from "./ui";
 
 const icons = {
+  experiment: FlaskConical,
+  research: Microscope,
   "change-review": FileSearch,
   before: ShieldCheck,
   run: PlayCircle,

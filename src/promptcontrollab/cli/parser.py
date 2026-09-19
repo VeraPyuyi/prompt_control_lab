@@ -10,6 +10,7 @@ from promptcontrollab.cli.commands import (
     diagnostics,
     evaluation,
     evidence,
+    experiments,
     integrations,
     preflight,
     provenance,
@@ -31,6 +32,7 @@ def build_parser() -> argparse.ArgumentParser:
         ),
     )
     subcommands = parser.add_subparsers(dest="command", metavar="command", required=True)
+    experiments.register_commands(subcommands)
     preflight.register_commands(subcommands, ("start", "quickstart", "choose", "init"))
     evidence.register_commands(subcommands, ("ingest",))
     preflight.register_commands(subcommands, ("scaffold-check", "improve"))

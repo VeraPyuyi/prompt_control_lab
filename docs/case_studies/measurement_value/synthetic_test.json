@@ -1,0 +1,33 @@
+{
+  "schema_version": "measurement-value/v1",
+  "evidence_status": "historical_observation",
+  "synthetic": true,
+  "provenance": {
+    "description": "SYNTHETIC TEST ONLY. Values demonstrate accounting; they are not empirical research evidence."
+  },
+  "cases": [
+    {
+      "model": "synthetic-model",
+      "pair": "synthetic-pair",
+      "item_ids": ["a", "b", "c", "d"],
+      "scores": {
+        "loss": [4, 3, 2, 1],
+        "primary": [4, 4, 2, 1],
+        "norm": [1, 2, 3, 4]
+      },
+      "behavior": {
+        "risk_source": [0, 1, 0, 1],
+        "risk_target": [1, 0, 0, 1]
+      },
+      "costs": {
+        "generation_pair_seconds": [1, 1, 1, 1],
+        "budget_seconds": 4,
+        "direct_sort_seconds": 0,
+        "scan_seconds": {"loss": 1, "primary": 2, "norm": 0},
+        "sort_seconds": {"loss": 0, "primary": 0, "norm": 0},
+        "probe_seconds": 1.5,
+        "selection_seconds": 0.5
+      }
+    }
+  ]
+}

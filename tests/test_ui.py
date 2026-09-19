@@ -170,7 +170,8 @@ def test_cli_ui_reports_missing_fastapi(
     assert main(["ui", "--runs", "runs"]) == 2
 
     stderr = capsys.readouterr().err
-    assert "pip install -e \".[ui]\"" in stderr
+    assert 'promptcontrollab[ui]' in stderr
+    assert 'pip install -e' not in stderr
 
 
 def test_cli_ui_rejects_unauthenticated_non_loopback_binding(
@@ -197,7 +198,8 @@ def test_cli_legacy_ui_reports_missing_plotly(
     stderr = capsys.readouterr().err
     assert "plotly" in stderr
     assert "pandas" not in stderr
-    assert "pip install -e \".[ui]\"" in stderr
+    assert 'promptcontrollab[ui]' in stderr
+    assert 'pip install -e' not in stderr
 
 
 def test_cli_legacy_ui_launches_streamlit_with_environment(

@@ -34,7 +34,9 @@ def list_runs(runs_dir: Path) -> list[JsonDict]:
         if case:
             runs.append(case)
         elif _has_any_artifact(child):
-            runs.append({"name": child.name, "path": str(child)})
+            row: JsonDict = {"name": child.name, "path": str(child)}
+            row.update(_local_case_metadata(child))
+            runs.append(row)
     if runs:
         return sorted(runs, key=_run_sort_key)
     current_case = _featured_case_run(runs_dir)
@@ -94,6 +96,35 @@ def _featured_case_run(case_dir: Path) -> JsonDict:
         if value not in ({}, None, ""):
             row[key] = value
     return row
+
+
+def _local_case_metadata(case_dir: Path) -> JsonDict:
+    """Return bounded display metadata for a non-featured local case run."""
+
+    manifest_path = case_dir / "case_manifest.json"
+    if not manifest_path.is_file():
+        return {}
+    try:
+        manifest = read_json(manifest_path)
+    except (OSError, ValueError):
+        return {}
+    display = manifest.get("display")
+    if not isinstance(display, dict):
+        return {}
+    metadata: JsonDict = {}
+    for key, value in (
+        ("title", _localized_mapping(display.get("title"))),
+        ("summary", _localized_mapping(display.get("summary"))),
+        ("boundary", _localized_mapping(display.get("boundary"))),
+        ("featured", display.get("featured") is True),
+        ("category", display.get("category")),
+        ("evidence_level", display.get("evidence_level")),
+        ("technical_change_kind", display.get("technical_change_kind")),
+        ("decision", manifest.get("decision")),
+    ):
+        if value not in ({}, None, ""):
+            metadata[key] = value
+    return metadata
 
 
 def _localized_mapping(value: object) -> JsonDict:

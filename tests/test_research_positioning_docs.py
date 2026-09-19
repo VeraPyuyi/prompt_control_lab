@@ -5,7 +5,7 @@ def test_readmes_lead_with_change_review_and_keep_diagnostic_depth() -> None:
     readme = Path("README.md").read_text(encoding="utf-8")
     readme_zh = Path("README.zh.md").read_text(encoding="utf-8")
 
-    assert "The local Change Review layer" in readme
+    assert "Evaluate prompts, search for improvements" in readme
     assert "pcl review" in readme
     assert "pcl trace import" in readme
     assert "pcl control" in readme
@@ -22,7 +22,7 @@ def test_readmes_lead_with_change_review_and_keep_diagnostic_depth() -> None:
     assert "docs/research_from_paper.en.md" in readme
     assert "Control-theoretic diagnostics and reproducible evidence" not in readme[:600]
 
-    assert "本地 Change Review 决策层" in readme_zh
+    assert "在本地评测提示词、搜索改进" in readme_zh
     assert "pcl review" in readme_zh
     assert "pcl trace import" in readme_zh
     assert "pcl control" in readme_zh

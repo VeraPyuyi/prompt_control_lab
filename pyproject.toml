@@ -4,8 +4,8 @@ build-backend = "hatchling.build"
 
 [project]
 name = "promptcontrollab"
-version = "0.2.0a1"
-description = "Local control, attribution, and stability diagnostics for prompts and AI agents."
+version = "0.3.0a1"
+description = "Evaluate and optimize prompts locally, then explain their effects and measurement costs."
 readme = "README.md"
 requires-python = ">=3.10"
 license = { text = "Apache-2.0" }
@@ -36,6 +36,9 @@ classifiers = [
 dependencies = []
 
 [project.optional-dependencies]
+optimize = [
+  "gepa==0.1.4"
+]
 research = [
   "numpy>=1.24,<2.0",
   "scipy>=1.10"
@@ -89,6 +92,10 @@ Changelog = "https://github.com/VeraPyuyi/prompt_control_lab/blob/main/CHANGELOG
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/promptcontrollab"]
+
+[tool.hatch.build.targets.wheel.force-include]
+"examples/research-tools" = "promptcontrollab/example_data/research"
+"examples/experiments" = "promptcontrollab/example_data/experiments"
 
 [tool.hatch.build.targets.sdist]
 include = [

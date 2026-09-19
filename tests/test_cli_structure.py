@@ -29,9 +29,7 @@ def _normalize_parser_value(value: Any) -> Any:
     if callable(value):
         return {"callable": getattr(value, "__name__", type(value).__name__)}
     if isinstance(value, Path):
-        if value.is_absolute() and value.resolve(strict=False) == Path.cwd().resolve(
-            strict=False
-        ):
+        if value.is_absolute() and value.resolve(strict=False) == Path.cwd().resolve(strict=False):
             return {"path": "<cwd>"}
         return {"path": value.as_posix()}
     if isinstance(value, type):
@@ -127,7 +125,26 @@ def test_cli_parser_contract_matches_pre_split_snapshot() -> None:
     """Preserve command order, arguments, defaults, help, and handlers."""
 
     cli = importlib.import_module("promptcontrollab.cli")
-    payload = json.dumps(_parser_snapshot(cli.build_parser()), ensure_ascii=False, indent=2) + "\n"
+    snapshot = _parser_snapshot(cli.build_parser())
+    # Version 0.3 adds groups and an explicit scope option; the existing parser
+    # contract must remain byte-for-byte identical after removing those additions.
+    for action in snapshot["actions"]:
+        if "commands" not in action:
+            continue
+        action["choices"] = [
+            name for name in action["choices"] if name not in {"experiment", "research"}
+        ]
+        action["commands"] = [
+            item for item in action["commands"] if not ({"experiment", "research"} & item.keys())
+        ]
+        for item in action["commands"]:
+            if "analyze" in item:
+                item["analyze"]["actions"] = [
+                    field
+                    for field in item["analyze"]["actions"]
+                    if field["dest"] != "evaluation_scope"
+                ]
+    payload = json.dumps(snapshot, ensure_ascii=False, indent=2) + "\n"
     assert hashlib.sha256(payload.encode("utf-8")).hexdigest() == CLI_PARSER_SNAPSHOT_SHA256
 
 

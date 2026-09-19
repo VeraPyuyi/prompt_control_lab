@@ -6,6 +6,8 @@ export interface LocalizedText {
 }
 
 export type ViewId =
+  | "experiment"
+  | "research"
   | "change-review"
   | "before"
   | "run"
@@ -17,6 +19,7 @@ export type ViewId =
 
 export interface Overview {
   ui_language?: Language;
+  checkpoint_import_enabled?: boolean;
   conclusion?: string;
   decision?: string;
   status?: string;
@@ -60,6 +63,79 @@ export interface RunSummary {
   featured?: boolean;
   order?: number;
   technical_change_kind?: string;
+}
+
+export interface CheckpointPoint {
+  seed: string;
+  stage: string;
+  checkpoint_id: string;
+  mean_score: number;
+  step?: number;
+  generation_mismatch?: number;
+  selective_aurc?: number;
+  trajectory_drift?: number;
+  format_following_score?: number;
+  mean_tokens?: number;
+  mean_latency_ms?: number;
+  readout_alignment_gap?: number;
+  reachability_shift?: number;
+}
+
+export interface CheckpointAggregate {
+  stage: string;
+  seed_count?: number;
+  mean_score: number;
+  generation_mismatch?: number;
+  selective_aurc?: number;
+  trajectory_drift?: number;
+  format_following_score?: number;
+  mean_tokens?: number;
+  mean_latency_ms?: number;
+  readout_alignment_gap?: number;
+  reachability_shift?: number;
+}
+
+export interface CheckpointDiagnostic {
+  available: boolean;
+  direction: "lower_is_better" | "context_dependent" | string;
+  aggregates: Array<{ stage: string; value?: number | null }>;
+}
+
+export interface CheckpointNarrative {
+  changed?: string;
+  observed?: string;
+  meaning?: string;
+  boundary?: string;
+  next_action?: string;
+}
+
+export interface CheckpointGateCheck {
+  check?: string;
+  observed?: string | number | null;
+  observed_mean?: string | number | null;
+  threshold?: string | number | null;
+  impact?: string;
+  status?: string;
+}
+
+export interface CheckpointVisualization {
+  schema: string;
+  decision: string;
+  evidence_level?: string;
+  stage_order: string[];
+  seeds: string[];
+  points: CheckpointPoint[];
+  aggregates: CheckpointAggregate[];
+  diagnostics?: Record<string, CheckpointDiagnostic>;
+  triggered_checks?: CheckpointGateCheck[];
+  narrative?: Partial<Record<Language, CheckpointNarrative>>;
+  claim_boundary?: string;
+}
+
+export interface CheckpointImportResult {
+  run: RunSummary;
+  decision: string;
+  warnings?: string[];
 }
 
 export interface DiagnosticEntry {

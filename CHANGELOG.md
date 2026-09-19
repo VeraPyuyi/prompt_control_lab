@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.3.0a1 - Prerelease candidate
+
+- Added a bilingual experiment workspace for live evaluation, CSV/JSONL mapping, existing-result import, bounded GEPA 0.1.4 optimization, progress, cancellation, safe retry and resume.
+- Added shared versioned experiment/job/assessment contracts and local-session APIs. Task and reflection calls share durable budgets; final comparison capacity is reserved and uncertain requests are never replayed automatically.
+- Added readout sensitivity, response profiles, measurement value, frozen transfer prediction and evidence replay with bilingual reports, tables and portable plots. Historical records and synthetic demonstrations are labeled separately.
+- Added portable experiment replay, exact-byte bundle receipts and explicit separation of provenance, numerical reproduction and local assumptions.
+- Integrated checkpoint CSV import and charts with the React UI; included example data and static UI in wheels and repaired outside-checkout doctor checks.
+- Fixed quick analysis to score the declared withheld partition. Use `pcl analyze --evaluation-scope all` for an explicit full-data comparison; existing reports retain their recorded meanings.
+- Preserved existing commands and local scientific worktrees. See `docs/releases/0.3.0a1-validation.md` for acceptance evidence and pending human usability trials.
+
 ## 0.2.0a1 - Unreleased release candidate
 
 - Added shadow-mode OpenTelemetry GenAI and OpenInference trace import with deterministic event normalization, deduplication, ordering, and default redaction.

@@ -17,7 +17,11 @@ from promptcontrollab.core.config import (
     get_config_str,
     load_project_config,
 )
-from promptcontrollab.core.errors import PromptControlLabError
+from promptcontrollab.core.errors import (
+    OptionalDependencyError,
+    PromptControlLabError,
+    optional_dependency_message,
+)
 from promptcontrollab.core.files import JsonDict, read_json
 from promptcontrollab.core.network import is_loopback_host
 from promptcontrollab.integrations.doctor import format_doctor, run_doctor
@@ -326,12 +330,10 @@ def _cmd_ui(args: argparse.Namespace) -> None:
     required = ["streamlit", "plotly"] if args.legacy_streamlit else ["fastapi", "uvicorn"]
     missing = [module for module in required if importlib.util.find_spec(module) is None]
     if missing:
-        msg = (
-            f"pcl ui requires optional UI dependencies ({', '.join(missing)} missing). "
-            "Install them with "
-            '`pip install -e ".[ui]"` or `uv pip install -e ".[ui]"`.'
+        raise OptionalDependencyError(
+            f"pcl ui is missing {', '.join(missing)}. "
+            f"{optional_dependency_message('pcl ui', 'ui')}"
         )
-        raise PromptControlLabError(msg)
     env = os.environ.copy()
     env["PCL_UI_RUNS"] = str(runs_dir)
     env["PCL_UI_POLICY"] = str(policy_path) if policy_path is not None else ""

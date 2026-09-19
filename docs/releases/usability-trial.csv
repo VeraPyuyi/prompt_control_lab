@@ -1,0 +1,6 @@
+participant_id,status,language,user_type,installation_complete,task_configured,run_import_complete,effect_explained,export_opened_elsewhere,unassisted_completion,elapsed_seconds,assistance,issues
+P01,not_recruited,,,,,,,,,,,
+P02,not_recruited,,,,,,,,,,,
+P03,not_recruited,,,,,,,,,,,
+P04,not_recruited,,,,,,,,,,,
+P05,not_recruited,,,,,,,,,,,

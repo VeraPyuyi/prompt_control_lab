@@ -1,6 +1,8 @@
 import type { DiagnosticEntry, Language, ViewId } from "./types";
 
 export const navItems: Array<{ id: ViewId; en: string; zh: string }> = [
+  { id: "experiment", en: "Experiments", zh: "评测与优化" },
+  { id: "research", en: "Research tools", zh: "科研工具" },
   { id: "change-review", en: "Change Review", zh: "变更审查" },
   { id: "before", en: "Before", zh: "执行前" },
   { id: "run", en: "Run", zh: "运行" },
@@ -14,7 +16,7 @@ export const navItems: Array<{ id: ViewId; en: string; zh: string }> = [
 export const copy = {
   en: {
     appName: "PromptControlLab",
-    local: "Local cockpit",
+    local: "Your prompt workspace",
     navigation: "Workflow",
     pageEyebrow: "CHANGE CONTROL",
     changeReview: "Change review",

@@ -19,6 +19,12 @@ if str(SRC_ROOT) not in sys.path:
 from promptcontrollab.control.control_protocol import ControlEvent
 from promptcontrollab.core.files import JsonDict, read_json, write_json, write_jsonl
 from promptcontrollab.evaluation.change_review import review_changes
+from promptcontrollab.evidence.posttraining.visualization import (
+    build_checkpoint_visualization,
+    normalized_checkpoint_csv,
+    parse_checkpoint_csv,
+    render_checkpoint_svg,
+)
 
 _MODEL_BASELINE = "Qwen/Qwen2.5-7B-Instruct"
 _MODEL_CANDIDATE = "mistralai/Mistral-7B-Instruct-v0.3"
@@ -72,7 +78,9 @@ def main() -> int:
 def build_checkpoint_case(*, source_dir: Path, out_dir: Path) -> JsonDict:
     """Build a three-seed initial-to-final review from the published pilot table."""
 
-    rows = _read_csv(source_dir / "checkpoint_metrics.csv")
+    metrics_path = source_dir / "checkpoint_metrics.csv"
+    rows = _read_csv(metrics_path)
+    visualization_rows = parse_checkpoint_csv(metrics_path.read_text(encoding="utf-8"))
     provenance = read_json(source_dir / "provenance.json")
     decisions = read_json(source_dir / "gate_decisions.json")
     initial = [row for row in rows if row.get("stage") == "initial"]
@@ -115,6 +123,26 @@ def build_checkpoint_case(*, source_dir: Path, out_dir: Path) -> JsonDict:
     write_json(baseline / "metrics.json", _checkpoint_metrics(initial))
     write_json(candidate / "metrics.json", _checkpoint_metrics(final))
     overall_decision = str(decisions.get("decision") or "insufficient_evidence")
+    checkpoint_visualization = build_checkpoint_visualization(
+        visualization_rows,
+        decision=overall_decision,
+        triggered_checks=_checkpoint_triggered_checks(decisions),
+        evidence_level="real_three_seed_pilot",
+    )
+    write_json(out_dir / "checkpoint_visualization.json", checkpoint_visualization)
+    (out_dir / "checkpoint_metrics.csv").write_text(
+        normalized_checkpoint_csv(visualization_rows),
+        encoding="utf-8",
+        newline="",
+    )
+    (out_dir / "comparison.en.svg").write_text(
+        render_checkpoint_svg(checkpoint_visualization, language="en"),
+        encoding="utf-8",
+    )
+    (out_dir / "comparison.zh.svg").write_text(
+        render_checkpoint_svg(checkpoint_visualization, language="zh"),
+        encoding="utf-8",
+    )
     write_json(
         candidate / "posttrain_gate.json",
         {
@@ -160,6 +188,7 @@ def build_checkpoint_case(*, source_dir: Path, out_dir: Path) -> JsonDict:
             "evidence_level": "real_three_seed_pilot",
             "review_path": "review",
             "technical_change_kind": "checkpoint_change",
+            "visualization_path": "checkpoint_visualization.json",
             "title": {
                 "en": "Checkpoint promotion review",
                 "zh": "Checkpoint 发布审查",
@@ -468,6 +497,8 @@ def _clear_generated_case_artifacts(out_dir: Path) -> None:
         "comparison.csv",
         "comparison.en.svg",
         "comparison.zh.svg",
+        "checkpoint_metrics.csv",
+        "checkpoint_visualization.json",
     ):
         path = out_dir / name
         if path.is_file():
@@ -488,6 +519,46 @@ def _checkpoint_metrics(rows: list[JsonDict]) -> JsonDict:
         "selective_aurc": _mean(rows, "selective_aurc"),
         "trajectory_drift": _mean(rows, "trajectory_drift"),
     }
+
+
+def _checkpoint_triggered_checks(decisions: JsonDict) -> list[JsonDict]:
+    """Aggregate final-checkpoint gate triggers without inventing paired statistics."""
+
+    gates = decisions.get("gates")
+    if not isinstance(gates, list):
+        return []
+    grouped: dict[str, list[JsonDict]] = {}
+    for gate in gates:
+        if not isinstance(gate, dict) or gate.get("stage") != "final":
+            continue
+        checks = gate.get("triggered_checks")
+        if not isinstance(checks, list):
+            continue
+        for check in checks:
+            if isinstance(check, dict) and isinstance(check.get("check"), str):
+                grouped.setdefault(str(check["check"]), []).append(check)
+    impact_order = {"insufficient_evidence": 0, "needs_review": 1, "hold": 2}
+    result: list[JsonDict] = []
+    for name in sorted(grouped):
+        checks = grouped[name]
+        impacts = [str(check.get("impact") or "needs_review") for check in checks]
+        impact = max(impacts, key=lambda value: impact_order.get(value, 0))
+        observed_values = [
+            float(value)
+            for check in checks
+            if isinstance((value := check.get("observed")), (int, float))
+        ]
+        thresholds = {str(check.get("threshold")) for check in checks}
+        row: JsonDict = {
+            "check": name,
+            "impact": impact,
+            "seed_count": len(checks),
+            "threshold": checks[0].get("threshold") if len(thresholds) == 1 else "mixed",
+        }
+        if observed_values:
+            row["observed_mean"] = round(sum(observed_values) / len(observed_values), 12)
+        result.append(row)
+    return result
 
 
 def _agent_metrics(rows: list[JsonDict], *, side: str) -> JsonDict:

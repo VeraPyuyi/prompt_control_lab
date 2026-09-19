@@ -237,6 +237,8 @@ def test_cli_quick_analyze_explain_and_report(tmp_path: Path) -> None:
                 "analyze",
                 "--data",
                 str(demo / "examples" / "tasks.jsonl"),
+                "--evaluation-scope",
+                "all",
                 "--baseline-predictions",
                 str(demo / "examples" / "predictions_baseline.jsonl"),
                 "--candidate-predictions",
@@ -279,6 +281,7 @@ def test_cli_quick_analyze_explain_and_report(tmp_path: Path) -> None:
     assert explanation["overall_summary"]["verdict"] in {"keep", "review", "hold"}
     assert explanation["data_hygiene"]["has_leakage"] is False
     assert explanation["example_changes"]["fixed_ids"] == ["arith-2"]
+    assert json.loads((run / "manifest.json").read_text())["evaluation_scope"]["partition"] == "all"
 
     report = (run / "report.md").read_text(encoding="utf-8")
     assert "Deployment Recommendation" in report
@@ -887,6 +890,8 @@ def test_cli_analyze_accepts_paired_prompt_identity_for_clean_validity(
         main(
             [
                 "analyze",
+                "--evaluation-scope",
+                "all",
                 "--data",
                 str(data),
                 "--baseline-predictions",

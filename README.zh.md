@@ -1,8 +1,14 @@
 # PromptControlLab
-**面向 Prompt、模型、Checkpoint 与 AI Agent 的本地 Change Review 决策层。**
-> 当前为公开 Alpha 源码预览：`promptcontrollab 0.2.0a1`。仓库包含三条有边界的真实验收工作流；GitHub Release 构建产物和 PyPI 包尚未发布。
+**在本地评测提示词、搜索改进，并理解结果的依据。**
+> `0.3.0a1` 预发布候选：已整合本地实验工作台。已验证与待验证项目见[验收记录](docs/releases/0.3.0a1-validation.md)；对外发布是独立步骤。
 
-PromptControlLab 是一个开源、本地优先的变更审查框架，用来回答一次已记录的变更到底改了什么、观察到了什么、最可能由哪些已记录因素造成、证据有多可靠，以及 candidate 是否值得继续或发布。它把 Prompt 执行前检查、模型与运行溯源、可复现评测、Agent 改动审计和有边界的稳定性诊断收敛成一个面向 reviewer 的决策。英文：[README.md](README.md)。相关论文：[*Horizon-Uniform Sensitivity and Decay of Terminal Reward Perturbations in Discrete-Time Pontryagin Systems*](https://arxiv.org/abs/2606.17762)。
+## 从一次实验开始
+
+源码安装：`python -m pip install -e ".[ui,optimize,research]"`，然后运行 `pcl ui --runs runs --language zh`。使用构建好的 wheel 时，安装 `python -m pip install "./promptcontrollab-0.3.0a1-py3-none-any.whl[ui,optimize,research]"`；日常使用无需 Node 或源码目录。
+
+点击 **先体验离线样例**，即可用预置合成结果完成一次比较，无需模型调用。之后可以编辑提示词、上传 CSV/JSONL 数据，选择实际评测、导入已有输出或运行有预算上限的 GEPA 搜索。比较条件、效果、覆盖情况与成本分别呈现，结果包可导出并换目录复算。
+
+[实验使用指南](docs/experiments.zh.md) · [五类科研工具](examples/research-tools/README.zh.md) · [实验配置样例](examples/experiments/README.md) · [English guide](docs/experiments.en.md)
 
 ## 2 分钟 Change Review
 
@@ -14,14 +20,7 @@ pcl ui --runs runs/checkpoint-review --language zh
 
 Change Review 默认使用 `shadow` 模式：只读取已有 artifact，写出有边界的解释和决策轨迹，不改变 baseline 或 candidate。需要在执行前检查 Prompt 时，再使用 `pcl control --authorization inspect`。
 
-如果已有 Agent telemetry，可以先统一导入：
-
-```bash
-pcl trace import --input traces.jsonl --format auto --out runs/imported
-pcl review --baseline runs/old --candidate runs/imported --kind auto --out runs/change-review
-```
-
-Trace 导入支持 OpenTelemetry GenAI 与 OpenInference JSONL，默认执行排序、去重和敏感字段脱敏。
+已有 Agent telemetry 可先用 `pcl trace import --input traces.jsonl --format auto --out runs/imported` 导入，再用 `pcl review --baseline runs/old --candidate runs/imported --kind auto --out runs/change-review` 比较。Trace 导入支持 OpenTelemetry GenAI 与 OpenInference JSONL，默认排序、去重并脱敏。
 
 ## 在 Hugging Face 体验
 <p><a href="https://huggingface.co/spaces/VeraPyuyi/prompt-control-lab"><img src="https://img.shields.io/badge/🤗%20在线体验-Hugging%20Face-yellow" alt="在 Hugging Face 体验"></a> <a href="https://huggingface.co/spaces/VeraPyuyi/prompt-control-lab"><img src="docs/assets/hf_space.zh.png" alt="Hugging Face 中文演示预览" width="760"></a></p>
@@ -29,7 +28,7 @@ Trace 导入支持 OpenTelemetry GenAI 与 OpenInference JSONL，默认执行排
 
 ## 先看示例结果
 <p><strong>统一 Change Review。</strong> 三个旗舰案例用同一流程审查 Agent、模型与 Checkpoint 变更：60 次真实 Codex 执行案例在完成率相同的情况下记录到更低的完整运行 Token 和工具调用；Qwen/Mistral 历史聚合案例因任务切片方向不同且缺少逐样本配对而保持 <code>needs_review</code>；三 Seed Checkpoint 案例则在分数提高后仍保留 <code>hold</code>。</p>
-<p><a href="docs/case_studies/agent_change_review/README.zh.md">Agent 运行案例</a> | <a href="docs/case_studies/model_change_review/README.zh.md">模型切换案例</a> | <a href="docs/case_studies/checkpoint_change_review/README.zh.md">Checkpoint 案例</a>。</p>
+<p><a href="docs/case_studies/agent_change_review/README.zh.md">Agent 运行案例</a> | <a href="docs/case_studies/model_change_review/README.zh.md">模型切换案例</a> | <a href="docs/case_studies/checkpoint_change_review/README.zh.md">Checkpoint 案例</a>。</p><p><a href="docs/case_studies/checkpoint_change_review/README.zh.md"><img src="docs/case_studies/checkpoint_change_review/comparison.zh.svg" alt="Checkpoint 分数、诊断与发布门禁"></a></p><p><strong>改了什么：</strong>在三个 Seed 上比较聚合 Initial 与 Final Checkpoint。<strong>观察到了什么：</strong>平均分数从 <code>0.0885</code> 提高到 <code>0.1944</code>，生成阶段错配和选择性风险下降，但表示轨迹漂移增加。<strong>可以解释什么、不能证明什么：</strong>训练阶段与性能和风险画像变化存在关联，但不能证明唯一因果机制或部署安全。<strong>下一步：</strong>保留 <code>hold</code>，直到触发的稳定性、生成和读出证据得到解决或合理解释。</p>
 <p><strong>Quickstart 报告。</strong> 固定合成样例给出 <code>needs_review</code>：分数更高，但置信区间跨 0、Prompt 身份不完整、模型 alias 未锁定。运行 <code>pcl quickstart --out demo --language zh --open-report</code> 即可生成；它验证报告链路，不是普遍提升证明。</p>
 <p><a href="docs/quickstart.zh.md"><img src="docs/assets/quickstart_result.zh.svg" alt="Quickstart 报告快照"></a></p>
 <p><strong>研究诊断。</strong> 真实三 seed SFT 试点中，平均分数提高、生成 Token 减少，但稳定性与生成错配/读出检查没有通过，因此 checkpoint gate 给出 <code>hold</code>。查看<a href="docs/case_studies/sft_checkpoint_pilot/README.zh.md">完整案例</a>，或运行 <code>pcl research-quickstart --out demo-research --language zh</code>。</p>

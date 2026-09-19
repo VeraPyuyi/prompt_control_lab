@@ -1,0 +1,313 @@
+{
+  "aggregates": [
+    {
+      "format_following_score": 0.0,
+      "generation_mismatch": 0.572916666667,
+      "mean_latency_ms": 8963.940084239262,
+      "mean_score": 0.088541666667,
+      "mean_tokens": 147.338541666667,
+      "reachability_shift": 0.0,
+      "readout_alignment_gap": 0.572916666667,
+      "seed_count": 3,
+      "selective_aurc": 0.871227659274,
+      "stage": "initial",
+      "trajectory_drift": 8.395504777982
+    },
+    {
+      "format_following_score": 0.0,
+      "generation_mismatch": 0.482638888889,
+      "mean_latency_ms": 6389.035940383716,
+      "mean_score": 0.178819444444,
+      "mean_tokens": 106.336805555556,
+      "reachability_shift": 2.174518825466,
+      "readout_alignment_gap": 0.482638888889,
+      "seed_count": 3,
+      "selective_aurc": 0.7070760422,
+      "stage": "mid",
+      "trajectory_drift": 8.767376717418
+    },
+    {
+      "format_following_score": 0.0,
+      "generation_mismatch": 0.467013888889,
+      "mean_latency_ms": 6691.539235561828,
+      "mean_score": 0.194444444444,
+      "mean_tokens": 107.335069444444,
+      "reachability_shift": 2.336863999946,
+      "readout_alignment_gap": 0.467013888889,
+      "seed_count": 3,
+      "selective_aurc": 0.667432288825,
+      "stage": "final",
+      "trajectory_drift": 8.825874485396
+    }
+  ],
+  "claim_boundary": "These plots describe recorded checkpoint associations. They do not establish a unique causal training mechanism or deployment safety.",
+  "decision": "hold",
+  "diagnostics": {
+    "generation_mismatch": {
+      "aggregates": [
+        {
+          "stage": "initial",
+          "value": 0.572916666667
+        },
+        {
+          "stage": "mid",
+          "value": 0.482638888889
+        },
+        {
+          "stage": "final",
+          "value": 0.467013888889
+        }
+      ],
+      "available": true,
+      "direction": "lower_is_better"
+    },
+    "selective_aurc": {
+      "aggregates": [
+        {
+          "stage": "initial",
+          "value": 0.871227659274
+        },
+        {
+          "stage": "mid",
+          "value": 0.7070760422
+        },
+        {
+          "stage": "final",
+          "value": 0.667432288825
+        }
+      ],
+      "available": true,
+      "direction": "lower_is_better"
+    },
+    "trajectory_drift": {
+      "aggregates": [
+        {
+          "stage": "initial",
+          "value": 8.395504777982
+        },
+        {
+          "stage": "mid",
+          "value": 8.767376717418
+        },
+        {
+          "stage": "final",
+          "value": 8.825874485396
+        }
+      ],
+      "available": true,
+      "direction": "context_dependent"
+    }
+  },
+  "evidence_level": "real_three_seed_pilot",
+  "narrative": {
+    "en": {
+      "boundary": "The aggregate trajectory does not identify a unique causal mechanism.",
+      "changed": "Checkpoint stage changed from initial to final.",
+      "meaning": "Training stage is associated with a changed performance and risk profile.",
+      "next_action": "Review the recorded gate evidence before acting on hold.",
+      "observed": "Recorded mean score changed from 0.0885 to 0.1944."
+    },
+    "zh": {
+      "boundary": "\u805a\u5408\u8f68\u8ff9\u4e0d\u80fd\u8bc6\u522b\u552f\u4e00\u7684\u56e0\u679c\u673a\u5236\u3002",
+      "changed": "Checkpoint \u9636\u6bb5\u4ece initial \u53d8\u4e3a final\u3002",
+      "meaning": "\u8bad\u7ec3\u9636\u6bb5\u4e0e\u6027\u80fd\u548c\u98ce\u9669\u753b\u50cf\u7684\u53d8\u5316\u5b58\u5728\u5173\u8054\u3002",
+      "next_action": "\u5728\u6267\u884c hold \u51b3\u7b56\u524d\u68c0\u67e5\u5df2\u8bb0\u5f55\u7684\u95e8\u7981\u8bc1\u636e\u3002",
+      "observed": "\u5df2\u8bb0\u5f55\u5e73\u5747\u5206\u6570\u4ece 0.0885 \u53d8\u4e3a 0.1944\u3002"
+    }
+  },
+  "points": [
+    {
+      "checkpoint_id": "seed-0-initial",
+      "format_following_score": 0.0,
+      "generation_mismatch": 0.5729166666666667,
+      "mean_latency_ms": 8989.084289603246,
+      "mean_score": 0.08854166666666667,
+      "mean_tokens": 147.33854166666666,
+      "reachability_shift": 0.0,
+      "readout_alignment_gap": 0.5729166666666667,
+      "seed": "0",
+      "selective_aurc": 0.8712276592736571,
+      "stage": "initial",
+      "trajectory_drift": 8.395504777981575
+    },
+    {
+      "checkpoint_id": "seed-1-initial",
+      "format_following_score": 0.0,
+      "generation_mismatch": 0.5729166666666667,
+      "mean_latency_ms": 9027.29445140964,
+      "mean_score": 0.08854166666666667,
+      "mean_tokens": 147.33854166666666,
+      "reachability_shift": 0.0,
+      "readout_alignment_gap": 0.5729166666666667,
+      "seed": "1",
+      "selective_aurc": 0.8712276592736571,
+      "stage": "initial",
+      "trajectory_drift": 8.395504777981575
+    },
+    {
+      "checkpoint_id": "seed-2-initial",
+      "format_following_score": 0.0,
+      "generation_mismatch": 0.5729166666666667,
+      "mean_latency_ms": 8875.441511704897,
+      "mean_score": 0.08854166666666667,
+      "mean_tokens": 147.33854166666666,
+      "reachability_shift": 0.0,
+      "readout_alignment_gap": 0.5729166666666667,
+      "seed": "2",
+      "selective_aurc": 0.8712276592736571,
+      "stage": "initial",
+      "trajectory_drift": 8.395504777981575
+    },
+    {
+      "checkpoint_id": "seed-0-mid",
+      "format_following_score": 0.0,
+      "generation_mismatch": 0.484375,
+      "mean_latency_ms": 6386.887121654581,
+      "mean_score": 0.17708333333333334,
+      "mean_tokens": 106.52083333333333,
+      "reachability_shift": 2.23300548067169,
+      "readout_alignment_gap": 0.484375,
+      "seed": "0",
+      "selective_aurc": 0.7171392806293712,
+      "stage": "mid",
+      "trajectory_drift": 8.780186665526992
+    },
+    {
+      "checkpoint_id": "seed-1-mid",
+      "format_following_score": 0.0,
+      "generation_mismatch": 0.5052083333333334,
+      "mean_latency_ms": 6381.212555570528,
+      "mean_score": 0.15625,
+      "mean_tokens": 105.53645833333333,
+      "reachability_shift": 2.293188976679468,
+      "readout_alignment_gap": 0.5052083333333334,
+      "seed": "1",
+      "selective_aurc": 0.7351434668648764,
+      "stage": "mid",
+      "trajectory_drift": 8.774712620848476
+    },
+    {
+      "checkpoint_id": "seed-2-mid",
+      "format_following_score": 0.0,
+      "generation_mismatch": 0.45833333333333337,
+      "mean_latency_ms": 6399.008143926039,
+      "mean_score": 0.203125,
+      "mean_tokens": 106.953125,
+      "reachability_shift": 1.9973620190466934,
+      "readout_alignment_gap": 0.45833333333333337,
+      "seed": "2",
+      "selective_aurc": 0.6689453791063021,
+      "stage": "mid",
+      "trajectory_drift": 8.747230865879198
+    },
+    {
+      "checkpoint_id": "seed-0-final",
+      "format_following_score": 0.0,
+      "generation_mismatch": 0.47395833333333337,
+      "mean_latency_ms": 6428.668268257752,
+      "mean_score": 0.1875,
+      "mean_tokens": 106.546875,
+      "reachability_shift": 2.3136754482741977,
+      "readout_alignment_gap": 0.47395833333333337,
+      "seed": "0",
+      "selective_aurc": 0.7039366323294587,
+      "stage": "final",
+      "trajectory_drift": 8.833958673456914
+    },
+    {
+      "checkpoint_id": "seed-1-final",
+      "format_following_score": 0.0,
+      "generation_mismatch": 0.47395833333333337,
+      "mean_latency_ms": 7038.9576111726155,
+      "mean_score": 0.1875,
+      "mean_tokens": 108.91145833333333,
+      "reachability_shift": 2.355936393206073,
+      "readout_alignment_gap": 0.47395833333333337,
+      "seed": "1",
+      "selective_aurc": 0.6632735595475494,
+      "stage": "final",
+      "trajectory_drift": 8.817407686890217
+    },
+    {
+      "checkpoint_id": "seed-2-final",
+      "format_following_score": 0.0,
+      "generation_mismatch": 0.453125,
+      "mean_latency_ms": 6606.991827255115,
+      "mean_score": 0.20833333333333334,
+      "mean_tokens": 106.546875,
+      "reachability_shift": 2.3409801583576955,
+      "readout_alignment_gap": 0.453125,
+      "seed": "2",
+      "selective_aurc": 0.6350866745993844,
+      "stage": "final",
+      "trajectory_drift": 8.826257095839404
+    }
+  ],
+  "schema": "prompt_control_lab.checkpoint_visualization.v1",
+  "seeds": [
+    "0",
+    "1",
+    "2"
+  ],
+  "stage_order": [
+    "initial",
+    "mid",
+    "final"
+  ],
+  "triggered_checks": [
+    {
+      "check": "evidence_validity",
+      "impact": "insufficient_evidence",
+      "seed_count": 3,
+      "threshold": null
+    },
+    {
+      "check": "generation_mismatch",
+      "impact": "hold",
+      "observed_mean": 0.467013888889,
+      "seed_count": 3,
+      "threshold": 0.1
+    },
+    {
+      "check": "prompt_reachability",
+      "impact": "needs_review",
+      "observed_mean": 2.336863999946,
+      "seed_count": 3,
+      "threshold": 0.5
+    },
+    {
+      "check": "prompt_routing",
+      "impact": "insufficient_evidence",
+      "seed_count": 3,
+      "threshold": "observed_intervention_required"
+    },
+    {
+      "check": "prompt_stability",
+      "impact": "hold",
+      "observed_mean": 0.430369707414,
+      "seed_count": 3,
+      "threshold": 0.05
+    },
+    {
+      "check": "readout_alignment",
+      "impact": "hold",
+      "observed_mean": 0.467013888889,
+      "seed_count": 3,
+      "threshold": 0.1
+    },
+    {
+      "check": "selective_risk",
+      "impact": "needs_review",
+      "observed_mean": 0.667432288825,
+      "seed_count": 3,
+      "threshold": 0.4
+    },
+    {
+      "check": "trajectory_stability",
+      "impact": "hold",
+      "observed_mean": 0.430369707414,
+      "seed_count": 3,
+      "threshold": 0.05
+    }
+  ]
+}

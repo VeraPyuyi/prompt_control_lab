@@ -1,0 +1,115 @@
+{
+  "schema_version": "research-replay/v1",
+  "synthetic": true,
+  "files": {
+    "response-input.json": {
+      "json": {
+        "schema_version": "response-profile/v1",
+        "synthetic": true,
+        "metadata": {
+          "readout_definition": "Fixed first-coordinate linear readout",
+          "gold_label_usage": "Synthetic labels used only for supplied loss scalars",
+          "calibration_source": "Analytical synthetic Jacobian; no fitted data",
+          "calibration_disjoint": true
+        },
+        "records": [
+          {
+            "record_id": "linear-toy",
+            "loss_before": 1,
+            "loss_after": 0.5,
+            "control_before": [
+              0,
+              0
+            ],
+            "control_after": [
+              1,
+              0
+            ],
+            "response_before": [
+              0,
+              0
+            ],
+            "response_after": [
+              2,
+              0
+            ],
+            "readout_gradient": [
+              1,
+              0
+            ],
+            "subspace_basis": [
+              [
+                1,
+                0
+              ]
+            ],
+            "linear_response_matrix": [
+              [
+                2,
+                0
+              ],
+              [
+                0,
+                1
+              ]
+            ]
+          }
+        ]
+      },
+      "sha256": "ca895fba3dc0b8614984fce6cf5e7925401e7c49c016c55d36072f806eb7c1de"
+    },
+    "response-expected.json": {
+      "json": {
+        "schema_version": "response-profile-result/v1",
+        "kind": "response",
+        "synthetic": true,
+        "metadata": {
+          "readout_definition": "Fixed first-coordinate linear readout",
+          "gold_label_usage": "Synthetic labels used only for supplied loss scalars",
+          "calibration_source": "Analytical synthetic Jacobian; no fitted data",
+          "calibration_disjoint": true
+        },
+        "evidence": {
+          "declared": "historical_observation",
+          "linked_receipts_verified": false,
+          "temporal_independence_verified": false,
+          "scope": "Local content and receipt consistency only; hashes do not prove chronology."
+        },
+        "rows": [
+          {
+            "record_id": "linear-toy",
+            "loss_delta": -0.5,
+            "control_displacement": 1.0,
+            "response_displacement": 2.0,
+            "response_gain": 2.0,
+            "readout_alignment": 1.0,
+            "readout_linear_delta": 2.0,
+            "subspace_fraction": 1.0,
+            "approximation_residual": 0.0,
+            "relative_approximation_residual": 0.0
+          }
+        ],
+        "formulae": {
+          "loss_delta": "loss_after - loss_before",
+          "response_gain": "norm(response_delta) / norm(control_delta)",
+          "readout_alignment": "cosine(response_delta, readout_gradient)",
+          "subspace_fraction": "squared orthogonal projection / squared response norm",
+          "approximation_residual": "norm(response_delta - linear_response_matrix @ control_delta)"
+        },
+        "claim_scope": "Saved finite-dimensional local response; calibration separation is declared, not inferred."
+      },
+      "sha256": "b8f469f238a363d969a925be6d9475452b841428ebedd6d2467fe463b35c8456"
+    }
+  },
+  "checks": [
+    {
+      "kind": "response",
+      "input_file": "response-input.json",
+      "expected_file": "response-expected.json"
+    }
+  ],
+  "tolerances": {
+    "atol": 1e-09,
+    "rtol": 1e-07
+  }
+}

@@ -8,11 +8,12 @@ import os
 import subprocess
 import sys
 import tempfile
+from importlib import resources
 from pathlib import Path
 
 from promptcontrollab.core.files import JsonDict
 from promptcontrollab.evaluation.workflow import run_quick_analysis
-from promptcontrollab.integrations.templates import write_example_project
+from promptcontrollab.integrations.templates import GUARD_POLICY_YAML, write_example_project
 from promptcontrollab.preflight.guard_policy import load_guard_policy
 
 
@@ -28,6 +29,7 @@ def run_doctor(*, repo_root: Path | None = None) -> JsonDict:
         _check_guard_policy(root),
         _check_claude_hook(root),
         _check_cursor_mcp(root),
+        _check_cursor_rule(),
         _check_demo_report(),
         _check_optional_research_dependencies(),
     ]
@@ -89,7 +91,14 @@ def _check_openai_key() -> JsonDict:
 def _check_guard_policy(root: Path) -> JsonDict:
     policy = root / "examples" / "guard.policy.yaml"
     if not policy.exists():
-        return _check("guard_policy", "warning", f"{policy} was not found.")
+        try:
+            with tempfile.TemporaryDirectory() as raw:
+                packaged = Path(raw) / "guard.policy.yaml"
+                packaged.write_text(GUARD_POLICY_YAML, encoding="utf-8")
+                load_guard_policy(packaged)
+        except Exception as exc:
+            return _check("guard_policy", "fail", f"Packaged guard policy failed to parse: {exc}")
+        return _check("guard_policy", "pass", "Packaged example guard policy parses successfully.")
     try:
         load_guard_policy(policy)
     except Exception as exc:
@@ -100,7 +109,7 @@ def _check_guard_policy(root: Path) -> JsonDict:
 def _check_claude_hook(root: Path) -> JsonDict:
     hook = root / "plugins" / "claude-code" / "hooks" / "prompt_guard.py"
     if not hook.exists():
-        return _check("claude_code_hook", "warning", "Claude Code hook script was not found.")
+        return _run_packaged_claude_hook()
     event = json.dumps({"prompt": "Fix this bug"})
     return _run_subprocess_check(
         "claude_code_hook",
@@ -111,10 +120,37 @@ def _check_claude_hook(root: Path) -> JsonDict:
     )
 
 
+def _run_packaged_claude_hook() -> JsonDict:
+    try:
+        source = (
+            resources.files("promptcontrollab.template_data")
+            .joinpath("claude_code")
+            .joinpath("prompt_guard.py")
+        )
+        with resources.as_file(source) as hook:
+            if not hook.is_file():
+                return _check("claude_code_hook", "fail", "Packaged Claude Code hook is missing.")
+            return _run_subprocess_check(
+                "claude_code_hook",
+                [sys.executable, str(hook), "--mode", "suggest"],
+                input_text="Fix this bug",
+                cwd=Path.cwd(),
+                success_message="Packaged Claude Code hook runs on a local synthetic prompt.",
+            )
+    except (FileNotFoundError, ModuleNotFoundError, OSError) as exc:
+        return _check(
+            "claude_code_hook", "fail", f"Packaged Claude Code hook is unavailable: {exc}"
+        )
+
+
 def _check_cursor_mcp(root: Path) -> JsonDict:
     server = root / "plugins" / "cursor" / "mcp_server.py"
     if not server.exists():
-        return _check("cursor_mcp_server", "warning", "Cursor MCP server script was not found.")
+        return _check(
+            "cursor_mcp_server",
+            "skipped",
+            "Optional checkout Cursor MCP server is absent; live initialization was not run.",
+        )
     request = json.dumps({"jsonrpc": "2.0", "id": 1, "method": "initialize", "params": {}}) + "\n"
     return _run_subprocess_check(
         "cursor_mcp_server",
@@ -122,6 +158,24 @@ def _check_cursor_mcp(root: Path) -> JsonDict:
         input_text=request,
         cwd=root,
         success_message="Cursor MCP server initializes.",
+    )
+
+
+def _check_cursor_rule() -> JsonDict:
+    try:
+        source = (
+            resources.files("promptcontrollab.template_data")
+            .joinpath("cursor_rule")
+            .joinpath("prompt_control_lab.mdc")
+        )
+        if not source.is_file() or not source.read_text(encoding="utf-8").strip():
+            return _check(
+                "cursor_rule_template", "fail", "Packaged Cursor rule is missing or empty."
+            )
+    except (FileNotFoundError, ModuleNotFoundError, OSError, UnicodeError) as exc:
+        return _check("cursor_rule_template", "fail", f"Packaged Cursor rule is unavailable: {exc}")
+    return _check(
+        "cursor_rule_template", "pass", "Packaged Cursor rule is available (template check only)."
     )
 
 
@@ -151,11 +205,7 @@ def _check_demo_report() -> JsonDict:
 
 
 def _check_optional_research_dependencies() -> JsonDict:
-    missing = [
-        name
-        for name in ["numpy", "scipy"]
-        if importlib.util.find_spec(name) is None
-    ]
+    missing = [name for name in ["numpy", "scipy"] if importlib.util.find_spec(name) is None]
     if missing:
         return _check(
             "optional_research_dependencies",

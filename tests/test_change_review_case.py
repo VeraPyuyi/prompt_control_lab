@@ -41,6 +41,24 @@ def test_checkpoint_case_preserves_docs_and_reproduces_real_aggregate(tmp_path: 
     assert case["decision"] == "hold"
     assert case["observed"]["baseline_mean_score"] == 0.088541666667
     assert case["observed"]["candidate_mean_score"] == 0.194444444444
+    visualization = read_json(out_dir / "checkpoint_visualization.json")
+    assert visualization["stage_order"] == ["initial", "mid", "final"]
+    assert len(visualization["points"]) == 9
+    assert visualization["aggregates"][0]["mean_score"] == pytest.approx(
+        0.088541666667
+    )
+    assert visualization["aggregates"][-1]["mean_score"] == pytest.approx(
+        0.194444444444
+    )
+    assert (out_dir / "comparison.en.svg").is_file()
+    assert (out_dir / "comparison.zh.svg").is_file()
+    assert (out_dir / "checkpoint_metrics.csv").is_file()
+    assert "Checkpoint score by seed" in (out_dir / "comparison.en.svg").read_text(
+        encoding="utf-8"
+    )
+    assert "各 Seed 的 Checkpoint 分数" in (
+        out_dir / "comparison.zh.svg"
+    ).read_text(encoding="utf-8")
     review = read_json(out_dir / "review" / "change_review.json")
     assert review["change_kind"] == "checkpoint_change"
     assert review["baseline_run"] == "../baseline"

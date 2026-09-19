@@ -33,6 +33,13 @@ pcl ui --runs runs/checkpoint-review --language zh
 
 Final 分数提高，生成阶段错配和选择性风险朝更好方向变化；但表示轨迹漂移增加，格式遵循 slice 仍为零，而且来源 checkpoint gate 要求 `hold`。
 
+![Checkpoint 分数、诊断与门禁证据](comparison.zh.svg)
+
+- **改了什么：**在相同三个 Seed 上，对比对象从聚合 Initial Checkpoint 变为聚合 Final Checkpoint。
+- **观察到了什么：**平均分数从 `0.0885` 提高到 `0.1944`，生成阶段错配和选择性风险 AURC 下降，但表示轨迹漂移增加。
+- **可以解释什么、不能证明什么：**这些记录说明训练阶段与性能和风险画像变化有关，但聚合证据不能识别唯一因果机制，也不能证明部署安全。
+- **下一步行动：**保持 `hold`，在发布前检查触发的稳定性、生成和读出证据。
+
 ## 为什么决策仍是 `hold`
 
 Change Review 不会用一个分数覆盖来源门禁。Candidate 已记录的后训练 gate 因此被保留：在稳定性与生成/读出发现得到修复或合理解释前，暂不晋级。
@@ -49,5 +56,8 @@ Change Review 不会用一个分数覆盖来源门禁。Candidate 已记录的�
 - [`review/comparison_validity.json`](review/comparison_validity.json)：身份与混杂因素检查。
 - [`review/human_feedback.json`](review/human_feedback.json)：固定 reviewer 问题。
 - [`review/decision_trace.json`](review/decision_trace.json)：产生决策的检查轨迹。
+- [`checkpoint_visualization.json`](checkpoint_visualization.json)：React 与静态图共同使用的规范数据。
+- [`checkpoint_metrics.csv`](checkpoint_metrics.csv)：规范化、可公开的 Checkpoint 记录。
+- [`comparison.en.svg`](comparison.en.svg) 与 [`comparison.zh.svg`](comparison.zh.svg)：双语三图联动视图。
 
 这里仅包含聚合证据，不保存 Prompt、逐样本生成、模型权重、凭据、隐藏推理或私有路径。

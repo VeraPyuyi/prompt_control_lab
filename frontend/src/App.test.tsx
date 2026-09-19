@@ -92,15 +92,67 @@ const catalog = {
   },
 };
 
+const checkpointSeries = {
+  schema: "prompt_control_lab.checkpoint_visualization.v1",
+  decision: "hold",
+  stage_order: ["initial", "mid", "final"],
+  seeds: ["0", "1", "2"],
+  points: [
+    { seed: "0", stage: "initial", checkpoint_id: "seed-0-initial", mean_score: 0.0885 },
+    { seed: "0", stage: "mid", checkpoint_id: "seed-0-mid", mean_score: 0.1771 },
+    { seed: "0", stage: "final", checkpoint_id: "seed-0-final", mean_score: 0.1875 },
+    { seed: "1", stage: "initial", checkpoint_id: "seed-1-initial", mean_score: 0.0885 },
+    { seed: "1", stage: "mid", checkpoint_id: "seed-1-mid", mean_score: 0.1563 },
+    { seed: "1", stage: "final", checkpoint_id: "seed-1-final", mean_score: 0.1875 },
+    { seed: "2", stage: "initial", checkpoint_id: "seed-2-initial", mean_score: 0.0885 },
+    { seed: "2", stage: "mid", checkpoint_id: "seed-2-mid", mean_score: 0.2031 },
+    { seed: "2", stage: "final", checkpoint_id: "seed-2-final", mean_score: 0.2083 },
+  ],
+  aggregates: [
+    { stage: "initial", mean_score: 0.0885, generation_mismatch: 0.5729, selective_aurc: 0.8712, trajectory_drift: 8.3955 },
+    { stage: "mid", mean_score: 0.1788, generation_mismatch: 0.4826, selective_aurc: 0.7071, trajectory_drift: 8.7674 },
+    { stage: "final", mean_score: 0.1944, generation_mismatch: 0.4670, selective_aurc: 0.6674, trajectory_drift: 8.8259 },
+  ],
+  diagnostics: {
+    generation_mismatch: { available: true, direction: "lower_is_better", aggregates: [] },
+    selective_aurc: { available: true, direction: "lower_is_better", aggregates: [] },
+    trajectory_drift: { available: true, direction: "context_dependent", aggregates: [] },
+  },
+  triggered_checks: [
+    { check: "trajectory_stability", impact: "hold", observed_mean: 0.43, threshold: 0.05 },
+    { check: "generation_mismatch", impact: "hold", observed_mean: 0.467, threshold: 0.1 },
+  ],
+  narrative: {
+    en: {
+      changed: "Checkpoint stage changed from initial to final.",
+      observed: "Recorded mean score changed from 0.0885 to 0.1944.",
+      meaning: "Training stage is associated with a changed performance and risk profile.",
+      boundary: "The aggregate trajectory does not identify a unique causal mechanism.",
+      next_action: "Review the recorded gate evidence before promotion.",
+    },
+    zh: {
+      changed: "Checkpoint 阶段从 initial 变为 final。",
+      observed: "已记录平均分数从 0.0885 变为 0.1944。",
+      meaning: "训练阶段与性能和风险画像的变化存在关联。",
+      boundary: "聚合轨迹不能识别唯一的因果机制。",
+      next_action: "发布前检查已记录的门禁证据。",
+    },
+  },
+};
+
 beforeEach(() => {
-  window.history.replaceState({}, "", "/");
+  window.history.replaceState({}, "", "/?view=change-review");
   vi.stubGlobal(
     "fetch",
     vi.fn(async (input: RequestInfo | URL) => {
       const url = String(input);
-      const body = url.includes("/api/overview")
+      const body = url.includes("/api/checkpoint-series")
+        ? checkpointSeries
+        : url.includes("/api/overview")
         ? url.includes("run=model_change_review")
           ? { ...overview, change_kind: "model_change", observations: ["Model aggregate changed"] }
+          : url.includes("run=checkpoint_change_review")
+            ? { ...overview, conclusion: "hold", change_kind: "checkpoint_change" }
           : overview
         : url.includes("/api/history")
           ? history
@@ -149,6 +201,95 @@ describe("workflow cockpit", () => {
     });
     expect(await screen.findByText("Model aggregate changed")).toBeInTheDocument();
     expect(window.location.search).toContain("run=model_change_review");
+  });
+
+  it("shows linked checkpoint score, diagnostic, and gate evidence", async () => {
+    const user = userEvent.setup();
+    render(<App />);
+
+    await user.click(await screen.findByRole("button", { name: /Checkpoint promotion review/ }));
+
+    expect(await screen.findByRole("heading", { name: "Checkpoint score by seed" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Generation mismatch" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Selective risk AURC" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Representation trajectory drift" })).toBeInTheDocument();
+    expect(screen.getByText("trajectory stability")).toBeInTheDocument();
+    expect(screen.getByText("What changed")).toBeInTheDocument();
+    expect(screen.getByText("What it cannot prove")).toBeInTheDocument();
+  });
+
+  it("imports a checkpoint CSV, refreshes runs, and opens the saved run", async () => {
+    const user = userEvent.setup();
+    let imported = false;
+    vi.mocked(fetch).mockImplementation(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
+      if (url === "/api/session") return new Response(JSON.stringify({ enabled: true, token: "test-session" }), { status: 200 });
+      if (url === "/api/checkpoint-runs" && init?.method === "POST") {
+        imported = true;
+        return new Response(JSON.stringify({
+          run: { name: "uploaded-checkpoints" },
+          decision: "insufficient_evidence",
+          warnings: ["No gate provenance was imported."],
+        }), { status: 201, headers: { "Content-Type": "application/json" } });
+      }
+      if (url === "/api/runs") {
+        return new Response(JSON.stringify(imported ? {
+          runs: [...runs.runs, {
+            name: "uploaded-checkpoints",
+            title: { en: "Uploaded Checkpoints", zh: "Uploaded Checkpoints" },
+            category: "checkpoint",
+            decision: "insufficient_evidence",
+          }],
+        } : runs), { status: 200, headers: { "Content-Type": "application/json" } });
+      }
+      const body = url.includes("/api/checkpoint-series")
+        ? { ...checkpointSeries, decision: "insufficient_evidence" }
+        : url.includes("/api/history")
+          ? history
+          : url.includes("/api/overview")
+            ? { ...overview, conclusion: "insufficient_evidence", change_kind: "checkpoint_change" }
+            : catalog;
+      return new Response(JSON.stringify(body), { status: 200, headers: { "Content-Type": "application/json" } });
+    });
+    render(<App />);
+
+    await user.click(await screen.findByRole("button", { name: "Run" }));
+    await user.type(screen.getByRole("textbox", { name: "Run name" }), "Uploaded Checkpoints");
+    await user.upload(
+      screen.getByLabelText("Checkpoint metrics CSV"),
+      new File([
+        "seed,stage,checkpoint_id,mean_score\n0,initial,a,0.1\n0,final,b,0.2\n",
+      ], "checkpoint_metrics.csv", { type: "text/csv" }),
+    );
+    await user.click(screen.getByRole("button", { name: "Import checkpoint run" }));
+
+    expect(await screen.findByRole("heading", { name: "Checkpoint score by seed" })).toBeInTheDocument();
+    expect(window.location.search).toContain("run=uploaded-checkpoints");
+    expect(fetch).toHaveBeenCalledWith("/api/checkpoint-runs", expect.objectContaining({ method: "POST" }));
+  });
+
+  it("hides checkpoint upload when the API disables local writes", async () => {
+    const user = userEvent.setup();
+    vi.mocked(fetch).mockImplementation(async (input: RequestInfo | URL) => {
+      const url = String(input);
+      const body = url.includes("/api/history")
+        ? history
+        : url.includes("/api/runs")
+          ? runs
+          : url.includes("/api/overview")
+            ? { ...overview, checkpoint_import_enabled: false }
+            : catalog;
+      return new Response(JSON.stringify(body), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      });
+    });
+    render(<App />);
+
+    await user.click(await screen.findByRole("button", { name: "Run" }));
+
+    expect(screen.queryByRole("heading", { name: "Import checkpoint metrics" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Import checkpoint run" })).not.toBeInTheDocument();
   });
 
   it("uses plain Chinese diagnostic titles and keeps technical names secondary", async () => {

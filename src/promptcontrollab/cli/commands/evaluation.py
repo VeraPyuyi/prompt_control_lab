@@ -208,6 +208,11 @@ def _register_analyze(subcommands: argparse._SubParsersAction[argparse.ArgumentP
         help="Verify public model metadata for supported providers.",
     )
     analyze_parser.add_argument("--train-ratio", type=float, default=None)
+    analyze_parser.add_argument(
+        "--evaluation-scope", choices=["withheld", "all"], default=None,
+        help=("Score withheld IDs by default; all explicitly requests "
+              "a descriptive full-data comparison."),
+    )
     analyze_parser.add_argument("--val-ratio", type=float, default=None)
     analyze_parser.add_argument("--seed", type=int, default=None)
     analyze_parser.add_argument("--bootstrap-samples", type=int, default=None)

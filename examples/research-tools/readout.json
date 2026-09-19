@@ -1,0 +1,31 @@
+{
+  "schema_version": "readout-sensitivity/v1",
+  "synthetic": true,
+  "evidence_status": "historical_observation",
+  "conditions": [
+    {
+      "condition_id": "exact-32",
+      "parser": {"rule": "exact", "version": "exact/v1", "posthoc": false},
+      "budget_tokens": 32,
+      "decoding": {"method": "greedy", "saved_outputs": true},
+      "samples": [
+        {"item_id": "a", "gold_answer": "2", "source": {"text": "1"}, "target": {"text": "Answer: 2"}, "scores": {"loss": 1, "primary": 4, "norm": 3}},
+        {"item_id": "b", "gold_answer": "3", "source": {"text": "3"}, "target": {"text": "3"}, "scores": {"loss": 2, "primary": 1, "norm": 1}},
+        {"item_id": "c", "gold_answer": "4", "source": {"text": ""}, "target": {"text": "4"}, "scores": {"loss": 3, "primary": 3, "norm": 4}},
+        {"item_id": "d", "gold_answer": "5", "source": {"text": "6"}, "target": {"text": "6"}, "scores": {"loss": 4, "primary": 2, "norm": 2}}
+      ]
+    },
+    {
+      "condition_id": "numeric-32",
+      "parser": {"rule": "last_number", "version": "last-number/v1", "posthoc": true},
+      "budget_tokens": 32,
+      "decoding": {"method": "greedy", "saved_outputs": true},
+      "samples": [
+        {"item_id": "a", "gold_answer": "2", "source": {"text": "1"}, "target": {"text": "Answer: 2"}, "scores": {"loss": 1, "primary": 4, "norm": 3}},
+        {"item_id": "b", "gold_answer": "3", "source": {"text": "3"}, "target": {"text": "3"}, "scores": {"loss": 2, "primary": 1, "norm": 1}},
+        {"item_id": "c", "gold_answer": "4", "source": {"text": ""}, "target": {"text": "4"}, "scores": {"loss": 3, "primary": 3, "norm": 4}},
+        {"item_id": "d", "gold_answer": "5", "source": {"text": "6"}, "target": {"text": "6"}, "scores": {"loss": 4, "primary": 2, "norm": 2}}
+      ]
+    }
+  ]
+}

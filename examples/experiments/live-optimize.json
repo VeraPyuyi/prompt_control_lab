@@ -1,0 +1,37 @@
+{
+  "schema_version": "experiment/v1",
+  "name": "Live GEPA example: search an exact-number answer contract",
+  "operation": "optimize",
+  "data": [
+    {"id": "sum-01", "input": "Return the sum of 2 and 3.", "expected": "5"},
+    {"id": "sum-02", "input": "Return the sum of 5 and 6.", "expected": "11"},
+    {"id": "sum-03", "input": "Return the sum of 8 and 9.", "expected": "17"},
+    {"id": "sum-04", "input": "Return the sum of 11 and 12.", "expected": "23"},
+    {"id": "sum-05", "input": "Return the sum of 14 and 15.", "expected": "29"},
+    {"id": "sum-06", "input": "Return the sum of 17 and 18.", "expected": "35"},
+    {"id": "sum-07", "input": "Return the sum of 20 and 21.", "expected": "41"},
+    {"id": "sum-08", "input": "Return the sum of 23 and 24.", "expected": "47"},
+    {"id": "sum-09", "input": "Return the sum of 26 and 27.", "expected": "53"},
+    {"id": "sum-10", "input": "Return the sum of 29 and 30.", "expected": "59"},
+    {"id": "sum-11", "input": "Return the sum of 32 and 33.", "expected": "65"},
+    {"id": "sum-12", "input": "Return the sum of 35 and 36.", "expected": "71"}
+  ],
+  "baseline": {
+    "prompt": "Answer each arithmetic question using a complete explanatory sentence.",
+    "provider": "openai-compatible", "model": "replace-with-your-model-id",
+    "base_url": "http://127.0.0.1:8000/v1", "api_key_env": "PCL_EXPERIMENT_API_KEY",
+    "max_output_tokens": 64, "temperature": 0, "timeout": 30
+  },
+  "optimization": {
+    "max_rounds": 5, "patience": 2,
+    "reflection": {
+      "prompt": "Improve plain-text task instructions using the provided training feedback.",
+      "provider": "openai-compatible", "model": "replace-with-your-model-id",
+      "base_url": "http://127.0.0.1:8000/v1", "api_key_env": "PCL_EXPERIMENT_API_KEY",
+      "max_output_tokens": 512, "temperature": 0.7, "timeout": 45
+    }
+  },
+  "metric": "exact_match", "seed": 17, "max_concurrency": 2,
+  "split": {"train_ratio": 0.5, "val_ratio": 0.25},
+  "budget": {"max_calls": 70, "max_output_tokens": 8192, "max_seconds": 300}
+}

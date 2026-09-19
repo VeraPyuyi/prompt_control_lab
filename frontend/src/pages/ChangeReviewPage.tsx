@@ -1,3 +1,4 @@
+import { lazy, Suspense } from "react";
 import { AlertTriangle, ArrowRight, Check, CircleHelp, Layers3 } from "lucide-react";
 
 import {
@@ -9,9 +10,19 @@ import {
   riskLabel,
 } from "../i18n";
 import { isEvidenceCovered } from "../lib/utils";
-import type { Language, LocalizedText, Overview, RunSummary } from "../types";
+import type {
+  CheckpointVisualization,
+  Language,
+  LocalizedText,
+  Overview,
+  RunSummary,
+} from "../types";
 import { PageHeader } from "../components/PageHeader";
 import { Badge, Card } from "../components/ui";
+
+const CheckpointReview = lazy(() => import("./CheckpointReview").then((module) => ({
+  default: module.CheckpointReview,
+})));
 
 function toneForDecision(value: string): "good" | "warn" | "danger" | "neutral" {
   if (value === "pass" || value === "passed") return "good";
@@ -26,6 +37,7 @@ interface ChangeReviewPageProps {
   cases: RunSummary[];
   selectedRun: string;
   onSelectRun: (name: string) => void;
+  checkpoint?: CheckpointVisualization;
 }
 
 function localized(value: LocalizedText | undefined, language: Language): string {
@@ -38,6 +50,7 @@ export function ChangeReviewPage({
   cases,
   selectedRun,
   onSelectRun,
+  checkpoint,
 }: ChangeReviewPageProps) {
   const labels = copy[language];
   const conclusion = overview.conclusion ?? overview.decision ?? overview.status;
@@ -116,6 +129,15 @@ export function ChangeReviewPage({
           </Badge>
         </div>
       </div>
+      {checkpoint ? (
+        <Suspense fallback={(
+          <div className="card checkpoint-loading">
+            {language === "zh" ? "正在加载 Checkpoint 证据…" : "Loading checkpoint evidence…"}
+          </div>
+        )}>
+          <CheckpointReview visualization={checkpoint} language={language} />
+        </Suspense>
+      ) : null}
       <div className="review-grid">
         <Card className="review-grid__primary">
           <div className="card-heading">

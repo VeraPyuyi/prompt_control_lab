@@ -7,9 +7,10 @@ import os
 from pathlib import Path
 from typing import Any
 
-from promptcontrollab.core.files import JsonDict
+from promptcontrollab.core.files import JsonDict, read_json
 from promptcontrollab.diagnostics.presentation import diagnostic_catalog
 from promptcontrollab.evaluation.history import summarize_run
+from promptcontrollab.evidence.posttraining.visualization import save_checkpoint_run
 from promptcontrollab.integrations.ui.data import (
     control_certificate_interpretation_rows,
     list_runs,
@@ -34,8 +35,8 @@ def create_app(
         A configured FastAPI application.
 
     Notes:
-        The API is intentionally read-only and only exposes normalized summaries from
-        recognized run directories below ``runs_dir``.
+        The API exposes normalized summaries from recognized run directories below
+        ``runs_dir``. Local mode also permits one bounded checkpoint CSV import endpoint.
     """
 
     from fastapi import FastAPI, HTTPException, Query
@@ -43,14 +44,18 @@ def create_app(
 
     root = (runs_dir or Path(os.environ.get("PCL_UI_RUNS", "runs"))).resolve(strict=False)
     initial_language = _language(language or os.environ.get("PCL_UI_LANGUAGE") or "en")
+    deployment_mode = os.environ.get("PCL_DEPLOYMENT_MODE", "local").strip().lower()
     assets = static_dir or Path(__file__).with_name("web_static")
     app = FastAPI(title="PromptControlLab Workflow Cockpit", version="1")
+    from promptcontrollab.integrations.experiment_api import register_experiment_api
+
+    register_experiment_api(app, root, deployment_mode)
 
     @app.get("/api/health")
     def health() -> JsonDict:
         return {
             "status": "ok",
-            "mode": "local_read_only",
+            "mode": "public_read_only" if deployment_mode == "hf_demo" else "local_session",
             "runs_configured": True,
         }
 
@@ -74,7 +79,9 @@ def create_app(
         selected = _select_run(root, run_name)
         if selected is None:
             raise HTTPException(status_code=404, detail="Run was not found under the runs root")
-        return _overview_payload(selected, _language(language), run_name=run_name)
+        payload = _overview_payload(selected, _language(language), run_name=run_name)
+        payload["checkpoint_import_enabled"] = deployment_mode != "hf_demo"
+        return payload
 
     @app.get("/api/overview")
     def overview(
@@ -87,13 +94,17 @@ def create_app(
         if selected is None:
             return {
                 "has_run": False,
+                "ui_language": _language(language),
+                "checkpoint_import_enabled": deployment_mode != "hf_demo",
                 "next_action": (
                     "Create or import a run, then use `pcl review --baseline ... "
                     "--candidate ... --out runs/change-review`."
                 ),
             }
         display_name = run or _display_name_for_path(root, selected)
-        return _overview_payload(selected, _language(language), run_name=display_name)
+        payload = _overview_payload(selected, _language(language), run_name=display_name)
+        payload["checkpoint_import_enabled"] = deployment_mode != "hf_demo"
+        return payload
 
     @app.get("/api/diagnostics/catalog")
     def diagnostics_catalog(
@@ -104,6 +115,46 @@ def create_app(
         if run and selected is None:
             raise HTTPException(status_code=404, detail="Run was not found under the runs root")
         return _diagnostic_catalog_with_evidence(selected, _language(language))
+
+    @app.get("/api/checkpoint-series")
+    def checkpoint_series(run: str = Query(...)) -> JsonDict:
+        selected = _checkpoint_run_dir(root, run)
+        if selected is None:
+            raise HTTPException(status_code=404, detail="Checkpoint series was not found")
+        try:
+            payload = read_json(selected / "checkpoint_visualization.json")
+        except (OSError, ValueError) as exc:
+            raise HTTPException(status_code=422, detail=str(exc)) from exc
+        if payload.get("schema") != "prompt_control_lab.checkpoint_visualization.v1":
+            raise HTTPException(status_code=422, detail="Unsupported checkpoint series schema")
+        return payload
+
+    @app.post("/api/checkpoint-runs", status_code=201)
+    def import_checkpoint_run(payload: dict[str, Any]) -> JsonDict:
+        if deployment_mode == "hf_demo":
+            raise HTTPException(
+                status_code=403,
+                detail="Checkpoint CSV import is disabled in the public demo",
+            )
+        name = payload.get("name")
+        csv_text = payload.get("csv_text")
+        if not isinstance(name, str) or not isinstance(csv_text, str):
+            raise HTTPException(status_code=422, detail="name and csv_text must be strings")
+        try:
+            output = save_checkpoint_run(root, name, csv_text)
+            series = read_json(output / "checkpoint_visualization.json")
+        except FileExistsError as exc:
+            raise HTTPException(status_code=409, detail=str(exc)) from exc
+        except (OSError, ValueError) as exc:
+            raise HTTPException(status_code=422, detail=str(exc)) from exc
+        return {
+            "run": {"name": output.name},
+            "decision": series.get("decision", "insufficient_evidence"),
+            "warnings": [
+                "No gate, model, prompt, or split provenance was imported; "
+                "release evidence is incomplete."
+            ],
+        }
 
     if (assets / "index.html").is_file():
         app.mount("/", StaticFiles(directory=assets, html=True), name="cockpit")
@@ -131,6 +182,21 @@ def _select_run(root: Path, name: str | None) -> Path | None:
         path = Path(str(row.get("path") or "")).resolve(strict=False)
         if path == root or root in path.parents:
             return path
+    return None
+
+
+def _checkpoint_run_dir(root: Path, name: str | None) -> Path | None:
+    """Resolve a checkpoint payload from a bounded run or featured-case root."""
+
+    if not name or any(marker in name for marker in ("/", "\\", "..")):
+        return None
+    root_resolved = root.resolve(strict=False)
+    direct = (root_resolved / name).resolve(strict=False)
+    if direct.parent == root_resolved and (direct / "checkpoint_visualization.json").is_file():
+        return direct
+    selected = _select_run(root_resolved, name)
+    if selected is not None and (selected / "checkpoint_visualization.json").is_file():
+        return selected
     return None
 
 

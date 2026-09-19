@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+import pytest
 from fastapi.testclient import TestClient
 
 from promptcontrollab.integrations.web_api import create_app
@@ -52,7 +53,7 @@ def test_web_api_exposes_normalized_change_review_and_diagnostics(tmp_path: Path
         },
     )
 
-    client = TestClient(create_app(runs_dir=runs, language="zh"))
+    client = TestClient(create_app(runs_dir=runs, language="zh"), base_url="http://127.0.0.1")
     overview = client.get("/api/overview", params={"run": "change-review"})
     catalog = client.get(
         "/api/diagnostics/catalog",
@@ -64,9 +65,7 @@ def test_web_api_exposes_normalized_change_review_and_diagnostics(tmp_path: Path
     assert overview.json()["conclusion"] == "needs_review"
     assert overview.json()["change_kind"] == "prompt_change"
     assert overview.json()["risk"] == "medium"
-    assert overview.json()["likely_causes"] == [
-        "The candidate changed a second recorded factor."
-    ]
+    assert overview.json()["likely_causes"] == ["The candidate changed a second recorded factor."]
     assert overview.json()["ui_language"] == "zh"
     assert overview.json()["next_action"].startswith("先解决")
     assert any("完整运行 Token" in item for item in overview.json()["observations"])
@@ -77,9 +76,7 @@ def test_web_api_exposes_normalized_change_review_and_diagnostics(tmp_path: Path
     assert catalog.json()["green_certificate"]["meaning"] == (
         "Recorded boundary conditions were not met."
     )
-    assert catalog.json()["green_certificate"]["next_action"] == (
-        "Inspect the boundary matrices."
-    )
+    assert catalog.json()["green_certificate"]["next_action"] == ("Inspect the boundary matrices.")
     assert catalog.json()["posterior_certificate"]["label"] == "局部解可信范围"
 
 
@@ -100,7 +97,7 @@ def test_diagnostic_catalog_tracks_the_selected_run(tmp_path: Path) -> None:
             },
         )
 
-    client = TestClient(create_app(runs_dir=runs, language="en"))
+    client = TestClient(create_app(runs_dir=runs, language="en"), base_url="http://127.0.0.1")
     response = client.get(
         "/api/diagnostics/catalog",
         params={"run": "model-case", "language": "en"},
@@ -114,7 +111,7 @@ def test_web_api_lists_child_runs_and_rejects_path_escape(tmp_path: Path) -> Non
     runs = tmp_path / "runs"
     _write_json(runs / "safe-run" / "manifest.json", {"mode": "quick"})
     _write_json(tmp_path / "outside" / "manifest.json", {"secret": True})
-    client = TestClient(create_app(runs_dir=runs))
+    client = TestClient(create_app(runs_dir=runs), base_url="http://127.0.0.1")
 
     response = client.get("/api/runs")
     history = client.get("/api/history")
@@ -168,7 +165,7 @@ def test_web_api_discovers_featured_cases_with_nested_reviews(tmp_path: Path) ->
             "claim_boundary": "Aggregate association, not unique causation.",
         },
     )
-    client = TestClient(create_app(runs_dir=runs, language="zh"))
+    client = TestClient(create_app(runs_dir=runs, language="zh"), base_url="http://127.0.0.1")
 
     listed = client.get("/api/runs")
     overview = client.get(
@@ -204,7 +201,9 @@ def test_web_api_discovers_featured_cases_with_nested_reviews(tmp_path: Path) ->
 
 
 def test_web_api_localizes_the_featured_model_review_reason() -> None:
-    client = TestClient(create_app(runs_dir=Path("docs/case_studies"), language="zh"))
+    client = TestClient(
+        create_app(runs_dir=Path("docs/case_studies"), language="zh"), base_url="http://127.0.0.1"
+    )
 
     response = client.get(
         "/api/overview",
@@ -216,7 +215,9 @@ def test_web_api_localizes_the_featured_model_review_reason() -> None:
 
 
 def test_web_api_empty_state_is_explicit(tmp_path: Path) -> None:
-    client = TestClient(create_app(runs_dir=tmp_path / "missing", language="en"))
+    client = TestClient(
+        create_app(runs_dir=tmp_path / "missing", language="en"), base_url="http://127.0.0.1"
+    )
 
     response = client.get("/api/overview")
 
@@ -228,8 +229,97 @@ def test_web_api_empty_state_is_explicit(tmp_path: Path) -> None:
 def test_web_api_rejects_unknown_or_unbounded_selected_runs(tmp_path: Path) -> None:
     runs = tmp_path / "runs"
     _write_json(runs / "known" / "change_review.json", {"decision": "needs_review"})
-    client = TestClient(create_app(runs_dir=runs, language="en"))
+    client = TestClient(create_app(runs_dir=runs, language="en"), base_url="http://127.0.0.1")
 
     for endpoint in ("/api/overview", "/api/diagnostics/catalog"):
         assert client.get(endpoint, params={"run": "missing"}).status_code == 404
         assert client.get(endpoint, params={"run": "../outside"}).status_code == 404
+
+
+def test_web_api_reads_checkpoint_series_from_featured_case(tmp_path: Path) -> None:
+    runs = tmp_path / "runs"
+    case = runs / "checkpoint-case"
+    _write_json(
+        case / "case_manifest.json",
+        {
+            "decision": "hold",
+            "display": {"review_path": "review", "featured": True},
+        },
+    )
+    _write_json(case / "review" / "change_review.json", {"decision": "hold"})
+    _write_json(
+        case / "checkpoint_visualization.json",
+        {
+            "schema": "prompt_control_lab.checkpoint_visualization.v1",
+            "decision": "hold",
+            "points": [{"seed": "0", "stage": "initial", "mean_score": 0.1}],
+        },
+    )
+    client = TestClient(create_app(runs_dir=runs), base_url="http://127.0.0.1")
+
+    response = client.get("/api/checkpoint-series", params={"run": "checkpoint-case"})
+
+    assert response.status_code == 200
+    assert response.json()["decision"] == "hold"
+    assert "path" not in json.dumps(response.json())
+
+
+def test_web_api_imports_checkpoint_csv_as_bounded_local_run(tmp_path: Path) -> None:
+    runs = tmp_path / "runs"
+    client = TestClient(create_app(runs_dir=runs), base_url="http://127.0.0.1")
+    csv_text = (
+        "seed,stage,checkpoint_id,mean_score\n"
+        "0,initial,seed-0-initial,0.1\n"
+        "0,final,seed-0-final,0.2\n"
+    )
+
+    response = client.post(
+        "/api/checkpoint-runs",
+        headers={"x-pcl-session": client.get("/api/session").json()["token"]},
+        json={"name": "Uploaded Checkpoints", "csv_text": csv_text},
+    )
+
+    assert response.status_code == 201
+    assert response.json()["run"]["name"] == "uploaded-checkpoints"
+    assert response.json()["decision"] == "insufficient_evidence"
+    assert (runs / "uploaded-checkpoints" / "checkpoint_visualization.json").is_file()
+    listed = client.get("/api/runs").json()["runs"]
+    assert listed == [
+        {
+            "name": "uploaded-checkpoints",
+            "title": {"en": "Uploaded Checkpoints", "zh": "Uploaded Checkpoints"},
+            "category": "checkpoint",
+            "decision": "insufficient_evidence",
+            "evidence_level": "user_imported_descriptive_metrics",
+            "featured": False,
+            "technical_change_kind": "checkpoint_change",
+        }
+    ]
+    assert (
+        client.get("/api/checkpoint-series", params={"run": "uploaded-checkpoints"}).status_code
+        == 200
+    )
+    assert (
+        client.post(
+            "/api/checkpoint-runs",
+            headers={"x-pcl-session": client.get("/api/session").json()["token"]},
+            json={"name": "Uploaded Checkpoints", "csv_text": csv_text},
+        ).status_code
+        == 409
+    )
+
+
+def test_web_api_rejects_checkpoint_upload_in_public_demo(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("PCL_DEPLOYMENT_MODE", "hf_demo")
+    client = TestClient(create_app(runs_dir=tmp_path / "runs"), base_url="http://127.0.0.1")
+
+    response = client.post(
+        "/api/checkpoint-runs",
+        json={"name": "blocked", "csv_text": "seed,stage,checkpoint_id,mean_score"},
+    )
+
+    assert response.status_code == 403
+    assert client.get("/api/overview").json()["checkpoint_import_enabled"] is False

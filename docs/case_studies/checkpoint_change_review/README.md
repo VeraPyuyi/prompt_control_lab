@@ -33,6 +33,13 @@ The expected checkpoint identity changed from `aggregate-initial` to `aggregate-
 
 The final score was higher, and generation mismatch and selective risk moved in a favorable direction. Trajectory drift increased, the format-following slice stayed at zero, and the source checkpoint gate required `hold`.
 
+![Checkpoint score, diagnostic, and gate evidence](comparison.en.svg)
+
+- **What changed:** the compared stage moved from the aggregate initial checkpoint to the aggregate final checkpoint across the same three seeds.
+- **What was observed:** mean score rose from `0.0885` to `0.1944`; generation mismatch and selective-risk AURC decreased, while representation trajectory drift increased.
+- **What this can and cannot explain:** the recorded training stage is associated with a different performance and risk profile, but the aggregate evidence does not identify a unique causal mechanism or prove deployment safety.
+- **Next action:** keep the promotion on `hold` and inspect the triggered stability, generation, and readout evidence before release.
+
 ## Why the decision is `hold`
 
 Change Review does not replace a source gate with a single score. The candidate's recorded post-training gate is therefore preserved: promotion remains on hold until the stability and generation/readout findings are resolved or justified.
@@ -49,5 +56,8 @@ This case supports a bounded association between the recorded SFT stage and the 
 - [`review/comparison_validity.json`](review/comparison_validity.json): identity and confounder checks.
 - [`review/human_feedback.json`](review/human_feedback.json): fixed reviewer questions.
 - [`review/decision_trace.json`](review/decision_trace.json): checks that produced the decision.
+- [`checkpoint_visualization.json`](checkpoint_visualization.json): the canonical data used by React and the static figures.
+- [`checkpoint_metrics.csv`](checkpoint_metrics.csv): normalized public-safe checkpoint rows.
+- [`comparison.en.svg`](comparison.en.svg) and [`comparison.zh.svg`](comparison.zh.svg): bilingual linked views.
 
 Only aggregate evidence is included. No prompts, per-example generations, model weights, credentials, hidden reasoning, or private paths are stored here.

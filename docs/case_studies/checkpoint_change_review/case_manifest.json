@@ -21,7 +21,8 @@
     "title": {
       "en": "Checkpoint promotion review",
       "zh": "Checkpoint \u53d1\u5e03\u5ba1\u67e5"
-    }
+    },
+    "visualization_path": "checkpoint_visualization.json"
   },
   "next_action": "Inspect the candidate gate decision trace before promotion.",
   "observed": {

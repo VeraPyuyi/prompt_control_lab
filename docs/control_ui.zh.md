@@ -30,6 +30,10 @@ pcl ui --runs runs --language zh --legacy-streamlit
 
 运行 `pcl ui --runs docs/case_studies --language zh` 后，变更审查首页会显示三张案例卡：**Agent 运行优化**、**模型切换审查**和 **Checkpoint 发布审查**。选择案例后，URL 会记录当前案例，执行前、原因、执行后、决策与稳定性页面也会同步读取同一组嵌套 `review/` 产物。Agent 案例的技术标签仍是 `prompt_change`，产品名称不会把它伪装成两个不同 Agent 身份的比较。
 
+## 本地 Checkpoint CSV 导入
+
+“运行”页可以从 CSV 创建一个描述性的本地 Checkpoint Run。必填列为 `seed`、`checkpoint_id`、`mean_score`，以及 `stage`（`initial`、`mid`、`final`）或数值 `step`；生成错配、选择性风险、轨迹、成本和对齐字段采用允许列表。文件上限为 1 MB、1,000 行，数值必须有限，输出只能写入配置的 `runs` 目录。缺少 Gate、模型、Prompt 或 split 来源时，页面仍可绘图，但决策固定为“证据不足”。Hugging Face 公开演示不开放该写入接口。
+
 ## 复核边界
 
 UI 解释已经记录的证据，不会补造产物中不存在的证据。视觉趋势不是因果证明，绿色决策不是安全证明，稳定性诊断也不是默认控制要求。需要独立复核时，应导出或共享版本化产物。

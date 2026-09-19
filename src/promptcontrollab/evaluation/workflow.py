@@ -6,7 +6,7 @@ from pathlib import Path
 
 from promptcontrollab.audit.claim_check import run_claim_check
 from promptcontrollab.core.config import get_config_path, get_config_str, read_simple_yaml
-from promptcontrollab.core.files import JsonDict, ensure_dir, read_json, write_json
+from promptcontrollab.core.files import JsonDict, ensure_dir, read_json, write_json, write_jsonl
 from promptcontrollab.core.version import __version__
 from promptcontrollab.evaluation.evaluation import run_import_eval
 from promptcontrollab.evaluation.explain import generate_explanation
@@ -34,6 +34,7 @@ def run_quick_analysis(
     permutation_samples: int,
     explain_level: str,
     title: str,
+    evaluation_scope: str = "withheld",
     policy_path: Path | None = None,
     baseline_provider: str | None = None,
     baseline_model: str | None = None,
@@ -57,8 +58,16 @@ def run_quick_analysis(
     tasks = load_tasks(data_path)
     split = make_split(tasks, train_ratio=train_ratio, val_ratio=val_ratio, seed=seed)
     write_split(out_dir / "splits.json", split)
+    if evaluation_scope not in {"all", "withheld"}:
+        raise ValueError("evaluation_scope must be all or withheld")
+    selected_ids = (
+        set(split.withheld) if evaluation_scope == "withheld" else {task.id for task in tasks}
+    )
+    selected_tasks = [task.to_json() for task in tasks if task.id in selected_ids]
+    evaluation_data = out_dir / "evaluation_data.jsonl"
+    write_jsonl(evaluation_data, selected_tasks)
     run_import_eval(
-        data_path=data_path,
+        data_path=evaluation_data,
         predictions_path=baseline_predictions_path,
         out_dir=out_dir / "baseline",
         metric=metric,
@@ -69,7 +78,7 @@ def run_quick_analysis(
         verify_model=verify_model,
     )
     run_import_eval(
-        data_path=data_path,
+        data_path=evaluation_data,
         predictions_path=candidate_predictions_path,
         out_dir=out_dir / "candidate",
         metric=metric,
@@ -91,6 +100,15 @@ def run_quick_analysis(
     candidate_manifest = read_json(out_dir / "candidate" / "manifest.json")
     baseline_manifest["split_hash"] = split.split_hash
     candidate_manifest["split_hash"] = split.split_hash
+    scope = {
+        "schema_version": "evaluation-scope/v1",
+        "partition": evaluation_scope,
+        "evaluated_ids": sorted(selected_ids),
+        "split_applied": evaluation_scope == "withheld",
+        "independence": "not_verified_for_imported_predictions",
+    }
+    baseline_manifest["evaluation_scope"] = scope
+    candidate_manifest["evaluation_scope"] = scope
     baseline_prompt_identity = build_prompt_identity(
         prompt_id=baseline_prompt_id,
         prompt_file=baseline_prompt_file,
@@ -119,6 +137,7 @@ def run_quick_analysis(
         "mode": "quick",
         "method": "baseline_vs_candidate",
         "metric": metric,
+        "evaluation_scope": scope,
         "data_path": str(data_path),
         "baseline_predictions_path": str(baseline_predictions_path),
         "candidate_predictions_path": str(candidate_predictions_path),

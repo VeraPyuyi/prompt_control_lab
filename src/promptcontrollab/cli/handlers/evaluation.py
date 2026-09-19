@@ -192,6 +192,8 @@ def _cmd_analyze(args: argparse.Namespace) -> None:
         data_path=data_path,
         baseline_predictions_path=baseline_path,
         candidate_predictions_path=candidate_path,
+        evaluation_scope=getattr(args, "evaluation_scope", None)
+        or get_config_str(config, "evaluation_scope", "withheld"),
         out_dir=out_dir,
         metric=metric,
         train_ratio=train_ratio,
