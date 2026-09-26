@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.3.0a2 - Prerelease candidate
+
+- Added guided bilingual research import, capability summaries, analysis selection, progress,
+  history and portable JSON/CSV/HTML exports. Saved tables stay explicitly descriptive.
+- Added versioned research bundles, immutable analysis specifications and persistent jobs with
+  suite-level cancellation and recovery. Data-only uploads validate paths, decoded sizes,
+  array types and credentials; uploaded scripts are never executed.
+- Added faithful shared-bootstrap replay with original correction families, undefined-AUC and
+  coverage rules. Integrity, numerical agreement, protocol scope and prediction chronology
+  remain separate checks. Legacy reports and commands retain their original meanings.
+- Expanded the five research diagnostics with parser versions and execution conditions,
+  calibration/measurement/evaluation label dependencies, grouped calibration, complete-cost
+  accounting, crossed transfer panels and explicit readout replacement scopes.
+- Added synthetic v2 examples and [English](docs/research.en.md) /
+  [Chinese](docs/research.zh.md) research guides. New real research inputs and acceptance
+  outputs are excluded from public packages. See the [acceptance record](docs/releases/0.3.0a2-validation.md).
+
 ## 0.3.0a1 - Prerelease candidate
 
 - Added a bilingual experiment workspace for live evaluation, CSV/JSONL mapping, existing-result import, bounded GEPA 0.1.4 optimization, progress, cancellation, safe retry and resume.

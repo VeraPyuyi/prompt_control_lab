@@ -13,6 +13,11 @@ def _compute(kind: str, document: JsonDict, out_dir: Path) -> JsonDict:
     if not isinstance(document, dict):
         raise ValueError("Research input must be a JSON object")
     canonical(document)
+    schema = document.get("schema_version")
+    if isinstance(schema, str) and schema.endswith("/v2"):
+        from .v2 import compute
+
+        return compute(kind, document, out_dir)
     if kind == "readout":
         from .readout import analyze_document
     elif kind == "response":

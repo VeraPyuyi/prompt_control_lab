@@ -11,7 +11,7 @@ import uuid
 from pathlib import Path
 from typing import Any
 
-from promptcontrollab.core.files import stable_digest
+from promptcontrollab.core.files import absolute_path, stable_digest
 from promptcontrollab.integrations.providers import _redact_persisted_text
 
 _ID = re.compile(r"[A-Za-z0-9][A-Za-z0-9_-]{0,95}\Z")
@@ -20,7 +20,7 @@ _LOCK = threading.RLock()
 
 def experiments_dir(root: Path) -> Path:
     """Resolve the experiment storage directory within the requested workspace."""
-    workspace = Path(root).resolve()
+    workspace = absolute_path(root)
     directory = workspace / ".pcl" / "experiments"
     if not directory.resolve().is_relative_to(workspace):
         raise ValueError("Experiment storage cannot escape its workspace")
@@ -149,7 +149,10 @@ def active_job(root: Path) -> dict[str, Any] | None:
     """Return a live lease owner or report malformed lease state without modifying it."""
     path = experiments_dir(root) / "active.lock"
     try:
-        state = read_json(path)
+        # A local transport may release the lease at this instant. Serialize
+        # the read with its unlink to avoid Windows delete-pending handles.
+        with _LOCK:
+            state = read_json(path)
     except FileNotFoundError:
         return None
     except (ValueError, json.JSONDecodeError):

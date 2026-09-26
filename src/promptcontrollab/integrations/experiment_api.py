@@ -68,6 +68,11 @@ def register_experiment_api(app: FastAPI, root: Path, deployment_mode: str) -> N
             if not write:
                 await self.app(scope, receive, send)
                 return
+            if request.url.path == "/api/research-bundles" and request.method == "POST":
+                # This route enforces a separate streaming limit after the same
+                # host, origin and session checks. Never buffer a ZIP in memory.
+                await self.app(scope, receive, send)
+                return
             maximum = 6_000_000
             length = request.headers.get("content-length")
             if length:
@@ -109,6 +114,10 @@ def register_experiment_api(app: FastAPI, root: Path, deployment_mode: str) -> N
             await self.app(scope, replay, send)
 
     app.add_middleware(LocalSessionGuard)
+
+    from promptcontrollab.integrations.research_api import register_research_api
+
+    register_research_api(app, root, local, pool)
 
     def clean_error(exc: Exception) -> str:
         message = str(exc)
@@ -232,20 +241,24 @@ def register_experiment_api(app: FastAPI, root: Path, deployment_mode: str) -> N
         return {"experiments": list_experiments(root)}
 
     @app.get("/api/research-examples/{kind}")
-    def example(kind: str, request: Request) -> dict[str, Any]:
-        local(request)
+    def example(kind: str, request: Request, version: int = 1) -> dict[str, Any]:
+        if deployment_mode != "hf_demo":
+            local(request)
+        if version not in {1, 2}:
+            raise HTTPException(422, "Choose research example version 1 or 2")
         if kind not in {"readout", "response", "measurement-value", "transfer", "replay"}:
             raise HTTPException(404, "Unknown research tool")
-        packaged = (
-            files("promptcontrollab")
-            .joinpath("example_data")
-            .joinpath("research")
-            .joinpath(f"{kind}.json")
-        )
+        packaged = files("promptcontrollab").joinpath("example_data").joinpath("research")
+        if version == 2:
+            packaged = packaged.joinpath("a2")
+        packaged = packaged.joinpath(f"{kind}.json")
         if packaged.is_file():
             return cast(dict[str, Any], json.loads(packaged.read_text(encoding="utf-8")))
+        example_directory = Path(__file__).resolve().parents[3] / "examples"
         source = (
-            Path(__file__).resolve().parents[3] / "examples" / "research-tools" / f"{kind}.json"
+            example_directory
+            / ("research/a2" if version == 2 else "research-tools")
+            / f"{kind}.json"
         )
         if source.is_file():
             return cast(dict[str, Any], json.loads(source.read_text(encoding="utf-8")))

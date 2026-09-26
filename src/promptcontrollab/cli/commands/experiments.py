@@ -47,6 +47,21 @@ def register_commands(subcommands: argparse._SubParsersAction[argparse.ArgumentP
         parser.add_argument("--input", type=Path, required=True)
         parser.add_argument("--out", type=Path, required=True)
         parser.set_defaults(func=_research)
+    imported = tools.add_parser("import", help="Import a data-only research bundle")
+    imported.add_argument("--input", type=Path, required=True)
+    imported.add_argument("--runs", type=Path, default=Path("runs"))
+    imported.set_defaults(func=_research_manage)
+    run = tools.add_parser("run", help="Run a persistent research analysis")
+    source = run.add_mutually_exclusive_group(required=True)
+    source.add_argument("--spec", type=Path)
+    source.add_argument("--bundle-id")
+    run.add_argument("--runs", type=Path, default=Path("runs"))
+    run.set_defaults(func=_research_manage)
+    for action in ("status", "cancel", "resume", "export"):
+        parser = tools.add_parser(action)
+        parser.add_argument("id", nargs="?" if action == "status" else None)
+        parser.add_argument("--runs", type=Path, default=Path("runs"))
+        parser.set_defaults(func=_research_manage)
 
 
 def _execute(args: argparse.Namespace) -> None:
@@ -111,3 +126,28 @@ def _replay(args: argparse.Namespace) -> None:
     from promptcontrollab.evaluation.experiments.replay import replay_experiment
 
     print(json.dumps(replay_experiment(args.bundle, args.out), ensure_ascii=False, indent=2))
+
+
+def _research_manage(args: argparse.Namespace) -> None:
+    from promptcontrollab.diagnostics.research_jobs import bundles, engine
+
+    action = args.research_kind
+    result: object
+    if action == "import":
+        result = bundles.import_bundle(args.runs, args.input)
+    elif action == "run":
+        spec = bundles.json_value(args.spec) if args.spec else {"bundle_id": args.bundle_id}
+        job = engine.create_job(args.runs, spec)
+        result = engine.run_job(args.runs, job["id"])
+    elif action == "cancel":
+        result = engine.cancel_job(args.runs, args.id)
+    elif action == "resume":
+        engine.prepare_resume(args.runs, args.id)
+        result = engine.run_job(args.runs, args.id)
+    elif action == "export":
+        result = {"bundle": str(engine.export_job(args.runs, args.id))}
+    else:
+        result = engine.get_job(args.runs, args.id) if args.id else engine.list_jobs(args.runs)
+    print(json.dumps(result, ensure_ascii=False, indent=2))
+    if isinstance(result, dict) and result.get("status") in {"failed", "interrupted", "cancelled"}:
+        raise SystemExit(1)

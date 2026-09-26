@@ -1,14 +1,16 @@
 # PromptControlLab
 **Evaluate prompts, search for improvements, and understand the evidence—all locally.**
-> `0.3.0a1` prerelease candidate. The local experiment workspace is integrated; see the [acceptance record](https://github.com/VeraPyuyi/prompt_control_lab/blob/main/docs/releases/0.3.0a1-validation.md) for verified and pending checks. Release publication is separate.
+> `0.3.0a2` prerelease candidate. The experiment workspace now includes guided research imports, resumable analysis and versioned diagnostics; see the [acceptance record](https://github.com/VeraPyuyi/prompt_control_lab/blob/main/docs/releases/0.3.0a2-validation.md) for verified and pending checks. Release publication is separate.
 
 ## Start with an experiment
 
-From this checkout, install `python -m pip install -e ".[ui,optimize,research]"`, then run `pcl ui --runs runs --language en`. From a built wheel, install `python -m pip install "./promptcontrollab-0.3.0a1-py3-none-any.whl[ui,optimize,research]"`; Node and the source checkout are not needed to use the app.
+From this checkout, install `python -m pip install -e ".[ui,optimize,research]"`, then run `pcl ui --runs runs --language en`. From a built wheel, install `python -m pip install "./promptcontrollab-0.3.0a2-py3-none-any.whl[ui,optimize,research]"`; Node and the source checkout are not needed to use the app.
 
 Choose **Try the offline example** for a preset synthetic comparison with no model calls. Next, edit prompts, upload CSV/JSONL data and either evaluate your selected model, import saved outputs, or run a bounded GEPA search. Compare conditions, effect, coverage and cost separately; export a portable report and replay it elsewhere.
 
 [Experiment guide](https://github.com/VeraPyuyi/prompt_control_lab/blob/main/docs/experiments.en.md) · [Five research tools](https://github.com/VeraPyuyi/prompt_control_lab/blob/main/examples/research-tools/README.md) · [Example configurations](https://github.com/VeraPyuyi/prompt_control_lab/blob/main/examples/experiments/README.md) · [中文指南](https://github.com/VeraPyuyi/prompt_control_lab/blob/main/docs/experiments.zh.md)
+
+Open **Research**, load a synthetic example or import JSON, CSV, NPZ or a data-only ZIP, then select the analyses supported by your material. Follow progress, inspect English or Chinese explanations, and export a replay bundle. Saved summaries, statistical recomputation and raw-record diagnostics are distinguished. Completed suites survive cancellation or process interruption. [Research workflow guide](https://github.com/VeraPyuyi/prompt_control_lab/blob/main/docs/research.en.md) · [Version 2 input examples](https://github.com/VeraPyuyi/prompt_control_lab/blob/main/examples/research/a2/README.md)
 
 ## 2-Minute Change Review
 
@@ -44,7 +46,6 @@ pcl posttrain-gate --baseline runs/checkpoint-000 --candidate runs/checkpoint-50
 
 These commands connect dispersed experiment artifacts to prompt reachability, readout alignment, routing, projection, and stability evidence. The public-safe [371-source prompt-reach-v2 case](https://github.com/VeraPyuyi/prompt_control_lab/blob/main/docs/case_studies/prompt_reach_v2/README.md) reports four observed dimensions and one dimension that requires reanalysis. For bounded control checks, `pcl terminal-sensitivity`, `pcl green-certificate`, and `pcl posterior-certificate` distinguish empirical trends, finite-dimensional surrogate consistency, and premise-backed local certificates. See the [control certificate guide](https://github.com/VeraPyuyi/prompt_control_lab/blob/main/docs/control_certificates.en.md); none of these levels is a proof about an entire operational language model.
 
-The real [three-seed SFT checkpoint case](https://github.com/VeraPyuyi/prompt_control_lab/blob/main/docs/case_studies/sft_checkpoint_pilot/README.md) records 9 checkpoints and 6 paired gates. Mean score rose from 0.0885 to 0.1944 and mean generated tokens fell 27.2%. The format slice independently remained at 0; the `hold` was triggered by trajectory/prompt-stability and generation-mismatch/readout checks, while routing evidence remained insufficient. This is an observed, bounded workflow result, not a universal improvement claim. See the [evidence import guide](https://github.com/VeraPyuyi/prompt_control_lab/blob/main/docs/server_evidence.en.md) and [post-training gate](https://github.com/VeraPyuyi/prompt_control_lab/blob/main/docs/posttraining.en.md).
 ## Flagship Integration: DeepSeek Harness
 
 The [native Cordis integration](https://github.com/VeraPyuyi/prompt_control_lab/blob/main/docs/deepseek_harness.en.md) gates model requests and tools, streams redacted lifecycle evidence through one persistent local bridge, and is contract-locked to Harness `0.1.1-rc.2` at `b150a551...`. The [public-safe real-session case](https://github.com/VeraPyuyi/prompt_control_lab/blob/main/docs/case_studies/deepseek_harness/README.md) records four model request/response pairs, two terminal reads, one bounded edit, one test invocation with exit code `0`, and 3/3 passing tests. The verified live run is `low` risk, `converging`, and conservatively `suggest`; lifecycle acceptance is still not presented as a safety proof.

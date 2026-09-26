@@ -56,6 +56,47 @@ def require_document(document: JsonDict, schema: str) -> None:
     canonical(document)
 
 
+def transfer_v2_receipt_projection(document: JsonDict) -> tuple[Any, Any, Any]:
+    """Project ordered forecasts and actual crossed cohorts without evaluation outcomes."""
+    calibration = {
+        "question_ids": document.get("calibration_question_ids"),
+        "prompt_ids": document.get("calibration_prompt_ids"),
+    }
+    if any(not isinstance(value, list) or not value for value in calibration.values()):
+        raise ValueError("Transfer receipts require actual calibration question and prompt IDs")
+    panels = document.get("panels")
+    if not isinstance(panels, list) or not panels:
+        raise ValueError("Transfer receipts require complete crossed panels")
+    forecasts, cohorts = [], []
+    for panel in panels:
+        if (
+            not isinstance(panel, dict)
+            or not {"panel_id", "model", "axes", "pairs"} <= panel.keys()
+        ):
+            raise ValueError("Transfer receipts require complete crossed panels")
+        pairs = panel["pairs"]
+        keys = ("pair_id", "prompt_ids", "question_ids", "predictions")
+        if (
+            not isinstance(pairs, list)
+            or not pairs
+            or any(not isinstance(pair, dict) or not set(keys) <= pair.keys() for pair in pairs)
+        ):
+            raise ValueError("Transfer receipts require complete nested forecast pairs")
+        identity = {key: panel[key] for key in ("panel_id", "model", "axes")}
+        forecasts.append(
+            {**identity, "pairs": [{key: pair[key] for key in keys} for pair in pairs]}
+        )
+        cohorts.append(
+            {
+                **identity,
+                "pairs": [
+                    {key: pair[key] for key in keys if key != "predictions"} for pair in pairs
+                ],
+            }
+        )
+    return forecasts, calibration, cohorts
+
+
 def evidence(document: JsonDict) -> JsonDict:
     """Verify links inside supplied receipts; never authenticate their real-world dates."""
     status = document.get("evidence_status", "historical_observation")
@@ -105,6 +146,28 @@ def evidence(document: JsonDict) -> JsonDict:
         ) from error
     if document.get("prediction_lock_sha256") not in (None, digest(lock)):
         raise ValueError("prediction_lock_sha256 does not match the supplied lock receipt")
+    measurement_v2 = document.get("schema_version") in (
+        "measurement-value/v2",
+        "pcl.measurement-value/v2",
+    )
+    transfer_v2 = document.get("schema_version") in (
+        "control-transfer/v2",
+        "pcl.control-transfer/v2",
+    )
+    if transfer_v2:
+        forecasts, calibration, panel_cohorts = transfer_v2_receipt_projection(document)
+        if payload.get("forecasts_sha256") != digest(forecasts):
+            raise ValueError("Lock receipt does not freeze the supplied crossed-panel forecasts")
+        cohorts = receipts.get("cohorts")
+        if not isinstance(cohorts, dict) or (
+            cohorts.get("calibration") != calibration
+            or cohorts.get("evaluation_panels") != panel_cohorts
+        ):
+            raise ValueError("Transfer cohort provenance must match the actual crossed panels")
+        if payload.get("calibration_cohorts_sha256") != digest(calibration) or evaluation.get(
+            "evaluation_panels_sha256"
+        ) != digest(panel_cohorts):
+            raise ValueError("Transfer cohorts are not linked to lock and evaluation receipts")
     if "pairs" in document:
         if not isinstance(document["pairs"], list) or any(
             not isinstance(pair, dict)
@@ -130,19 +193,20 @@ def evidence(document: JsonDict) -> JsonDict:
         if payload.get("forecasts_sha256") != digest(forecasts):
             raise ValueError("Lock receipt does not freeze the supplied forecasts")
     if "cases" in document:
+        policy_keys = (
+            ("case_id", "model", "pair_id", "item_ids", "budget_seconds", "policies")
+            if measurement_v2
+            else ("model", "pair", "item_ids", "scores", "costs")
+        )
         if not isinstance(document["cases"], list) or any(
-            not isinstance(case, dict)
-            or not {"model", "pair", "item_ids", "scores", "costs"} <= case.keys()
+            not isinstance(case, dict) or not set(policy_keys) <= case.keys()
             for case in document["cases"]
         ):
             raise ValueError("Receipt verification requires complete measurement case records")
-        policies = [
-            {key: case[key] for key in ("model", "pair", "item_ids", "scores", "costs")}
-            for case in document["cases"]
-        ]
+        policies = [{key: case[key] for key in policy_keys} for case in document["cases"]]
         if payload.get("policies_sha256") != digest(policies):
             raise ValueError("Lock receipt does not freeze the supplied score and cost policies")
-    if status == "independent_confirmation":
+    if status == "independent_confirmation" and not transfer_v2:
         cohorts = receipts.get("cohorts")
         if not isinstance(cohorts, dict):
             raise ValueError("independent_confirmation requires linked cohort provenance")
@@ -161,7 +225,8 @@ def evidence(document: JsonDict) -> JsonDict:
                 for name in ("left_seed", "right_seed")
             }
         elif "cases" in document:
-            actual_ids = {f"{case['model']}:{case['pair']}" for case in document["cases"]}
+            pair_key = "pair_id" if measurement_v2 else "pair"
+            actual_ids = {f"{case['model']}:{case[pair_key]}" for case in document["cases"]}
         if actual_ids is not None and set(test) != actual_ids:
             raise ValueError("Evaluation cohort identities must match the actual analyzed cases")
         if payload.get("calibration_ids_sha256") != digest(train) or evaluation.get(

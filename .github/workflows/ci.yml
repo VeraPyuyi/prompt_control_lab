@@ -92,3 +92,28 @@ jobs:
           test -f .wheel-research/research-demo/research_diagnostics.html
           test -f .wheel-research/research-demo/evidence_card.html
           test -f .wheel-research/research-demo/claim_check.html
+      - name: Installed research job round trip
+        run: |
+          cd "$(mktemp -d)"
+          python -I - <<'PY'
+          import importlib.resources
+          from pathlib import Path
+          from promptcontrollab.diagnostics.research_jobs import bundles, engine
+          examples = importlib.resources.files("promptcontrollab").joinpath("example_data/research/a2")
+          sources = sorted(Path(str(examples)).glob("*.json"))
+          assert len(sources) == 6
+          for source in sources:
+              root = Path.cwd() / source.stem
+              bundle = bundles.import_bundle(root, source)
+              assert bundle["synthetic"] is True
+              job = engine.create_job(root, {"bundle_id": bundle["id"]})
+              first = engine.run_job(root, job["id"])
+              assert first["status"] == "completed", first
+              exported = engine.export_job(root, job["id"])
+              moved = root / "relocated"
+              again = bundles.import_bundle(moved, exported)
+              replay = engine.create_job(moved, {"bundle_id": again["id"]})
+              second = engine.run_job(moved, replay["id"])
+              assert second["status"] == "completed", second
+              assert first["completed"]["unit-000"]["result"] == second["completed"]["unit-000"]["result"]
+          PY

@@ -1,14 +1,16 @@
 # PromptControlLab
 **在本地评测提示词、搜索改进，并理解结果的依据。**
-> `0.3.0a1` 预发布候选：已整合本地实验工作台。已验证与待验证项目见[验收记录](docs/releases/0.3.0a1-validation.md)；对外发布是独立步骤。
+> `0.3.0a2` 预发布候选：在本地实验工作台上新增研究材料导入、可恢复分析和版本化诊断。已验证与待验证项目见[验收记录](docs/releases/0.3.0a2-validation.md)；对外发布是独立步骤。
 
 ## 从一次实验开始
 
-源码安装：`python -m pip install -e ".[ui,optimize,research]"`，然后运行 `pcl ui --runs runs --language zh`。使用构建好的 wheel 时，安装 `python -m pip install "./promptcontrollab-0.3.0a1-py3-none-any.whl[ui,optimize,research]"`；日常使用无需 Node 或源码目录。
+源码安装：`python -m pip install -e ".[ui,optimize,research]"`，然后运行 `pcl ui --runs runs --language zh`。使用构建好的 wheel 时，安装 `python -m pip install "./promptcontrollab-0.3.0a2-py3-none-any.whl[ui,optimize,research]"`；日常使用无需 Node 或源码目录。
 
 点击 **先体验离线样例**，即可用预置合成结果完成一次比较，无需模型调用。之后可以编辑提示词、上传 CSV/JSONL 数据，选择实际评测、导入已有输出或运行有预算上限的 GEPA 搜索。比较条件、效果、覆盖情况与成本分别呈现，结果包可导出并换目录复算。
 
 [实验使用指南](docs/experiments.zh.md) · [五类科研工具](examples/research-tools/README.zh.md) · [实验配置样例](examples/experiments/README.md) · [English guide](docs/experiments.en.md)
+
+打开 **研究工具**，载入合成样例，或导入 JSON、CSV、NPZ、数据 ZIP。页面会说明材料能支持哪些分析；选择后即可查看进度、中英文解释并导出重放包。已有汇总、统计重算与原始记录诊断分别标明，已完成套件在取消或进程退出后仍会保留。 [研究流程指南](docs/research.zh.md) · [第二版输入样例](examples/research/a2/README.md)
 
 ## 2 分钟 Change Review
 
@@ -44,7 +46,6 @@ pcl posttrain-gate --baseline runs/checkpoint-000 --candidate runs/checkpoint-50
 
 这三步把分散的实验 artifact 归入 Prompt 可达性、读出对齐、路由、投影和稳定性五类证据。公开安全的 [371 项 prompt-reach-v2 案例](docs/case_studies/prompt_reach_v2/README.zh.md)中有四类已观测、一类需要重新分析。如需有边界的控制检查，可使用 `pcl terminal-sensitivity`、`pcl green-certificate` 和 `pcl posterior-certificate`，区分经验趋势、有限维 surrogate 一致性与有 premise 支持的局部证书。详见[控制证书指南](docs/control_certificates.zh.md)；任何等级都不等于对完整线上语言模型的证明。
 
-真实的[三 seed SFT checkpoint 案例](docs/case_studies/sft_checkpoint_pilot/README.zh.md)包含 9 个 checkpoint 和 6 个配对 gate。平均分数从 0.0885 提高到 0.1944，平均生成 token 减少 27.2%。格式 slice 独立地保持为 0；真正触发 `hold` 的是 trajectory/prompt stability 与 generation mismatch/readout 检查，routing 证据则仍然不足。这是有边界的真实工作流结果，不是普遍提升声明。参见[证据导入说明](docs/server_evidence.zh.md)和[后训练门禁](docs/posttraining.zh.md)。
 ## 旗舰集成：DeepSeek Harness
 
 [原生 Cordis 集成](docs/deepseek_harness.zh.md)可以在模型请求和工具执行前 gate，并通过一个持久本地 bridge 写入脱敏生命周期证据；兼容性锁定到 Harness `0.1.1-rc.2`、commit `b150a551...`。[可公开真实会话案例](docs/case_studies/deepseek_harness/README.zh.md)记录了 4 组模型请求/响应、2 次终态读取、1 次有界修改、1 次退出码为 `0` 的测试调用和 3/3 测试通过。经过严格协议验收的真实运行是 `low` risk、`converging`，最终仍保守给出 `suggest`；生命周期验收不被包装成安全证明。

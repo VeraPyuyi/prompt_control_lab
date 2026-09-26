@@ -215,6 +215,10 @@ def _plot(
 
 def render_sections(result: JsonDict, language: str, out_dir: Path) -> tuple[str, str]:
     """Build bilingual explanations, metric tables, and plots from research results."""
+    if str(result.get("schema_version", "")).endswith("/v2"):
+        from .v2_reporting import render_sections as render_v2
+
+        return render_v2(result, language, out_dir)
     zh = language == "zh"
 
     def t(en: str, cn: str) -> str:

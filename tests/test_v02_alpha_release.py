@@ -15,7 +15,7 @@ def test_v02_alpha_version_and_readmes_are_consistent() -> None:
     english = (ROOT / "README.md").read_text(encoding="utf-8")
     chinese = (ROOT / "README.zh.md").read_text(encoding="utf-8")
 
-    assert __version__ == "0.3.0a1"
+    assert __version__ == "0.3.0a2"
     assert f'version = "{__version__}"' in pyproject
     assert __version__ in english
     assert __version__ in chinese

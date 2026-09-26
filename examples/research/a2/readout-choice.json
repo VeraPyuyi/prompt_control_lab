@@ -1,0 +1,284 @@
+{
+  "schema_version": "pcl.readout-sensitivity/v2",
+  "synthetic": true,
+  "representation": "raw_records",
+  "provenance": {
+    "description": "Synthetic unit-test evidence only",
+    "source": "synthetic"
+  },
+  "conditions": [
+    {
+      "condition_id": "strict",
+      "parser": {
+        "rule": "strict",
+        "version": "choice/v2",
+        "posthoc": false
+      },
+      "budget_tokens": 32,
+      "generation_mode": "saved_full",
+      "decoding": {
+        "method": "greedy"
+      },
+      "batch_size": 2,
+      "stopping": "eos",
+      "precision": "float32",
+      "template_id": "synthetic-template/v1",
+      "samples": [
+        {
+          "item_id": "q0",
+          "gold_answer": "A",
+          "initial_answers": {
+            "source": "B",
+            "target": "A"
+          },
+          "source": {
+            "text": "B"
+          },
+          "target": {
+            "text": "A"
+          },
+          "scores": {
+            "loss": 0,
+            "primary": 3
+          }
+        },
+        {
+          "item_id": "q1",
+          "gold_answer": "B",
+          "initial_answers": {
+            "source": "C",
+            "target": "B"
+          },
+          "source": {
+            "text": "C"
+          },
+          "target": {
+            "text": "Answer: (B)."
+          },
+          "scores": {
+            "loss": 1,
+            "primary": 2
+          }
+        },
+        {
+          "item_id": "q2",
+          "gold_answer": "C",
+          "initial_answers": {
+            "source": "D",
+            "target": "C"
+          },
+          "source": {
+            "text": "D"
+          },
+          "target": {
+            "text": "C"
+          },
+          "scores": {
+            "loss": 2,
+            "primary": 1
+          }
+        },
+        {
+          "item_id": "q3",
+          "gold_answer": "D",
+          "initial_answers": {
+            "source": "E",
+            "target": "D"
+          },
+          "source": {
+            "text": "E"
+          },
+          "target": {
+            "text": "D"
+          },
+          "scores": {
+            "loss": 3,
+            "primary": 0
+          }
+        }
+      ]
+    },
+    {
+      "condition_id": "leading",
+      "parser": {
+        "rule": "leading",
+        "version": "choice/v2",
+        "posthoc": false
+      },
+      "budget_tokens": 32,
+      "generation_mode": "saved_full",
+      "decoding": {
+        "method": "greedy"
+      },
+      "batch_size": 2,
+      "stopping": "eos",
+      "precision": "float32",
+      "template_id": "synthetic-template/v1",
+      "samples": [
+        {
+          "item_id": "q0",
+          "gold_answer": "A",
+          "initial_answers": {
+            "source": "B",
+            "target": "A"
+          },
+          "source": {
+            "text": "B"
+          },
+          "target": {
+            "text": "A"
+          },
+          "scores": {
+            "loss": 0,
+            "primary": 3
+          }
+        },
+        {
+          "item_id": "q1",
+          "gold_answer": "B",
+          "initial_answers": {
+            "source": "C",
+            "target": "B"
+          },
+          "source": {
+            "text": "C"
+          },
+          "target": {
+            "text": "Answer: (B)."
+          },
+          "scores": {
+            "loss": 1,
+            "primary": 2
+          }
+        },
+        {
+          "item_id": "q2",
+          "gold_answer": "C",
+          "initial_answers": {
+            "source": "D",
+            "target": "C"
+          },
+          "source": {
+            "text": "D"
+          },
+          "target": {
+            "text": "C"
+          },
+          "scores": {
+            "loss": 2,
+            "primary": 1
+          }
+        },
+        {
+          "item_id": "q3",
+          "gold_answer": "D",
+          "initial_answers": {
+            "source": "E",
+            "target": "D"
+          },
+          "source": {
+            "text": "E"
+          },
+          "target": {
+            "text": "D"
+          },
+          "scores": {
+            "loss": 3,
+            "primary": 0
+          }
+        }
+      ]
+    },
+    {
+      "condition_id": "terminal",
+      "parser": {
+        "rule": "terminal",
+        "version": "choice/v2",
+        "posthoc": false
+      },
+      "budget_tokens": 32,
+      "generation_mode": "saved_full",
+      "decoding": {
+        "method": "greedy"
+      },
+      "batch_size": 2,
+      "stopping": "eos",
+      "precision": "float32",
+      "template_id": "synthetic-template/v1",
+      "samples": [
+        {
+          "item_id": "q0",
+          "gold_answer": "A",
+          "initial_answers": {
+            "source": "B",
+            "target": "A"
+          },
+          "source": {
+            "text": "B"
+          },
+          "target": {
+            "text": "A"
+          },
+          "scores": {
+            "loss": 0,
+            "primary": 3
+          }
+        },
+        {
+          "item_id": "q1",
+          "gold_answer": "B",
+          "initial_answers": {
+            "source": "C",
+            "target": "B"
+          },
+          "source": {
+            "text": "C"
+          },
+          "target": {
+            "text": "Answer: (B)."
+          },
+          "scores": {
+            "loss": 1,
+            "primary": 2
+          }
+        },
+        {
+          "item_id": "q2",
+          "gold_answer": "C",
+          "initial_answers": {
+            "source": "D",
+            "target": "C"
+          },
+          "source": {
+            "text": "D"
+          },
+          "target": {
+            "text": "C"
+          },
+          "scores": {
+            "loss": 2,
+            "primary": 1
+          }
+        },
+        {
+          "item_id": "q3",
+          "gold_answer": "D",
+          "initial_answers": {
+            "source": "E",
+            "target": "D"
+          },
+          "source": {
+            "text": "E"
+          },
+          "target": {
+            "text": "D"
+          },
+          "scores": {
+            "loss": 3,
+            "primary": 0
+          }
+        }
+      ]
+    }
+  ]
+}

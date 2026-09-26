@@ -3,10 +3,22 @@
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
 from typing import Any, cast
 
 JsonDict = dict[str, Any]
+
+
+def absolute_path(path: Path) -> Path:
+    """Support deep Windows paths while preserving resolved containment checks."""
+    resolved = Path(path).resolve()
+    value = str(resolved)
+    if os.name != "nt" or value.startswith("\\\\?\\"):
+        return resolved
+    if value.startswith("\\\\"):
+        return Path("\\\\?\\UNC\\" + value[2:])
+    return Path("\\\\?\\" + value)
 
 
 def ensure_dir(path: Path) -> None:

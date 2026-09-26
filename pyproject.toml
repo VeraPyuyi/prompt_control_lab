@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "promptcontrollab"
-version = "0.3.0a1"
+version = "0.3.0a2"
 description = "Evaluate and optimize prompts locally, then explain their effects and measurement costs."
 readme = "README.md"
 requires-python = ">=3.10"
@@ -95,6 +95,7 @@ packages = ["src/promptcontrollab"]
 
 [tool.hatch.build.targets.wheel.force-include]
 "examples/research-tools" = "promptcontrollab/example_data/research"
+"examples/research/a2" = "promptcontrollab/example_data/research/a2"
 "examples/experiments" = "promptcontrollab/example_data/experiments"
 
 [tool.hatch.build.targets.sdist]
