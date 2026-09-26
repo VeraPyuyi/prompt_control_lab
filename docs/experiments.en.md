@@ -36,7 +36,7 @@ Search stores candidate text, lineage, validation scores, costs and stop reasons
 
 ## Persistence, cancellation and retry
 
-One experiment runs at a time per runs directory, with no more than two model requests in flight. Cancellation stops new admission and keeps finished items. A request already sent may finish before cancellation becomes visible. If the process exits before its outcome is known, the call remains uncertain and its budget reservation remains charged.
+One experiment runs at a time per runs directory, with no more than two model requests in flight. Cancellation stops new admission immediately and keeps finished items. Requests already sent are collected until their original request or total-budget deadline, whichever comes first; cancellation does not extend either deadline. Responses returned on time are retained for resume. If the process exits or the deadline expires before an outcome is available, the call remains uncertain and its budget reservation remains charged.
 
 Resume reuses completed calls and continues unfinished work. **Retry safely rejected requests** is explicit: only known pre-execution rejections or known local configuration errors qualify. Timeouts, interrupted calls and malformed responses are not automatically replayed. Memory-only credentials must be supplied again after service restart; keep the recorded environment-variable reference when restoring them.
 
