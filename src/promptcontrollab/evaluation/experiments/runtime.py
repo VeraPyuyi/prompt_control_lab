@@ -327,15 +327,21 @@ class ExperimentRuntime:
         )
 
     def _invoke(self, kwargs: dict[str, Any], timeout: float) -> object:
-        mailbox: queue.Queue[tuple[bool, Any]] = queue.Queue(maxsize=1)
+        """Drain admitted calls to their original deadline, using transport return time."""
+        deadline = min(
+            time.monotonic() + timeout,
+            self._started + self.spec["budget"]["max_seconds"] - self._elapsed_before,
+        )
+        mailbox: queue.Queue[tuple[bool, Any, float]] = queue.Queue(maxsize=1)
         with self._mutex:
             self._pending += 1
 
         def transport() -> None:
             try:
-                mailbox.put((True, self._provider(**kwargs)))
+                response = self._provider(**kwargs)
+                mailbox.put((True, response, time.monotonic()))
             except BaseException as exc:
-                mailbox.put((False, exc))
+                mailbox.put((False, exc, time.monotonic()))
             finally:
                 with self._mutex:
                     self._pending -= 1
@@ -343,17 +349,25 @@ class ExperimentRuntime:
                         self._lease.release()
 
         threading.Thread(target=transport, daemon=True, name="pcl-experiment-call").start()
-        deadline = time.monotonic() + timeout
         while True:
-            remaining = deadline - time.monotonic()
-            if remaining <= 0:
-                raise TimeoutError("Request deadline reached; outcome unknown, replay disabled")
+            remaining = max(0.0, deadline - time.monotonic())
             try:
-                success, result = mailbox.get(timeout=min(0.05, remaining))
+                success, result, returned_at = mailbox.get(timeout=min(0.05, remaining))
             except queue.Empty:
-                if (self.job_dir / "cancel.request").exists():
-                    raise ExperimentStopped("cancelled_in_flight") from None
-                continue
+                # Cancellation blocks admission, but admitted calls retain their
+                # original deadline so a successful response is not discarded.
+                if time.monotonic() < deadline:
+                    continue
+                try:
+                    # A timely response may have arrived after get timed out
+                    # while this consumer was descheduled. Do not wait again.
+                    success, result, returned_at = mailbox.get_nowait()
+                except queue.Empty:
+                    raise TimeoutError(
+                        "Request deadline reached; outcome unknown, replay disabled"
+                    ) from None
+            if returned_at > deadline:
+                raise TimeoutError("Request deadline reached; outcome unknown, replay disabled")
             if not success:
                 raise result
             return result
@@ -525,24 +539,30 @@ class ExperimentRuntime:
                 "Evaluation tasks must match the immutable snapshot and permitted phase"
             )
 
-        def one(task: dict[str, Any]) -> dict[str, Any]:
-            """Score a task after verifying any reusable completion against its call receipt."""
+        cached: dict[str, tuple[Path, dict[str, Any] | None]] = {}
+        # Check the whole batch before admitting any request, including when a
+        # fresh task precedes a corrupt completion or workers run concurrently.
+        for task in tasks:
             key = _digest({"name": name, "config": config, "task": task["id"], "phase": phase})
             target = self.job_dir / "records" / f"{key}.json"
-            if target.exists():
-                prior_record = read_json(target)
-                if prior_record.get("status") == "completed":
-                    validate_completed_record(
-                        prior_record,
-                        task,
-                        config,
-                        metric=self.spec["metric"],
-                        phase=phase,
-                        name=name,
-                        job_dir=self.job_dir,
-                    )
-                if not self._should_retry(prior_record):
-                    return prior_record
+            prior_record = read_json(target) if target.exists() else None
+            if prior_record is not None and prior_record.get("status") == "completed":
+                validate_completed_record(
+                    prior_record,
+                    task,
+                    config,
+                    metric=self.spec["metric"],
+                    phase=phase,
+                    name=name,
+                    job_dir=self.job_dir,
+                )
+            cached[task["id"]] = target, prior_record
+
+        def one(task: dict[str, Any]) -> dict[str, Any]:
+            """Score a task or reuse its completion after the batch integrity preflight."""
+            target, prior_record = cached[task["id"]]
+            if prior_record is not None and not self._should_retry(prior_record):
+                return prior_record
             prompt = render_task_prompt(config, task)
             call = self.call(config, prompt, phase=phase, label=f"{name}:{task['id']}")
             score = (

@@ -670,6 +670,7 @@ def test_corrupted_cached_completion_is_not_reused_or_scored(tmp_path: Path) -> 
     assert run_experiment(tmp_path, created["id"], stop_after_one)["status"] == "cancelled"
     record_path = next((job_directory(tmp_path, created["id"]) / "records").glob("*.json"))
     record = json.loads(record_path.read_text())
+    assert record["status"] == "completed"
     record["score"] = float("nan")
     record_path.write_text(json.dumps(record))
     prepare_resume(tmp_path, created["id"])

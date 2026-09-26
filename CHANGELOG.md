@@ -7,6 +7,9 @@
 - Added versioned research bundles, immutable analysis specifications and persistent jobs with
   suite-level cancellation and recovery. Data-only uploads validate paths, decoded sizes,
   array types and credentials; uploaded scripts are never executed.
+- Fixed experiment cancellation at the response boundary: admitted calls retain responses
+  returned within their original deadlines, and recovery validates every cached completion
+  before admitting new requests. Expired outcomes remain uncertain and are not replayed.
 - Added faithful shared-bootstrap replay with original correction families, undefined-AUC and
   coverage rules. Integrity, numerical agreement, protocol scope and prediction chronology
   remain separate checks. Legacy reports and commands retain their original meanings.
