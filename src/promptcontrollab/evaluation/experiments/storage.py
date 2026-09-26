@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import os
 import re
+import sys
 import threading
 import time
 import uuid
@@ -114,7 +115,7 @@ def alive(pid: object) -> bool:
         return False
     if pid == os.getpid():
         return True
-    if os.name == "nt":
+    if sys.platform == "win32":
         # os.kill(pid, 0) is not a portable existence probe on Windows: use
         # a query-only process handle and never send a signal to another job.
         import ctypes
