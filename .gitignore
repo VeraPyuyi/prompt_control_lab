@@ -1,4 +1,6 @@
 .venv/
+.integration/
+.pcl/
 __pycache__/
 *.py[cod]
 .pytest_cache/

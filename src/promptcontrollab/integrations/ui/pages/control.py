@@ -9,6 +9,10 @@ from pathlib import Path
 from typing import Any, cast
 
 from promptcontrollab.core.files import JsonDict
+from promptcontrollab.diagnostics.presentation import (
+    diagnostic_status_label,
+    get_diagnostic_presentation,
+)
 from promptcontrollab.integrations.hf_demo import is_hf_demo
 from promptcontrollab.integrations.ui.charts import (
     control_event_timeline,
@@ -341,7 +345,7 @@ def _render_stability_view(
         certificate_rows,
         _merge_interpretation_records(prompt_rows, report_rows),
     )
-    title = "Stability and uncertainty findings" if language == "en" else "稳定性与不确定性"
+    title = "Stability and confidence findings" if language == "en" else "稳定性与可信度"
     if rows:
         _render_interpretation_records(st, rows, language, title=title)
     terminal_rows = terminal_sensitivity_rows(detail)
@@ -350,9 +354,9 @@ def _render_stability_view(
             terminal_sensitivity_decay(
                 terminal_rows,
                 title=(
-                    "Terminal sensitivity by boundary distance"
+                    "Long-horizon goal influence by boundary distance"
                     if language == "en"
-                    else "终端敏感度随边界距离变化"
+                    else "最终目标影响随任务距离变化"
                 ),
             ),
             use_container_width=True,
@@ -364,9 +368,9 @@ def _render_stability_view(
             green_boundary_margin(
                 green_rows,
                 title=(
-                    "Scaled boundary minimum singular value"
+                    "Local stability boundary margin"
                     if language == "en"
-                    else "缩放边界矩阵最小奇异值"
+                    else "局部稳定边界余量"
                 ),
             ),
             use_container_width=True,
@@ -377,18 +381,21 @@ def _render_stability_view(
         metric_cards(
             st,
             [
-                ("Posterior h" if language == "en" else "后验 h", posterior.get("h")),
                 (
-                    "Existence radius" if language == "en" else "存在半径",
+                    "Local condition indicator" if language == "en" else "局部条件指标",
+                    posterior.get("h"),
+                ),
+                (
+                    "Confidence neighborhood radius" if language == "en" else "可信邻域半径",
                     posterior.get("existence_radius"),
                 ),
                 (
-                    "Neighborhood margin" if language == "en" else "邻域余量",
+                    "Remaining neighborhood margin" if language == "en" else "剩余邻域余量",
                     posterior.get("neighborhood_margin"),
                 ),
                 (
-                    "Certificate level" if language == "en" else "证书等级",
-                    posterior.get("certificate_level"),
+                    "Evidence level" if language == "en" else "证据等级",
+                    diagnostic_status_label(posterior.get("certificate_level"), language),
                 ),
             ],
         )
@@ -442,17 +449,23 @@ def _render_training_gate_view(st: Any, language: str, detail: JsonDict) -> None
     certificate_summary = _dict(gate.get("certificate_summary"))
     certificate_checks = _dict(certificate_summary.get("checks"))
     if certificate_summary:
-        st.markdown("### Control certificates" if language == "en" else "### 控制证书")
+        st.markdown(
+            "### Stability and confidence checks"
+            if language == "en"
+            else "### 稳定性与可信度检查"
+        )
         metric_cards(
             st,
             [
                 (
                     "Overall state" if language == "en" else "总体状态",
-                    certificate_summary.get("overall_state"),
+                    diagnostic_status_label(certificate_summary.get("overall_state"), language),
                 ),
                 (
                     "Highest level" if language == "en" else "最高等级",
-                    certificate_summary.get("highest_recorded_level"),
+                    diagnostic_status_label(
+                        certificate_summary.get("highest_recorded_level"), language
+                    ),
                 ),
                 (
                     "Minimum required" if language == "en" else "策略最低要求",
@@ -464,10 +477,14 @@ def _render_training_gate_view(st: Any, language: str, detail: JsonDict) -> None
             st.dataframe(
                 [
                     {
-                        "certificate": name,
-                        "state": _dict(raw).get("check_state")
-                        or _dict(raw).get("observed"),
-                        "level": _dict(raw).get("certificate_level"),
+                        "diagnostic": get_diagnostic_presentation(name, language)["label"],
+                        "state": diagnostic_status_label(
+                            _dict(raw).get("check_state") or _dict(raw).get("observed"),
+                            language,
+                        ),
+                        "level": diagnostic_status_label(
+                            _dict(raw).get("certificate_level"), language
+                        ),
                         "passed": _dict(raw).get("passed"),
                         "message": _dict(raw).get("message"),
                     }
@@ -605,18 +622,32 @@ def _render_interpretation_records(
     if title:
         st.markdown(f"### {title}")
     for row in rows:
-        name = str(row.get("adapter") or "diagnostic")
-        status = str(row.get("status") or "unknown")
+        name = str(row.get("diagnostic") or row.get("adapter") or "diagnostic")
+        status = str(row.get("status_label") or row.get("status") or "unknown")
         confidence = str(row.get("confidence") or "unknown")
-        st.markdown(f"#### `{name}`")
+        st.markdown(f"#### {html.escape(name)}")
         st.markdown(
             f"**{labels['status']}:** {html.escape(status)} · "
             f"**{labels['confidence']}:** {html.escape(confidence)}"
         )
+        purpose = row.get("function")
+        if purpose:
+            st.markdown(f"**{labels['purpose']}:** {html.escape(str(purpose))}")
         for key in ("observed", "explains", "does_not_prove", "next_action"):
             value = row.get(key)
             rendered = _interpretation_value(value)
             st.markdown(f"**{labels[key]}:** {html.escape(rendered)}")
+        expander = getattr(st, "expander", None)
+        if callable(expander) and row.get("technical_name"):
+            with expander(labels["technical_details"], expanded=False):
+                st.markdown(f"**Technical name:** {html.escape(str(row['technical_name']))}")
+                st.markdown(
+                    f"**Stable ID:** `{html.escape(str(row.get('adapter') or 'unknown'))}`"
+                )
+                st.markdown(
+                    "**Certificate level:** "
+                    f"{html.escape(str(row.get('certificate_level_label') or 'unknown'))}"
+                )
 
 
 def _merge_interpretation_records(

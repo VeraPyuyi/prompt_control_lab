@@ -462,7 +462,7 @@ def test_cli_history_index_and_compare(tmp_path: Path) -> None:
     )
     _write_json(
         new / "agent_run.json",
-        {"risk_level": "high", "review_required": True, "agent": "codex"},
+        {"risk_level": "low", "review_required": True, "agent": "codex"},
     )
     _write(runs / "notes.txt", "not a run")
 
@@ -508,6 +508,47 @@ def test_history_index_reads_quick_mode_candidate_metrics(tmp_path: Path) -> Non
     assert payload["runs"][0]["mean_score"] == 0.92
     assert payload["runs"][0]["by_slice"] == {"math": 1.0, "format": 0.8}
     assert payload["runs"][0]["agent_run"] == {}
+
+
+def test_history_index_reads_trace_and_change_review_runs(tmp_path: Path) -> None:
+    runs = tmp_path / "runs"
+    trace_run = runs / "trace-run"
+    review_run = runs / "review-run"
+    _write_json(
+        trace_run / "control_run.json",
+        {
+            "schema": "prompt_control_lab.control_run.v1",
+            "run_id": "trace-1",
+            "created_at": "2026-08-28T00:00:00Z",
+            "provider": "deepseek",
+            "model": "deepseek-chat",
+            "prompt_hash": "sha256:trace",
+        },
+    )
+    _write_json(trace_run / "trace_import.json", {"mode": "shadow", "events_written": 3})
+    _write_json(
+        review_run / "change_review.json",
+        {
+            "change_kind": "agent_change",
+            "decision": "needs_review",
+            "coverage": {"candidate_events": True},
+        },
+    )
+    _write_json(review_run / "stability.json", {"state": "oscillating"})
+
+    index_out = runs / "history_index.json"
+    assert main(["history", "index", "--runs", str(runs), "--out", str(index_out)]) == 0
+    payload = json.loads(index_out.read_text(encoding="utf-8"))
+    by_name = {row["run_name"]: row for row in payload["runs"]}
+
+    assert by_name["trace-run"]["model"] == {
+        "provider": "deepseek",
+        "model_id": "deepseek-chat",
+    }
+    assert by_name["trace-run"]["prompt_identity"]["prompt_hash"] == "sha256:trace"
+    assert by_name["review-run"]["change_kind"] == "agent_change"
+    assert by_name["review-run"]["review_required"] is True
+    assert by_name["review-run"]["stability_state"] == "oscillating"
 
 
 def test_cli_doctor_json_outputs_stable_checks(capsys: pytest.CaptureFixture[str]) -> None:

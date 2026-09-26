@@ -19,7 +19,7 @@ PRIMARY_VIEW_LABELS = {
         "before": "Before",
         "run": "Run",
         "mechanism": "Mechanism",
-        "stability": "Stability",
+        "stability": "Stability & Confidence",
         "training": "Training Gate",
         "evidence": "Evidence Scope",
         "decision": "Decision",
@@ -29,7 +29,7 @@ PRIMARY_VIEW_LABELS = {
         "before": "执行前",
         "run": "运行中",
         "mechanism": "机制解释",
-        "stability": "稳定性",
+        "stability": "稳定性与可信度",
         "training": "训练门禁",
         "evidence": "证据边界",
         "decision": "决策",
@@ -69,20 +69,24 @@ HF_DEMO_TEXT = {
 
 INTERPRETATION_LABELS = {
     "en": {
+        "purpose": "What this does",
         "observed": "Observed",
         "explains": "Explains",
         "does_not_prove": "Does not prove",
         "next_action": "Next action",
         "status": "Status",
         "confidence": "Confidence",
+        "technical_details": "Technical details",
     },
     "zh": {
+        "purpose": "这个功能做什么",
         "observed": "观察到了什么",
         "explains": "可以解释什么",
         "does_not_prove": "不能证明什么",
         "next_action": "下一步行动",
         "status": "状态",
         "confidence": "置信度",
+        "technical_details": "技术细节",
     },
 }
 LEGACY_VIEW_GROUPS = {

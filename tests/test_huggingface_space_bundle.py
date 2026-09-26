@@ -6,6 +6,7 @@ from zipfile import ZIP_DEFLATED, ZipFile
 
 import pytest
 
+from promptcontrollab.core.version import __version__
 from promptcontrollab.integrations.hf_space import build_space_bundle
 from promptcontrollab.integrations.ui.app import HF_DEMO_TEXT
 from promptcontrollab.integrations.ui.data import load_run_detail
@@ -56,7 +57,9 @@ def test_checked_in_hugging_face_space_layout_is_safe_and_complete() -> None:
 
 
 def test_build_space_bundle_copies_only_curated_assets_and_records_source(tmp_path: Path) -> None:
-    wheel = _write_fixture_wheel(tmp_path / "promptcontrollab-0.2.0a1-py3-none-any.whl")
+    wheel = _write_fixture_wheel(
+        tmp_path / f"promptcontrollab-{__version__}-py3-none-any.whl", version=__version__
+    )
     output = tmp_path / "space"
 
     manifest = build_space_bundle(
@@ -67,7 +70,7 @@ def test_build_space_bundle_copies_only_curated_assets_and_records_source(tmp_pa
     )
 
     assert manifest["source_commit"] == "abc123"
-    assert manifest["package_version"] == "0.2.0a1"
+    assert manifest["package_version"] == __version__
     assert manifest["demo_data_version"] == "1"
     assert (output / "wheels" / wheel.name).is_file()
     assert (output / "README.zh.md").is_file()
@@ -92,10 +95,10 @@ def test_hugging_face_deploy_workflow_is_manual_or_release_only() -> None:
     assert "build_hf_space_bundle.py" in text
     assert "get_space_runtime" in text
     assert "\n    env:\n      HF_TOKEN:" not in text
-    assert 'private=False' in text
+    assert "private=False" in text
     assert 'space_hardware="cpu-basic"' in text
     assert 'request_space_hardware(space_id, "cpu-basic")' in text
-    assert 'runtime.hardware' in text
+    assert "runtime.hardware" in text
     assert text.index("docker build") < text.index("api.upload_folder")
 
 
@@ -172,17 +175,17 @@ def test_space_bundle_strips_plugin_templates_from_deployment_wheel(tmp_path: Pa
     assert "template_data" not in record
 
 
-def _write_fixture_wheel(path: Path) -> Path:
+def _write_fixture_wheel(path: Path, *, version: str = "0.2.0a1") -> Path:
     with ZipFile(path, "w", compression=ZIP_DEFLATED) as archive:
-        archive.writestr("promptcontrollab/__init__.py", '__version__ = "0.2.0a1"\n')
+        archive.writestr("promptcontrollab/__init__.py", f'__version__ = "{version}"\n')
         archive.writestr("promptcontrollab/template_data/cursor_rule/rule.mdc", "fixture")
         archive.writestr(
-            "promptcontrollab-0.2.0a1.dist-info/METADATA",
-            "Metadata-Version: 2.3\nName: promptcontrollab\nVersion: 0.2.0a1\n",
+            f"promptcontrollab-{version}.dist-info/METADATA",
+            f"Metadata-Version: 2.3\nName: promptcontrollab\nVersion: {version}\n",
         )
         archive.writestr(
-            "promptcontrollab-0.2.0a1.dist-info/WHEEL",
+            f"promptcontrollab-{version}.dist-info/WHEEL",
             "Wheel-Version: 1.0\nGenerator: test\nRoot-Is-Purelib: true\nTag: py3-none-any\n",
         )
-        archive.writestr("promptcontrollab-0.2.0a1.dist-info/RECORD", "")
+        archive.writestr(f"promptcontrollab-{version}.dist-info/RECORD", "")
     return path

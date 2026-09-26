@@ -1,0 +1,84 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="900" viewBox="0 0 1280 900" role="img">
+<rect width="1280" height="900" fill="#f7f9f8"/>
+<text x="64" y="62" font-family="Arial, Microsoft YaHei, sans-serif" font-size="30" font-weight="700" fill="#142624">Checkpoint 发布审查</text>
+<text x="64" y="96" font-family="Arial, Microsoft YaHei, sans-serif" font-size="18" fill="#526461">真实 Seed 轨迹、独立风险量纲与发布门禁</text>
+<text x="64" y="144" font-family="Arial, Microsoft YaHei, sans-serif" font-size="20" font-weight="700" fill="#1f3532">各 Seed 的 Checkpoint 分数</text>
+<rect x="64" y="166" width="730" height="340" rx="6" fill="#ffffff" stroke="#d7e0de"/>
+<line x1="118" y1="458" x2="770" y2="458" stroke="#cbd5e1"/>
+<line x1="118" y1="184" x2="118" y2="458" stroke="#cbd5e1"/>
+<line x1="118" y1="458.00" x2="770" y2="458.00" stroke="#eef1f4"/>
+<text x="108" y="463.00" text-anchor="end" font-family="Arial, sans-serif" font-size="13" fill="#657083">0.00</text>
+<line x1="118" y1="366.67" x2="770" y2="366.67" stroke="#eef1f4"/>
+<text x="108" y="371.67" text-anchor="end" font-family="Arial, sans-serif" font-size="13" fill="#657083">0.08</text>
+<line x1="118" y1="275.33" x2="770" y2="275.33" stroke="#eef1f4"/>
+<text x="108" y="280.33" text-anchor="end" font-family="Arial, sans-serif" font-size="13" fill="#657083">0.16</text>
+<line x1="118" y1="184.00" x2="770" y2="184.00" stroke="#eef1f4"/>
+<text x="108" y="189.00" text-anchor="end" font-family="Arial, sans-serif" font-size="13" fill="#657083">0.24</text>
+<text x="118.00" y="486" text-anchor="start" font-family="Arial, sans-serif" font-size="13" fill="#526461">初始</text>
+<text x="444.00" y="486" text-anchor="middle" font-family="Arial, sans-serif" font-size="13" fill="#526461">中间</text>
+<text x="770.00" y="486" text-anchor="end" font-family="Arial, sans-serif" font-size="13" fill="#526461">最终</text>
+<polyline points="118.00,356.74 444.00,255.48 770.00,243.57" fill="none" stroke="#2563eb" stroke-width="2"/>
+<circle cx="118.00" cy="356.74" r="4" fill="#2563eb"/>
+<circle cx="444.00" cy="255.48" r="4" fill="#2563eb"/>
+<circle cx="770.00" cy="243.57" r="4" fill="#2563eb"/>
+<line x1="88" y1="182" x2="108" y2="182" stroke="#2563eb" stroke-width="3"/>
+<text x="115" y="187" font-family="Arial, sans-serif" font-size="12" fill="#526461">Seed 0</text>
+<polyline points="118.00,356.74 444.00,279.30 770.00,243.57" fill="none" stroke="#0f766e" stroke-width="2"/>
+<circle cx="118.00" cy="356.74" r="4" fill="#0f766e"/>
+<circle cx="444.00" cy="279.30" r="4" fill="#0f766e"/>
+<circle cx="770.00" cy="243.57" r="4" fill="#0f766e"/>
+<line x1="200" y1="182" x2="220" y2="182" stroke="#0f766e" stroke-width="3"/>
+<text x="227" y="187" font-family="Arial, sans-serif" font-size="12" fill="#526461">Seed 1</text>
+<polyline points="118.00,356.74 444.00,225.70 770.00,219.74" fill="none" stroke="#c26a18" stroke-width="2"/>
+<circle cx="118.00" cy="356.74" r="4" fill="#c26a18"/>
+<circle cx="444.00" cy="225.70" r="4" fill="#c26a18"/>
+<circle cx="770.00" cy="219.74" r="4" fill="#c26a18"/>
+<line x1="312" y1="182" x2="332" y2="182" stroke="#c26a18" stroke-width="3"/>
+<text x="339" y="187" font-family="Arial, sans-serif" font-size="12" fill="#526461">Seed 2</text>
+<polyline points="118.00,356.74 444.00,253.49 770.00,235.62" fill="none" stroke="#172033" stroke-width="4"/>
+<line x1="424" y1="182" x2="444" y2="182" stroke="#172033" stroke-width="4"/>
+<text x="451" y="187" font-family="Arial, Microsoft YaHei, sans-serif" font-size="12" fill="#526461">阶段均值</text>
+<text x="850" y="138" font-family="Arial, Microsoft YaHei, sans-serif" font-size="16" font-weight="700" fill="#1f3532">生成阶段错配</text>
+<rect x="850" y="156" width="360" height="118" rx="6" fill="#ffffff" stroke="#d7e0de"/>
+<polyline points="858.00,176.14 1030.00,227.90 1202.00,236.86" fill="none" stroke="#0f766e" stroke-width="2.5"/>
+<circle cx="858.00" cy="176.14" r="3.5" fill="#0f766e"/>
+<text x="858.00" y="167.14" text-anchor="start" font-family="Arial, sans-serif" font-size="12" fill="#334155">0.573</text>
+<text x="858.00" y="266" text-anchor="start" font-family="Arial, sans-serif" font-size="11" fill="#657083">初始</text>
+<circle cx="1030.00" cy="227.90" r="3.5" fill="#0f766e"/>
+<text x="1030.00" y="218.90" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" fill="#334155">0.483</text>
+<text x="1030.00" y="266" text-anchor="middle" font-family="Arial, sans-serif" font-size="11" fill="#657083">中间</text>
+<circle cx="1202.00" cy="236.86" r="3.5" fill="#0f766e"/>
+<text x="1202.00" y="227.86" text-anchor="end" font-family="Arial, sans-serif" font-size="12" fill="#334155">0.467</text>
+<text x="1202.00" y="266" text-anchor="end" font-family="Arial, sans-serif" font-size="11" fill="#657083">最终</text>
+<text x="850" y="308" font-family="Arial, Microsoft YaHei, sans-serif" font-size="16" font-weight="700" fill="#1f3532">选择性风险 AURC</text>
+<rect x="850" y="326" width="360" height="118" rx="6" fill="#ffffff" stroke="#d7e0de"/>
+<polyline points="858.00,346.14 1030.00,395.05 1202.00,406.86" fill="none" stroke="#0f766e" stroke-width="2.5"/>
+<circle cx="858.00" cy="346.14" r="3.5" fill="#0f766e"/>
+<text x="858.00" y="337.14" text-anchor="start" font-family="Arial, sans-serif" font-size="12" fill="#334155">0.871</text>
+<text x="858.00" y="436" text-anchor="start" font-family="Arial, sans-serif" font-size="11" fill="#657083">初始</text>
+<circle cx="1030.00" cy="395.05" r="3.5" fill="#0f766e"/>
+<text x="1030.00" y="386.05" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" fill="#334155">0.707</text>
+<text x="1030.00" y="436" text-anchor="middle" font-family="Arial, sans-serif" font-size="11" fill="#657083">中间</text>
+<circle cx="1202.00" cy="406.86" r="3.5" fill="#0f766e"/>
+<text x="1202.00" y="397.86" text-anchor="end" font-family="Arial, sans-serif" font-size="12" fill="#334155">0.667</text>
+<text x="1202.00" y="436" text-anchor="end" font-family="Arial, sans-serif" font-size="11" fill="#657083">最终</text>
+<text x="850" y="478" font-family="Arial, Microsoft YaHei, sans-serif" font-size="16" font-weight="700" fill="#1f3532">表示轨迹漂移</text>
+<rect x="850" y="496" width="360" height="118" rx="6" fill="#ffffff" stroke="#d7e0de"/>
+<polyline points="858.00,569.85 1030.00,529.50 1202.00,523.15" fill="none" stroke="#0f766e" stroke-width="2.5"/>
+<circle cx="858.00" cy="569.85" r="3.5" fill="#0f766e"/>
+<text x="858.00" y="560.85" text-anchor="start" font-family="Arial, sans-serif" font-size="12" fill="#334155">8.396</text>
+<text x="858.00" y="606" text-anchor="start" font-family="Arial, sans-serif" font-size="11" fill="#657083">初始</text>
+<circle cx="1030.00" cy="529.50" r="3.5" fill="#0f766e"/>
+<text x="1030.00" y="520.50" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" fill="#334155">8.767</text>
+<text x="1030.00" y="606" text-anchor="middle" font-family="Arial, sans-serif" font-size="11" fill="#657083">中间</text>
+<circle cx="1202.00" cy="523.15" r="3.5" fill="#0f766e"/>
+<text x="1202.00" y="514.15" text-anchor="end" font-family="Arial, sans-serif" font-size="12" fill="#334155">8.826</text>
+<text x="1202.00" y="606" text-anchor="end" font-family="Arial, sans-serif" font-size="11" fill="#657083">最终</text>
+<rect x="64" y="560" width="1152" height="122" rx="8" fill="#fff7e8" stroke="#ead0a6"/>
+<text x="90" y="602" font-family="Arial, Microsoft YaHei, sans-serif" font-size="16" font-weight="700" fill="#7a4708">当前决策</text>
+<text x="90" y="648" font-family="Arial, Microsoft YaHei, sans-serif" font-size="30" font-weight="700" fill="#7a4708">HOLD</text>
+<text x="310" y="630" font-family="Arial, Microsoft YaHei, sans-serif" font-size="16" fill="#5f4a2f">evidence_validity / generation_mismatch / prompt_reachability +5</text>
+<text x="64" y="744" font-family="Arial, Microsoft YaHei, sans-serif" font-size="19" font-weight="700" fill="#1f3532">平均分数 0.0885 → 0.1944；分数提高不能覆盖门禁中的阻断项。</text>
+<line x1="64" y1="782" x2="1216" y2="782" stroke="#d7e0de"/>
+<text x="64" y="820" font-family="Arial, Microsoft YaHei, sans-serif" font-size="16" fill="#526461">聚合轨迹只支持有边界的关联解释，不证明唯一因果机制或部署安全。</text>
+</svg>

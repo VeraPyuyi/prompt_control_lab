@@ -15,10 +15,10 @@ def test_v02_alpha_version_and_readmes_are_consistent() -> None:
     english = (ROOT / "README.md").read_text(encoding="utf-8")
     chinese = (ROOT / "README.zh.md").read_text(encoding="utf-8")
 
-    assert __version__ == "0.2.0a1"
-    assert 'version = "0.2.0a1"' in pyproject
-    assert "promptcontrollab 0.2.0a1" in english
-    assert "promptcontrollab 0.2.0a1" in chinese
+    assert __version__ == "0.3.0a2"
+    assert f'version = "{__version__}"' in pyproject
+    assert __version__ in english
+    assert __version__ in chinese
     assert "PromptControlLab 2.0" not in english
     assert "PromptControlLab 2.0" not in chinese
 

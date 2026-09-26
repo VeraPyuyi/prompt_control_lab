@@ -1,0 +1,92 @@
+{
+  "checks": [
+    {
+      "check": "comparison_validity",
+      "evidence": [
+        "comparison_validity.json"
+      ],
+      "observed": "needs_review",
+      "status": "triggered"
+    },
+    {
+      "check": "score_delta",
+      "evidence": [
+        "baseline/metrics.json",
+        "candidate/metrics.json"
+      ],
+      "observed": 0.0,
+      "status": "passed"
+    },
+    {
+      "check": "stability",
+      "evidence": [
+        "stability.json"
+      ],
+      "observed": "insufficient_evidence",
+      "status": "passed"
+    },
+    {
+      "check": "candidate_gate",
+      "evidence": [
+        "candidate/posttrain_gate.json",
+        "candidate/gate_result.json"
+      ],
+      "observed": null,
+      "status": "missing"
+    },
+    {
+      "check": "secondary_metric_deltas",
+      "evidence": [
+        "baseline/metrics.json",
+        "candidate/metrics.json"
+      ],
+      "observed": {
+        "mean_duration_seconds": {
+          "baseline": 57.384333333333,
+          "candidate": 54.955,
+          "delta": -2.4293333333329983,
+          "direction": "decrease"
+        },
+        "mean_score": {
+          "baseline": 1.0,
+          "candidate": 1.0,
+          "delta": 0.0,
+          "direction": "unchanged"
+        },
+        "mean_tool_calls": {
+          "baseline": 7.0,
+          "candidate": 6.2,
+          "delta": -0.7999999999999998,
+          "direction": "decrease"
+        },
+        "mean_total_tokens": {
+          "baseline": 192948.13333333333,
+          "candidate": 169150.43333333332,
+          "delta": -23797.70000000001,
+          "direction": "decrease"
+        },
+        "mean_touched_files": {
+          "baseline": 1.0,
+          "candidate": 1.0,
+          "delta": 0.0,
+          "direction": "unchanged"
+        },
+        "mean_unnecessary_file_edits": {
+          "baseline": 0.0,
+          "candidate": 0.0,
+          "delta": 0.0,
+          "direction": "unchanged"
+        },
+        "tests_pass_rate": {
+          "baseline": 1.0,
+          "candidate": 1.0,
+          "delta": 0.0,
+          "direction": "unchanged"
+        }
+      },
+      "status": "observed"
+    }
+  ],
+  "decision": "needs_review",
+  "schema": "prompt_control_lab.change_review_decision_trace.v1"
+}

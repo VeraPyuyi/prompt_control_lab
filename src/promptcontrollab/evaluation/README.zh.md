@@ -4,6 +4,8 @@
 
 `promptcontrollab.evaluation` 提供可复现的 Prompt 与 checkpoint 比较，包括确定性数据切分、预测导入、指标、配对统计、有效性检查、解释、Policy Gate、报告和运行历史。
 
+面向 reviewer 的统一入口是 Change Review：比较两次已记录的 Prompt、模型、Agent 或 checkpoint run，在不修改来源 run 的前提下解释变化并给出决策。
+
 ## 使用场景
 
 - 在同一批样本上比较 baseline 与 candidate Prompt。
@@ -22,6 +24,7 @@ pcl explain --run runs/quick --level technical
 pcl gate --run runs/quick --policy examples/gate.policy.yaml
 pcl report --run runs/quick
 pcl history index --runs runs --out runs/history_index.json
+pcl review --baseline runs/baseline --candidate runs/candidate --kind auto --out runs/change-review
 ```
 
 ## Python API
@@ -34,6 +37,7 @@ from promptcontrollab.evaluation import (
     generate_report,
     run_gate,
     run_import_eval,
+    review_changes,
     run_quick_analysis,
 )
 ```
@@ -43,7 +47,7 @@ from promptcontrollab.evaluation import (
 ## 输入与产物
 
 - 输入：任务 JSONL、预测 JSONL、baseline/candidate run、指标、Policy，以及可选 Prompt/模型身份。
-- 输出：`splits.json`、`predictions.jsonl`、`metrics.json`、`stats.json`、`explanation.json`、`gate_result.json`、`report.md`、`report.html` 和 History artifact。
+- 输出：`splits.json`、`predictions.jsonl`、`metrics.json`、`stats.json`、`explanation.json`、`gate_result.json`、`change_review.json`、`comparison_validity.json`、`attribution.json`、`stability.json`、`decision_trace.json`、`human_feedback.json`、`report.md`、`report.html` 和 History artifact。
 - `export-report` 只打包已知 run artifact，不包含未声明的源码文件。
 
 ## 依赖

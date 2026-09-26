@@ -90,42 +90,34 @@ def _check_openai_key() -> JsonDict:
 
 def _check_guard_policy(root: Path) -> JsonDict:
     policy = root / "examples" / "guard.policy.yaml"
-    if policy.exists():
-        return _parse_guard_policy(policy, "examples/guard.policy.yaml parses successfully.")
-    return _parse_packaged_guard_policy()
-
-
-def _parse_guard_policy(policy: Path, success_message: str) -> JsonDict:
+    if not policy.exists():
+        try:
+            with tempfile.TemporaryDirectory() as raw:
+                packaged = Path(raw) / "guard.policy.yaml"
+                packaged.write_text(GUARD_POLICY_YAML, encoding="utf-8")
+                load_guard_policy(packaged)
+        except Exception as exc:
+            return _check("guard_policy", "fail", f"Packaged guard policy failed to parse: {exc}")
+        return _check("guard_policy", "pass", "Packaged example guard policy parses successfully.")
     try:
         load_guard_policy(policy)
     except Exception as exc:
         return _check("guard_policy", "fail", f"Guard policy failed to parse: {exc}")
-    return _check("guard_policy", "pass", success_message)
-
-
-def _parse_packaged_guard_policy() -> JsonDict:
-    try:
-        with tempfile.TemporaryDirectory() as raw:
-            policy = Path(raw) / "guard.policy.yaml"
-            policy.write_text(GUARD_POLICY_YAML, encoding="utf-8")
-            load_guard_policy(policy)
-    except Exception as exc:
-        return _check("guard_policy", "fail", f"Packaged guard policy failed to parse: {exc}")
-    return _check("guard_policy", "pass", "Packaged example guard policy parses successfully.")
+    return _check("guard_policy", "pass", "examples/guard.policy.yaml parses successfully.")
 
 
 def _check_claude_hook(root: Path) -> JsonDict:
     hook = root / "plugins" / "claude-code" / "hooks" / "prompt_guard.py"
-    if hook.exists():
-        event = json.dumps({"prompt": "Fix this bug"})
-        return _run_subprocess_check(
-            "claude_code_hook",
-            [sys.executable, str(hook), "--mode", "suggest"],
-            input_text=event,
-            cwd=root,
-            success_message="Claude Code hook runs.",
-        )
-    return _run_packaged_claude_hook()
+    if not hook.exists():
+        return _run_packaged_claude_hook()
+    event = json.dumps({"prompt": "Fix this bug"})
+    return _run_subprocess_check(
+        "claude_code_hook",
+        [sys.executable, str(hook), "--mode", "suggest"],
+        input_text=event,
+        cwd=root,
+        success_message="Claude Code hook runs.",
+    )
 
 
 def _run_packaged_claude_hook() -> JsonDict:
@@ -213,11 +205,7 @@ def _check_demo_report() -> JsonDict:
 
 
 def _check_optional_research_dependencies() -> JsonDict:
-    missing = [
-        name
-        for name in ["numpy", "scipy"]
-        if importlib.util.find_spec(name) is None
-    ]
+    missing = [name for name in ["numpy", "scipy"] if importlib.util.find_spec(name) is None]
     if missing:
         return _check(
             "optional_research_dependencies",

@@ -1,0 +1,50 @@
+{
+  "aggregation_units_per_model": 24,
+  "baseline_model": "Qwen/Qwen2.5-7B-Instruct",
+  "candidate_model": "mistralai/Mistral-7B-Instruct-v0.3",
+  "claim_boundary": "These historical aggregate cells describe an association between recorded model identity and outcomes. They do not provide paired per-example significance, a verified shared prompt identity, or unique causal attribution.",
+  "decision": "needs_review",
+  "display": {
+    "boundary": {
+      "en": "The source is real historical aggregate evidence, not a paired per-example model experiment.",
+      "zh": "\u6765\u6e90\u662f\u771f\u5b9e\u5386\u53f2\u805a\u5408\u8bc1\u636e\uff0c\u4e0d\u662f\u9010\u6837\u672c\u914d\u5bf9\u6a21\u578b\u5b9e\u9a8c\u3002"
+    },
+    "category": "model",
+    "evidence_level": "historical_aggregate",
+    "featured": true,
+    "order": 2,
+    "review_path": "review",
+    "summary": {
+      "en": "Compare Qwen2.5-7B and Mistral-7B across the same four tasks and six recorded methods.",
+      "zh": "\u6bd4\u8f83 Qwen2.5-7B \u4e0e Mistral-7B \u5728\u76f8\u540c\u56db\u4e2a\u4efb\u52a1\u548c\u516d\u79cd\u65b9\u6cd5\u4e0a\u7684\u8bb0\u5f55\u3002"
+    },
+    "technical_change_kind": "model_change",
+    "title": {
+      "en": "Model change review",
+      "zh": "\u6a21\u578b\u5207\u6362\u5ba1\u67e5"
+    }
+  },
+  "method_count": 6,
+  "next_action": "Run both models on the same per-example task set with three repetitions and record the prompt identity before making a promotion decision.",
+  "observed": {
+    "baseline_by_slice": {
+      "bbh3": 0.661783854167,
+      "commonsenseqa": 0.365885416667,
+      "gsm8k": 0.213541666667,
+      "svamp": 0.525911458333
+    },
+    "baseline_mean_score": 0.441780598958,
+    "candidate_by_slice": {
+      "bbh3": 0.4576171875,
+      "commonsenseqa": 0.515690104167,
+      "gsm8k": 0.2505859375,
+      "svamp": 0.556380208333
+    },
+    "candidate_mean_score": 0.445068359375
+  },
+  "schema": "prompt_control_lab.model_change_review_case.v1",
+  "source": "../peoc_real/research_case_study.json",
+  "source_model_count": 3,
+  "source_replicates_per_model": 240,
+  "task_count": 4
+}

@@ -1,0 +1,411 @@
+{
+  "schema_version": "pcl.response-profile/v2",
+  "synthetic": true,
+  "representation": "raw_records",
+  "provenance": {
+    "description": "Synthetic unit-test evidence only",
+    "source": "synthetic"
+  },
+  "metadata": {
+    "readout_definition": "First coordinate",
+    "calibration_source": "Synthetic calibration",
+    "label_usage": {
+      "calibration": "fit",
+      "measurement": "none",
+      "evaluation": "score"
+    },
+    "calibration_ids": [
+      "calibration-q"
+    ],
+    "measurement_ids": [
+      "measurement-q"
+    ],
+    "evaluation_ids": [
+      "q0",
+      "q1",
+      "q2",
+      "q3",
+      "q4",
+      "q5",
+      "q6",
+      "q7",
+      "q8",
+      "q9"
+    ]
+  },
+  "records": [
+    {
+      "record_id": "local",
+      "loss_before": 1,
+      "loss_after": 0.5,
+      "control_before": [
+        0
+      ],
+      "control_after": [
+        1
+      ],
+      "response_before": [
+        0,
+        0
+      ],
+      "response_after": [
+        2,
+        0
+      ],
+      "readout_gradient": [
+        1,
+        0
+      ],
+      "linear_response_matrix": [
+        [
+          2
+        ],
+        [
+          0
+        ]
+      ]
+    }
+  ],
+  "readouts": [
+    {
+      "readout_id": "fixed",
+      "mode": "fixed_coefficients",
+      "original_coefficients": [
+        1,
+        0
+      ],
+      "coefficients": [
+        1,
+        0
+      ]
+    },
+    {
+      "readout_id": "refit",
+      "mode": "refit",
+      "original_coefficients": [
+        1,
+        0
+      ],
+      "coefficients": [
+        0.5,
+        0.5
+      ],
+      "fit_question_ids": [
+        "calibration-q"
+      ],
+      "fit_run_id": "synthetic-fit"
+    }
+  ],
+  "selection_records": [
+    {
+      "question_id": "q0",
+      "pair_id": "pair-a",
+      "fold": 0,
+      "label": 0,
+      "scores": {
+        "loss": 1,
+        "primary": 0,
+        "activation": 0,
+        "logit": 1
+      }
+    },
+    {
+      "question_id": "q1",
+      "pair_id": "pair-a",
+      "fold": 0,
+      "label": 1,
+      "scores": {
+        "loss": 0,
+        "primary": 1,
+        "activation": 1,
+        "logit": 0
+      }
+    },
+    {
+      "question_id": "q0",
+      "pair_id": "pair-b",
+      "fold": 0,
+      "label": 0,
+      "scores": {
+        "loss": 1,
+        "primary": 0,
+        "activation": 0,
+        "logit": 1
+      }
+    },
+    {
+      "question_id": "q1",
+      "pair_id": "pair-b",
+      "fold": 0,
+      "label": 1,
+      "scores": {
+        "loss": 0,
+        "primary": 1,
+        "activation": 1,
+        "logit": 0
+      }
+    },
+    {
+      "question_id": "q2",
+      "pair_id": "pair-a",
+      "fold": 1,
+      "label": 0,
+      "scores": {
+        "loss": 1,
+        "primary": 100,
+        "activation": 0,
+        "logit": 1
+      }
+    },
+    {
+      "question_id": "q3",
+      "pair_id": "pair-a",
+      "fold": 1,
+      "label": 1,
+      "scores": {
+        "loss": 0,
+        "primary": 101,
+        "activation": 1,
+        "logit": 0
+      }
+    },
+    {
+      "question_id": "q2",
+      "pair_id": "pair-b",
+      "fold": 1,
+      "label": 0,
+      "scores": {
+        "loss": 1,
+        "primary": 100,
+        "activation": 0,
+        "logit": 1
+      }
+    },
+    {
+      "question_id": "q3",
+      "pair_id": "pair-b",
+      "fold": 1,
+      "label": 1,
+      "scores": {
+        "loss": 0,
+        "primary": 101,
+        "activation": 1,
+        "logit": 0
+      }
+    },
+    {
+      "question_id": "q4",
+      "pair_id": "pair-a",
+      "fold": 2,
+      "label": 0,
+      "scores": {
+        "loss": 1,
+        "primary": 200,
+        "activation": 0,
+        "logit": 1
+      }
+    },
+    {
+      "question_id": "q5",
+      "pair_id": "pair-a",
+      "fold": 2,
+      "label": 1,
+      "scores": {
+        "loss": 0,
+        "primary": 201,
+        "activation": 1,
+        "logit": 0
+      }
+    },
+    {
+      "question_id": "q4",
+      "pair_id": "pair-b",
+      "fold": 2,
+      "label": 0,
+      "scores": {
+        "loss": 1,
+        "primary": 200,
+        "activation": 0,
+        "logit": 1
+      }
+    },
+    {
+      "question_id": "q5",
+      "pair_id": "pair-b",
+      "fold": 2,
+      "label": 1,
+      "scores": {
+        "loss": 0,
+        "primary": 201,
+        "activation": 1,
+        "logit": 0
+      }
+    },
+    {
+      "question_id": "q6",
+      "pair_id": "pair-a",
+      "fold": 3,
+      "label": 0,
+      "scores": {
+        "loss": 1,
+        "primary": 300,
+        "activation": 0,
+        "logit": 1
+      }
+    },
+    {
+      "question_id": "q7",
+      "pair_id": "pair-a",
+      "fold": 3,
+      "label": 1,
+      "scores": {
+        "loss": 0,
+        "primary": 301,
+        "activation": 1,
+        "logit": 0
+      }
+    },
+    {
+      "question_id": "q6",
+      "pair_id": "pair-b",
+      "fold": 3,
+      "label": 0,
+      "scores": {
+        "loss": 1,
+        "primary": 300,
+        "activation": 0,
+        "logit": 1
+      }
+    },
+    {
+      "question_id": "q7",
+      "pair_id": "pair-b",
+      "fold": 3,
+      "label": 1,
+      "scores": {
+        "loss": 0,
+        "primary": 301,
+        "activation": 1,
+        "logit": 0
+      }
+    },
+    {
+      "question_id": "q8",
+      "pair_id": "pair-a",
+      "fold": 4,
+      "label": 0,
+      "scores": {
+        "loss": 1,
+        "primary": 400,
+        "activation": 0,
+        "logit": 1
+      }
+    },
+    {
+      "question_id": "q9",
+      "pair_id": "pair-a",
+      "fold": 4,
+      "label": 1,
+      "scores": {
+        "loss": 0,
+        "primary": 401,
+        "activation": 1,
+        "logit": 0
+      }
+    },
+    {
+      "question_id": "q8",
+      "pair_id": "pair-b",
+      "fold": 4,
+      "label": 0,
+      "scores": {
+        "loss": 1,
+        "primary": 400,
+        "activation": 0,
+        "logit": 1
+      }
+    },
+    {
+      "question_id": "q9",
+      "pair_id": "pair-b",
+      "fold": 4,
+      "label": 1,
+      "scores": {
+        "loss": 0,
+        "primary": 401,
+        "activation": 1,
+        "logit": 0
+      }
+    }
+  ],
+  "calibration_curves": [
+    {
+      "readout_id": "fixed",
+      "source": "saved_summary",
+      "bins": [
+        {
+          "count": 4,
+          "mean_prediction": 0.25,
+          "observed_rate": 0.5
+        },
+        {
+          "count": 4,
+          "mean_prediction": 0.75,
+          "observed_rate": 0.75
+        }
+      ]
+    }
+  ],
+  "training_question_ids_by_fold": {
+    "0": [
+      "q2",
+      "q3",
+      "q4",
+      "q5",
+      "q6",
+      "q7",
+      "q8",
+      "q9"
+    ],
+    "1": [
+      "q0",
+      "q1",
+      "q4",
+      "q5",
+      "q6",
+      "q7",
+      "q8",
+      "q9"
+    ],
+    "2": [
+      "q0",
+      "q1",
+      "q2",
+      "q3",
+      "q6",
+      "q7",
+      "q8",
+      "q9"
+    ],
+    "3": [
+      "q0",
+      "q1",
+      "q2",
+      "q3",
+      "q4",
+      "q5",
+      "q8",
+      "q9"
+    ],
+    "4": [
+      "q0",
+      "q1",
+      "q2",
+      "q3",
+      "q4",
+      "q5",
+      "q6",
+      "q7"
+    ]
+  }
+}

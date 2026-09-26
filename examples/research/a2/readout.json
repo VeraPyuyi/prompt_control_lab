@@ -1,0 +1,978 @@
+{
+  "schema_version": "pcl.readout-sensitivity/v2",
+  "synthetic": true,
+  "representation": "raw_records",
+  "provenance": {
+    "description": "Synthetic unit-test evidence only",
+    "source": "synthetic"
+  },
+  "conditions": [
+    {
+      "condition_id": "strict",
+      "parser": {
+        "rule": "strict",
+        "version": "numeric/v2",
+        "posthoc": false
+      },
+      "budget_tokens": 32,
+      "generation_mode": "saved_full",
+      "decoding": {
+        "method": "greedy"
+      },
+      "batch_size": 2,
+      "stopping": "eos",
+      "precision": "float32",
+      "template_id": "synthetic-template/v1",
+      "samples": [
+        {
+          "item_id": "q0",
+          "gold_answer": "0",
+          "initial_answers": {
+            "source": "1",
+            "target": "0"
+          },
+          "source": {
+            "text": "1"
+          },
+          "target": {
+            "text": "0"
+          },
+          "scores": {
+            "loss": 0,
+            "primary": 3
+          }
+        },
+        {
+          "item_id": "q1",
+          "gold_answer": "1",
+          "initial_answers": {
+            "source": "2",
+            "target": "1"
+          },
+          "source": {
+            "text": "2"
+          },
+          "target": {
+            "text": "Answer: 1"
+          },
+          "scores": {
+            "loss": 1,
+            "primary": 2
+          }
+        },
+        {
+          "item_id": "q2",
+          "gold_answer": "2",
+          "initial_answers": {
+            "source": "3",
+            "target": "2"
+          },
+          "source": {
+            "text": "3"
+          },
+          "target": {
+            "text": ""
+          },
+          "scores": {
+            "loss": 2,
+            "primary": 1
+          }
+        },
+        {
+          "item_id": "q3",
+          "gold_answer": "3",
+          "initial_answers": {
+            "source": "4",
+            "target": "3"
+          },
+          "source": {
+            "text": "4"
+          },
+          "target": {
+            "text": "3"
+          },
+          "scores": {
+            "loss": 3,
+            "primary": 0
+          }
+        }
+      ]
+    },
+    {
+      "condition_id": "leading",
+      "parser": {
+        "rule": "leading",
+        "version": "numeric/v2",
+        "posthoc": false
+      },
+      "budget_tokens": 32,
+      "generation_mode": "saved_full",
+      "decoding": {
+        "method": "greedy"
+      },
+      "batch_size": 2,
+      "stopping": "eos",
+      "precision": "float32",
+      "template_id": "synthetic-template/v1",
+      "samples": [
+        {
+          "item_id": "q0",
+          "gold_answer": "0",
+          "initial_answers": {
+            "source": "1",
+            "target": "0"
+          },
+          "source": {
+            "text": "1"
+          },
+          "target": {
+            "text": "0"
+          },
+          "scores": {
+            "loss": 0,
+            "primary": 3
+          }
+        },
+        {
+          "item_id": "q1",
+          "gold_answer": "1",
+          "initial_answers": {
+            "source": "2",
+            "target": "1"
+          },
+          "source": {
+            "text": "2"
+          },
+          "target": {
+            "text": "Answer: 1"
+          },
+          "scores": {
+            "loss": 1,
+            "primary": 2
+          }
+        },
+        {
+          "item_id": "q2",
+          "gold_answer": "2",
+          "initial_answers": {
+            "source": "3",
+            "target": "2"
+          },
+          "source": {
+            "text": "3"
+          },
+          "target": {
+            "text": ""
+          },
+          "scores": {
+            "loss": 2,
+            "primary": 1
+          }
+        },
+        {
+          "item_id": "q3",
+          "gold_answer": "3",
+          "initial_answers": {
+            "source": "4",
+            "target": "3"
+          },
+          "source": {
+            "text": "4"
+          },
+          "target": {
+            "text": "3"
+          },
+          "scores": {
+            "loss": 3,
+            "primary": 0
+          }
+        }
+      ]
+    },
+    {
+      "condition_id": "terminal",
+      "parser": {
+        "rule": "terminal",
+        "version": "numeric/v2",
+        "posthoc": false
+      },
+      "budget_tokens": 32,
+      "generation_mode": "saved_full",
+      "decoding": {
+        "method": "greedy"
+      },
+      "batch_size": 2,
+      "stopping": "eos",
+      "precision": "float32",
+      "template_id": "synthetic-template/v1",
+      "samples": [
+        {
+          "item_id": "q0",
+          "gold_answer": "0",
+          "initial_answers": {
+            "source": "1",
+            "target": "0"
+          },
+          "source": {
+            "text": "1"
+          },
+          "target": {
+            "text": "0"
+          },
+          "scores": {
+            "loss": 0,
+            "primary": 3
+          }
+        },
+        {
+          "item_id": "q1",
+          "gold_answer": "1",
+          "initial_answers": {
+            "source": "2",
+            "target": "1"
+          },
+          "source": {
+            "text": "2"
+          },
+          "target": {
+            "text": "Answer: 1"
+          },
+          "scores": {
+            "loss": 1,
+            "primary": 2
+          }
+        },
+        {
+          "item_id": "q2",
+          "gold_answer": "2",
+          "initial_answers": {
+            "source": "3",
+            "target": "2"
+          },
+          "source": {
+            "text": "3"
+          },
+          "target": {
+            "text": ""
+          },
+          "scores": {
+            "loss": 2,
+            "primary": 1
+          }
+        },
+        {
+          "item_id": "q3",
+          "gold_answer": "3",
+          "initial_answers": {
+            "source": "4",
+            "target": "3"
+          },
+          "source": {
+            "text": "4"
+          },
+          "target": {
+            "text": "3"
+          },
+          "scores": {
+            "loss": 3,
+            "primary": 0
+          }
+        }
+      ]
+    },
+    {
+      "condition_id": "terminal-batch_size",
+      "parser": {
+        "rule": "terminal",
+        "version": "numeric/v2",
+        "posthoc": false
+      },
+      "budget_tokens": 32,
+      "generation_mode": "saved_full",
+      "decoding": {
+        "method": "greedy"
+      },
+      "batch_size": 1,
+      "stopping": "eos",
+      "precision": "float32",
+      "template_id": "synthetic-template/v1",
+      "samples": [
+        {
+          "item_id": "q0",
+          "gold_answer": "0",
+          "initial_answers": {
+            "source": "1",
+            "target": "0"
+          },
+          "source": {
+            "text": "1"
+          },
+          "target": {
+            "text": "0"
+          },
+          "scores": {
+            "loss": 0,
+            "primary": 3
+          }
+        },
+        {
+          "item_id": "q1",
+          "gold_answer": "1",
+          "initial_answers": {
+            "source": "2",
+            "target": "1"
+          },
+          "source": {
+            "text": "2"
+          },
+          "target": {
+            "text": "Answer: 1"
+          },
+          "scores": {
+            "loss": 1,
+            "primary": 2
+          }
+        },
+        {
+          "item_id": "q2",
+          "gold_answer": "2",
+          "initial_answers": {
+            "source": "3",
+            "target": "2"
+          },
+          "source": {
+            "text": "3"
+          },
+          "target": {
+            "text": ""
+          },
+          "scores": {
+            "loss": 2,
+            "primary": 1
+          }
+        },
+        {
+          "item_id": "q3",
+          "gold_answer": "3",
+          "initial_answers": {
+            "source": "4",
+            "target": "3"
+          },
+          "source": {
+            "text": "4"
+          },
+          "target": {
+            "text": "3"
+          },
+          "scores": {
+            "loss": 3,
+            "primary": 0
+          }
+        }
+      ]
+    },
+    {
+      "condition_id": "terminal-stopping",
+      "parser": {
+        "rule": "terminal",
+        "version": "numeric/v2",
+        "posthoc": false
+      },
+      "budget_tokens": 32,
+      "generation_mode": "saved_full",
+      "decoding": {
+        "method": "greedy"
+      },
+      "batch_size": 2,
+      "stopping": "stop-token-synthetic",
+      "precision": "float32",
+      "template_id": "synthetic-template/v1",
+      "samples": [
+        {
+          "item_id": "q0",
+          "gold_answer": "0",
+          "initial_answers": {
+            "source": "1",
+            "target": "0"
+          },
+          "source": {
+            "text": "1"
+          },
+          "target": {
+            "text": "0"
+          },
+          "scores": {
+            "loss": 0,
+            "primary": 3
+          }
+        },
+        {
+          "item_id": "q1",
+          "gold_answer": "1",
+          "initial_answers": {
+            "source": "2",
+            "target": "1"
+          },
+          "source": {
+            "text": "2"
+          },
+          "target": {
+            "text": "Answer: 1"
+          },
+          "scores": {
+            "loss": 1,
+            "primary": 2
+          }
+        },
+        {
+          "item_id": "q2",
+          "gold_answer": "2",
+          "initial_answers": {
+            "source": "3",
+            "target": "2"
+          },
+          "source": {
+            "text": "3"
+          },
+          "target": {
+            "text": ""
+          },
+          "scores": {
+            "loss": 2,
+            "primary": 1
+          }
+        },
+        {
+          "item_id": "q3",
+          "gold_answer": "3",
+          "initial_answers": {
+            "source": "4",
+            "target": "3"
+          },
+          "source": {
+            "text": "4"
+          },
+          "target": {
+            "text": "3"
+          },
+          "scores": {
+            "loss": 3,
+            "primary": 0
+          }
+        }
+      ]
+    },
+    {
+      "condition_id": "terminal-precision",
+      "parser": {
+        "rule": "terminal",
+        "version": "numeric/v2",
+        "posthoc": false
+      },
+      "budget_tokens": 32,
+      "generation_mode": "saved_full",
+      "decoding": {
+        "method": "greedy"
+      },
+      "batch_size": 2,
+      "stopping": "eos",
+      "precision": "float16",
+      "template_id": "synthetic-template/v1",
+      "samples": [
+        {
+          "item_id": "q0",
+          "gold_answer": "0",
+          "initial_answers": {
+            "source": "1",
+            "target": "0"
+          },
+          "source": {
+            "text": "1"
+          },
+          "target": {
+            "text": "0"
+          },
+          "scores": {
+            "loss": 0,
+            "primary": 3
+          }
+        },
+        {
+          "item_id": "q1",
+          "gold_answer": "1",
+          "initial_answers": {
+            "source": "2",
+            "target": "1"
+          },
+          "source": {
+            "text": "2"
+          },
+          "target": {
+            "text": "Answer: 1"
+          },
+          "scores": {
+            "loss": 1,
+            "primary": 2
+          }
+        },
+        {
+          "item_id": "q2",
+          "gold_answer": "2",
+          "initial_answers": {
+            "source": "3",
+            "target": "2"
+          },
+          "source": {
+            "text": "3"
+          },
+          "target": {
+            "text": ""
+          },
+          "scores": {
+            "loss": 2,
+            "primary": 1
+          }
+        },
+        {
+          "item_id": "q3",
+          "gold_answer": "3",
+          "initial_answers": {
+            "source": "4",
+            "target": "3"
+          },
+          "source": {
+            "text": "4"
+          },
+          "target": {
+            "text": "3"
+          },
+          "scores": {
+            "loss": 3,
+            "primary": 0
+          }
+        }
+      ]
+    },
+    {
+      "condition_id": "terminal-template_id",
+      "parser": {
+        "rule": "terminal",
+        "version": "numeric/v2",
+        "posthoc": false
+      },
+      "budget_tokens": 32,
+      "generation_mode": "saved_full",
+      "decoding": {
+        "method": "greedy"
+      },
+      "batch_size": 2,
+      "stopping": "eos",
+      "precision": "float32",
+      "template_id": "synthetic-template/v2",
+      "samples": [
+        {
+          "item_id": "q0",
+          "gold_answer": "0",
+          "initial_answers": {
+            "source": "1",
+            "target": "0"
+          },
+          "source": {
+            "text": "1"
+          },
+          "target": {
+            "text": "0"
+          },
+          "scores": {
+            "loss": 0,
+            "primary": 3
+          }
+        },
+        {
+          "item_id": "q1",
+          "gold_answer": "1",
+          "initial_answers": {
+            "source": "2",
+            "target": "1"
+          },
+          "source": {
+            "text": "2"
+          },
+          "target": {
+            "text": "Answer: 1"
+          },
+          "scores": {
+            "loss": 1,
+            "primary": 2
+          }
+        },
+        {
+          "item_id": "q2",
+          "gold_answer": "2",
+          "initial_answers": {
+            "source": "3",
+            "target": "2"
+          },
+          "source": {
+            "text": "3"
+          },
+          "target": {
+            "text": ""
+          },
+          "scores": {
+            "loss": 2,
+            "primary": 1
+          }
+        },
+        {
+          "item_id": "q3",
+          "gold_answer": "3",
+          "initial_answers": {
+            "source": "4",
+            "target": "3"
+          },
+          "source": {
+            "text": "4"
+          },
+          "target": {
+            "text": "3"
+          },
+          "scores": {
+            "loss": 3,
+            "primary": 0
+          }
+        }
+      ]
+    },
+    {
+      "condition_id": "stored_prefix",
+      "parser": {
+        "rule": "terminal",
+        "version": "numeric/v2",
+        "posthoc": false
+      },
+      "budget_tokens": 16,
+      "generation_mode": "stored_prefix",
+      "decoding": {
+        "method": "greedy"
+      },
+      "batch_size": 2,
+      "stopping": "eos",
+      "precision": "float32",
+      "template_id": "synthetic-template/v1",
+      "samples": [
+        {
+          "item_id": "q0",
+          "gold_answer": "0",
+          "initial_answers": {
+            "source": "1",
+            "target": "0"
+          },
+          "source": {
+            "text": "1",
+            "token_ids": [
+              0
+            ],
+            "token_texts": [
+              "1"
+            ],
+            "prefix_tokens": 1,
+            "tokenizer_id": "synthetic-char/v1",
+            "token_consistency": {
+              "token_ids_sha256": "d0bca111f8628137adc4c16f123496dcdd1d590d06cb5d9acd68b39fe656fb97",
+              "decoded_text_sha256": "391552c099c101b131feaf24c5795a6a15bc8ec82015424e0d2b4274a369a0bf",
+              "decoder": "synthetic character decoder/v1",
+              "verified": true
+            }
+          },
+          "target": {
+            "text": "0",
+            "token_ids": [
+              0
+            ],
+            "token_texts": [
+              "0"
+            ],
+            "prefix_tokens": 1,
+            "tokenizer_id": "synthetic-char/v1",
+            "token_consistency": {
+              "token_ids_sha256": "d0bca111f8628137adc4c16f123496dcdd1d590d06cb5d9acd68b39fe656fb97",
+              "decoded_text_sha256": "98089e6d36f78e9766c9ea34d5acb3611f3a92cd81c5eb102095d924ffc7d08b",
+              "decoder": "synthetic character decoder/v1",
+              "verified": true
+            }
+          },
+          "scores": {
+            "loss": 0,
+            "primary": 3
+          }
+        },
+        {
+          "item_id": "q1",
+          "gold_answer": "1",
+          "initial_answers": {
+            "source": "2",
+            "target": "1"
+          },
+          "source": {
+            "text": "2",
+            "token_ids": [
+              0
+            ],
+            "token_texts": [
+              "2"
+            ],
+            "prefix_tokens": 1,
+            "tokenizer_id": "synthetic-char/v1",
+            "token_consistency": {
+              "token_ids_sha256": "d0bca111f8628137adc4c16f123496dcdd1d590d06cb5d9acd68b39fe656fb97",
+              "decoded_text_sha256": "cc11310c456c3690d5a74c23aa31cc25b4e74cdae146c71e54ad9dbc1d109fde",
+              "decoder": "synthetic character decoder/v1",
+              "verified": true
+            }
+          },
+          "target": {
+            "text": "Answer: 1",
+            "token_ids": [
+              0,
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              7,
+              8
+            ],
+            "token_texts": [
+              "A",
+              "n",
+              "s",
+              "w",
+              "e",
+              "r",
+              ":",
+              " ",
+              "1"
+            ],
+            "prefix_tokens": 9,
+            "tokenizer_id": "synthetic-char/v1",
+            "token_consistency": {
+              "token_ids_sha256": "5cfc4211e4918b07c75c1ec51a90d9f5423607c3fb588a14a3bd8d0d415f8886",
+              "decoded_text_sha256": "bdc88c41d4b63cad288aec5131097c99fdd1ca731fa3c98dc8d1db1f4c9d422f",
+              "decoder": "synthetic character decoder/v1",
+              "verified": true
+            }
+          },
+          "scores": {
+            "loss": 1,
+            "primary": 2
+          }
+        },
+        {
+          "item_id": "q2",
+          "gold_answer": "2",
+          "initial_answers": {
+            "source": "3",
+            "target": "2"
+          },
+          "source": {
+            "text": "3",
+            "token_ids": [
+              0
+            ],
+            "token_texts": [
+              "3"
+            ],
+            "prefix_tokens": 1,
+            "tokenizer_id": "synthetic-char/v1",
+            "token_consistency": {
+              "token_ids_sha256": "d0bca111f8628137adc4c16f123496dcdd1d590d06cb5d9acd68b39fe656fb97",
+              "decoded_text_sha256": "a4aab3f1f08004e907d2357fafe74cab56359bcb32e23f52e7eb1d3a9c0a2ad3",
+              "decoder": "synthetic character decoder/v1",
+              "verified": true
+            }
+          },
+          "target": {
+            "text": "",
+            "token_ids": [],
+            "token_texts": [],
+            "prefix_tokens": 0,
+            "tokenizer_id": "synthetic-char/v1",
+            "token_consistency": {
+              "token_ids_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+              "decoded_text_sha256": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+              "decoder": "synthetic character decoder/v1",
+              "verified": true
+            }
+          },
+          "scores": {
+            "loss": 2,
+            "primary": 1
+          }
+        },
+        {
+          "item_id": "q3",
+          "gold_answer": "3",
+          "initial_answers": {
+            "source": "4",
+            "target": "3"
+          },
+          "source": {
+            "text": "4",
+            "token_ids": [
+              0
+            ],
+            "token_texts": [
+              "4"
+            ],
+            "prefix_tokens": 1,
+            "tokenizer_id": "synthetic-char/v1",
+            "token_consistency": {
+              "token_ids_sha256": "d0bca111f8628137adc4c16f123496dcdd1d590d06cb5d9acd68b39fe656fb97",
+              "decoded_text_sha256": "2bf175f9655e7bb7357b9f0a7c6051465a5ae701104ffe741b98e852c0e4d460",
+              "decoder": "synthetic character decoder/v1",
+              "verified": true
+            }
+          },
+          "target": {
+            "text": "3",
+            "token_ids": [
+              0
+            ],
+            "token_texts": [
+              "3"
+            ],
+            "prefix_tokens": 1,
+            "tokenizer_id": "synthetic-char/v1",
+            "token_consistency": {
+              "token_ids_sha256": "d0bca111f8628137adc4c16f123496dcdd1d590d06cb5d9acd68b39fe656fb97",
+              "decoded_text_sha256": "a4aab3f1f08004e907d2357fafe74cab56359bcb32e23f52e7eb1d3a9c0a2ad3",
+              "decoder": "synthetic character decoder/v1",
+              "verified": true
+            }
+          },
+          "scores": {
+            "loss": 3,
+            "primary": 0
+          }
+        }
+      ]
+    },
+    {
+      "condition_id": "real_short_generation",
+      "parser": {
+        "rule": "terminal",
+        "version": "numeric/v2",
+        "posthoc": false
+      },
+      "budget_tokens": 16,
+      "generation_mode": "real_short_generation",
+      "decoding": {
+        "method": "greedy"
+      },
+      "batch_size": 2,
+      "stopping": "eos",
+      "precision": "float32",
+      "template_id": "synthetic-template/v1",
+      "samples": [
+        {
+          "item_id": "q0",
+          "gold_answer": "0",
+          "initial_answers": {
+            "source": "1",
+            "target": "0"
+          },
+          "source": {
+            "text": "1",
+            "generation_run_id": "synthetic-short-0-source",
+            "generated_tokens": 1,
+            "finish_reason": "eos"
+          },
+          "target": {
+            "text": "0",
+            "generation_run_id": "synthetic-short-0-target",
+            "generated_tokens": 1,
+            "finish_reason": "eos"
+          },
+          "scores": {
+            "loss": 0,
+            "primary": 3
+          }
+        },
+        {
+          "item_id": "q1",
+          "gold_answer": "1",
+          "initial_answers": {
+            "source": "2",
+            "target": "1"
+          },
+          "source": {
+            "text": "2",
+            "generation_run_id": "synthetic-short-1-source",
+            "generated_tokens": 1,
+            "finish_reason": "eos"
+          },
+          "target": {
+            "text": "Answer: 1",
+            "generation_run_id": "synthetic-short-1-target",
+            "generated_tokens": 9,
+            "finish_reason": "eos"
+          },
+          "scores": {
+            "loss": 1,
+            "primary": 2
+          }
+        },
+        {
+          "item_id": "q2",
+          "gold_answer": "2",
+          "initial_answers": {
+            "source": "3",
+            "target": "2"
+          },
+          "source": {
+            "text": "3",
+            "generation_run_id": "synthetic-short-2-source",
+            "generated_tokens": 1,
+            "finish_reason": "eos"
+          },
+          "target": {
+            "text": "",
+            "generation_run_id": "synthetic-short-2-target",
+            "generated_tokens": 0,
+            "finish_reason": "eos"
+          },
+          "scores": {
+            "loss": 2,
+            "primary": 1
+          }
+        },
+        {
+          "item_id": "q3",
+          "gold_answer": "3",
+          "initial_answers": {
+            "source": "4",
+            "target": "3"
+          },
+          "source": {
+            "text": "4",
+            "generation_run_id": "synthetic-short-3-source",
+            "generated_tokens": 1,
+            "finish_reason": "eos"
+          },
+          "target": {
+            "text": "3",
+            "generation_run_id": "synthetic-short-3-target",
+            "generated_tokens": 1,
+            "finish_reason": "eos"
+          },
+          "scores": {
+            "loss": 3,
+            "primary": 0
+          }
+        }
+      ]
+    }
+  ]
+}

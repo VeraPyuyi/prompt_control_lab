@@ -1,0 +1,129 @@
+{
+  "evidence_status": "historical_observation",
+  "evidence_status_source": "declared by input; this compact replay does not certify prospective isolation",
+  "input_canonical_sha256": "975f5d648c6fe6044255be6166754e8f5cd06ba04b790e371808946e05fb9c47",
+  "input_file_sha256": "cee3817d64f54eb4817282e384b7831c33acdf76fb1945389b416713ec36beee",
+  "pairs": [
+    {
+      "auc": {
+        "loss": 0.0,
+        "norm": 1.0,
+        "primary": 1.0
+      },
+      "errors": {
+        "norm": {
+          "cheap": {
+            "absolute": 0.4,
+            "signed": -0.4
+          },
+          "full": {
+            "absolute": 0.19999999999999996,
+            "signed": -0.19999999999999996
+          },
+          "uniform_mean": {
+            "absolute": 0.5,
+            "signed": -0.5
+          },
+          "zero": {
+            "absolute": 1.0,
+            "signed": -1.0
+          }
+        },
+        "primary": {
+          "cheap": {
+            "absolute": 0.4,
+            "signed": -0.4
+          },
+          "full": {
+            "absolute": 0.19999999999999996,
+            "signed": -0.19999999999999996
+          },
+          "uniform_mean": {
+            "absolute": 0.5,
+            "signed": -0.5
+          },
+          "zero": {
+            "absolute": 1.0,
+            "signed": -1.0
+          }
+        }
+      },
+      "gains": {
+        "norm": 1.0,
+        "primary": 1.0
+      },
+      "item_count": 4,
+      "left_seed": 1,
+      "model": "synthetic-model",
+      "pair_id": "synthetic-pair-01",
+      "pairing_type": "adjacent_seed",
+      "predictions": {
+        "norm": {
+          "cheap": 0.6,
+          "full": 0.8,
+          "uniform_mean": 0.5,
+          "zero": 0.0
+        },
+        "primary": {
+          "cheap": 0.6,
+          "full": 0.8,
+          "uniform_mean": 0.5,
+          "zero": 0.0
+        }
+      },
+      "right_seed": 2,
+      "risk_changes": 2,
+      "risk_decreases": 0,
+      "risk_increases": 2,
+      "status": "defined"
+    }
+  ],
+  "prediction_lock_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "schema_version": "control-transfer-result/v1",
+  "success_claim": "none; point estimates do not establish independent prediction or efficiency gains",
+  "summaries": [
+    {
+      "common_valid_pairs": 1,
+      "inference_status": "point_estimates_only; use separately verified crossed bootstrap intervals",
+      "mae": {
+        "cheap": 0.4,
+        "full": 0.19999999999999996,
+        "uniform_mean": 0.5,
+        "zero": 1.0
+      },
+      "mae_improvement": {
+        "cheap": 0.20000000000000007,
+        "uniform_mean": 0.30000000000000004,
+        "zero": 0.8
+      },
+      "model": "synthetic-model",
+      "pair_count": 1,
+      "pairing_type_counts": {
+        "adjacent_seed": 1
+      },
+      "score": "primary"
+    },
+    {
+      "common_valid_pairs": 1,
+      "inference_status": "point_estimates_only; use separately verified crossed bootstrap intervals",
+      "mae": {
+        "cheap": 0.4,
+        "full": 0.19999999999999996,
+        "uniform_mean": 0.5,
+        "zero": 1.0
+      },
+      "mae_improvement": {
+        "cheap": 0.20000000000000007,
+        "uniform_mean": 0.30000000000000004,
+        "zero": 0.8
+      },
+      "model": "synthetic-model",
+      "pair_count": 1,
+      "pairing_type_counts": {
+        "adjacent_seed": 1
+      },
+      "score": "norm"
+    }
+  ],
+  "synthetic": true
+}

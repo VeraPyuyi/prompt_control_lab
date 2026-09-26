@@ -16,6 +16,7 @@ from promptcontrollab.cli.handlers.evaluation import (
     _cmd_history_compare,
     _cmd_history_index,
     _cmd_report,
+    _cmd_review,
     _cmd_split,
     _cmd_stats,
     _cmd_validity,
@@ -80,6 +81,25 @@ def _register_compare_runs(
     compare_runs_parser.add_argument("--bootstrap-samples", type=int, default=1000)
     compare_runs_parser.add_argument("--permutation-samples", type=int, default=1000)
     compare_runs_parser.set_defaults(func=_cmd_compare_runs)
+
+
+def _register_review(subcommands: argparse._SubParsersAction[argparse.ArgumentParser]) -> None:
+    """Register the unified ``review`` command parser."""
+
+    parser = subcommands.add_parser(
+        "review",
+        help="Review a prompt, model, agent, or checkpoint change from two run directories.",
+    )
+    parser.add_argument("--baseline", type=Path, required=True, help="Baseline run directory.")
+    parser.add_argument("--candidate", type=Path, required=True, help="Candidate run directory.")
+    parser.add_argument("--out", type=Path, required=True, help="Change review output directory.")
+    parser.add_argument(
+        "--kind",
+        choices=["auto", "prompt_change", "model_change", "agent_change", "checkpoint_change"],
+        default="auto",
+    )
+    parser.add_argument("--mode", choices=["shadow"], default="shadow")
+    parser.set_defaults(func=_cmd_review)
 
 
 def _register_history(subcommands: argparse._SubParsersAction[argparse.ArgumentParser]) -> None:
@@ -188,6 +208,11 @@ def _register_analyze(subcommands: argparse._SubParsersAction[argparse.ArgumentP
         help="Verify public model metadata for supported providers.",
     )
     analyze_parser.add_argument("--train-ratio", type=float, default=None)
+    analyze_parser.add_argument(
+        "--evaluation-scope", choices=["withheld", "all"], default=None,
+        help=("Score withheld IDs by default; all explicitly requests "
+              "a descriptive full-data comparison."),
+    )
     analyze_parser.add_argument("--val-ratio", type=float, default=None)
     analyze_parser.add_argument("--seed", type=int, default=None)
     analyze_parser.add_argument("--bootstrap-samples", type=int, default=None)
@@ -299,6 +324,7 @@ def _register_gate(subcommands: argparse._SubParsersAction[argparse.ArgumentPars
 _REGISTRARS = {
     "validity": _register_validity,
     "compare-runs": _register_compare_runs,
+    "review": _register_review,
     "history": _register_history,
     "export-report": _register_export_report,
     "analyze": _register_analyze,

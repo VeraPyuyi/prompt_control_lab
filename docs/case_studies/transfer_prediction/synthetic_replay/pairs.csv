@@ -1,0 +1,9 @@
+model,pair_id,pairing_type,status,score,predictor,prediction,observed_gap,absolute_error
+synthetic-model,synthetic-pair-01,adjacent_seed,defined,primary,full,0.8,1.0,0.19999999999999996
+synthetic-model,synthetic-pair-01,adjacent_seed,defined,primary,cheap,0.6,1.0,0.4
+synthetic-model,synthetic-pair-01,adjacent_seed,defined,primary,uniform_mean,0.5,1.0,0.5
+synthetic-model,synthetic-pair-01,adjacent_seed,defined,primary,zero,0.0,1.0,1.0
+synthetic-model,synthetic-pair-01,adjacent_seed,defined,norm,full,0.8,1.0,0.19999999999999996
+synthetic-model,synthetic-pair-01,adjacent_seed,defined,norm,cheap,0.6,1.0,0.4
+synthetic-model,synthetic-pair-01,adjacent_seed,defined,norm,uniform_mean,0.5,1.0,0.5
+synthetic-model,synthetic-pair-01,adjacent_seed,defined,norm,zero,0.0,1.0,1.0

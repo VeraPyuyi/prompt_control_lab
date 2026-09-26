@@ -1,0 +1,390 @@
+{
+  "schema_version": "pcl.control-transfer/v2",
+  "synthetic": true,
+  "representation": "raw_records",
+  "provenance": {
+    "description": "Synthetic unit-test evidence only",
+    "source": "synthetic"
+  },
+  "calibration_question_ids": [
+    "old-q0",
+    "old-q1",
+    "old-q2",
+    "old-q3"
+  ],
+  "calibration_prompt_ids": [
+    "old-a",
+    "old-b",
+    "old-c"
+  ],
+  "panels": [
+    {
+      "panel_id": "calibration_questions-seen_prompts",
+      "model": "synthetic-model",
+      "axes": {
+        "questions": "calibration_questions",
+        "prompts": "seen_prompts"
+      },
+      "pairs": [
+        {
+          "pair_id": "pair-0",
+          "prompt_ids": [
+            "old-a",
+            "old-b"
+          ],
+          "question_ids": [
+            "old-q0",
+            "old-q1",
+            "old-q2",
+            "old-q3"
+          ],
+          "labels": [
+            0,
+            1,
+            0,
+            1
+          ],
+          "scores": {
+            "loss": [
+              0,
+              1,
+              2,
+              3
+            ],
+            "primary": [
+              0,
+              3,
+              1,
+              2
+            ]
+          },
+          "predictions": {
+            "primary": {
+              "full": 0.2,
+              "cheap": 0.1,
+              "group_mean": 0.25,
+              "zero": 0
+            }
+          }
+        },
+        {
+          "pair_id": "pair-1",
+          "prompt_ids": [
+            "old-b",
+            "old-c"
+          ],
+          "question_ids": [
+            "old-q0",
+            "old-q1",
+            "old-q2",
+            "old-q3"
+          ],
+          "labels": [
+            0,
+            1,
+            0,
+            1
+          ],
+          "scores": {
+            "loss": [
+              0,
+              1,
+              2,
+              3
+            ],
+            "primary": [
+              0,
+              3,
+              1,
+              2
+            ]
+          },
+          "predictions": {
+            "primary": {
+              "full": 0.2,
+              "cheap": 0.1,
+              "group_mean": 0.25,
+              "zero": 0
+            }
+          }
+        }
+      ]
+    },
+    {
+      "panel_id": "calibration_questions-unseen_prompts",
+      "model": "synthetic-model",
+      "axes": {
+        "questions": "calibration_questions",
+        "prompts": "unseen_prompts"
+      },
+      "pairs": [
+        {
+          "pair_id": "pair-0",
+          "prompt_ids": [
+            "p0",
+            "p1"
+          ],
+          "question_ids": [
+            "old-q0",
+            "old-q1",
+            "old-q2",
+            "old-q3"
+          ],
+          "labels": [
+            0,
+            1,
+            0,
+            1
+          ],
+          "scores": {
+            "loss": [
+              0,
+              1,
+              2,
+              3
+            ],
+            "primary": [
+              0,
+              3,
+              1,
+              2
+            ]
+          },
+          "predictions": {
+            "primary": {
+              "full": 0.2,
+              "cheap": 0.1,
+              "group_mean": 0.25,
+              "zero": 0
+            }
+          }
+        },
+        {
+          "pair_id": "pair-1",
+          "prompt_ids": [
+            "p1",
+            "p2"
+          ],
+          "question_ids": [
+            "old-q0",
+            "old-q1",
+            "old-q2",
+            "old-q3"
+          ],
+          "labels": [
+            0,
+            1,
+            0,
+            1
+          ],
+          "scores": {
+            "loss": [
+              0,
+              1,
+              2,
+              3
+            ],
+            "primary": [
+              0,
+              3,
+              1,
+              2
+            ]
+          },
+          "predictions": {
+            "primary": {
+              "full": 0.2,
+              "cheap": 0.1,
+              "group_mean": 0.25,
+              "zero": 0
+            }
+          }
+        }
+      ]
+    },
+    {
+      "panel_id": "new_questions-seen_prompts",
+      "model": "synthetic-model",
+      "axes": {
+        "questions": "new_questions",
+        "prompts": "seen_prompts"
+      },
+      "pairs": [
+        {
+          "pair_id": "pair-0",
+          "prompt_ids": [
+            "old-a",
+            "old-b"
+          ],
+          "question_ids": [
+            "q0",
+            "q1",
+            "q2",
+            "q3"
+          ],
+          "labels": [
+            0,
+            1,
+            0,
+            1
+          ],
+          "scores": {
+            "loss": [
+              0,
+              1,
+              2,
+              3
+            ],
+            "primary": [
+              0,
+              3,
+              1,
+              2
+            ]
+          },
+          "predictions": {
+            "primary": {
+              "full": 0.2,
+              "cheap": 0.1,
+              "group_mean": 0.25,
+              "zero": 0
+            }
+          }
+        },
+        {
+          "pair_id": "pair-1",
+          "prompt_ids": [
+            "old-b",
+            "old-c"
+          ],
+          "question_ids": [
+            "q0",
+            "q1",
+            "q2",
+            "q3"
+          ],
+          "labels": [
+            0,
+            1,
+            0,
+            1
+          ],
+          "scores": {
+            "loss": [
+              0,
+              1,
+              2,
+              3
+            ],
+            "primary": [
+              0,
+              3,
+              1,
+              2
+            ]
+          },
+          "predictions": {
+            "primary": {
+              "full": 0.2,
+              "cheap": 0.1,
+              "group_mean": 0.25,
+              "zero": 0
+            }
+          }
+        }
+      ]
+    },
+    {
+      "panel_id": "new_questions-unseen_prompts",
+      "model": "synthetic-model",
+      "axes": {
+        "questions": "new_questions",
+        "prompts": "unseen_prompts"
+      },
+      "pairs": [
+        {
+          "pair_id": "pair-0",
+          "prompt_ids": [
+            "p0",
+            "p1"
+          ],
+          "question_ids": [
+            "q0",
+            "q1",
+            "q2",
+            "q3"
+          ],
+          "labels": [
+            0,
+            1,
+            0,
+            1
+          ],
+          "scores": {
+            "loss": [
+              0,
+              1,
+              2,
+              3
+            ],
+            "primary": [
+              0,
+              3,
+              1,
+              2
+            ]
+          },
+          "predictions": {
+            "primary": {
+              "full": 0.2,
+              "cheap": 0.1,
+              "group_mean": 0.25,
+              "zero": 0
+            }
+          }
+        },
+        {
+          "pair_id": "pair-1",
+          "prompt_ids": [
+            "p1",
+            "p2"
+          ],
+          "question_ids": [
+            "q0",
+            "q1",
+            "q2",
+            "q3"
+          ],
+          "labels": [
+            0,
+            1,
+            0,
+            1
+          ],
+          "scores": {
+            "loss": [
+              0,
+              1,
+              2,
+              3
+            ],
+            "primary": [
+              0,
+              3,
+              1,
+              2
+            ]
+          },
+          "predictions": {
+            "primary": {
+              "full": 0.2,
+              "cheap": 0.1,
+              "group_mean": 0.25,
+              "zero": 0
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

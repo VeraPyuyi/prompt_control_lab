@@ -15,6 +15,8 @@
 
 ```bash
 pcl control --prompt "检查这个请求" --authorization inspect --out runs/control
+pcl trace import --input traces.jsonl --format auto --out runs/imported
+pcl trace serve --host 127.0.0.1 --port 4318 --out runs/observed
 pcl bridge serve --transport stdio
 pcl harness replay --session session.jsonl --out runs/harness-replay
 pcl harness finalize --runs runs --session session-id
@@ -51,12 +53,18 @@ from promptcontrollab.control import (
 - 在不改变已有事件语义的前提下增加版本化事件类型。
 - 增加带显式证据和可信度的归因维度与稳定性信号。
 - 增加把外部 Agent 事件转换为稳定 Control 协议的 adapter。
+- 通过经过脱敏且顺序确定的 adapter 导入 OpenTelemetry GenAI 与
+  OpenInference 观测记录。
 
 ## 限制
 
 - 归因表示基于证据的关联，不是严格因果识别。
 - 稳定性标签是可观测事件的启发式汇总，也可能返回 `insufficient_evidence`。
 - 自动 steering 和恢复必须显式启用，并受 Policy 约束。
+- 本地 Trace 接收器仅支持 HTTP 上的 OTLP JSON，不支持 OTLP protobuf；它只做
+  旁路观察，不会阻断、重试或修改下游执行。
+- Trace 导入只保存 Prompt/内容哈希、长度和允许的元数据，不保存原始 Prompt、
+  响应正文、Authorization、凭据或推理内容。
 
 ## 测试与示例
 

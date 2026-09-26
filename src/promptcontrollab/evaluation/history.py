@@ -59,11 +59,15 @@ def compare_history(*, a_dir: Path, b_dir: Path, out_path: Path) -> JsonDict:
 def summarize_run(run_dir: Path) -> JsonDict:
     """Return a compact run summary."""
 
-    manifest = _read_optional_json(run_dir / "manifest.json")
+    manifest_artifact = _read_optional_json(run_dir / "manifest.json")
+    control_run = _read_optional_json(run_dir / "control_run.json")
+    manifest = manifest_artifact or control_run
     metrics = _read_metrics(run_dir)
     gate = _read_optional_json(run_dir / "gate_result.json")
     audit = _read_optional_json(run_dir / "audit_result.json")
     agent_run = _read_optional_json(run_dir / "agent_run.json")
+    change_review = _read_optional_json(run_dir / "change_review.json")
+    stability = _read_optional_json(run_dir / "stability.json")
     artifacts = [
         name
         for name in [
@@ -77,11 +81,19 @@ def summarize_run(run_dir: Path) -> JsonDict:
             "report.md",
             "report.html",
             "agent_run.json",
+            "control_run.json",
+            "trace_import.json",
+            "change_review.json",
+            "comparison_validity.json",
+            "attribution.json",
+            "stability.json",
+            "decision_trace.json",
+            "human_feedback.json",
         ]
         if (run_dir / name).exists()
     ]
     warnings: list[str] = []
-    if not manifest and artifacts:
+    if not manifest_artifact and not control_run and artifacts:
         warnings.append(f"{run_dir} has artifacts but no manifest.json.")
     return {
         "run_name": run_dir.name,
@@ -89,6 +101,7 @@ def summarize_run(run_dir: Path) -> JsonDict:
         "artifacts": artifacts,
         "method": manifest.get("method"),
         "metric": manifest.get("metric"),
+        "created_at": manifest.get("created_at"),
         "prompt_identity": _prompt_identity(manifest),
         "model": _model_identity(manifest),
         "baseline_model": (
@@ -105,9 +118,16 @@ def summarize_run(run_dir: Path) -> JsonDict:
         "by_slice": metrics.get("by_slice") if isinstance(metrics.get("by_slice"), dict) else {},
         "gate_status": gate.get("status"),
         "risk_categories": _combined_risk_categories(gate, audit),
-        "risk_level": _risk_level(gate, audit, agent_run),
-        "review_required": _review_required(gate, audit, agent_run),
-        "human_review_required": _review_required(gate, audit, agent_run),
+        "risk_level": _risk_level(gate, audit, agent_run, change_review, stability),
+        "review_required": _review_required(
+            gate, audit, agent_run, change_review, stability
+        ),
+        "human_review_required": _review_required(
+            gate, audit, agent_run, change_review, stability
+        ),
+        "change_kind": change_review.get("change_kind"),
+        "change_decision": change_review.get("decision"),
+        "stability_state": stability.get("state"),
         "agent_run": agent_run,
         "warnings": warnings,
     }
@@ -146,6 +166,14 @@ def _model_identity(manifest: JsonDict) -> JsonDict:
         value = manifest.get(key)
         if isinstance(value, dict):
             return value
+    model = manifest.get("model")
+    provider = manifest.get("provider")
+    if isinstance(model, str) and model:
+        return {
+            key: value
+            for key, value in {"provider": provider, "model_id": model}.items()
+            if isinstance(value, str) and value
+        }
     return {}
 
 
@@ -185,33 +213,63 @@ def _combined_risk_categories(gate: JsonDict, audit: JsonDict) -> list[str]:
     return sorted(set(categories))
 
 
-def _risk_level(gate: JsonDict, audit: JsonDict, agent_run: JsonDict) -> str | None:
+def _risk_level(
+    gate: JsonDict,
+    audit: JsonDict,
+    agent_run: JsonDict,
+    change_review: JsonDict | None = None,
+    stability: JsonDict | None = None,
+) -> str | None:
+    review = change_review or {}
+    stability_payload = stability or {}
+    observed: list[str] = []
     agent_risk = agent_run.get("risk_level")
-    if isinstance(agent_risk, str) and agent_risk:
-        return agent_risk
+    if agent_risk in {"low", "medium", "high"}:
+        observed.append(str(agent_risk))
     if (
         audit.get("secret_findings")
         or audit.get("dangerous_paths")
         or audit.get("workflow_files_changed")
         or audit.get("deleted_test_files")
     ):
-        return "high"
-    if gate.get("status") == "fail":
-        return "high"
-    if gate.get("status") == "needs_review" or audit.get("human_review_required"):
-        return "medium"
-    if gate.get("status") == "pass":
-        return "low"
-    return None
+        observed.append("high")
+    if gate.get("status") == "fail" or review.get("decision") == "hold":
+        observed.append("high")
+    if stability_payload.get("state") == "diverging":
+        observed.append("high")
+    if (
+        gate.get("status") == "needs_review"
+        or review.get("decision") in {"needs_review", "insufficient_evidence"}
+        or audit.get("human_review_required")
+        or stability_payload.get("state") in {"stalled", "oscillating"}
+    ):
+        observed.append("medium")
+    if gate.get("status") == "pass" or review.get("decision") == "pass":
+        observed.append("low")
+    if not observed:
+        return None
+    rank = {"low": 0, "medium": 1, "high": 2}
+    return max(observed, key=rank.__getitem__)
 
 
-def _review_required(gate: JsonDict, audit: JsonDict, agent_run: JsonDict) -> bool:
+def _review_required(
+    gate: JsonDict,
+    audit: JsonDict,
+    agent_run: JsonDict,
+    change_review: JsonDict | None = None,
+    stability: JsonDict | None = None,
+) -> bool:
+    review = change_review or {}
+    stability_payload = stability or {}
     return bool(
         gate.get("status") in {"fail", "needs_review"}
+        or review.get("decision") in {"hold", "needs_review", "insufficient_evidence"}
         or audit.get("human_review_required")
         or agent_run.get("review_required")
         or agent_run.get("human_review_required")
-        or _risk_level(gate, audit, agent_run) in {"high", "medium"}
+        or stability_payload.get("state") in {"diverging", "stalled", "oscillating"}
+        or _risk_level(gate, audit, agent_run, review, stability_payload)
+        in {"high", "medium"}
     )
 
 

@@ -1,0 +1,74 @@
+{
+  "blocking_issues": [],
+  "change_kind": "checkpoint_change",
+  "checks": {
+    "agent": {
+      "baseline": {
+        "agent": "pcl-posttrain-pilot"
+      },
+      "candidate": {
+        "agent": "pcl-posttrain-pilot"
+      },
+      "changed": false,
+      "status": "pass",
+      "what_this_means": "The recorded agent identity stayed the same."
+    },
+    "checkpoint": {
+      "baseline": {
+        "checkpoint_id": "aggregate-initial",
+        "stage": "initial"
+      },
+      "candidate": {
+        "checkpoint_id": "aggregate-final",
+        "stage": "final"
+      },
+      "changed": true,
+      "status": "pass",
+      "what_this_means": "The expected checkpoint identity changed."
+    },
+    "metric": {
+      "baseline": "withheld_exact_match",
+      "candidate": "withheld_exact_match",
+      "changed": false,
+      "status": "pass",
+      "what_this_means": "The recorded metric identity stayed the same."
+    },
+    "model": {
+      "baseline": {
+        "model_id": "Qwen/Qwen2.5-0.5B-Instruct",
+        "provider": "huggingface",
+        "revision": "7ae557604adf67be50417f59c2c2f167def9a775"
+      },
+      "candidate": {
+        "model_id": "Qwen/Qwen2.5-0.5B-Instruct",
+        "provider": "huggingface",
+        "revision": "7ae557604adf67be50417f59c2c2f167def9a775"
+      },
+      "changed": false,
+      "status": "pass",
+      "what_this_means": "The recorded model identity stayed the same."
+    },
+    "prompt": {
+      "baseline": {
+        "prompt_hash": "recorded-shared-evaluation-prompt"
+      },
+      "candidate": {
+        "prompt_hash": "recorded-shared-evaluation-prompt"
+      },
+      "changed": false,
+      "status": "pass",
+      "what_this_means": "The recorded prompt identity stayed the same."
+    },
+    "split": {
+      "baseline": "sha256:664cb24ac6d779378bf256c49f1369f910f49a788594d8813af51655af7bd4b4",
+      "candidate": "sha256:664cb24ac6d779378bf256c49f1369f910f49a788594d8813af51655af7bd4b4",
+      "changed": false,
+      "status": "pass",
+      "what_this_means": "The recorded split identity stayed the same."
+    }
+  },
+  "plain_summary": "The recorded identities support the requested change comparison.",
+  "review_items": [],
+  "schema": "prompt_control_lab.change_comparison_validity.v1",
+  "validity": "clean"
+}

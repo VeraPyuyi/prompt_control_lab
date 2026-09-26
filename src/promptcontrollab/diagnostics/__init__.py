@@ -20,6 +20,22 @@ _EXPORTS = {
         "promptcontrollab.diagnostics.terminal_sensitivity",
         "analyze_terminal_sensitivity",
     ),
+    "diagnostic_catalog": (
+        "promptcontrollab.diagnostics.presentation",
+        "diagnostic_catalog",
+    ),
+    "diagnostic_metric_label": (
+        "promptcontrollab.diagnostics.presentation",
+        "diagnostic_metric_label",
+    ),
+    "diagnostic_status_label": (
+        "promptcontrollab.diagnostics.presentation",
+        "diagnostic_status_label",
+    ),
+    "get_diagnostic_presentation": (
+        "promptcontrollab.diagnostics.presentation",
+        "get_diagnostic_presentation",
+    ),
     "analyze_trajectory": ("promptcontrollab.diagnostics.trajectory", "analyze_trajectory"),
     "extract_hidden_states": (
         "promptcontrollab.diagnostics.hf_hidden",

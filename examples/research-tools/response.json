@@ -1,0 +1,24 @@
+{
+  "schema_version": "response-profile/v1",
+  "synthetic": true,
+  "metadata": {
+    "readout_definition": "Fixed first-coordinate linear readout",
+    "gold_label_usage": "Synthetic labels used only for supplied loss scalars",
+    "calibration_source": "Analytical synthetic Jacobian; no fitted data",
+    "calibration_disjoint": true
+  },
+  "records": [
+    {
+      "record_id": "linear-toy",
+      "loss_before": 1,
+      "loss_after": 0.5,
+      "control_before": [0, 0],
+      "control_after": [1, 0],
+      "response_before": [0, 0],
+      "response_after": [2, 0],
+      "readout_gradient": [1, 0],
+      "subspace_basis": [[1, 0]],
+      "linear_response_matrix": [[2, 0], [0, 1]]
+    }
+  ]
+}

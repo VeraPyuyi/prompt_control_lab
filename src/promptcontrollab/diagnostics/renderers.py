@@ -12,6 +12,7 @@ from promptcontrollab.diagnostics.interpretation import (
     _plain_language_research_insights,
     _research_at_a_glance,
 )
+from promptcontrollab.diagnostics.presentation import get_diagnostic_presentation
 
 
 def render_research_diagnostics_markdown(payload: JsonDict) -> str:
@@ -494,17 +495,17 @@ def _research_overview_rows(payload: JsonDict) -> list[JsonDict]:
             "status": _overview_diagnostic_status(diagnostics_dict, "tv_soft"),
         },
         {
-            "label": "Terminal sensitivity",
+            "label": get_diagnostic_presentation("terminal_sensitivity", "en")["label"],
             "meaning": "early response vs terminal distance",
             "status": _overview_diagnostic_status(diagnostics_dict, "terminal_sensitivity"),
         },
         {
-            "label": "Green certificate",
+            "label": get_diagnostic_presentation("green_certificate", "en")["label"],
             "meaning": "hyperbolicity and boundary margin",
             "status": _overview_diagnostic_status(diagnostics_dict, "green_certificate"),
         },
         {
-            "label": "Posterior certificate",
+            "label": get_diagnostic_presentation("posterior_certificate", "en")["label"],
             "meaning": "local residual and derivative bounds",
             "status": _overview_diagnostic_status(diagnostics_dict, "posterior_certificate"),
         },

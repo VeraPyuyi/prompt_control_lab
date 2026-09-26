@@ -1,0 +1,21 @@
+{
+  "schema_version": "control-transfer/v1",
+  "evidence_status": "historical_observation",
+  "synthetic": true,
+  "endpoint_policy": "disjoint",
+  "prediction_lock_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "pairs": [{
+    "model": "synthetic-model",
+    "pair_id": "synthetic-pair-01",
+    "left_seed": 1,
+    "right_seed": 2,
+    "pairing_type": "adjacent_seed",
+    "item_ids": ["synthetic-item-a", "synthetic-item-b", "synthetic-item-c", "synthetic-item-d"],
+    "scores": {"loss": [1, 2, 3, 4], "primary": [3, 4, 1, 2], "norm": [2, 2, 1, 1]},
+    "behavior": {"risk_source": [0, 0, 0, 1], "risk_target": [1, 1, 0, 1]},
+    "predictions": {
+      "primary": {"full": 0.8, "cheap": 0.6, "uniform_mean": 0.5, "zero": 0},
+      "norm": {"full": 0.8, "cheap": 0.6, "uniform_mean": 0.5, "zero": 0}
+    }
+  }]
+}

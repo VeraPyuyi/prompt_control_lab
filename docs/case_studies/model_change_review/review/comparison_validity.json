@@ -1,0 +1,65 @@
+{
+  "blocking_issues": [],
+  "change_kind": "model_change",
+  "checks": {
+    "agent": {
+      "baseline": {
+        "agent": "pcl-evidence-import"
+      },
+      "candidate": {
+        "agent": "pcl-evidence-import"
+      },
+      "changed": false,
+      "status": "pass",
+      "what_this_means": "The recorded agent identity stayed the same."
+    },
+    "checkpoint": {
+      "baseline": {},
+      "candidate": {},
+      "changed": "unknown",
+      "status": "review",
+      "what_this_means": "The checkpoint identity was not recorded on both runs."
+    },
+    "metric": {
+      "baseline": "acc_hard_test",
+      "candidate": "acc_hard_test",
+      "changed": false,
+      "status": "pass",
+      "what_this_means": "The recorded metric identity stayed the same."
+    },
+    "model": {
+      "baseline": {
+        "model_id": "Qwen/Qwen2.5-7B-Instruct",
+        "provider": "huggingface"
+      },
+      "candidate": {
+        "model_id": "mistralai/Mistral-7B-Instruct-v0.3",
+        "provider": "huggingface"
+      },
+      "changed": true,
+      "status": "pass",
+      "what_this_means": "The expected model identity changed."
+    },
+    "prompt": {
+      "baseline": {},
+      "candidate": {},
+      "changed": "unknown",
+      "status": "review",
+      "what_this_means": "The prompt identity was not recorded on both runs."
+    },
+    "split": {
+      "baseline": "peoc-hard-test-aggregate-grid-v1",
+      "candidate": "peoc-hard-test-aggregate-grid-v1",
+      "changed": false,
+      "status": "pass",
+      "what_this_means": "The recorded split identity stayed the same."
+    }
+  },
+  "plain_summary": "Review the recorded identity gaps or confounders before attributing the result.",
+  "review_items": [
+    "The prompt identity was not recorded on both runs.",
+    "The checkpoint identity was not recorded on both runs."
+  ],
+  "schema": "prompt_control_lab.change_comparison_validity.v1",
+  "validity": "needs_review"
+}

@@ -1,7 +1,44 @@
 # Changelog
 
+## 0.3.0a2 - Prerelease candidate
+
+- Added guided bilingual research import, capability summaries, analysis selection, progress,
+  history and portable JSON/CSV/HTML exports. Saved tables stay explicitly descriptive.
+- Added versioned research bundles, immutable analysis specifications and persistent jobs with
+  suite-level cancellation and recovery. Data-only uploads validate paths, decoded sizes,
+  array types and credentials; uploaded scripts are never executed.
+- Fixed experiment cancellation at the response boundary: admitted calls retain responses
+  returned within their original deadlines, and recovery validates every cached completion
+  before admitting new requests. Expired outcomes remain uncertain and are not replayed.
+- Added faithful shared-bootstrap replay with original correction families, undefined-AUC and
+  coverage rules. Integrity, numerical agreement, protocol scope and prediction chronology
+  remain separate checks. Legacy reports and commands retain their original meanings.
+- Expanded the five research diagnostics with parser versions and execution conditions,
+  calibration/measurement/evaluation label dependencies, grouped calibration, complete-cost
+  accounting, crossed transfer panels and explicit readout replacement scopes.
+- Added synthetic v2 examples and [English](docs/research.en.md) /
+  [Chinese](docs/research.zh.md) research guides. New real research inputs and acceptance
+  outputs are excluded from public packages. See the [acceptance record](docs/releases/0.3.0a2-validation.md).
+
+## 0.3.0a1 - Prerelease candidate
+
+- Added a bilingual experiment workspace for live evaluation, CSV/JSONL mapping, existing-result import, bounded GEPA 0.1.4 optimization, progress, cancellation, safe retry and resume.
+- Added shared versioned experiment/job/assessment contracts and local-session APIs. Task and reflection calls share durable budgets; final comparison capacity is reserved and uncertain requests are never replayed automatically.
+- Added readout sensitivity, response profiles, measurement value, frozen transfer prediction and evidence replay with bilingual reports, tables and portable plots. Historical records and synthetic demonstrations are labeled separately.
+- Added portable experiment replay, exact-byte bundle receipts and explicit separation of provenance, numerical reproduction and local assumptions.
+- Integrated checkpoint CSV import and charts with the React UI; included example data and static UI in wheels and repaired outside-checkout doctor checks.
+- Fixed quick analysis to score the declared withheld partition. Use `pcl analyze --evaluation-scope all` for an explicit full-data comparison; existing reports retain their recorded meanings.
+- Preserved existing commands and local scientific worktrees. See `docs/releases/0.3.0a1-validation.md` for acceptance evidence and pending human usability trials.
+
 ## 0.2.0a1 - Unreleased release candidate
 
+- Added shadow-mode OpenTelemetry GenAI and OpenInference trace import with deterministic event normalization, deduplication, ordering, and default redaction.
+- Added unified Change Review for prompt, model, Agent, and checkpoint changes, including comparison validity, attribution, stability, human feedback, and decision trace artifacts.
+- Added a React/FastAPI workflow cockpit while preserving the Streamlit dashboard through `pcl ui --legacy-streamlit`.
+- Reframed the three control-certificate diagnostics in bilingual, function-first language under Stability & Confidence while preserving stable artifact IDs and technical details.
+- Added a 10-task, 3-trial paired Agent Change Review case from 60 real Codex executions; both sides completed 30/30 while the guarded side used fewer full-run tokens and tool calls on the controlled fixture set.
+- Added three bilingual flagship Change Review cards for Agent workflow, historical model, and checkpoint changes, including nested review discovery and URL-persistent selection.
+- Added a public-safe Qwen2.5-7B versus Mistral-7B historical aggregate review with task-slice heterogeneity, a conservative `needs_review` decision, and an explicitly unexecuted paired-model pilot protocol.
 - Reorganized the Python package into documented `core`, `preflight`, `evaluation`, `control`,
   `provenance`, `audit`, `evidence`, `diagnostics`, `integrations`, and `cli` domains while
   preserving established imports, commands, protocols, and artifact schemas.

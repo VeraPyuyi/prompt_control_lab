@@ -1,0 +1,109 @@
+{
+  "factors": [
+    {
+      "changed": false,
+      "confidence": "high",
+      "evidence": [
+        "Current prompt (prompt.prompt_hash): \"recorded-shared-evaluation-prompt\"",
+        "Baseline prompt (prompt.prompt_hash): \"recorded-shared-evaluation-prompt\""
+      ],
+      "factor": "prompt",
+      "impact": "low",
+      "summary": "No difference was observed in the recorded prompt values."
+    },
+    {
+      "changed": "unknown",
+      "confidence": "low",
+      "evidence": [
+        "Missing current, baseline evidence for model."
+      ],
+      "factor": "model",
+      "impact": "unknown",
+      "summary": "Whether model changed is unknown from the recorded artifacts."
+    },
+    {
+      "changed": "unknown",
+      "confidence": "low",
+      "evidence": [
+        "Missing current, baseline evidence for api_parameters."
+      ],
+      "factor": "api_parameters",
+      "impact": "unknown",
+      "summary": "Whether api_parameters changed is unknown from the recorded artifacts."
+    },
+    {
+      "changed": "unknown",
+      "confidence": "low",
+      "evidence": [
+        "Missing current, baseline evidence for data_split."
+      ],
+      "factor": "data_split",
+      "impact": "unknown",
+      "summary": "Whether data_split changed is unknown from the recorded artifacts."
+    },
+    {
+      "changed": "unknown",
+      "confidence": "low",
+      "evidence": [
+        "Missing current, baseline evidence for tools."
+      ],
+      "factor": "tools",
+      "impact": "unknown",
+      "summary": "Whether tools changed is unknown from the recorded artifacts."
+    },
+    {
+      "changed": "unknown",
+      "confidence": "low",
+      "evidence": [
+        "Missing current, baseline evidence for policy."
+      ],
+      "factor": "policy",
+      "impact": "unknown",
+      "summary": "Whether policy changed is unknown from the recorded artifacts."
+    },
+    {
+      "changed": "unknown",
+      "confidence": "low",
+      "evidence": [
+        "Missing current, baseline evidence for agent."
+      ],
+      "factor": "agent",
+      "impact": "unknown",
+      "summary": "Whether agent changed is unknown from the recorded artifacts."
+    },
+    {
+      "changed": "unknown",
+      "confidence": "low",
+      "evidence": [
+        "Missing current, baseline evidence for git_commit."
+      ],
+      "factor": "git_commit",
+      "impact": "unknown",
+      "summary": "Whether git_commit changed is unknown from the recorded artifacts."
+    },
+    {
+      "changed": "unknown",
+      "confidence": "low",
+      "evidence": [
+        "Missing current, baseline evidence for tests."
+      ],
+      "factor": "tests",
+      "impact": "unknown",
+      "summary": "Whether tests changed is unknown from the recorded artifacts."
+    },
+    {
+      "changed": "unknown",
+      "confidence": "low",
+      "evidence": [
+        "Missing current, baseline evidence for seed."
+      ],
+      "factor": "seed",
+      "impact": "unknown",
+      "summary": "Whether seed changed is unknown from the recorded artifacts."
+    }
+  ],
+  "run_id": "candidate",
+  "schema": "prompt_control_lab.attribution_report.v1",
+  "status": "insufficient_evidence",
+  "summary": "9 of 10 factors could not be compared from the available artifacts. Missing evidence does not establish equivalence or causation."
+}

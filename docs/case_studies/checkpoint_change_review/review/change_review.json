@@ -1,0 +1,78 @@
+{
+  "artifacts": [
+    "comparison_validity.json",
+    "attribution.json",
+    "stability.json",
+    "decision_trace.json",
+    "human_feedback.json",
+    "report.md",
+    "report.html"
+  ],
+  "baseline_run": "../baseline",
+  "candidate_run": "../candidate",
+  "change_kind": "checkpoint_change",
+  "claim_boundary": "This review describes recorded associations and decision evidence. It does not establish a unique causal explanation.",
+  "coverage": {
+    "baseline_events": false,
+    "baseline_gate": false,
+    "baseline_manifest": true,
+    "baseline_metrics": true,
+    "candidate_events": false,
+    "candidate_gate": true,
+    "candidate_manifest": true,
+    "candidate_metrics": true
+  },
+  "decision": "hold",
+  "downstream_modified": false,
+  "enforcement": "observe_only",
+  "mode": "shadow",
+  "next_action": "Inspect the candidate gate decision trace before promotion.",
+  "observations": {
+    "baseline_score": 0.088541666667,
+    "candidate_gate": "hold",
+    "candidate_score": 0.194444444444,
+    "metric_deltas": {
+      "generation_mismatch": {
+        "baseline": 0.572916666667,
+        "candidate": 0.467013888889,
+        "delta": -0.10590277777800006,
+        "direction": "decrease"
+      },
+      "mean_latency_ms": {
+        "baseline": 8963.940084239262,
+        "candidate": 6691.539235561828,
+        "delta": -2272.4008486774346,
+        "direction": "decrease"
+      },
+      "mean_score": {
+        "baseline": 0.088541666667,
+        "candidate": 0.194444444444,
+        "delta": 0.105902777777,
+        "direction": "increase"
+      },
+      "mean_tokens": {
+        "baseline": 147.338541666667,
+        "candidate": 107.335069444444,
+        "delta": -40.003472222222996,
+        "direction": "decrease"
+      },
+      "selective_aurc": {
+        "baseline": 0.871227659274,
+        "candidate": 0.667432288825,
+        "delta": -0.20379537044899998,
+        "direction": "decrease"
+      },
+      "trajectory_drift": {
+        "baseline": 8.395504777982,
+        "candidate": 8.825874485396,
+        "delta": 0.43036970741400005,
+        "direction": "increase"
+      }
+    },
+    "stability_state": "insufficient_evidence"
+  },
+  "reasons": [
+    "The recorded candidate post-training gate or deployment gate requires a hold."
+  ],
+  "schema": "prompt_control_lab.change_review.v1"
+}

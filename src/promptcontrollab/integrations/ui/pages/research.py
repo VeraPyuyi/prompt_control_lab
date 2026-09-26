@@ -24,8 +24,6 @@ from promptcontrollab.integrations.ui.data import (
     claim_evidence_ladder,
     ecosystem_demo_rows,
     ecosystem_evidence_matrix_rows,
-    ecosystem_market_map_rows,
-    ecosystem_market_readiness,
     ecosystem_scorecard_rows,
     evidence_card_rows,
     evidence_gap_action_rows,
@@ -327,7 +325,7 @@ def _render_research_overview_tab(
         empty_state(st, text["research_empty"], text["research_demo_command"])
         return
 
-    rows = research_diagnostic_rows(detail)
+    rows = research_diagnostic_rows(detail, language)
     counts = research_status_counts(detail)
     available = counts.get("available", 0)
     artifacts = detail.get("artifacts")
@@ -345,8 +343,6 @@ def _render_research_overview_tab(
     bridge = external_bridge_summary(detail)
     scorecard_rows = ecosystem_scorecard_rows(detail)
     scorecard_matrix_rows = ecosystem_evidence_matrix_rows(detail)
-    scorecard_market_rows = ecosystem_market_map_rows(detail)
-    scorecard_market_readiness = ecosystem_market_readiness(detail)
     ecosystem_rows = ecosystem_demo_rows(detail)
     asset_summary = prompt_asset_summary(detail)
     asset_rows = prompt_asset_rows(detail)
@@ -437,32 +433,12 @@ def _render_research_overview_tab(
             f'<div class="pcl-section-title">{html.escape(text["ecosystem_scorecard"])}</div>',
             unsafe_allow_html=True,
         )
-        scorecard = detail.get("ecosystem_scorecard")
-        scorecard_dict = scorecard if isinstance(scorecard, dict) else {}
-        st.caption(str(scorecard_dict.get("positioning", "")))
         if scorecard_matrix_rows:
             st.markdown(
                 f'<div class="pcl-section-title">{html.escape(text["ecosystem_evidence_matrix"])}</div>',
                 unsafe_allow_html=True,
             )
             st.dataframe(scorecard_matrix_rows, use_container_width=True)
-        if scorecard_market_readiness:
-            st.markdown(
-                f'<div class="pcl-section-title">{html.escape(text["ecosystem_market_readiness"])}</div>',
-                unsafe_allow_html=True,
-            )
-            st.caption(text["ecosystem_market_readiness_note"])
-            _render_market_readiness_summary(st, scorecard_market_readiness, language)
-        if scorecard_market_rows:
-            st.markdown(
-                f'<div class="pcl-section-title">{html.escape(text["ecosystem_market_map"])}</div>',
-                unsafe_allow_html=True,
-            )
-            st.caption(text["ecosystem_market_map_note"])
-            st.dataframe(
-                _market_map_display_rows(scorecard_market_rows, language),
-                use_container_width=True,
-            )
         st.dataframe(scorecard_rows, use_container_width=True)
 
     if ecosystem_rows:

@@ -1,0 +1,9 @@
+{
+  "plain_summary": "Historical aggregate evidence lacks paired per-example records and a shared recorded prompt identity. Collect a controlled paired model run before promotion.",
+  "schema": "prompt_control_lab.gate_result.v1",
+  "status": "needs_review",
+  "warnings": [
+    "No paired per-example evidence was recorded.",
+    "A common prompt hash was not recorded for both model aggregates."
+  ]
+}

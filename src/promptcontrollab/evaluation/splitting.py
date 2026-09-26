@@ -65,10 +65,8 @@ def make_split(
         raise ValueError(msg)
     shuffled = ids[:]
     random.Random(seed).shuffle(shuffled)
-    train_end = max(1, round(len(shuffled) * train_ratio))
-    val_end = train_end + round(len(shuffled) * val_ratio)
-    if val_end >= len(shuffled):
-        val_end = len(shuffled) - 1
+    train_end = min(len(shuffled) - 1, max(1, round(len(shuffled) * train_ratio)))
+    val_end = min(len(shuffled) - 1, train_end + round(len(shuffled) * val_ratio))
     train = sorted(shuffled[:train_end])
     val = sorted(shuffled[train_end:val_end])
     withheld = sorted(shuffled[val_end:])

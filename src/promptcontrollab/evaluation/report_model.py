@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 
 from promptcontrollab.core.files import JsonDict, read_json
@@ -58,6 +58,12 @@ class ReportModel:
     artifacts: list[str]
     candidate_score: float | None
     baseline_score: float | None
+    change_review: JsonDict = field(default_factory=dict)
+    attribution: JsonDict = field(default_factory=dict)
+    stability: JsonDict = field(default_factory=dict)
+    decision_trace: JsonDict = field(default_factory=dict)
+    human_feedback: JsonDict = field(default_factory=dict)
+    trace_import: JsonDict = field(default_factory=dict)
 
     @classmethod
     def from_run(cls, run_dir: Path) -> ReportModel:
@@ -85,7 +91,13 @@ class ReportModel:
             splits=_read_optional(run_dir / "splits.json"),
             explanation=_read_optional(run_dir / "explanation.json"),
             gate=_read_optional(run_dir / "gate_result.json"),
+            change_review=_read_optional(run_dir / "change_review.json"),
             comparison_validity=_read_optional(run_dir / "comparison_validity.json"),
+            attribution=_read_optional(run_dir / "attribution.json"),
+            stability=_read_optional(run_dir / "stability.json"),
+            decision_trace=_read_optional(run_dir / "decision_trace.json"),
+            human_feedback=_read_optional(run_dir / "human_feedback.json"),
+            trace_import=_read_optional(run_dir / "trace_import.json"),
             model_drift=_read_optional(run_dir / "model_drift.json"),
             audit=_read_optional(run_dir / "audit_result.json"),
             history_index=_read_optional(run_dir / "history_index.json"),
@@ -184,7 +196,13 @@ def _existing_artifacts(run_dir: Path, diagnostics: dict[str, JsonDict]) -> list
         "stats.json",
         "splits.json",
         "gate_result.json",
+        "change_review.json",
         "comparison_validity.json",
+        "attribution.json",
+        "stability.json",
+        "decision_trace.json",
+        "human_feedback.json",
+        "trace_import.json",
         "explanation.json",
         "model_drift.json",
         "audit_result.json",

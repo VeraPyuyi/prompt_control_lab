@@ -9,8 +9,11 @@ from pathlib import Path
 from promptcontrollab.cli.handlers.control import (
     _cmd_bridge_serve,
     _cmd_control,
+    _cmd_trace_import,
+    _cmd_trace_serve,
 )
 from promptcontrollab.control.control_workflow import AUTHORIZATIONS
+from promptcontrollab.control.trace_ingest import TRACE_FORMATS
 
 
 def _register_control(subcommands: argparse._SubParsersAction[argparse.ArgumentParser]) -> None:
@@ -84,8 +87,57 @@ def _register_bridge(subcommands: argparse._SubParsersAction[argparse.ArgumentPa
     bridge_serve_parser.set_defaults(func=_cmd_bridge_serve)
 
 
+def _register_trace(subcommands: argparse._SubParsersAction[argparse.ArgumentParser]) -> None:
+    """Register trace import and local shadow receiver commands."""
+
+    trace_parser = subcommands.add_parser(
+        "trace",
+        help="Import or observe GenAI traces without changing downstream execution.",
+    )
+    trace_subcommands = trace_parser.add_subparsers(dest="trace_command", required=True)
+
+    import_parser = trace_subcommands.add_parser(
+        "import",
+        help="Import OTLP/OpenTelemetry GenAI or OpenInference JSON traces.",
+    )
+    import_parser.add_argument(
+        "--input",
+        type=Path,
+        required=True,
+        help="Trace JSON or JSONL file.",
+    )
+    import_parser.add_argument(
+        "--format",
+        choices=list(TRACE_FORMATS),
+        default="auto",
+        help="Input format or automatic detection.",
+    )
+    import_parser.add_argument(
+        "--out",
+        type=Path,
+        required=True,
+        help="Destination control-run directory.",
+    )
+    import_parser.set_defaults(func=_cmd_trace_import)
+
+    serve_parser = trace_subcommands.add_parser(
+        "serve",
+        help="Serve a local OTLP JSON receiver in observation-only shadow mode.",
+    )
+    serve_parser.add_argument("--host", default="127.0.0.1")
+    serve_parser.add_argument("--port", type=int, default=4318)
+    serve_parser.add_argument(
+        "--out",
+        type=Path,
+        required=True,
+        help="Destination control-run directory.",
+    )
+    serve_parser.set_defaults(func=_cmd_trace_serve)
+
+
 _REGISTRARS = {
     "control": _register_control,
+    "trace": _register_trace,
     "bridge": _register_bridge,
 }
 

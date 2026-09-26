@@ -1,0 +1,116 @@
+{
+  "schema_version": "pcl.measurement-value/v2",
+  "synthetic": true,
+  "representation": "raw_records",
+  "provenance": {
+    "description": "Synthetic unit-test evidence only",
+    "source": "synthetic"
+  },
+  "cases": [
+    {
+      "case_id": "case",
+      "model": "synthetic-model",
+      "pair_id": "pair",
+      "item_ids": [
+        "q0",
+        "q1",
+        "q2",
+        "q3"
+      ],
+      "labels": [
+        1,
+        1,
+        0,
+        0
+      ],
+      "budget_seconds": 3.99,
+      "policies": [
+        {
+          "strategy": "direct",
+          "actual_batch_size": 2,
+          "costs": {
+            "load": 0,
+            "probe": 0,
+            "score": 0,
+            "sort": 0,
+            "transfer": 0,
+            "serialization": 0,
+            "failed": 0
+          },
+          "timing_scope": "measured_full_policy",
+          "run_id": "synthetic-direct",
+          "batches": [
+            {
+              "batch_id": "b0",
+              "item_ids": [
+                "q2",
+                "q3"
+              ],
+              "elapsed_seconds": 2,
+              "completed": true
+            },
+            {
+              "batch_id": "b1",
+              "item_ids": [
+                "q0",
+                "q1"
+              ],
+              "elapsed_seconds": 2,
+              "completed": true
+            }
+          ]
+        },
+        {
+          "strategy": "primary",
+          "actual_batch_size": 2,
+          "costs": {
+            "load": 0,
+            "probe": 0,
+            "score": 0,
+            "sort": 0,
+            "transfer": 0,
+            "serialization": 0,
+            "failed": 0
+          },
+          "timing_scope": "measured_full_policy",
+          "run_id": "synthetic-primary",
+          "batches": [
+            {
+              "batch_id": "b0",
+              "item_ids": [
+                "q0",
+                "q1"
+              ],
+              "elapsed_seconds": 2,
+              "completed": true
+            },
+            {
+              "batch_id": "b1",
+              "item_ids": [
+                "q2",
+                "q3"
+              ],
+              "elapsed_seconds": 2,
+              "completed": true
+            }
+          ]
+        }
+      ],
+      "budget_grid_seconds": [
+        0,
+        2,
+        3.99,
+        4,
+        6,
+        8
+      ]
+    }
+  ],
+  "primitive_timings": [
+    {
+      "operation": "synthetic score",
+      "elapsed_seconds": 0.1,
+      "model": "synthetic-model"
+    }
+  ]
+}

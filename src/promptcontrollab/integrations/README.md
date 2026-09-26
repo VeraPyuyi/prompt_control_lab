@@ -2,13 +2,13 @@
 
 ## Purpose
 
-`promptcontrollab.integrations` connects the domain APIs to providers, agents, developer tools, the local Streamlit UI, and the bounded Hugging Face demo. Integrations translate external protocols; they do not redefine core evidence or decision semantics.
+`promptcontrollab.integrations` connects the domain APIs to providers, agents, developer tools, the local React workflow cockpit, the compatibility Streamlit UI, and the bounded Hugging Face demo. Integrations translate external protocols; they do not redefine core evidence or decision semantics.
 
 ## Use cases
 
 - Inspect or call a supported model provider through one local adapter contract.
 - Install and operate the DeepSeek Harness, Claude Code, Cursor, Codex, or GitHub Action adapters.
-- Explore runs in the local dashboard without uploading project data.
+- Review changes and explore runs in the local React cockpit without uploading project data.
 - Build a public-safe, CPU-only Hugging Face Space bundle.
 
 ## CLI commands
@@ -22,6 +22,7 @@ pcl harness doctor --project .
 pcl install-plugin deepseek-harness
 pcl install-plugin all --target ./installed-templates
 pcl ui --runs runs --language en
+pcl ui --runs runs --language en --legacy-streamlit
 pcl github-app serve --host 0.0.0.0 --port 8080
 pcl doctor --json
 ```
@@ -51,7 +52,7 @@ Supporting APIs initialize and replay Harness sessions, validate the Hugging Fac
 
 ## Dependencies
 
-Provider metadata and plugin installation use the default runtime. The UI requires the `ui` extra, the GitHub App requires `bot`, and model/post-training integrations use their declared optional extras. The DeepSeek Harness plugin has its own TypeScript toolchain.
+Provider metadata and plugin installation use the default runtime. The React/FastAPI cockpit and compatibility Streamlit dashboard require the `ui` extra, the GitHub App requires `bot`, and model/post-training integrations use their declared optional extras. The DeepSeek Harness plugin has its own TypeScript toolchain.
 
 ## Extension points
 

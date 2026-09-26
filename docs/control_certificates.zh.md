@@ -1,8 +1,14 @@
-# 控制证书诊断
+# 稳定性与可信度检查
 
 [English](control_certificates.en.md)
 
-PromptControlLab 提供三项来自控制论敏感性与局部存在性思想的有边界检查。它们诊断用户指定的 artifact 或有限维 surrogate，不会把结果包装成对线上语言模型、全局最优性、隐藏推理或部署安全的证明。
+PromptControlLab 提供三项来自控制论敏感性与局部存在性思想的有边界检查。中文说明优先回答“这个功能做什么”，学术名称和公式保留在技术细节中。它们诊断用户指定的 artifact 或有限维 surrogate，不会把结果包装成对线上语言模型、全局最优性、隐藏推理或部署安全的证明。
+
+| 功能名称 | 它回答的问题 | 技术名称 |
+|---|---|---|
+| 最终目标影响 | 最终奖励或目标改变后，对前面决策的影响会不会随任务变长而减弱？ | 终端敏感性（Terminal sensitivity） |
+| 局部稳定边界 | 低维近似中的稳定方向是否清楚分离，边界约束是否稳健？ | Green 证书（Green certificate） |
+| 局部解可信范围 | 当前结果附近是否有可检查的解，可信范围有多大？ | 后验证书（Posterior certificate） |
 
 矩阵诊断需要安装研究依赖：
 
@@ -10,7 +16,9 @@ PromptControlLab 提供三项来自控制论敏感性与局部存在性思想的
 python -m pip install -e ".[research]"
 ```
 
-## 1. 终端敏感度
+## 1. 最终目标影响
+
+技术名称：终端敏感性（Terminal sensitivity）。它检查最终目标的一次变化对早期决策的影响是否随着任务距离增加而衰减。
 
 直接分析 terminal objective 或 readout 干预记录：
 
@@ -31,7 +39,9 @@ log(sensitivity) = intercept - decay_rate * (horizon - early_step)
 
 如需可复现的低维边值问题样例，可运行 `pcl research-demo --out runs/research-demo`。生成的 `inputs/terminal_surrogate.npz` 包含 `M`、`B0`、`BN`、`terminal_perturbations` 和 `control_readout`，可配合多个 `--horizon` 与 `--early-step` 使用。
 
-## 2. Green 证书
+## 2. 局部稳定边界
+
+技术名称：Green 证书（Green certificate）。它检查低维近似中稳定方向的分离程度与边界约束的稳健余量。
 
 ```bash
 pcl green-certificate \
@@ -45,7 +55,9 @@ pcl green-certificate \
 
 使用估计前提的浮点检查最高只能得到 `surrogate_consistent`。只有完整且保守的 premise record 才能对其中明确命名的固定维 surrogate 和 horizon family 给出 `certificate_verified`，该等级不延伸到完整 Transformer。
 
-## 3. 后验证书
+## 3. 局部解可信范围
+
+技术名称：后验证书（Posterior certificate）。它根据残差和局部变化上界，估计数值结果附近的可验证范围。
 
 ```bash
 pcl posterior-certificate \

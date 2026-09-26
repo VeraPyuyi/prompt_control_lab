@@ -1,0 +1,5 @@
+Reviewed statistical kernels adapted from the anonymous saved-score replay artifact.
+Copyright 2026 Anonymous contributors.
+Changes: data-only package interface, generic model identities, input validation, and typing.
+Numerical arithmetic ordering and frozen resampling protocols are retained.
+No research inputs, results, or uploaded source are included or executed.

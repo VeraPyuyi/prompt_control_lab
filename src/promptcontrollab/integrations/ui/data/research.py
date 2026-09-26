@@ -6,6 +6,7 @@ from pathlib import Path
 
 from promptcontrollab.audit.claim_check import CLAIM_LABELS, CLAIM_REQUIREMENTS, TIER_ORDER
 from promptcontrollab.core.files import JsonDict
+from promptcontrollab.diagnostics.presentation import get_diagnostic_presentation
 from promptcontrollab.integrations.ui.data.common import _mapping, _nonnegative_int
 from promptcontrollab.integrations.ui.data.constants import PEOC_STATUSES
 from promptcontrollab.integrations.ui.data.run import first_comparison
@@ -206,7 +207,7 @@ def research_overview_path(detail: JsonDict) -> Path | None:
     return candidate if candidate.exists() else None
 
 
-def research_diagnostic_rows(detail: JsonDict) -> list[JsonDict]:
+def research_diagnostic_rows(detail: JsonDict, language: str = "en") -> list[JsonDict]:
     """Return normalized rows for the paper-derived research overview."""
 
     diagnostics = detail.get("diagnostics")
@@ -263,6 +264,10 @@ def research_diagnostic_rows(detail: JsonDict) -> list[JsonDict]:
     ]
     rows: list[JsonDict] = []
     for key, label, meaning, signal_fn in specs:
+        if key in {"terminal_sensitivity", "green_certificate", "posterior_certificate"}:
+            presentation = get_diagnostic_presentation(key, language)
+            label = str(presentation["label"])
+            meaning = str(presentation["purpose"])
         payload = (
             _hidden_state_payload(detail)
             if key == "hidden_states"

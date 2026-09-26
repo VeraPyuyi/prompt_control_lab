@@ -36,7 +36,7 @@ def test_control_navigation_labels_are_localized() -> None:
         "Before",
         "Run",
         "Mechanism",
-        "Stability",
+        "Stability & Confidence",
         "Training Gate",
         "Evidence Scope",
         "Decision",
@@ -46,7 +46,7 @@ def test_control_navigation_labels_are_localized() -> None:
         "执行前",
         "运行中",
         "机制解释",
-        "稳定性",
+        "稳定性与可信度",
         "训练门禁",
         "证据边界",
         "决策",
@@ -770,6 +770,24 @@ def test_recommendation_card_escapes_values_and_preserves_evidence_boundary() ->
     assert "Observed change only." in rendered
     assert "This does not prove causality or safety." in rendered
     assert "<script>" not in rendered
+
+
+def test_deepseek_harness_view_prefers_change_review_decision() -> None:
+    from promptcontrollab.integrations.ui.data import deepseek_harness_view
+
+    view = deepseek_harness_view(
+        {
+            "change_review": {
+                "decision": "hold",
+                "reasons": ["The candidate checkpoint gate requires a hold."],
+                "next_action": "Inspect the decision trace.",
+            },
+            "decision": {"decision": "pass"},
+        }
+    )
+
+    assert view["recommendation"]["decision"] == "hold"
+    assert view["recommendation"]["next_action"] == "Inspect the decision trace."
 
 
 def _event(sequence: int, event_type: str, **payload: object) -> dict[str, object]:

@@ -73,5 +73,6 @@ def _first_number(value: str) -> float | None:
     match = re.search(r"[-+]?(?:\d*\.\d+|\d+)", value)
     if match is None:
         return None
-    return float(match.group(0))
+    number = float(match.group(0))
+    return number if math.isfinite(number) else None
 

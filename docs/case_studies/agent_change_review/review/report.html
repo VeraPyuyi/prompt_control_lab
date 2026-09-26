@@ -1,0 +1,92 @@
+<!doctype html><html><head><meta charset='utf-8'><title>Change Review</title><style>body{font-family:system-ui;max-width:1100px;margin:auto;padding:32px;background:#f7f7f5;color:#1d2525}header{border-bottom:3px solid #1f766e;padding-bottom:20px}section{padding:18px 0;border-bottom:1px solid #d7dddd}code{background:#e8eeec;padding:2px 5px}h1,h2{letter-spacing:0}</style></head><body><header><h1>PromptControlLab Change Review</h1><p>Decision: <strong>needs_review</strong></p></header><section><h2>What changed?</h2><p>prompt_change</p></section><section><h2>What was observed?</h2><p>score changed from 1 to 1; tests_pass_rate stayed unchanged from 1 to 1; mean_total_tokens decreased from 192948 to 169150; mean_tool_calls decreased from 7 to 6.2; mean_touched_files stayed unchanged from 1 to 1; stability=insufficient_evidence.</p></section><section><h2>What most likely explains the difference?</h2><p>prompt</p></section><section><h2>How reliable is the evidence?</h2><p>identity comparison=needs_review; execution stability=insufficient_evidence</p></section><section><h2>What cannot be concluded?</h2><p>The evidence does not establish a unique causal explanation.</p></section><section><h2>What should happen next?</h2><p>Resolve the listed evidence gaps before promotion.</p></section><section><h2>Decision trace</h2><pre>{
+  &quot;schema&quot;: &quot;prompt_control_lab.change_review_decision_trace.v1&quot;,
+  &quot;decision&quot;: &quot;needs_review&quot;,
+  &quot;checks&quot;: [
+    {
+      &quot;check&quot;: &quot;comparison_validity&quot;,
+      &quot;observed&quot;: &quot;needs_review&quot;,
+      &quot;status&quot;: &quot;triggered&quot;,
+      &quot;evidence&quot;: [
+        &quot;comparison_validity.json&quot;
+      ]
+    },
+    {
+      &quot;check&quot;: &quot;score_delta&quot;,
+      &quot;observed&quot;: 0.0,
+      &quot;status&quot;: &quot;passed&quot;,
+      &quot;evidence&quot;: [
+        &quot;baseline/metrics.json&quot;,
+        &quot;candidate/metrics.json&quot;
+      ]
+    },
+    {
+      &quot;check&quot;: &quot;stability&quot;,
+      &quot;observed&quot;: &quot;insufficient_evidence&quot;,
+      &quot;status&quot;: &quot;passed&quot;,
+      &quot;evidence&quot;: [
+        &quot;stability.json&quot;
+      ]
+    },
+    {
+      &quot;check&quot;: &quot;candidate_gate&quot;,
+      &quot;observed&quot;: null,
+      &quot;status&quot;: &quot;missing&quot;,
+      &quot;evidence&quot;: [
+        &quot;candidate/posttrain_gate.json&quot;,
+        &quot;candidate/gate_result.json&quot;
+      ]
+    },
+    {
+      &quot;check&quot;: &quot;secondary_metric_deltas&quot;,
+      &quot;observed&quot;: {
+        &quot;mean_score&quot;: {
+          &quot;baseline&quot;: 1.0,
+          &quot;candidate&quot;: 1.0,
+          &quot;delta&quot;: 0.0,
+          &quot;direction&quot;: &quot;unchanged&quot;
+        },
+        &quot;tests_pass_rate&quot;: {
+          &quot;baseline&quot;: 1.0,
+          &quot;candidate&quot;: 1.0,
+          &quot;delta&quot;: 0.0,
+          &quot;direction&quot;: &quot;unchanged&quot;
+        },
+        &quot;mean_total_tokens&quot;: {
+          &quot;baseline&quot;: 192948.13333333333,
+          &quot;candidate&quot;: 169150.43333333332,
+          &quot;delta&quot;: -23797.70000000001,
+          &quot;direction&quot;: &quot;decrease&quot;
+        },
+        &quot;mean_tool_calls&quot;: {
+          &quot;baseline&quot;: 7.0,
+          &quot;candidate&quot;: 6.2,
+          &quot;delta&quot;: -0.7999999999999998,
+          &quot;direction&quot;: &quot;decrease&quot;
+        },
+        &quot;mean_touched_files&quot;: {
+          &quot;baseline&quot;: 1.0,
+          &quot;candidate&quot;: 1.0,
+          &quot;delta&quot;: 0.0,
+          &quot;direction&quot;: &quot;unchanged&quot;
+        },
+        &quot;mean_unnecessary_file_edits&quot;: {
+          &quot;baseline&quot;: 0.0,
+          &quot;candidate&quot;: 0.0,
+          &quot;delta&quot;: 0.0,
+          &quot;direction&quot;: &quot;unchanged&quot;
+        },
+        &quot;mean_duration_seconds&quot;: {
+          &quot;baseline&quot;: 57.384333333333,
+          &quot;candidate&quot;: 54.955,
+          &quot;delta&quot;: -2.4293333333329983,
+          &quot;direction&quot;: &quot;decrease&quot;
+        }
+      },
+      &quot;status&quot;: &quot;observed&quot;,
+      &quot;evidence&quot;: [
+        &quot;baseline/metrics.json&quot;,
+        &quot;candidate/metrics.json&quot;
+      ]
+    }
+  ]
+}</pre></section></body></html>

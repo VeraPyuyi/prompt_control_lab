@@ -35,6 +35,7 @@ _EXPORTS = {
         "compare_prediction_files",
     ),
     "compare_runs": ("promptcontrollab.evaluation.run_comparison", "compare_runs"),
+    "review_changes": ("promptcontrollab.evaluation.change_review", "review_changes"),
     "config_metric": ("promptcontrollab.evaluation.workflow", "config_metric"),
     "export_report_zip": (
         "promptcontrollab.evaluation.artifact_export",

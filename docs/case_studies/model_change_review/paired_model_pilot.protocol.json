@@ -1,0 +1,76 @@
+{
+  "schema": "prompt_control_lab.paired_model_pilot_protocol.v1",
+  "status": "not_executed",
+  "execution_authorized": false,
+  "purpose": "Upgrade the historical aggregate model case with controlled per-run evidence.",
+  "change_kind": "model_change",
+  "baseline_model": "Qwen/Qwen2.5-7B-Instruct",
+  "candidate_model": "mistralai/Mistral-7B-Instruct-v0.3",
+  "fixed_dimensions": {
+    "agent": "one pinned Agent runner and version for both models",
+    "provider_interface": "one pinned OpenAI-compatible interface",
+    "prompt_set": "controlled-coding-fixtures-v1",
+    "policy": "one pinned PromptControlLab policy file",
+    "sampling_parameters": "identical and recorded for both models",
+    "acceptance_checks": "task-specific pytest checks from controlled-coding-fixtures-v1"
+  },
+  "task_ids": [
+    "paired-001",
+    "paired-002",
+    "paired-003",
+    "paired-004",
+    "paired-005",
+    "paired-006",
+    "paired-007",
+    "paired-008",
+    "paired-009",
+    "paired-010"
+  ],
+  "repetitions_per_task_per_model": 3,
+  "planned_run_count": 60,
+  "required_metrics": [
+    "task_success",
+    "tests_passed",
+    "full_run_input_tokens",
+    "full_run_output_tokens",
+    "tool_calls",
+    "duration_seconds",
+    "touched_files",
+    "unnecessary_file_edits",
+    "human_corrections",
+    "stability_state"
+  ],
+  "required_identity": [
+    "agent_version",
+    "provider",
+    "public_model_id",
+    "prompt_hash",
+    "policy_hash",
+    "task_set_id",
+    "git_commit",
+    "sampling_parameters"
+  ],
+  "redaction": {
+    "exclude": [
+      "api_keys",
+      "hidden_reasoning",
+      "raw_private_prompts",
+      "absolute_local_paths",
+      "unredacted_tool_output"
+    ],
+    "publish": [
+      "structured_metrics",
+      "public_model_id",
+      "task_id",
+      "test_status",
+      "bounded_failure_reason"
+    ]
+  },
+  "artifact_schema": {
+    "per_run": "prompt_control_lab.control_run.v1",
+    "events": "prompt_control_lab.control_event.v1",
+    "paired_table": "prompt_control_lab.paired_model_pilot.v1",
+    "review": "prompt_control_lab.change_review.v1"
+  },
+  "acceptance_boundary": "Do not report a paired model result until all 60 planned runs and identity fields are complete."
+}

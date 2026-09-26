@@ -10,6 +10,7 @@ from promptcontrollab.cli.commands import (
     diagnostics,
     evaluation,
     evidence,
+    experiments,
     integrations,
     preflight,
     provenance,
@@ -31,15 +32,17 @@ def build_parser() -> argparse.ArgumentParser:
         ),
     )
     subcommands = parser.add_subparsers(dest="command", metavar="command", required=True)
+    experiments.register_commands(subcommands)
     preflight.register_commands(subcommands, ("start", "quickstart", "choose", "init"))
     evidence.register_commands(subcommands, ("ingest",))
     preflight.register_commands(subcommands, ("scaffold-check", "improve"))
     control.register_commands(subcommands, ("control",))
+    control.register_commands(subcommands, ("trace",))
     integrations.register_commands(subcommands, ("providers", "harness"))
     control.register_commands(subcommands, ("bridge",))
     preflight.register_commands(subcommands, ("guard",))
     provenance.register_commands(subcommands, ("model-detect", "model-drift"))
-    evaluation.register_commands(subcommands, ("validity", "compare-runs"))
+    evaluation.register_commands(subcommands, ("validity", "compare-runs", "review"))
     evidence.register_commands(
         subcommands,
         ("evidence-from", "evidence-audit", "source-verify", "evidence-gate"),

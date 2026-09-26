@@ -15,6 +15,8 @@
 
 ```bash
 pcl control --prompt "Inspect the request" --authorization inspect --out runs/control
+pcl trace import --input traces.jsonl --format auto --out runs/imported
+pcl trace serve --host 127.0.0.1 --port 4318 --out runs/observed
 pcl bridge serve --transport stdio
 pcl harness replay --session session.jsonl --out runs/harness-replay
 pcl harness finalize --runs runs --session session-id
@@ -51,12 +53,18 @@ The protocol, event log, analysis, and stdio bridge use the default dependency-f
 - Add versioned event kinds without changing existing event meanings.
 - Add attribution dimensions and stability signals with explicit evidence and confidence.
 - Add adapters that translate external agent events into the stable control protocol.
+- Import OpenTelemetry GenAI and OpenInference observations through a redacted,
+  deterministic trace adapter.
 
 ## Limitations
 
 - Attribution is evidence-based association, not strict causal identification.
 - Stability labels are heuristic summaries of observable events and may be `insufficient_evidence`.
 - Automatic steering and recovery must remain opt-in and bounded by policy.
+- The local trace receiver accepts OTLP JSON over HTTP, not OTLP protobuf. It is
+  observation-only: it never blocks, retries, or modifies downstream execution.
+- Trace ingestion stores prompt/content hashes, lengths, and approved metadata rather
+  than raw prompt, response, authorization, credential, or reasoning content.
 
 ## Tests/Examples
 

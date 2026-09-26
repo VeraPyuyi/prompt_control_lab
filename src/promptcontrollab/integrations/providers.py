@@ -171,9 +171,7 @@ _SECRET_ASSIGNMENT_RE = re.compile(
     r"secret|credential)\s*[:=]\s*(?:bearer\s+)?[\"']?"
     r"[A-Za-z0-9][A-Za-z0-9._~+/=-]{7,}[\"']?"
 )
-_BEARER_SECRET_RE = re.compile(
-    r"(?i)\bbearer\s+[A-Za-z0-9][A-Za-z0-9._~+/=-]{7,}"
-)
+_BEARER_SECRET_RE = re.compile(r"(?i)\bbearer\s+[A-Za-z0-9][A-Za-z0-9._~+/=-]{7,}")
 _KNOWN_SECRET_RE = re.compile(
     r"(?<![A-Za-z0-9])(?:"
     r"sk[-_][A-Za-z0-9][A-Za-z0-9._-]{14,}|"
@@ -287,8 +285,13 @@ def call_provider(
     timeout: float = 30.0,
     max_output_tokens: int = 256,
     api_key_env: str | None = None,
+    temperature: float | None = None,
+    top_p: float | None = None,
+    seed: int | None = None,
+    auth_scheme: str | None = None,
+    thinking: str | None = None,
 ) -> ProviderResponse:
-    """Call a supported provider and return a normalized, redacted response."""
+    """Call a provider, optionally set DeepSeek thinking, and return a redacted response."""
 
     spec = _provider_spec(provider)
     model_id = model.strip()
@@ -301,9 +304,7 @@ def call_provider(
     key_env = _key_env(spec, api_key_env)
     api_key = os.environ.get(key_env)
     if not api_key:
-        raise ProviderError(
-            f"Provider '{spec.provider_id}' requires API credentials in {key_env}."
-        )
+        raise ProviderError(f"Provider '{spec.provider_id}' requires API credentials in {key_env}.")
     resolved_base = _resolve_base_url(spec, base_url, required=True)
     assert resolved_base is not None
     request, request_payload = _build_request(
@@ -313,6 +314,11 @@ def call_provider(
         base_url=resolved_base,
         api_key=api_key,
         max_output_tokens=max_output_tokens,
+        temperature=temperature,
+        top_p=top_p,
+        seed=seed,
+        auth_scheme=auth_scheme,
+        thinking=thinking,
     )
     request_bytes = _stable_json_bytes(request_payload)
     request_digest = _digest(request_bytes)
@@ -331,9 +337,7 @@ def call_provider(
         ) from None
     except (TimeoutError, OSError) as exc:
         reason = _redact_error_text(str(exc), api_key)
-        raise ProviderError(
-            f"Provider '{spec.provider_id}' request failed: {reason}."
-        ) from None
+        raise ProviderError(f"Provider '{spec.provider_id}' request failed: {reason}.") from None
     latency_ms = round((time.perf_counter() - started) * 1000, 3)
     try:
         decoded = json.loads(
@@ -427,9 +431,24 @@ def _build_request(
     base_url: str,
     api_key: str,
     max_output_tokens: int,
+    temperature: float | None = None,
+    top_p: float | None = None,
+    seed: int | None = None,
+    auth_scheme: str | None = None,
+    thinking: str | None = None,
 ) -> tuple[urllib.request.Request, JsonDict]:
     """Build a provider-specific HTTPS request and its hashable payload."""
 
+    if auth_scheme is not None and (
+        spec.protocol != "anthropic-messages" or auth_scheme not in {"api_key", "bearer"}
+    ):
+        raise ProviderError("auth_scheme supports api_key or bearer only for Anthropic endpoints.")
+    if thinking is not None and (
+        spec.provider_id != "deepseek"
+        or not isinstance(thinking, str)
+        or thinking not in {"enabled", "disabled"}
+    ):
+        raise ProviderError("thinking supports enabled or disabled only for DeepSeek endpoints.")
     if spec.protocol == "anthropic-messages":
         endpoint = f"{base_url}/v1/messages"
         payload: JsonDict = {
@@ -440,9 +459,12 @@ def _build_request(
         headers = {
             "Accept": "application/json",
             "Content-Type": "application/json",
-            "X-Api-Key": api_key,
             "Anthropic-Version": "2023-06-01",
         }
+        if auth_scheme == "bearer":
+            headers["Authorization"] = f"Bearer {api_key}"
+        else:
+            headers["X-Api-Key"] = api_key
     elif spec.protocol == "gemini-generate-content":
         normalized_model = model.removeprefix("models/")
         encoded_model = urllib.parse.quote(normalized_model, safe="-._")
@@ -469,6 +491,31 @@ def _build_request(
             "Authorization": f"Bearer {api_key}",
             "Content-Type": "application/json",
         }
+    if thinking is not None:
+        payload["thinking"] = {"type": thinking}
+    decoding = {"temperature": temperature, "top_p": top_p, "seed": seed}
+    for name, value in decoding.items():
+        if value is None:
+            continue
+        if (
+            isinstance(value, bool)
+            or not isinstance(value, (int, float))
+            or not math.isfinite(value)
+        ):
+            raise ProviderError(f"{name} must be a finite number.")
+        if name == "seed" and (not isinstance(value, int) or value < 0):
+            raise ProviderError("seed must be a nonnegative integer.")
+        if name == "temperature" and not 0 <= value <= 2:
+            raise ProviderError("temperature must be between 0 and 2.")
+        if name == "top_p" and not 0 <= value <= 1:
+            raise ProviderError("top_p must be between 0 and 1.")
+        if spec.protocol == "anthropic-messages" and name == "seed":
+            raise ProviderError("Anthropic does not support a seed decoding parameter.")
+        if spec.protocol == "gemini-generate-content":
+            generation = cast(JsonDict, payload["generationConfig"])
+            generation["topP" if name == "top_p" else name] = value
+        else:
+            payload[name] = value
     request = urllib.request.Request(
         endpoint,
         data=_stable_json_bytes(payload),
@@ -617,8 +664,10 @@ def _validate_usable_response(spec: ProviderSpec, payload: JsonDict) -> None:
                     f"Provider '{spec.provider_id}' refused or blocked the response."
                 )
         candidates = payload.get("candidates")
-        if not isinstance(candidates, list) or not candidates or not isinstance(
-            candidates[0], dict
+        if (
+            not isinstance(candidates, list)
+            or not candidates
+            or not isinstance(candidates[0], dict)
         ):
             raise ProviderError(
                 f"Provider '{spec.provider_id}' returned a missing candidate response."
@@ -848,10 +897,7 @@ def _redact_json_value(value: object, api_key: str) -> object:
     if isinstance(value, list):
         return [_redact_json_value(item, api_key) for item in value]
     if isinstance(value, dict):
-        return {
-            str(key): _redact_json_value(item, api_key)
-            for key, item in value.items()
-        }
+        return {str(key): _redact_json_value(item, api_key) for key, item in value.items()}
     return value
 
 

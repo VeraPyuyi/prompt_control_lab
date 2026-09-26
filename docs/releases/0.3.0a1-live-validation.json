@@ -1,0 +1,77 @@
+{
+  "schema_version": "pcl-release-live-acceptance/v1",
+  "date": "2026-09-12",
+  "scope": "Real model calls on synthetic sentiment tasks; installation and workflow acceptance only, not a benchmark or independent scientific confirmation.",
+  "model_alias_source": "https://www.deepseek.com/en/news/deepseek-v4-1-flash/",
+  "jobs": [
+    {
+      "id": "exp-20260912-051855-937a0f9b42d1",
+      "operation": "run",
+      "status": "completed",
+      "provider": "deepseek",
+      "requested_model": "deepseek-v4-flash",
+      "observed_models": [
+        "deepseek-flash"
+      ],
+      "thinking": "disabled",
+      "synthetic_tasks": 2,
+      "calls": 4,
+      "call_phases": {
+        "evaluation": 4
+      },
+      "input_tokens": 80,
+      "output_tokens": 12,
+      "budget_limits": {
+        "max_calls": 4,
+        "max_output_tokens": 4096,
+        "max_seconds": 360.0
+      },
+      "elapsed_seconds": 2.062,
+      "monetary_cost": "unknown_without_price_configuration",
+      "matched_final_pairs": 2,
+      "final_scope": "evaluation",
+      "effect_status": "uncertain",
+      "rounds": null,
+      "optimizer": null,
+      "bundle_name": "live-run.zip",
+      "bundle_sha256": "49dab37db36deb8f3cf3c57c82d9fcce1c2d1c1222481facac55e5b51eee77c3",
+      "credential_and_private_path_scan": "passed"
+    },
+    {
+      "id": "exp-20260912-051939-4587cb0ace16",
+      "operation": "optimize",
+      "status": "completed",
+      "provider": "deepseek",
+      "requested_model": "deepseek-v4-flash",
+      "observed_models": [
+        "deepseek-flash"
+      ],
+      "thinking": "disabled",
+      "synthetic_tasks": 10,
+      "calls": 15,
+      "call_phases": {
+        "train": 6,
+        "withheld": 4,
+        "reflection": 1,
+        "val": 4
+      },
+      "input_tokens": 1030,
+      "output_tokens": 187,
+      "budget_limits": {
+        "max_calls": 24,
+        "max_output_tokens": 4096,
+        "max_seconds": 360.0
+      },
+      "elapsed_seconds": 10.0,
+      "monetary_cost": "unknown_without_price_configuration",
+      "matched_final_pairs": 2,
+      "final_scope": "withheld",
+      "effect_status": "uncertain",
+      "rounds": 1,
+      "optimizer": "0.1.4",
+      "bundle_name": "live-optimize.zip",
+      "bundle_sha256": "cea3394f755761af84408e12f80b890f10bf8db4109e9b8f657a0c534b84a27f",
+      "credential_and_private_path_scan": "passed"
+    }
+  ]
+}

@@ -1,0 +1,116 @@
+{
+  "source": "Read-only published case snapshot from the measurement-value research worktree",
+  "scope": "Only named modules, tests, runners and already-published case directories. No running-job files or unpublished GSM8K results accessed.",
+  "files": [
+    {
+      "source_path": "docs/case_studies/measurement_value/DATA.md",
+      "source_sha256": "a986243458b7706fe1777db39a08177943e27d7fe4d314dfbeba5aceb453c8ac",
+      "source_bytes": 5178
+    },
+    {
+      "source_path": "docs/case_studies/measurement_value/historical_replay/report.md",
+      "source_sha256": "cc4b601cc7f8ae5a9558ae5a264fa10068e1d947da9c57184560cd86c7a5ab0b",
+      "source_bytes": 3090
+    },
+    {
+      "source_path": "docs/case_studies/measurement_value/historical_replay/report.zh.md",
+      "source_sha256": "1fa77ea41ea91c8cb0b74b9c9cf0a172c18c1df54eea7de96c4b4b6708a797e0",
+      "source_bytes": 3010
+    },
+    {
+      "source_path": "docs/case_studies/measurement_value/historical_replay/results.json",
+      "source_sha256": "8b97ec7cd439f65358bea90d524c33231a2d8b7a73af1255e8f83eaeaaf5bdbf",
+      "source_bytes": 8012200
+    },
+    {
+      "source_path": "docs/case_studies/measurement_value/historical_replay/strategies.csv",
+      "source_sha256": "a646ea72967c986072c3e24f1ab430b0e7e282815794d92f0a499483f428f616",
+      "source_bytes": 110754
+    },
+    {
+      "source_path": "docs/case_studies/measurement_value/README.md",
+      "source_sha256": "919a98d4688216f418e42fbf75c32b283d2350c50e687e11bc4649959b7c5e9b",
+      "source_bytes": 14794
+    },
+    {
+      "source_path": "docs/case_studies/measurement_value/README.zh.md",
+      "source_sha256": "9faa2ce42541a60ccca7387186ecfc12c84ad00f3bfb4a72a79509d392579585",
+      "source_bytes": 13317
+    },
+    {
+      "source_path": "docs/case_studies/measurement_value/source_records.json",
+      "source_sha256": "eafacdb018e50f40199012e6d422599bcd92477d6e34089f53e5ca45fbdd2257",
+      "source_bytes": 4368113
+    },
+    {
+      "source_path": "docs/case_studies/measurement_value/synthetic_test.json",
+      "source_sha256": "7459d59778d016e4c873c60fef18e9faa7678ce4e9922081727c8480167346a1",
+      "source_bytes": 934
+    },
+    {
+      "source_path": "scripts/run_measurement_value_case.py",
+      "source_sha256": "9c12c4e4f5452cf8c35aa69f7677afdcc2c9ec20588da8e027036870042ffca0",
+      "source_bytes": 8773
+    },
+    {
+      "source_path": "src/promptcontrollab/measurement_value.py",
+      "source_sha256": "5b549c42c43924f939a82390c4628a4ddf47c30388cc09e93af74749267e4af9",
+      "source_bytes": 19064
+    },
+    {
+      "source_path": "tests/test_measurement_value.py",
+      "source_sha256": "2f874f8daa8edbfa9002f75c314d3ca94e6e446800b0777e2c8053fdb70fb00d",
+      "source_bytes": 23920
+    },
+    {
+      "source_path": "docs/case_studies/transfer_prediction/README.md",
+      "source_sha256": "8714f7915b04d2cdd2086a3a8b8d014788d4421f80882b4105900ed4d5a0f04d",
+      "source_bytes": 3808
+    },
+    {
+      "source_path": "docs/case_studies/transfer_prediction/README.zh.md",
+      "source_sha256": "5c4001326257c04d9ef65835fc7e6418b6dd7d8c6f5a7b85213ab57bc9240ffa",
+      "source_bytes": 2468
+    },
+    {
+      "source_path": "docs/case_studies/transfer_prediction/synthetic_replay/pairs.csv",
+      "source_sha256": "c4c6148214dada734a85f948056621679e07aa7c9ab5f19b1a7dc9355b531ff1",
+      "source_bytes": 784
+    },
+    {
+      "source_path": "docs/case_studies/transfer_prediction/synthetic_replay/report.md",
+      "source_sha256": "e2d47f70c6f2c75e03e2da7a9e927c8cad0179b81c946c8d4cada76342cfa6e2",
+      "source_bytes": 1466
+    },
+    {
+      "source_path": "docs/case_studies/transfer_prediction/synthetic_replay/report.zh.md",
+      "source_sha256": "ec5074d096d161d95434e436ea5986f3798f2c1c0fddcfa0faa6fcd179018f4b",
+      "source_bytes": 1307
+    },
+    {
+      "source_path": "docs/case_studies/transfer_prediction/synthetic_replay/results.json",
+      "source_sha256": "66cc40f1b8f6ab6b37f5664ddfca52ae5c1c77857c5a4d7cc4950e1c9dc33f90",
+      "source_bytes": 3542
+    },
+    {
+      "source_path": "docs/case_studies/transfer_prediction/synthetic_test.json",
+      "source_sha256": "cee3817d64f54eb4817282e384b7831c33acdf76fb1945389b416713ec36beee",
+      "source_bytes": 847
+    },
+    {
+      "source_path": "scripts/run_transfer_prediction_case.py",
+      "source_sha256": "ba1ee4abbb40a05e8fd8c22178f9a4fb09345fe4420ee4405705ed7bc5fe8eda",
+      "source_bytes": 6062
+    },
+    {
+      "source_path": "src/promptcontrollab/transfer_prediction.py",
+      "source_sha256": "0a476a39b6992dad314d5c787de097ef686220cecd3b491dda860d7cdc2e498a",
+      "source_bytes": 12229
+    },
+    {
+      "source_path": "tests/test_transfer_prediction.py",
+      "source_sha256": "3f067e8cc336d8a2be4db17d9a86c3c583d5f36ee8c6154ddfb13cdbdf6bcb4e",
+      "source_bytes": 5089
+    }
+  ]
+}
