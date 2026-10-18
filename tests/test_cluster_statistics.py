@@ -16,7 +16,7 @@ def test_cluster_bootstrap_uses_independent_groups_not_repeated_rows() -> None:
             tasks.append(
                 {
                     "id": task_id,
-                    "input": f"task {group}",
+                    "input": f"task {group}-{repeat}",
                     "expected": "yes",
                     "slice": "default",
                     "meta": {"group_id": str(group)},
