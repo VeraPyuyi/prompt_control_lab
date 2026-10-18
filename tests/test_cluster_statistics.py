@@ -46,4 +46,7 @@ def test_cluster_bootstrap_uses_independent_groups_not_repeated_rows() -> None:
     assert stats["independent_group_count"] == 10
     assert stats["independent_group_count"] == 10
     assert stats["estimation_target"] in {"mean_task_effect", "mean_record_effect"}
-    assert stats["inference_status"] in {"cluster_bootstrap", "descriptive_only_nonindependent_rows"}
+    assert stats["inference_status"] in {
+        "cluster_bootstrap",
+        "descriptive_only_nonindependent_rows",
+    }
