@@ -120,4 +120,4 @@ Document the package as "PyPI-ready" rather than "published". Do not claim a
 PyPI install path until the package is actually available under
 `promptcontrollab`.
 
-Publication status / ????: [single source of truth](releases/publication-status.md).
+Publication status: [single source of truth](releases/publication-status.md).

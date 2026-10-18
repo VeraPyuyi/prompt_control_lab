@@ -466,7 +466,7 @@ def _rescore(
                 row.update(score_details(output, task["expected"], spec["metric"]))
             if spec.get("score_mode") == "preserve":
                 prediction: JsonDict = next(
-                    (p for p in spec["predictions"][arm] if p["id"] == item), {}
+                    (p for p in spec["predictions"][arm] if p["id"] == item), cast(JsonDict, {})
                 )
                 fixed = prediction.get("source_score", prediction.get("score"))
                 row["score"] = fixed if status == "completed" else None
@@ -509,16 +509,18 @@ def _rescore(
                     }
                 )
             elif spec["operation"] == "import":
-                prediction = next(
+                imported_prediction: JsonDict | None = next(
                     (value for value in spec["predictions"][arm] if value["id"] == item), None
                 )
                 imported_output = (
-                    prediction.get("output", prediction.get("output_text")) if prediction else None
+                    imported_prediction.get("output", imported_prediction.get("output_text"))
+                    if imported_prediction
+                    else None
                 )
-                imported_status = "completed" if prediction else "missing"
-                if prediction and (
-                    prediction.get("error")
-                    or prediction.get("status")
+                imported_status = "completed" if imported_prediction else "missing"
+                if imported_prediction and (
+                    imported_prediction.get("error")
+                    or imported_prediction.get("status")
                     in {
                         "failed",
                         "error",
@@ -530,7 +532,7 @@ def _rescore(
                     }
                 ):
                     imported_status = (
-                        "missing" if prediction.get("status") == "missing" else "service_error"
+                        "missing" if imported_prediction.get("status") == "missing" else "service_error"
                     )
                 if imported_status == "completed" and not isinstance(imported_output, str):
                     imported_status = "missing"

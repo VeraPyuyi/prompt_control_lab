@@ -6,7 +6,7 @@ from pathlib import Path
 import pytest
 
 
-def validate_protocol(payload: dict) -> None:
+def validate_protocol(payload: dict[str, object]) -> None:
     required = {
         "protocol_version",
         "benchmark_name",

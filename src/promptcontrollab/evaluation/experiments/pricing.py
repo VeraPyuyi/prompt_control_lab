@@ -12,6 +12,7 @@ def _rates(snapshot: dict[str, Any]) -> tuple[float, float]:
 def resolve_price_snapshot(
     budget: dict[str, Any], *, provider: str, model: str, phase: str
 ) -> dict[str, Any] | None:
+    """Return the provider/model/phase snapshot or a legacy global fallback."""
     snapshots = budget.get("price_snapshots")
     if isinstance(snapshots, list):
         for snapshot in snapshots:
@@ -46,6 +47,7 @@ def estimate_cost(
     model: str,
     phase: str,
 ) -> float | None:
+    """Estimate reported cost from known usage and a resolved price snapshot."""
     snapshot = resolve_price_snapshot(budget, provider=provider, model=model, phase=phase)
     if snapshot is None:
         return None
@@ -65,6 +67,7 @@ def reserve_cost(
     input_tokens: int,
     output_tokens: int,
 ) -> float | None:
+    """Reserve budget cost from an upper-bound token reservation."""
     snapshot = resolve_price_snapshot(budget, provider=provider, model=model, phase=phase)
     if snapshot is None:
         return None

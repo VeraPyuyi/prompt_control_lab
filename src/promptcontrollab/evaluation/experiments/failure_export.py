@@ -17,6 +17,7 @@ def export_failure_dataset(
     confirmed_expected: dict[str, str],
     version: str,
 ) -> dict[str, Any]:
+    """Write a new dataset version from confirmed failure records and lineage."""
     spec = read_json(job_dir / "spec.json")
     records = [read_json(path) for path in sorted((job_dir / "records").glob("*.json"))]
     tasks = {task["id"]: task for task in spec["data"]}

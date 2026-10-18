@@ -3,7 +3,7 @@
 from promptcontrollab.evaluation.experiments.assessment import assess
 
 
-def _records(task_id: str, score: float, arm: str) -> dict:
+def _records(task_id: str, score: float, arm: str) -> dict[str, object]:
     return {"id": task_id, "status": "completed", "score": score, "slice": "default"}
 
 
@@ -37,7 +37,7 @@ def test_cluster_bootstrap_uses_independent_groups_not_repeated_rows() -> None:
         spec,
         baseline,
         candidate,
-        expected_ids=[task["id"] for task in tasks],
+        expected_ids=[str(task["id"]) for task in tasks],
         scope="evaluation",
         budget={},
     )

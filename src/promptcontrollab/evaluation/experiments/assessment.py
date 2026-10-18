@@ -283,8 +283,10 @@ def assess(
                 break
     stats = None
     if matched:
-        if len(set(group_map.get(item, item) for item in matched)) >= 2 and all(
-            item in group_map for item in matched
+        if (
+            len(set(group_map.get(item, item) for item in matched)) >= 2
+            and all(item in group_map for item in matched)
+            and not dependence_fields
         ):
             stats = cluster_paired_compare(
                 left,
@@ -361,9 +363,9 @@ def assess(
     matched_components = [find(index) for index, task in enumerate(tasks) if task["id"] in matched]
     if len(set(matched_components)) != len(matched_components):
         dependence_fields.add("full_snapshot_connected_components")
-    if stats and stats.get("inference_status") != "cluster_bootstrap":
-        stats["inference_status"] = "iid_assumed"
-        if dependence_fields:
+    if stats:
+        stats["inference_status"] = stats.get("inference_status", "iid_assumed")
+        if dependence_fields and stats.get("inference_status") != "cluster_bootstrap":
             # Keep the raw resampling output only as explicitly invalidated
             # diagnostics; do not report row-wise intervals as group evidence.
             stats["iid_diagnostics"] = {

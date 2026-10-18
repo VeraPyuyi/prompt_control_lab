@@ -112,4 +112,4 @@ pcl install-plugin deepseek-harness --target ./tmp-pcl-deepseek-harness
 “PyPI-ready”，不要写成“已经发布”。在包真正以 `promptcontrollab` 名称可安装前，
 不要声称用户可以直接从 PyPI 安装。
 
-Publication status / ????: [single source of truth](releases/publication-status.md).
+发布状态: [单一事实来源](releases/publication-status.md)。

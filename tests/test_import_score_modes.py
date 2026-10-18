@@ -76,7 +76,8 @@ def test_preserve_rejects_mixed_versions_and_uses_external_direction(tmp_path: P
 
 def test_report_html_is_standalone_without_network_resources(tmp_path: Path) -> None:
     job = run_experiment(tmp_path, create_experiment(tmp_path, spec("preserve"))["id"])
-    html = (job_directory(tmp_path, job["id"]) / "report/report.en.html").read_text(encoding="utf-8")
+    report = job_directory(tmp_path, job["id"]) / "report/report.en.html"
+    html = report.read_text(encoding="utf-8")
     assert "<style>" in html and "<script>" not in html
     assert "http://" not in html and "https://" not in html and "src=\"http" not in html
 
