@@ -46,7 +46,7 @@ def _practical_html(assessment: dict[str, Any], language: str) -> str:
         section = practical.get(arm, {})
         value = section.get("known_cost")
         amount.append(
-            str(value)
+            f"{value} {section.get('cost_currency')} ({section.get('cost_basis')})"
             if section.get("cost_status") == "known" and value is not None
             else "未知或不完整"
             if zh
@@ -55,6 +55,20 @@ def _practical_html(assessment: dict[str, Any], language: str) -> str:
     delta_cost = practical.get("delta", {}).get("cost")
     amount.append("—" if delta_cost is None else str(delta_cost))
     rows.append("<tr>" + "".join(f"<td>{_html_value(c)}</td>" for c in amount) + "</tr>")
+    for field, en, cn in (
+        ("reserved_cost", "Reserved cost", "预留费用"),
+        ("estimated_cost", "Estimated cost", "估算费用"),
+        ("reported_cost", "Reported cost", "报告费用"),
+        ("actual_cost", "Actual cost", "实际费用"),
+    ):
+        cells = [cn if zh else en]
+        for arm in ("baseline", "candidate"):
+            section = practical.get(arm, {})
+            value = section.get(field)
+            currency = section.get("cost_currency")
+            cells.append(f"{value} {currency}" if value is not None and currency else "—")
+        cells.append("—")
+        rows.append("<tr>" + "".join(f"<td>{_html_value(c)}</td>" for c in cells) + "</tr>")
     headings = (
         ("指标", "原版本", "候选版本", "变化")
         if zh
@@ -133,6 +147,18 @@ def write_reports(
             "derived_score",
             "source_metric",
             "score_mode",
+            "derived_metric",
+            "actual_cost",
+            "reported_cost",
+            "estimated_cost",
+            "reserved_cost",
+            "cost_currency",
+            "actual_cost_currency",
+            "reported_cost_currency",
+            "estimated_cost_currency",
+            "reserved_cost_currency",
+            "price_source",
+            "price_snapshot",
             "expected",
             "output",
             "slice",

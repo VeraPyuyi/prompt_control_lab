@@ -10,6 +10,7 @@ from typing import Any
 from promptcontrollab.evaluation.statistics import cluster_paired_compare, paired_compare
 
 from .models import ComparisonAssessment
+from .pricing import cost_summary, estimate_cost, finite_cost, resolve_price_snapshot
 
 
 def _finite_measurement(value: object, *, tokens: bool = False) -> float | None:
@@ -40,13 +41,12 @@ def _practical_assessment(
     dependent: bool,
 ) -> dict[str, Any]:
     """Summarize resource measurements and choose a next action bounded by current evidence."""
-    rates = [
-        _finite_measurement(spec["budget"].get(key))
-        for key in ("input_cost_per_million", "output_cost_per_million")
-    ]
-    prices_known = all(rate is not None for rate in rates)
 
-    def arm_summary(rows: list[dict[str, Any]], scores: dict[str, float]) -> dict[str, Any]:
+    def arm_summary(
+        rows: list[dict[str, Any]],
+        scores: dict[str, float],
+        config: dict[str, Any],
+    ) -> dict[str, Any]:
         """Summarize one arm while retaining missing measurement counts and known zero values."""
         usable = {
             row["id"]: row for row in rows if isinstance(row.get("id"), str) and row["id"] in scores
@@ -93,30 +93,36 @@ def _practical_assessment(
             summary[f"known_{field}"] = _finite_measurement(sum(known)) if known else None
             summary[f"mean_{field}"] = sum(value / len(known) for value in known) if known else None
         costs = []
-        for index, row in enumerate(paired):
-            cost = _finite_measurement(row.get("actual_cost")) if prices_known else None
-            inputs = usage_values["input_tokens"][index]
-            outputs = usage_values["output_tokens"][index]
-            if cost is None and prices_known and inputs is not None and outputs is not None:
-                input_rate, output_rate = rates
-                assert input_rate is not None and output_rate is not None
-                cost = _finite_measurement(
-                    (inputs * input_rate + outputs * output_rate) / 1_000_000
+        for row in paired:
+            provider = row.get("observed_provider") or config.get("provider", "")
+            model = row.get("observed_model") or config.get("model", "")
+            snapshot = resolve_price_snapshot(
+                spec["budget"],
+                provider=provider,
+                model=model,
+                phase=scope,
+            )
+            cost_row = dict(row)
+            if "estimated_cost" not in cost_row:
+                cost_row["estimated_cost"] = estimate_cost(
+                    spec["budget"],
+                    row.get("usage") or {},
+                    provider=provider,
+                    model=model,
+                    phase=scope,
                 )
-            costs.append(cost)
-        known_costs = [value for value in costs if value is not None]
-        known_cost_total = _finite_measurement(sum(known_costs)) if known_costs else None
-        summary.update(
-            known_cost=known_cost_total,
-            cost_known_count=len(known_costs),
-            cost_unknown_count=len(matched) - len(known_costs),
-            cost_status="known"
-            if matched and len(known_costs) == len(matched) and known_cost_total is not None
-            else "unknown",
-        )
+            if "reported_cost" not in cost_row:
+                cost_row["reported_cost"] = finite_cost(row.get("actual_cost"))
+            if not cost_row.get("cost_currency") and snapshot:
+                cost_row["cost_currency"] = snapshot["currency"]
+            if snapshot and cost_row.get("estimated_cost") is not None:
+                cost_row.setdefault("estimated_cost_currency", snapshot["currency"])
+            costs.append(cost_row)
+        summary.update(cost_summary(costs))
         return summary
 
-    base, cand = arm_summary(baseline, left), arm_summary(candidate, right)
+    base = arm_summary(baseline, left, spec["baseline"])
+    cand = arm_summary(candidate, right, spec["candidate"])
     delta: dict[str, Any] = {
         "score_mean": cand["score_mean"] - base["score_mean"] if matched else None,
         "mean_latency_ms": None,
@@ -131,7 +137,9 @@ def _practical_assessment(
     ):
         if matched and base[count_field] == cand[count_field] == len(matched):
             delta[field] = cand[field] - base[field]
-    if base["cost_status"] == cand["cost_status"] == "known":
+    if base["cost_status"] == cand["cost_status"] == "known" and (
+        base["cost_currency"] == cand["cost_currency"] and base["cost_basis"] == cand["cost_basis"]
+    ):
         delta["cost"] = cand["known_cost"] - base["known_cost"]
     if comparability == "invalid_records":
         action = (
@@ -218,10 +226,15 @@ def _practical_assessment(
         "baseline": base,
         "candidate": cand,
         "delta": delta,
-        "score_direction": "lower_is_better"
+        "score_direction": spec["source_metric"]["direction"]
+        if spec.get("score_mode") == "preserve"
+        else "lower_is_better"
         if spec["metric"] == "format_error"
         else "higher_is_better",
-        "cost_basis": "configured_prices_and_reported_usage",
+        "cost_basis": base["cost_basis"] if base["cost_basis"] == cand["cost_basis"] else "mixed",
+        "cost_currency": base["cost_currency"]
+        if base["cost_currency"] == cand["cost_currency"]
+        else None,
         "evidence_range": evidence,
         "next_action": {"code": action[0], "en": action[1], "zh": action[2]},
     }
@@ -278,8 +291,8 @@ def assess(
     for task in spec["data"]:
         meta = task.get("meta", {})
         for key in ("group_id", "group", "document_id", "document", "task_id", "task"):
-            if isinstance(meta.get(key), str) and meta[key]:
-                group_map[task["id"]] = meta[key]
+            if isinstance(meta.get(key), (str, int)) and not isinstance(meta[key], bool):
+                group_map[task["id"]] = str(meta[key])
                 break
     tasks = spec["data"]
     parents = list(range(len(tasks)))
@@ -306,6 +319,19 @@ def assess(
     matched_components = [find(index) for index, task in enumerate(tasks) if task["id"] in matched]
     if len(set(matched_components)) != len(matched_components):
         dependence_fields.add("full_snapshot_connected_components")
+    # Count independent units after joining declared task groups with every existing
+    # input/sample connection. A group label cannot split a connected component.
+    seen_labels: dict[str, int] = {}
+    for index, task in enumerate(tasks):
+        label = group_map.get(task["id"])
+        if label is not None:
+            if label in seen_labels:
+                parents[find(index)] = find(seen_labels[label])
+            seen_labels[label] = index
+    independent_count = len(
+        {find(index) for index, task in enumerate(tasks) if task["id"] in matched}
+    )
+    single_group = bool(matched) and independent_count < 2
     stats = None
     if matched:
         if (
@@ -327,13 +353,28 @@ def assess(
                 estimation_target="mean_task_effect",
                 inference_status="cluster_bootstrap",
             )
+        elif single_group:
+            stats = {
+                "n": 1,
+                "baseline_mean": sum(left[item] for item in matched) / len(matched),
+                "candidate_mean": sum(right[item] for item in matched) / len(matched),
+                "mean_delta": sum(right[item] - left[item] for item in matched) / len(matched),
+                "record_count": len(matched),
+                "independent_group_count": 1,
+                "estimation_target": "mean_task_effect",
+                "bootstrap_ci": None,
+                "permutation_p_value": None,
+                "holm_adjusted_p_value": None,
+                "inference_status": "descriptive_only_insufficient_groups",
+                "interpretation": "insufficient_independent_groups",
+            }
         else:
             stats = paired_compare(
                 left, right, seed=spec["seed"], bootstrap_samples=2000, permutation_samples=2000
             ).to_json()
             stats.update(
                 record_count=len(matched),
-                independent_group_count=len(set(group_map.get(item, item) for item in matched)),
+                independent_group_count=independent_count,
                 estimation_target="mean_record_effect",
             )
     direction = (
@@ -344,7 +385,7 @@ def assess(
         else "higher_is_better"
     )
     effect_status = "insufficient_data"
-    if stats:
+    if stats and stats["bootstrap_ci"] is not None:
         lo, hi = stats["bootstrap_ci"]
         delta = stats["mean_delta"]
         adjusted = stats["holm_adjusted_p_value"]
@@ -450,7 +491,13 @@ def assess(
         "scope": scope,
         "differing_settings": differing,
         "paired_design": True,
-        "metric": spec["metric"],
+        "metric": (
+            f"{spec['source_metric']['id']}@{spec['source_metric']['version']}"
+            if spec.get("score_mode") == "preserve"
+            else spec["metric"]
+        ),
+        "score_mode": spec.get("score_mode", "recompute"),
+        "derived_metric": spec["metric"],
         "provenance": "user_supplied_predictions" if imported else "local_call_ledger",
         "limitations": (
             ["Imported model and prompt provenance is user-declared"] if imported else []
@@ -473,15 +520,7 @@ def assess(
         comparability["limitations"].append("Invalid or out-of-scope records were excluded")
         if stats:
             effect_status = "uncertain"
-    prices_known = all(
-        spec["budget"].get(key) is not None
-        for key in ("input_cost_per_million", "output_cost_per_million")
-    )
-    cost_status = (
-        "unknown"
-        if imported or not prices_known or budget.get("unknown_cost_calls", 0)
-        else "known"
-    )
+    cost_status = budget.get("cost_status", "unknown")
     if dependence_fields:
         comparability["limitations"].append(
             "Matched rows share inputs or sample/group metadata; inferential claims are disabled"
@@ -522,7 +561,7 @@ def assess(
         comparability=comparability["status"],
         coverage=str(coverage["status"]),
         effect=effect_status,
-        dependent=bool(dependence_fields),
+        dependent=bool(dependence_fields) or single_group,
     )
     return ComparisonAssessment(
         {

@@ -15,6 +15,7 @@ from promptcontrollab.evaluation.metrics import score_details, score_output
 
 from .assessment import assess
 from .models import ExperimentSpec, model_config
+from .pricing import estimate_cost, finite_cost, resolve_price_snapshot
 from .reporting import write_reports
 from .runtime import (
     ExperimentRuntime,
@@ -438,10 +439,54 @@ def _import_records(directory: Path, spec: dict[str, Any], arm: str) -> list[dic
             "error": source.get("error") if source else None,
             "usage": source.get("usage", {}) if source else {},
             "latency_ms": source.get("latency_ms") if source else None,
-            "actual_cost": source.get("actual_cost") if source else None,
+            **{
+                key: (source or {}).get(key)
+                for key in (
+                    "actual_cost",
+                    "reported_cost",
+                    "estimated_cost",
+                    "reserved_cost",
+                    "cost_currency",
+                    "actual_cost_currency",
+                    "reported_cost_currency",
+                    "estimated_cost_currency",
+                    "reserved_cost_currency",
+                    "price_source",
+                    "price_snapshot",
+                )
+            },
             "provenance": "imported",
             **_imported_conditions(source or {}),
         }
+        provider = row.get("observed_provider") or spec[arm]["provider"]
+        model = row.get("observed_model") or spec[arm]["model"]
+        snapshot = resolve_price_snapshot(
+            spec["budget"],
+            provider=provider,
+            model=model,
+            phase="evaluation",
+        )
+        row["estimated_cost"] = estimate_cost(
+            spec["budget"],
+            row["usage"],
+            provider=provider,
+            model=model,
+            phase="evaluation",
+        )
+        row["reported_cost"] = finite_cost((source or {}).get("reported_cost", row["actual_cost"]))
+        row["cost_source"] = "imported_receipt" if row["reported_cost"] is not None else None
+        if snapshot:
+            row.update(
+                price_snapshot=copy.deepcopy(snapshot),
+                price_source=snapshot.get("source", "configured_price_snapshot"),
+                estimated_cost_currency=snapshot["currency"],
+            )
+            if not row["cost_currency"] and row["reported_cost"] is None:
+                row["cost_currency"] = snapshot["currency"]
+        if row["reported_cost"] is not None and not row["cost_currency"]:
+            row["reported_cost_currency"] = row["actual_cost_currency"] = "unknown"
+        if status == "completed" and "@1" in spec["metric"]:
+            row.update(score_details(output_text, task["expected"], spec["metric"]))
         if "score_mode" in spec:
             original = (source or {}).get("source_score", (source or {}).get("score"))
             known = (
@@ -452,16 +497,22 @@ def _import_records(directory: Path, spec: dict[str, Any], arm: str) -> list[dic
             row.update(
                 source_score=original if known else None,
                 derived_score=score,
-                source_metric=copy.deepcopy(spec.get("source_metric")),
+                source_metric=copy.deepcopy(
+                    (source or {}).get("source_metric", spec.get("source_metric"))
+                ),
                 score_mode=spec["score_mode"],
                 score_provenance=copy.deepcopy((source or {}).get("provenance", {})),
             )
+            row["derived_metric"] = spec["metric"]
             if spec["score_mode"] == "preserve":
                 row["score"] = row["source_score"] if status == "completed" else None
+                row.update(
+                    metric_id=spec["source_metric"]["id"],
+                    metric_version=spec["source_metric"]["version"],
+                    direction=spec["source_metric"]["direction"],
+                )
                 if row["score"] is None and status == "completed":
                     row["status"] = "missing_score"
-        if status == "completed" and "@1" in spec["metric"]:
-            row.update(score_details(output_text, task["expected"], spec["metric"]))
         write_json(
             directory
             / "records"
