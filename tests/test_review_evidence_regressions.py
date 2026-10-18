@@ -127,7 +127,7 @@ def test_task_group_boundaries_use_independent_units(groups: int) -> None:
         assert result["effect"]["status"] == "improved"
 
 
-def test_connected_rows_count_one_independent_unit_and_never_resample_rows() -> None:
+def test_shared_input_does_not_merge_explicit_task_units_or_enable_inference() -> None:
     rows = [{"id": str(i), "status": "completed", "score": 0.0} for i in range(30)]
     result = assess(
         {
@@ -149,9 +149,13 @@ def test_connected_rows_count_one_independent_unit_and_never_resample_rows() -> 
         budget={},
     )
     stats = result["effect"]["statistics"]
-    assert stats["independent_group_count"] == 1
+    assert stats["independent_group_count"] == stats["n"] == 2
+    assert stats["record_count"] == 30
     assert stats["bootstrap_ci"] is None
+    assert stats["permutation_p_value"] is None
+    assert stats["holm_adjusted_p_value"] is None
     assert stats.get("iid_diagnostics", {}).get("bootstrap_ci") is None
+    assert stats["inference_status"] == "descriptive_only_nonindependent_rows"
     assert result["effect"]["status"] != "improved"
 
 

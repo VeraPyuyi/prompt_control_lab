@@ -13,10 +13,13 @@ from .models import ComparisonAssessment
 from .pricing import cost_summary, estimate_cost, finite_cost, resolve_price_snapshot
 
 
-def _group_label(value: object) -> str | None:
+def _group_label(value: object) -> str | int | None:
+    """Keep declared identity exact, including type; blank labels declare no group."""
     if isinstance(value, bool) or not isinstance(value, (str, int)):
         return None
-    return " ".join(unicodedata.normalize("NFKC", str(value)).casefold().split()) or None
+    if isinstance(value, str) and not value.strip():
+        return None
+    return value
 
 
 def _finite_measurement(value: object, *, tokens: bool = False) -> float | None:
@@ -308,25 +311,31 @@ def assess(
             index = parents[index]
         return index
 
-    seen_groups: dict[tuple[str, str], int] = {}
+    seen_groups: dict[tuple[str, str | int], int] = {}
     dependence_fields: set[str] = set()
+    normalized_inputs: dict[str, list[str]] = {}
     for index, task in enumerate(tasks):
-        normalized = " ".join(unicodedata.normalize("NFKC", task["input"]).casefold().split())
-        tokens = [("normalized_input", normalized)]
+        # Text recurrence is a diagnostic, never an identity edge or a group weight.
+        if task["id"] in matched:
+            normalized = " ".join(unicodedata.normalize("NFKC", task["input"]).casefold().split())
+            normalized_inputs.setdefault(normalized, []).append(task["id"])
         for key in ("group", "group_id", "sample_id", "source_id", "document_id"):
             value = _group_label(task.get("meta", {}).get(key))
-            if value is not None:
-                tokens.append(("group" if key in {"group", "group_id"} else key, value))
-        for token in tokens:
+            if value is None:
+                continue
+            token = ("group" if key in {"group", "group_id"} else key, value)
             if token in seen_groups:
                 parents[find(index)] = find(seen_groups[token])
             seen_groups[token] = index
+    input_duplicates = sorted(sorted(ids) for ids in normalized_inputs.values() if len(ids) > 1)
+    if input_duplicates:
+        dependence_fields.add("normalized_input")
     matched_components = [find(index) for index, task in enumerate(tasks) if task["id"] in matched]
     if len(set(matched_components)) != len(matched_components):
         dependence_fields.add("full_snapshot_connected_components")
-    # Count independent units after joining declared task groups with every existing
-    # input/sample connection. A group label cannot split a connected component.
-    seen_labels: dict[tuple[str, str], int] = {}
+    # Only exact declared identities join units across the immutable snapshot.
+    # Recognized field aliases and explicit bridge rows retain their existing meaning.
+    seen_labels: dict[tuple[str, str | int], int] = {}
     for index, task in enumerate(tasks):
         for key in group_fields:
             label = _group_label(task.get("meta", {}).get(key))
@@ -340,6 +349,23 @@ def assess(
     for item in matched:
         grouped.setdefault(group_map[item], []).append(item)
     independent_count = len(grouped)
+    grouping = {
+        "identity_policy": "exact_typed_values_nonblank",
+        "scope": "matched_completed_pairs",
+        "normalized_input_policy": "NFKC_casefold_whitespace",
+        "normalized_input_duplicates": input_duplicates,
+        "explicit_group_duplicates": sorted(
+            sorted(ids) for ids in grouped.values() if len(ids) > 1
+        ),
+        "explicit_group_fields": sorted(
+            {
+                key
+                for task in tasks
+                for key in (*group_fields, "sample_id", "source_id")
+                if _group_label(task.get("meta", {}).get(key)) is not None
+            }
+        ),
+    }
     insufficient_groups = bool(matched) and independent_count < 3
     stats: dict[str, Any] | None = None
     if matched:
@@ -536,9 +562,14 @@ def assess(
         if stats:
             effect_status = "uncertain"
     cost_status = budget.get("cost_status", "unknown")
-    if dependence_fields:
+    if input_duplicates:
         comparability["limitations"].append(
-            "Matched rows share inputs or sample/group metadata; inferential claims are disabled"
+            "Matched rows repeat normalized input text; inference is disabled, "
+            "but explicit group counts and weights are unchanged"
+        )
+    if "full_snapshot_connected_components" in dependence_fields:
+        comparability["limitations"].append(
+            "Matched rows share explicit sample/group metadata; inferential claims are disabled"
         )
     coverage = {
         "status": "complete" if complete else "partial" if matched else "none",
@@ -587,6 +618,7 @@ def assess(
                 "direction": direction,
                 "statistics": stats,
                 "matched_ids": matched,
+                "grouping": grouping,
                 "by_slice": by_slice,
                 "claim_scope": "matched_completed_pairs_only",
             },
