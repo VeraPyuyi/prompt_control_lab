@@ -442,6 +442,24 @@ def _import_records(directory: Path, spec: dict[str, Any], arm: str) -> list[dic
             "provenance": "imported",
             **_imported_conditions(source or {}),
         }
+        if "score_mode" in spec:
+            original = (source or {}).get("source_score", (source or {}).get("score"))
+            known = (
+                isinstance(original, (int, float))
+                and not isinstance(original, bool)
+                and 0 <= original <= 1
+            )
+            row.update(
+                source_score=original if known else None,
+                derived_score=score,
+                source_metric=copy.deepcopy(spec.get("source_metric")),
+                score_mode=spec["score_mode"],
+                score_provenance=copy.deepcopy((source or {}).get("provenance", {})),
+            )
+            if spec["score_mode"] == "preserve":
+                row["score"] = row["source_score"] if status == "completed" else None
+                if row["score"] is None and status == "completed":
+                    row["status"] = "missing_score"
         if status == "completed" and "@1" in spec["metric"]:
             row.update(score_details(output_text, task["expected"], spec["metric"]))
         write_json(

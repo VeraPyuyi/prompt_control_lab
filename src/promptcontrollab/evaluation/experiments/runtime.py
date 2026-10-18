@@ -89,7 +89,11 @@ def validate_completed_record(
         or not isinstance(score, (int, float))
         or not 0 <= score <= 1
         or not math.isfinite(score)
-        or score != score_output(record["output"], task["expected"], metric)
+        or score != (
+            record.get("source_score")
+            if imported and record.get("score_mode") == "preserve"
+            else score_output(record["output"], task["expected"], metric)
+        )
     ):
         raise ValueError("Persisted completion does not match its immutable task or score")
     if imported:

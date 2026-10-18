@@ -23,6 +23,15 @@ describe('experiment workspace', () => {
     expect(screen.getByRole('option', { name: 'Valid JSON · v1' })).toHaveValue('json_valid@1');
     expect(screen.getByRole('option', { name: 'JSON schema · v1' })).toHaveValue('json_schema@1');
   });
+  it('offers explicit external score preservation with metric identity', async () => {
+    render(<ExperimentPage language="en" />);
+    await userEvent.click(screen.getByRole('button', { name: 'Import results' }));
+    expect(screen.getByLabelText('Score mode')).toHaveValue('recompute');
+    await userEvent.selectOptions(screen.getByLabelText('Score mode'), 'preserve');
+    expect(screen.getByLabelText('External metric ID')).toBeInTheDocument();
+    expect(screen.getByLabelText('Metric version')).toBeInTheDocument();
+    expect(screen.getByLabelText('Reviewer')).toBeInTheDocument();
+  });
   it('runs the offline example without collecting a key or calling a model', async () => {
     const user = userEvent.setup();
     render(<ExperimentPage language="en" />);

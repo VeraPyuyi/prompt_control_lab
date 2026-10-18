@@ -281,7 +281,13 @@ def assess(
         if matched
         else None
     )
-    direction = "lower_is_better" if spec["metric"] == "format_error" else "higher_is_better"
+    direction = (
+        spec["source_metric"]["direction"]
+        if spec.get("score_mode") == "preserve"
+        else "lower_is_better"
+        if spec["metric"] == "format_error"
+        else "higher_is_better"
+    )
     effect_status = "insufficient_data"
     if stats:
         lo, hi = stats["bootstrap_ci"]

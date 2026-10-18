@@ -462,8 +462,14 @@ def _rescore(
                 if status == "completed" and isinstance(output, str)
                 else "unavailable",
             )
-            if status == "completed" and "@1" in spec["metric"]:
+            if status == "completed" and isinstance(output, str) and "@1" in spec["metric"]:
                 row.update(score_details(output, task["expected"], spec["metric"]))
+            if spec.get("score_mode") == "preserve":
+                prediction: JsonDict = next(
+                    (p for p in spec["predictions"][arm] if p["id"] == item), {}
+                )
+                fixed = prediction.get("source_score", prediction.get("score"))
+                row["score"] = fixed if status == "completed" else None
             differences = compare_values(source.get("score"), row["score"], atol=ATOL, rtol=RTOL)
             score_checks.append(
                 {

@@ -53,6 +53,14 @@ def normalize_import_document(payload: dict[str, Any], imports_root: Path) -> di
             for row in rows
         )
     ):
+        for row in rows:
+            scores = row.get("scores")
+            if isinstance(scores, dict):
+                chosen = payload.get("score_name")
+                if chosen is None or chosen not in scores:
+                    raise ValueError("Select score_name explicitly from imported scores")
+                row["source_score"] = scores[chosen]
+                row["score_name"] = chosen
         normalized = _prediction_rows(rows)
         result = {
             "kind": "predictions",

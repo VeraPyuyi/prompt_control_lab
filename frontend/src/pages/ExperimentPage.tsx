@@ -38,6 +38,8 @@ export function ExperimentPage({ language, writeEnabled = true, active = true }:
   const [outputPrice, setOutputPrice] = useState('');
   const [maxCost, setMaxCost] = useState('');
   const [metric, setMetric] = useState('exact_match');
+  const [scoreMode, setScoreMode] = useState('recompute');
+  const [sourceMetric, setSourceMetric] = useState({ id: '', version: '', reviewer: '', source: 'external', direction: 'higher_is_better', scale: [0, 1] });
   const [calls, setCalls] = useState(200);
   const [tokens, setTokens] = useState(20000);
   const [seconds, setSeconds] = useState(900);
@@ -46,6 +48,7 @@ export function ExperimentPage({ language, writeEnabled = true, active = true }:
   const [imports, setImports] = useState<{ baseline?: Json; candidate?: Json }>({});
   const [importText, setImportText] = useState({ baseline: '', candidate: '' });
   const [importPrompt, setImportPrompt] = useState({ baseline: '', candidate: '' });
+  const [scoreName, setScoreName] = useState('');
   const [jobs, setJobs] = useState<Json[]>([]);
   const [selected, setSelected] = useState('');
   const [job, setJob] = useState<Json>();
@@ -82,7 +85,7 @@ export function ExperimentPage({ language, writeEnabled = true, active = true }:
   }
   async function normalize(arm: 'baseline' | 'candidate', text = importText[arm], fileFormat = 'json') {
     try {
-      const result = await experimentRequest('/api/experiments/normalize-import', { text, format: fileFormat, arm, ...(importPrompt[arm] ? { prompt_id: importPrompt[arm] } : {}) });
+      const result = await experimentRequest('/api/experiments/normalize-import', { text, format: fileFormat, arm, ...(scoreName ? { score_name: scoreName } : {}), ...(importPrompt[arm] ? { prompt_id: importPrompt[arm] } : {}) });
       setImports(current => ({ ...current, [arm]: result }));
       if (result.kind === 'assets') {
         const content = result.assets?.[0]?.content;
@@ -127,6 +130,8 @@ export function ExperimentPage({ language, writeEnabled = true, active = true }:
         const right = imports.candidate ?? await normalize('candidate');
         if (left?.kind !== 'predictions' || right?.kind !== 'predictions') throw new Error(t('Paired evaluation needs per-item outputs for both prompts.', '成对比较需要两组逐条输出；资产或汇总指标可在上方查看。'));
         spec.predictions = { baseline: left.predictions, candidate: right.predictions };
+        spec.score_mode = scoreMode;
+        if (scoreMode === 'preserve') spec.source_metric = sourceMetric;
       }
       const created = await experimentRequest('/api/experiments', spec);
       setSelected(created.id); setJob(created);
@@ -179,6 +184,11 @@ export function ExperimentPage({ language, writeEnabled = true, active = true }:
         {operation !== 'optimize' && <label>{t('Candidate prompt', '候选提示词')}<textarea rows={5} value={candidate} onChange={e => setCandidate(e.target.value)} /></label>}</div>
         {operation === 'optimize' && <p className="field-help">{t('Search develops candidates on training data, selects on validation data, then compares the locked best on withheld data.', '搜索使用训练数据生成候选、验证数据选择候选，锁定后才在留出数据上比较。')}</p>}
         <label>{t('Scoring', '评分方式')}<select value={metric} onChange={e => setMetric(e.target.value)}>{[['exact_match', 'Exact answer', '精确答案'], ['contains', 'Contains answer', '包含答案'], ['numeric_tolerance:0.001', 'Numeric tolerance · 0.001', '数值容差 · 0.001'], ['classification_accuracy', 'Classification accuracy', '分类准确率'], ['format_error', 'Empty output check · lower is better', '空输出检查 · 越低越好'], ['json_valid@1', 'Valid JSON · v1', '有效 JSON · v1'], ['json_schema@1', 'JSON schema · v1', 'JSON schema · v1']].map(([value,en,cn]) => <option key={value} value={value}>{t(en,cn)}</option>)}</select></label>
+        {operation === 'import' && <>
+          <label>{t('Score name in export', '导出中的评分名称')}<input value={scoreName} onChange={e => { setScoreName(e.target.value); setImports({}); }} /></label>
+          <label>{t('Score mode', '评分模式')}<select value={scoreMode} onChange={e => setScoreMode(e.target.value)}><option value="recompute">{t('Recompute locally', '本地重新评分')}</option><option value="preserve">{t('Preserve external scores', '保留外部分数')}</option></select></label>
+          {scoreMode === 'preserve' && <>{(['id', 'version', 'reviewer'] as const).map(field => <label key={field}>{t(field === 'id' ? 'External metric ID' : field === 'version' ? 'Metric version' : 'Reviewer', field === 'id' ? '外部指标 ID' : field === 'version' ? '指标版本' : '评分者')}<input value={sourceMetric[field]} onChange={e => setSourceMetric({ ...sourceMetric, [field]: e.target.value })} /></label>)}<label>{t('Score direction', '分数方向')}<select value={sourceMetric.direction} onChange={e => setSourceMetric({ ...sourceMetric, direction: e.target.value })}><option value="higher_is_better">{t('Higher is better', '越高越好')}</option><option value="lower_is_better">{t('Lower is better', '越低越好')}</option></select></label></>}
+        </>}
         <details><summary>{t('Dataset · CSV / JSONL / JSON', '任务数据 · CSV / JSONL / JSON')}</summary>
           <input aria-label={t('Upload dataset', '上传任务数据')} type="file" accept=".csv,.json,.jsonl" onChange={e => void readFile(e.target.files?.[0], (text, fmt) => { setDataText(text); setFormat(fmt); setSyntheticData(false); })} />
           <select aria-label={t('Dataset format', '数据格式')} value={format} onChange={e => setFormat(e.target.value)}><option>jsonl</option><option>csv</option><option>json</option></select>
