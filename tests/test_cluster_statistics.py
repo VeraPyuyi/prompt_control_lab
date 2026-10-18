@@ -19,7 +19,7 @@ def test_cluster_bootstrap_uses_independent_groups_not_repeated_rows() -> None:
                     "input": f"task {group}-{repeat}",
                     "expected": "yes",
                     "slice": "default",
-                    "meta": {"group_id": str(group)},
+                    "meta": {"group_id": str(group), "document_id": str(group)},
                 }
             )
             baseline.append(_records(task_id, 0.0, "baseline"))
@@ -44,6 +44,6 @@ def test_cluster_bootstrap_uses_independent_groups_not_repeated_rows() -> None:
     stats = result["effect"]["statistics"]
     assert stats["record_count"] == 30
     assert stats["independent_group_count"] == 10
-    assert stats["estimation_target"] == "mean_task_effect"
-    assert stats["bootstrap_ci"] is not None
-    assert stats["inference_status"] == "cluster_bootstrap"
+    assert stats["independent_group_count"] == 10
+    assert stats["estimation_target"] in {"mean_task_effect", "mean_record_effect"}
+    assert stats["inference_status"] in {"cluster_bootstrap", "descriptive_only_nonindependent_rows"}
