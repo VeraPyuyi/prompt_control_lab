@@ -218,6 +218,72 @@ def test_resume_requires_explicit_boolean_retry_option(
         assert retries == [False, True]
 
 
+def test_failure_dataset_endpoint_exports_without_resubmitting_experiment(tmp_path: Path) -> None:
+    job = run_experiment(tmp_path, create_experiment(tmp_path, _spec())["id"])
+    directory = job_directory(tmp_path, job["id"])
+    job_before = (directory / "job.json").read_bytes()
+    events_before = (directory / "events.jsonl").read_bytes()
+    task = _spec()["data"][0]
+    payload = {
+        "selected_ids": [task["id"]],
+        "confirmed_expected": {task["id"]: "reviewed answer"},
+        "version": "reviewed-v2",
+    }
+    with TestClient(create_app(runs_dir=tmp_path), base_url="http://127.0.0.1") as client:
+        path = f"/api/experiments/{job['id']}/failure-dataset"
+        assert client.post(path, json=payload).status_code == 403
+        headers = _headers(client)
+        missing = client.post(path, json={**payload, "confirmed_expected": {}}, headers=headers)
+        assert missing.status_code == 422
+        response = client.post(path, json=payload, headers=headers)
+        assert response.status_code == 200, response.text
+        exported = response.json()
+        assert exported["records"][0]["id"] == task["id"]
+        assert exported["records"][0]["expected"] == "reviewed answer"
+        assert exported["records"][0]["meta"]["not_for_current_withheld_training"] is True
+        assert exported["usage"] == "for_follow_up_experiments_only"
+        assert json.loads((directory / "datasets/reviewed-v2.json").read_bytes()) == exported
+        duplicate = client.post(path, json=payload, headers=headers)
+        assert duplicate.status_code == 422
+        assert json.loads((directory / "datasets/reviewed-v2.json").read_bytes()) == exported
+    assert (directory / "job.json").read_bytes() == job_before
+    assert (directory / "events.jsonl").read_bytes() == events_before
+
+
+@pytest.mark.parametrize(
+    "change",
+    [
+        {"version": "../spec"},
+        {"version": "..\\spec"},
+        {"version": None},
+        {"selected_ids": ["unknown"], "confirmed_expected": {"unknown": "yes"}},
+        {"selected_ids": "example-1"},
+        {"confirmed_expected": []},
+        {"confirmed_expected": {"sum-1": 42}},
+    ],
+)
+def test_failure_dataset_rejects_invalid_inputs_without_writing(
+    tmp_path: Path, change: dict[str, Any]
+) -> None:
+    job = run_experiment(tmp_path, create_experiment(tmp_path, _spec())["id"])
+    directory = job_directory(tmp_path, job["id"])
+    spec_before = (directory / "spec.json").read_bytes()
+    task_id = _spec()["data"][0]["id"]
+    payload = {
+        "selected_ids": [task_id],
+        "confirmed_expected": {task_id: "reviewed answer"},
+        "version": "reviewed-v2",
+        **change,
+    }
+    with TestClient(create_app(runs_dir=tmp_path), base_url="http://127.0.0.1") as client:
+        response = client.post(
+            f"/api/experiments/{job['id']}/failure-dataset", json=payload, headers=_headers(client)
+        )
+        assert response.status_code == 422, response.text
+    assert (directory / "spec.json").read_bytes() == spec_before
+    assert not (directory / "datasets").exists()
+
+
 def test_error_responses_redact_session_keys_and_exports_use_allowlist(tmp_path: Path) -> None:
     job = run_experiment(tmp_path, create_experiment(tmp_path, _spec())["id"])
     with TestClient(create_app(runs_dir=tmp_path), base_url="http://127.0.0.1") as client:

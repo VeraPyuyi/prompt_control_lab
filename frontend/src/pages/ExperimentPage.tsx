@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { ArrowRight, Download, FlaskConical, Play, Square, WandSparkles } from 'lucide-react';
 import type { Language } from '../types';
 import { experimentRequest, type Json } from '../experimentApi';
-import { PairedRecordsPanel } from '../components/PairedRecordsPanel';
+import { FailureDatasetPanel } from '../components/FailureDatasetPanel';
 
 const sampleData = [
   ['A wonderful service.', 'positive'], ['This is a terrible product.', 'negative'],
@@ -255,7 +255,7 @@ export function ExperimentPage({ language, writeEnabled = true, active = true }:
         {assessment && <p className="experiment-next"><strong>{t('Next step', '下一步')}</strong> · {nextAction}</p>}
         {job.optimization && <details open><summary>{t('Search history and selected candidate', '搜索记录与选中候选')}</summary><p className="field-help">{t('Validation selects the candidate. The effect above is the separate withheld comparison; completion alone does not establish an improvement.', '验证集用于选候选，上方效果来自单独的留出比较；搜索完成本身不代表改进有效。')}</p><table><thead><tr><th>{t('Round', '轮次')}</th><th>{t('Validation score', '验证分数')}</th><th>{t('Selection', '选择')}</th></tr></thead><tbody>{job.optimization.history?.map((entry: Json) => <tr key={entry.id}><td>{entry.round}</td><td>{number(entry.validation_score)}</td><td>{entry.id === job.optimization.best_id ? t('Selected', '已选中') : entry.validation_complete ? t('Compared', '已比较') : t('Incomplete', '未完成')}</td></tr>)}</tbody></table><pre>{job.optimization.candidate?.prompt}</pre><p className="field-help">{t('Stop reason', '停止原因')}: {label(job.optimization.stop_reason)}</p></details>}
         <div className="experiment-downloads">{finalStates.has(job.status) && [['experiment.zip', t('Portable bundle', '完整结果包')], [`report.${language}.html`, t('Readable report', '可读报告')], ['records.csv', 'CSV']].map(([file, title]) => <a key={file} className="button" href={`/api/experiments/${selected}/artifacts/${file}`}><Download size={15} />{title}</a>)}</div>
-        {pairedRecords && <details open><summary>{t('Inspect paired outputs', '查看配对输出')} ({allRows.length})</summary><PairedRecordsPanel records={pairedRecords} language={language} /></details>}
+        {pairedRecords && finalStates.has(job.status) && <details open><summary>{t('Inspect paired outputs', '查看配对输出')} ({allRows.length})</summary><FailureDatasetPanel key={selected} jobId={selected} records={pairedRecords} language={language} writeEnabled={writeEnabled} /></details>}
       </>}
     </section>
   </div>;

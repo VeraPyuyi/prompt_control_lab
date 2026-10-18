@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import copy
+import re
 import time
 from pathlib import Path
 from typing import Any
@@ -21,14 +22,27 @@ def export_failure_dataset(
     spec = read_json(job_dir / "spec.json")
     records = [read_json(path) for path in sorted((job_dir / "records").glob("*.json"))]
     tasks = {task["id"]: task for task in spec["data"]}
-    if not selected_ids:
-        raise ValueError("Select at least one failure to export")
-    if not version.strip():
-        raise ValueError("Dataset version is required")
+    if (
+        not isinstance(selected_ids, list)
+        or not selected_ids
+        or any(not isinstance(item, str) or item not in tasks for item in selected_ids)
+    ):
+        raise ValueError("Select at least one known example to export")
+    if not isinstance(version, str) or not re.fullmatch(
+        r"[A-Za-z0-9][A-Za-z0-9_.-]{0,95}", version
+    ):
+        raise ValueError("Dataset version must be a filename-safe identifier (1-96 characters)")
+    target = job_dir / "datasets" / f"{version}.json"
+    if target.resolve().parent.parent != job_dir.resolve():
+        raise ValueError("Dataset export cannot escape its experiment")
+    if target.exists():
+        raise ValueError("Dataset version already exists; choose a new version")
+    if not isinstance(confirmed_expected, dict):
+        raise ValueError("Expected answers must be confirmed by example ID")
     exported = []
-    for item_id in selected_ids:
-        if item_id not in confirmed_expected:
-            raise ValueError(f"Expected answer for {item_id} must be confirmed")
+    for item_id in dict.fromkeys(selected_ids):
+        if not isinstance(confirmed_expected.get(item_id), str):
+            raise ValueError(f"Expected answer for {item_id} must be confirmed as text")
         task = tasks[item_id]
         source_rows = [row for row in records if row.get("id") == item_id]
         exported.append(
@@ -65,6 +79,5 @@ def export_failure_dataset(
         "records": exported,
         "usage": "for_follow_up_experiments_only",
     }
-    target = job_dir / "datasets" / f"{version}.json"
     write_json(target, payload)
     return payload

@@ -284,6 +284,23 @@ def register_experiment_api(app: FastAPI, root: Path, deployment_mode: str) -> N
 
         return get_experiment(root, job_id)
 
+    @app.post("/api/experiments/{job_id}/failure-dataset")
+    async def failure_dataset(job_id: str, request: Request) -> dict[str, Any]:
+        payload = await document(request)
+        local(request)
+        directory = job_path(job_id)
+        from promptcontrollab.evaluation.experiments.failure_export import export_failure_dataset
+
+        try:
+            return export_failure_dataset(
+                directory,
+                selected_ids=payload.get("selected_ids", []),
+                confirmed_expected=payload.get("confirmed_expected", {}),
+                version=payload.get("version", ""),
+            )
+        except (ValueError, TypeError) as exc:
+            raise HTTPException(422, clean_error(exc)) from exc
+
     @app.post("/api/experiments/{job_id}/{action}")
     async def manage(job_id: str, action: str, request: Request) -> dict[str, Any]:
         payload = await document(request)
@@ -322,23 +339,6 @@ def register_experiment_api(app: FastAPI, root: Path, deployment_mode: str) -> N
         return StreamingResponse(
             stream(), media_type="text/event-stream", headers={"Cache-Control": "no-cache"}
         )
-
-    @app.post("/api/experiments/{job_id}/failure-dataset")
-    async def failure_dataset(job_id: str, request: Request) -> dict[str, Any]:
-        payload = await document(request)
-        local(request)
-        directory = job_path(job_id)
-        from promptcontrollab.evaluation.experiments.failure_export import export_failure_dataset
-
-        try:
-            return export_failure_dataset(
-                directory,
-                selected_ids=payload.get("selected_ids", []),
-                confirmed_expected=payload.get("confirmed_expected", {}),
-                version=str(payload.get("version", "")),
-            )
-        except (ValueError, TypeError) as exc:
-            raise HTTPException(422, clean_error(exc)) from exc
 
     @app.get("/api/experiments/{job_id}/artifacts/{filename}")
     def artifact(job_id: str, filename: str, request: Request) -> FileResponse:

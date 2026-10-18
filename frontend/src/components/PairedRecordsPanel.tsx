@@ -2,8 +2,9 @@ import { useMemo, useState } from 'react';
 import type { Json } from '../experimentApi';
 
 type Pair = { id: string; baseline?: Json; candidate?: Json };
+type Review = { expected: Map<string, string>; onChange: (id: string, expected: string | undefined) => void; disabled: boolean };
 
-export function PairedRecordsPanel({ records, language }: { records: Json; language: 'en' | 'zh' }) {
+export function PairedRecordsPanel({ records, language, review }: { records: Json; language: 'en' | 'zh'; review?: Review }) {
   const zh = language === 'zh';
   const t = (en: string, cn: string) => zh ? cn : en;
   const [status, setStatus] = useState('all');
@@ -12,10 +13,9 @@ export function PairedRecordsPanel({ records, language }: { records: Json; langu
   const pageSize = 50;
   const pairs = useMemo(() => {
     const map = new Map<string, Pair>();
-    for (const row of [...(records.baseline ?? []), ...(records.candidate ?? [])] as Json[]) {
+    for (const arm of ['baseline', 'candidate'] as const) for (const row of (records[arm] ?? []) as Json[]) {
       const current = map.get(String(row.id)) ?? { id: String(row.id) };
-      if (row.arm === 'baseline' || row.name === 'baseline') current.baseline = row;
-      if (row.arm === 'candidate' || row.name === 'candidate') current.candidate = row;
+      current[arm] = row;
       map.set(String(row.id), current);
     }
     return [...map.values()].sort((a, b) => {
@@ -49,8 +49,11 @@ export function PairedRecordsPanel({ records, language }: { records: Json; langu
       <button disabled={page === 0} onClick={() => setPage(page - 1)}>{t('Previous', '上一页')}</button>
       <button disabled={(page + 1) * pageSize >= filtered.length} onClick={() => setPage(page + 1)}>{t('Next', '下一页')}</button>
     </div>
-    <div className="experiment-table-wrap"><table><thead><tr><th>ID</th><th>{t('Original', '原版本')}</th><th>{t('Candidate', '候选版本')}</th></tr></thead><tbody>
-      {pageRows.map(pair => <tr key={pair.id}><td>{pair.id}</td><td>{pair.baseline?.output ?? '—'}</td><td>{pair.candidate?.output ?? t('Missing', '缺失')}</td></tr>)}
+    <div className="experiment-table-wrap"><table><thead><tr><th>ID</th><th>{t('Original', '原版本')}</th><th>{t('Candidate', '候选版本')}</th>{review && <th>{t('Review for export', '复核导出')}</th>}</tr></thead><tbody>
+      {pageRows.map(pair => <tr key={pair.id}><td>{pair.id}</td><td>{pair.baseline?.output ?? '—'}</td><td>{pair.candidate?.output ?? t('Missing', '缺失')}</td>{review && <td>
+        <input type="checkbox" aria-label={t(`Select ${pair.id} for export`, `选择 ${pair.id} 导出`)} checked={review.expected.has(pair.id)} disabled={review.disabled} onChange={e => review.onChange(pair.id, e.target.checked ? String(pair.baseline?.expected ?? pair.candidate?.expected ?? '') : undefined)} />
+        {review.expected.has(pair.id) && <label>{t(`Expected answer for ${pair.id}`, `${pair.id} 的期望答案`)}<textarea value={review.expected.get(pair.id)} disabled={review.disabled} onChange={e => review.onChange(pair.id, e.target.value)} /></label>}
+      </td>}</tr>)}
     </tbody></table></div>
   </div>;
 }
