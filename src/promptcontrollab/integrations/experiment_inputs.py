@@ -58,6 +58,20 @@ def parse_dataset(
 ) -> list[dict[str, Any]]:
     """Parse bounded task records and validate mapped text columns and unique IDs."""
     rows = parse_document(text, format)
+    export = None
+    if isinstance(rows, dict) and rows.get("schema_version") == "experiment-failure-dataset/v1":
+        export = rows
+        if (
+            export.get("usage") != "for_follow_up_experiments_only"
+            or not isinstance(export.get("version"), str)
+            or not export["version"].strip()
+            or not isinstance(export.get("source_experiment_id"), str)
+            or not export["source_experiment_id"].strip()
+        ):
+            raise ValueError(
+                "Failure dataset requires version, source experiment and follow-up usage"
+            )
+        rows = export.get("records")
     if not isinstance(rows, list) or not rows or len(rows) > 10_000:
         raise ValueError("Provide between 1 and 10,000 task records")
     if mapping is not None and (
@@ -85,6 +99,17 @@ def parse_dataset(
         seen.add(record["id"])
         record["slice"] = row.get("slice") or "default"
         record["meta"] = dict(row["meta"]) if isinstance(row.get("meta"), dict) else {}
+        if export is not None:
+            if not isinstance(row.get("lineage"), dict):
+                raise ValueError(f"Row {index}: failure dataset requires lineage")
+            record["meta"].update(
+                dataset_version=export["version"],
+                source_experiment_id=export["source_experiment_id"],
+                source_snapshot_hash=export.get("source_snapshot_hash"),
+                failure_lineage=row["lineage"],
+                failure_export=True,
+                not_for_current_withheld_training=True,
+            )
         if row.get("group_id"):
             record["meta"]["group_id"] = row["group_id"]
         records.append(record)

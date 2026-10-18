@@ -51,10 +51,15 @@ def test_mixed_model_costs_use_phase_snapshots(tmp_path: Path) -> None:
     job = run_experiment(tmp_path, create_experiment(tmp_path, spec)["id"], _provider)
     records = sorted((job_directory(tmp_path, job["id"]) / "records").glob("*.json"))
     costs = sorted(
-        float(__import__("json").loads(path.read_text())["actual_cost"]) for path in records
+        float(__import__("json").loads(path.read_text())["estimated_cost"]) for path in records
     )
     assert costs == [0.0012, 0.0034]
     budget = job["budget"]
-    assert budget["reported_cost"] == 0.0046
+    assert budget["reported_cost"] is None
+    assert budget["actual_cost"] is None
+    assert all(
+        __import__("json").loads(path.read_text())["actual_cost"] is None for path in records
+    )
     assert budget["estimated_cost"] == 0.0046
-    assert budget["reserved_cost"] >= budget["reported_cost"]
+    assert budget["cost_currency"] == "USD"
+    assert budget["reserved_cost"] >= budget["estimated_cost"]

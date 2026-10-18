@@ -38,6 +38,12 @@ def register_commands(subcommands: argparse._SubParsersAction[argparse.ArgumentP
     replay.add_argument("--bundle", type=Path, required=True)
     replay.add_argument("--out", type=Path, required=True)
     replay.set_defaults(func=_replay)
+    protocol = actions.add_parser("protocol", help="Validate a benchmark declaration and replay")
+    protocol.add_argument("--input", type=Path, required=True)
+    protocol.add_argument(
+        "--out", type=Path, help="Replay the declared local bundle into this folder"
+    )
+    protocol.set_defaults(func=_protocol)
     research = subcommands.add_parser(
         "research", help="Readout, response, cost, transfer, and replay tools"
     )
@@ -126,6 +132,23 @@ def _replay(args: argparse.Namespace) -> None:
     from promptcontrollab.evaluation.experiments.replay import replay_experiment
 
     print(json.dumps(replay_experiment(args.bundle, args.out), ensure_ascii=False, indent=2))
+
+
+def _protocol(args: argparse.Namespace) -> None:
+    from promptcontrollab.evaluation.experiments.protocol import replay_protocol, validate_protocol
+
+    document = json.loads(args.input.read_text(encoding="utf-8-sig"))
+    result = (
+        replay_protocol(document, base_dir=args.input.parent, out_dir=args.out)
+        if args.out
+        else {"protocol_status": "passed", "declaration": validate_protocol(document)}
+    )
+    print(json.dumps(result, ensure_ascii=False, indent=2))
+    replay = result.get("replay")
+    if isinstance(replay, dict) and any(
+        replay[key]["status"] != "passed" for key in ("integrity", "numerical_replay")
+    ):
+        raise SystemExit(1)
 
 
 def _research_manage(args: argparse.Namespace) -> None:
