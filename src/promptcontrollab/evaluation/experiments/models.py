@@ -129,6 +129,8 @@ class ExperimentSpec:
             "title",
             "synthetic",
             "provenance",
+            "score_mode",
+            "source_metric",
         }
         if set(spec) - allowed:
             raise ValueError(
@@ -208,6 +210,9 @@ class ExperimentSpec:
             "max_cost",
             "input_cost_per_million",
             "output_cost_per_million",
+            "currency",
+            "effective_date",
+            "price_snapshots",
         }:
             raise ValueError("Unsupported budget fields")
         defaults = {"max_calls": 100, "max_output_tokens": 25600, "max_seconds": 300}
@@ -215,6 +220,32 @@ class ExperimentSpec:
             budget[key] = (_number if key == "max_seconds" else _integer)(
                 budget.get(key, default), f"budget.{key}", positive=key == "max_seconds"
             )
+        if "price_snapshots" in budget:
+            snapshots = budget["price_snapshots"]
+            if not isinstance(snapshots, list) or not snapshots:
+                raise ValueError("price_snapshots must be a nonempty list")
+            for snapshot in snapshots:
+                if not isinstance(snapshot, dict):
+                    raise ValueError("Each price snapshot must be an object")
+                for key in (
+                    "provider",
+                    "model",
+                    "phase",
+                    "currency",
+                    "effective_date",
+                    "input_cost_per_million",
+                    "output_cost_per_million",
+                ):
+                    if not isinstance(snapshot.get(key), str) and key in {
+                        "provider",
+                        "model",
+                        "phase",
+                        "currency",
+                        "effective_date",
+                    }:
+                        raise ValueError(f"price snapshot {key} must be a string")
+                    if key.endswith("_per_million"):
+                        _number(snapshot[key], f"price snapshot {key}")
         for key in ("max_cost", "input_cost_per_million", "output_cost_per_million"):
             if key in budget and budget[key] is not None:
                 _number(budget[key], f"budget.{key}")
@@ -232,6 +263,23 @@ class ExperimentSpec:
             opt[key] = _integer(opt.get(key, default), f"optimization.{key}", positive=True)
         if "reflection" in opt:
             opt["reflection"] = model_config(opt["reflection"], "optimization.reflection")
+        if "score_mode" in spec and (
+            operation != "import" or spec["score_mode"] not in {"preserve", "recompute"}
+        ):
+            raise ValueError("score_mode requires import and must be preserve or recompute")
+        if spec.get("score_mode") == "preserve" or "source_metric" in spec:
+            identity = spec.get("source_metric")
+            if not isinstance(identity, dict) or any(
+                not isinstance(identity.get(key), str) or not identity[key].strip()
+                for key in ("id", "version", "source", "reviewer")
+            ):
+                raise ValueError("source_metric requires id, version, source and reviewer")
+            if identity.get("direction") not in {"higher_is_better", "lower_is_better"}:
+                raise ValueError("source_metric requires explicit direction")
+            if identity.get("scale") != [0, 1]:
+                raise ValueError(
+                    "source_metric scale must be [0, 1]; other scales cannot be pooled"
+                )
         if operation == "import":
             predictions = spec.get("predictions")
             if not isinstance(predictions, dict) or set(predictions) != {"baseline", "candidate"}:
@@ -245,6 +293,10 @@ class ExperimentSpec:
                     raise ValueError(f"predictions.{arm} must be a list of objects")
                 seen = set()
                 for row in records:
+                    if spec.get("score_mode") == "preserve" and (
+                        row.get("source_metric", spec["source_metric"]) != spec["source_metric"]
+                    ):
+                        raise ValueError("Imported metric identity differs from source_metric")
                     item_id = row.get("id")
                     if not isinstance(item_id, str) or item_id not in ids or item_id in seen:
                         raise ValueError(f"predictions.{arm} contains a duplicate or unknown ID")

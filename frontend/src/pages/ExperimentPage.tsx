@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { ArrowRight, Download, FlaskConical, Play, Square, WandSparkles } from 'lucide-react';
 import type { Language } from '../types';
 import { experimentRequest, type Json } from '../experimentApi';
+import { FailureDatasetPanel } from '../components/FailureDatasetPanel';
 
 const sampleData = [
   ['A wonderful service.', 'positive'], ['This is a terrible product.', 'negative'],
@@ -38,6 +39,8 @@ export function ExperimentPage({ language, writeEnabled = true, active = true }:
   const [outputPrice, setOutputPrice] = useState('');
   const [maxCost, setMaxCost] = useState('');
   const [metric, setMetric] = useState('exact_match');
+  const [scoreMode, setScoreMode] = useState('recompute');
+  const [sourceMetric, setSourceMetric] = useState({ id: '', version: '', reviewer: '', source: 'external', direction: 'higher_is_better', scale: [0, 1] });
   const [calls, setCalls] = useState(200);
   const [tokens, setTokens] = useState(20000);
   const [seconds, setSeconds] = useState(900);
@@ -46,6 +49,7 @@ export function ExperimentPage({ language, writeEnabled = true, active = true }:
   const [imports, setImports] = useState<{ baseline?: Json; candidate?: Json }>({});
   const [importText, setImportText] = useState({ baseline: '', candidate: '' });
   const [importPrompt, setImportPrompt] = useState({ baseline: '', candidate: '' });
+  const [scoreName, setScoreName] = useState('');
   const [jobs, setJobs] = useState<Json[]>([]);
   const [selected, setSelected] = useState('');
   const [job, setJob] = useState<Json>();
@@ -82,7 +86,7 @@ export function ExperimentPage({ language, writeEnabled = true, active = true }:
   }
   async function normalize(arm: 'baseline' | 'candidate', text = importText[arm], fileFormat = 'json') {
     try {
-      const result = await experimentRequest('/api/experiments/normalize-import', { text, format: fileFormat, arm, ...(importPrompt[arm] ? { prompt_id: importPrompt[arm] } : {}) });
+      const result = await experimentRequest('/api/experiments/normalize-import', { text, format: fileFormat, arm, ...(scoreName ? { score_name: scoreName } : {}), ...(importPrompt[arm] ? { prompt_id: importPrompt[arm] } : {}) });
       setImports(current => ({ ...current, [arm]: result }));
       if (result.kind === 'assets') {
         const content = result.assets?.[0]?.content;
@@ -127,6 +131,8 @@ export function ExperimentPage({ language, writeEnabled = true, active = true }:
         const right = imports.candidate ?? await normalize('candidate');
         if (left?.kind !== 'predictions' || right?.kind !== 'predictions') throw new Error(t('Paired evaluation needs per-item outputs for both prompts.', '成对比较需要两组逐条输出；资产或汇总指标可在上方查看。'));
         spec.predictions = { baseline: left.predictions, candidate: right.predictions };
+        spec.score_mode = scoreMode;
+        if (scoreMode === 'preserve') spec.source_metric = sourceMetric;
       }
       const created = await experimentRequest('/api/experiments', spec);
       setSelected(created.id); setJob(created);
@@ -144,6 +150,7 @@ export function ExperimentPage({ language, writeEnabled = true, active = true }:
   const practical = assessment?.practical;
   const number = (value: unknown) => typeof value === 'number' && Number.isFinite(value) ? value !== 0 && Math.abs(value) < 0.001 ? value.toExponential(2) : value.toFixed(3) : '—';
   const allRows = records ? [...(records.baseline ?? []).map((row: Json) => ({ ...row, arm: 'baseline' })), ...(records.candidate ?? []).map((row: Json) => ({ ...row, arm: 'candidate' }))] : [];
+  const pairedRecords = records ? { baseline: records.baseline ?? [], candidate: records.candidate ?? [] } : undefined;
   const labels: Record<string, string> = zh ? { comparable: '条件一致', confounded: '多项条件同时变化', declared_only: '来源由导入者声明', improved: '支持提升', regressed: '发现退步', uncertain: '提升尚不明确', no_observed_change: '未观察到变化', insufficient_data: '样本不足', completed: '已完成', completed_with_errors: '完成，部分样本出错', queued: '排队中', running: '运行中', stopped: '已停止', cancelled: '已取消', failed: '运行失败', unknown: '未确定', known: '已记录', complete: '完整', partial: '不完整' } : {};
   Object.assign(labels, zh ? { preparing: '准备中', evaluation: '评估', withheld: '留出比较', search: '搜索', validation: '验证', training: '训练', final: '最终比较', cancelling: '正在取消', import: '导入', imported: '已导入', baseline: '原版本', candidate: '候选版本', parse_error: '解析失败', format_error: '格式错误', empty_output: '空输出', model_error: '模型输出错误', service_error: '服务错误', timeout: '超时', max_rounds: '达到轮数上限', patience: '连续验证无提升', max_calls: '达到调用上限', max_output_tokens: '达到输出预算', max_seconds: '达到时间上限' } : {});
   const label = (value: unknown) => typeof value === 'string' ? labels[value] ?? value.replaceAll('_', ' ') : '—';
@@ -178,7 +185,12 @@ export function ExperimentPage({ language, writeEnabled = true, active = true }:
         <div className="prompt-pair"><label>{t('Original prompt', '原提示词')}<textarea rows={5} value={baseline} onChange={e => setBaseline(e.target.value)} /></label>
         {operation !== 'optimize' && <label>{t('Candidate prompt', '候选提示词')}<textarea rows={5} value={candidate} onChange={e => setCandidate(e.target.value)} /></label>}</div>
         {operation === 'optimize' && <p className="field-help">{t('Search develops candidates on training data, selects on validation data, then compares the locked best on withheld data.', '搜索使用训练数据生成候选、验证数据选择候选，锁定后才在留出数据上比较。')}</p>}
-        <label>{t('Scoring', '评分方式')}<select value={metric} onChange={e => setMetric(e.target.value)}>{[['exact_match', 'Exact answer', '精确答案'], ['contains', 'Contains answer', '包含答案'], ['numeric_tolerance:0.001', 'Numeric tolerance · 0.001', '数值容差 · 0.001'], ['classification_accuracy', 'Classification accuracy', '分类准确率'], ['format_error', 'Format errors · lower is better', '格式错误 · 越低越好']].map(([value,en,cn]) => <option key={value} value={value}>{t(en,cn)}</option>)}</select></label>
+        <label>{t('Scoring', '评分方式')}<select value={metric} onChange={e => setMetric(e.target.value)}>{[['exact_match', 'Exact answer', '精确答案'], ['contains', 'Contains answer', '包含答案'], ['numeric_tolerance:0.001', 'Numeric tolerance · 0.001', '数值容差 · 0.001'], ['classification_accuracy', 'Classification accuracy', '分类准确率'], ['format_error', 'Empty output check · lower is better', '空输出检查 · 越低越好'], ['json_valid@1', 'Valid JSON · v1', '有效 JSON · v1'], ['json_schema@1', 'JSON schema · v1', 'JSON schema · v1']].map(([value,en,cn]) => <option key={value} value={value}>{t(en,cn)}</option>)}</select></label>
+        {operation === 'import' && <>
+          <label>{t('Score name in export', '导出中的评分名称')}<input value={scoreName} onChange={e => { setScoreName(e.target.value); setImports({}); }} /></label>
+          <label>{t('Score mode', '评分模式')}<select value={scoreMode} onChange={e => setScoreMode(e.target.value)}><option value="recompute">{t('Recompute locally', '本地重新评分')}</option><option value="preserve">{t('Preserve external scores', '保留外部分数')}</option></select></label>
+          {scoreMode === 'preserve' && <>{(['id', 'version', 'reviewer'] as const).map(field => <label key={field}>{t(field === 'id' ? 'External metric ID' : field === 'version' ? 'Metric version' : 'Reviewer', field === 'id' ? '外部指标 ID' : field === 'version' ? '指标版本' : '评分者')}<input value={sourceMetric[field]} onChange={e => setSourceMetric({ ...sourceMetric, [field]: e.target.value })} /></label>)}<label>{t('Score direction', '分数方向')}<select value={sourceMetric.direction} onChange={e => setSourceMetric({ ...sourceMetric, direction: e.target.value })}><option value="higher_is_better">{t('Higher is better', '越高越好')}</option><option value="lower_is_better">{t('Lower is better', '越低越好')}</option></select></label></>}
+        </>}
         <details><summary>{t('Dataset · CSV / JSONL / JSON', '任务数据 · CSV / JSONL / JSON')}</summary>
           <input aria-label={t('Upload dataset', '上传任务数据')} type="file" accept=".csv,.json,.jsonl" onChange={e => void readFile(e.target.files?.[0], (text, fmt) => { setDataText(text); setFormat(fmt); setSyntheticData(false); })} />
           <select aria-label={t('Dataset format', '数据格式')} value={format} onChange={e => setFormat(e.target.value)}><option>jsonl</option><option>csv</option><option>json</option></select>
@@ -226,7 +238,7 @@ export function ExperimentPage({ language, writeEnabled = true, active = true }:
         {job.stop_reason && <p className="field-help">{label(job.stop_reason)}</p>}
         {job.progress && <div className="experiment-progress"><span>{t('Stage', '阶段')}: {label(job.progress.stage)} · {t('Finished samples', '已完成样本')}: {job.progress.completed} / {job.progress.expected_total ?? '—'} · {t('Errors', '错误')}: {job.progress.errors} · {t('In flight', '请求中')}: {job.progress.in_flight}</span></div>}
         {job.status === 'completed_with_errors' && <button className="button" onClick={() => void manage('resume', true)}>{t('Retry safely rejected requests', '重试明确被拒绝的请求')}</button>}
-        {job.budget && <div className="experiment-progress"><span>{t('Calls', '调用')}: {job.budget.calls} / {job.budget.limits?.max_calls} · {t('Output tokens charged', '计入预算的输出 token')}: {job.budget.charged_output_tokens} / {job.budget.limits?.max_output_tokens} · {t('Amount', '金额')}: {assessment?.cost?.status === 'known' ? number(job.budget.known_cost) : t('Unknown', '未知')}</span><progress value={job.budget.calls ?? 0} max={job.budget.limits?.max_calls || 1} /></div>}
+        {job.budget && <div className="experiment-progress"><span>{t('Calls', '调用')}: {job.budget.calls} / {job.budget.limits?.max_calls} · {t('Output tokens charged', '计入预算的输出 token')}: {job.budget.charged_output_tokens} / {job.budget.limits?.max_output_tokens}{[['reserved_cost', t('Reserved cost', '预留费用')], ['estimated_cost', t('Estimated cost', '估算费用')], ['reported_cost', t('Reported cost', '报告费用')], ['actual_cost', t('Actual cost', '实际费用')]].map(([field, title]) => <span key={field}> · {title}: {typeof job.budget[field] === 'number' && job.budget.cost_currency ? `${job.budget[field]} ${job.budget.cost_currency}` : t('Unknown', '未知')}</span>)}</span><progress value={job.budget.calls ?? 0} max={job.budget.limits?.max_calls || 1} /></div>}
         <div className="experiment-metrics">{[
           [t('Comparison conditions', '比较条件'), label(assessment?.comparability?.status)],
           [t('Effect', '效果判断'), label(assessment?.effect?.status)],
@@ -238,12 +250,12 @@ export function ExperimentPage({ language, writeEnabled = true, active = true }:
         {stats?.holm_adjusted_p_value != null && <p className="field-help">{t('Adjusted p-value', '校正后 p 值')}: {number(stats.holm_adjusted_p_value)} · {t('An improvement requires a favorable interval and a supported paired test; a small sample can remain uncertain.', '支持提升需要区间方向支持改进且成对检验通过；样本较少时仍可能无法确定。')}</p>}
         {practical && <div className="experiment-practical"><h3>{t('Quality, time and cost', '质量、耗时与成本')}</h3><p className="field-help">{practical.evidence_range?.[language]}</p><div className="experiment-table-wrap"><table><thead><tr><th>{t('Measure', '指标')}</th><th>{t('Original', '原版本')}</th><th>{t('Candidate', '候选版本')}</th><th>{t('Change', '变化')}</th></tr></thead><tbody>{[
           ['score_mean', t('Mean score', '平均分数')], ['mean_latency_ms', t('Mean latency · ms', '平均耗时 · 毫秒')], ['mean_input_tokens', t('Input tokens / item', '每题输入 token')], ['mean_output_tokens', t('Output tokens / item', '每题输出 token')],
-        ].map(([field, title]) => <tr key={field}><th>{title}</th><td>{number(practical.baseline?.[field])}</td><td>{number(practical.candidate?.[field])}</td><td>{number(practical.delta?.[field])}</td></tr>)}<tr><th>{t('Known amount', '已知金额')}</th>{['baseline', 'candidate'].map(arm => <td key={arm}>{practical[arm]?.cost_status === 'known' ? number(practical[arm]?.known_cost) : t('Unknown / partial', '未知／不完整')}</td>)}<td>{number(practical.delta?.cost)}</td></tr></tbody></table></div><p className="field-help">{t('Quality errors (parse / format / empty)', '输出错误（解析／格式／空输出）')}: {['baseline', 'candidate'].map(arm => `${label(arm)} ${practical[arm]?.parse_error_count ?? 0} / ${practical[arm]?.format_error_count ?? 0} / ${practical[arm]?.empty_output_count ?? 0}`).join(' · ')}. {t('Missing observations stay unknown; zero is a recorded value.', '缺失观测保留为未知，零值按实际记录展示。')}</p></div>}
+        ].map(([field, title]) => <tr key={field}><th>{title}</th><td>{number(practical.baseline?.[field])}</td><td>{number(practical.candidate?.[field])}</td><td>{number(practical.delta?.[field])}</td></tr>)}{[['reserved_cost', t('Reserved cost', '预留费用')], ['estimated_cost', t('Estimated cost', '估算费用')], ['reported_cost', t('Reported cost', '报告费用')], ['actual_cost', t('Actual cost', '实际费用')]].map(([field, title]) => <tr key={field}><th>{title}</th>{['baseline', 'candidate'].map(arm => <td key={arm}>{typeof practical[arm]?.[field] === 'number' && practical[arm]?.cost_currency ? `${practical[arm][field]} ${practical[arm].cost_currency}` : t('Unknown / partial', '未知／不完整')}</td>)}<td>—</td></tr>)}</tbody></table></div><p className="field-help">{t('Quality errors (parse / format / empty)', '输出错误（解析／格式／空输出）')}: {['baseline', 'candidate'].map(arm => `${label(arm)} ${practical[arm]?.parse_error_count ?? 0} / ${practical[arm]?.format_error_count ?? 0} / ${practical[arm]?.empty_output_count ?? 0}`).join(' · ')}. {t('Missing observations stay unknown; zero is a recorded value.', '缺失观测保留为未知，零值按实际记录展示。')}</p></div>}
         {assessment?.comparability?.limitations?.map((message: string) => <p key={message} className="field-help">{limitation(message)}</p>)}
         {assessment && <p className="experiment-next"><strong>{t('Next step', '下一步')}</strong> · {nextAction}</p>}
         {job.optimization && <details open><summary>{t('Search history and selected candidate', '搜索记录与选中候选')}</summary><p className="field-help">{t('Validation selects the candidate. The effect above is the separate withheld comparison; completion alone does not establish an improvement.', '验证集用于选候选，上方效果来自单独的留出比较；搜索完成本身不代表改进有效。')}</p><table><thead><tr><th>{t('Round', '轮次')}</th><th>{t('Validation score', '验证分数')}</th><th>{t('Selection', '选择')}</th></tr></thead><tbody>{job.optimization.history?.map((entry: Json) => <tr key={entry.id}><td>{entry.round}</td><td>{number(entry.validation_score)}</td><td>{entry.id === job.optimization.best_id ? t('Selected', '已选中') : entry.validation_complete ? t('Compared', '已比较') : t('Incomplete', '未完成')}</td></tr>)}</tbody></table><pre>{job.optimization.candidate?.prompt}</pre><p className="field-help">{t('Stop reason', '停止原因')}: {label(job.optimization.stop_reason)}</p></details>}
         <div className="experiment-downloads">{finalStates.has(job.status) && [['experiment.zip', t('Portable bundle', '完整结果包')], [`report.${language}.html`, t('Readable report', '可读报告')], ['records.csv', 'CSV']].map(([file, title]) => <a key={file} className="button" href={`/api/experiments/${selected}/artifacts/${file}`}><Download size={15} />{title}</a>)}</div>
-        {allRows.length > 0 && <details><summary>{t('Inspect individual outputs', '查看逐条输出')} ({allRows.length})</summary><div className="experiment-table-wrap"><table><thead><tr>{['ID', t('Version', '版本'), t('Status', '状态'), t('Score', '分数'), t('Output', '输出')].map(item => <th key={item}>{item}</th>)}</tr></thead><tbody>{allRows.slice(0,200).map((row: Json) => <tr key={`${row.arm}-${row.id}`}><td>{row.id}</td><td>{row.arm}</td><td>{label(row.status)}</td><td>{row.score ?? '—'}</td><td>{row.output}</td></tr>)}</tbody></table></div></details>}
+        {pairedRecords && finalStates.has(job.status) && <details open><summary>{t('Inspect paired outputs', '查看配对输出')} ({allRows.length})</summary><FailureDatasetPanel key={selected} jobId={selected} records={pairedRecords} language={language} writeEnabled={writeEnabled} /></details>}
       </>}
     </section>
   </div>;

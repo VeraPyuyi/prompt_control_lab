@@ -24,6 +24,10 @@ pcl ui --runs runs --language zh
 
 支持 PCL 自身 JSON/CSV 与已有 Promptfoo、DeepEval、Langfuse、LangSmith、prompt-optimizer 导入器。多版本导出需要选择对应提示词或比较侧。提示词资产进入编辑与评测；显式的 `aggregate_metrics` 只做描述性比较，不生成成对统计。CSV 做了电子表格公式防护；无损复用请用 `records.json`。
 
+分组身份按精确值匹配：非空字符串保留大小写、Unicode 形式和所有空白，整数标签与字符串标签不同。空字符串或纯空白标签不声明分组。需要主动合并不同任务 ID 时，请为它们设置相同的显式 `meta.group_id`；已有任务/文档字段别名和用户显式提供的桥接记录仍保留其声明的连接。系统不会根据文本相似性猜测别名值。
+
+评估仅根据显式身份连接计算组数与组权重。`effect.grouping` 分别在 `explicit_group_duplicates` 和 `normalized_input_duplicates` 中列出显式同组与输入重复的配对记录 ID。输入重复检测仍使用 NFKC、大小写折叠和空白归一化；它会保守地关闭推断，但不会减少组数或改变组权重。只有一组或两组时不生成置信区间或 p 值。为防止数据泄漏，优化时的数据划分仍将重复输入保留在同一分区；划分连通分量与评估分组是两个独立概念。
+
 ## 有预算上限的 GEPA 搜索
 
 通过 `optimize` 可选依赖安装 `gepa==0.1.4`。默认最多五轮、每轮一个提案，连续两轮验证集无提升时停止。反思默认使用所选评测模型，也可明确指定；界面将单次反思输出上限设为 512 token。

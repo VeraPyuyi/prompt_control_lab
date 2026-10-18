@@ -146,10 +146,7 @@ def _validate_output_dir(*, out_dir: Path, baseline_dir: Path, candidate_dir: Pa
     ]:
         resolved_source = source_dir.resolve(strict=False)
         if _paths_overlap(resolved_out, resolved_source):
-            msg = (
-                f"Comparison output directory must not overlap the {label} source run: "
-                f"{out_dir}"
-            )
+            msg = f"Comparison output directory must not overlap the {label} source run: {out_dir}"
             raise ValueError(msg)
     if out_dir.exists() and any(out_dir.iterdir()):
         msg = f"Comparison output directory must be empty: {out_dir}"

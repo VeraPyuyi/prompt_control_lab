@@ -36,9 +36,7 @@ def compare_history(*, a_dir: Path, b_dir: Path, out_path: Path) -> JsonDict:
     a_score = _optional_float(a.get("mean_score"))
     b_score = _optional_float(b.get("mean_score"))
     metric_delta = (
-        round(b_score - a_score, 10)
-        if a_score is not None and b_score is not None
-        else None
+        round(b_score - a_score, 10) if a_score is not None and b_score is not None else None
     )
     payload: JsonDict = {
         "a": str(a_dir),
@@ -119,12 +117,8 @@ def summarize_run(run_dir: Path) -> JsonDict:
         "gate_status": gate.get("status"),
         "risk_categories": _combined_risk_categories(gate, audit),
         "risk_level": _risk_level(gate, audit, agent_run, change_review, stability),
-        "review_required": _review_required(
-            gate, audit, agent_run, change_review, stability
-        ),
-        "human_review_required": _review_required(
-            gate, audit, agent_run, change_review, stability
-        ),
+        "review_required": _review_required(gate, audit, agent_run, change_review, stability),
+        "human_review_required": _review_required(gate, audit, agent_run, change_review, stability),
         "change_kind": change_review.get("change_kind"),
         "change_decision": change_review.get("decision"),
         "stability_state": stability.get("state"),
@@ -268,8 +262,7 @@ def _review_required(
         or agent_run.get("review_required")
         or agent_run.get("human_review_required")
         or stability_payload.get("state") in {"diverging", "stalled", "oscillating"}
-        or _risk_level(gate, audit, agent_run, review, stability_payload)
-        in {"high", "medium"}
+        or _risk_level(gate, audit, agent_run, review, stability_payload) in {"high", "medium"}
     )
 
 

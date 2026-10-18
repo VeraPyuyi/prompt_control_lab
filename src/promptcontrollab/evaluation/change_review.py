@@ -380,8 +380,10 @@ def _decision(
             ["Comparison validity or stability evidence needs human review."],
             "Resolve the listed evidence gaps before promotion.",
         )
-    return "pass", ["No blocking issue was observed in the recorded evidence."], (
-        "Keep the review artifact with the release decision."
+    return (
+        "pass",
+        ["No blocking issue was observed in the recorded evidence."],
+        ("Keep the review artifact with the release decision."),
     )
 
 
@@ -399,9 +401,7 @@ def _decision_trace(
     new_score = _score(candidate["metrics"])
     delta = None if old_score is None or new_score is None else new_score - old_score
     metric_deltas = _metric_deltas(baseline["metrics"], candidate["metrics"])
-    candidate_gate = candidate["posttrain_gate"].get("decision") or candidate["gate"].get(
-        "status"
-    )
+    candidate_gate = candidate["posttrain_gate"].get("decision") or candidate["gate"].get("status")
     invalid_metrics = _contains_nonfinite(baseline["metrics"]) or _contains_nonfinite(
         candidate["metrics"]
     )

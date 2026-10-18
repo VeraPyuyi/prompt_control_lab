@@ -26,9 +26,7 @@ def generate_explanation(run_dir: Path, *, level: str) -> JsonDict:
     splits = _read_optional_json(run_dir / "splits.json")
     diagnostics = _collect_diagnostics(run_dir / "diagnostics")
     comparison = _first_comparison(stats)
-    baseline_mean = _float(
-        comparison.get("baseline_mean", baseline_metrics.get("mean_score", 0.0))
-    )
+    baseline_mean = _float(comparison.get("baseline_mean", baseline_metrics.get("mean_score", 0.0)))
     candidate_mean = _float(
         comparison.get("candidate_mean", candidate_metrics.get("mean_score", 0.0))
     )
@@ -265,8 +263,7 @@ def _deployment_recommendation(next_action: object) -> JsonDict:
             "label": "yes",
             "color": "green",
             "what_this_means": (
-                "The candidate can be kept if the surrounding product constraints are "
-                "acceptable."
+                "The candidate can be kept if the surrounding product constraints are acceptable."
             ),
             "reason": reason,
         }

@@ -20,11 +20,12 @@ from typing import Any, cast
 
 from promptcontrollab.core.files import stable_digest
 from promptcontrollab.diagnostics.research_tools.replay import compare_values
-from promptcontrollab.evaluation.metrics import score_output
+from promptcontrollab.evaluation.metrics import score_details, score_output
 
 from .assessment import assess
 from .models import ExperimentSpec, model_config
-from .runtime import _usage, output_quality
+from .pricing import estimate_cost, finite_cost
+from .runtime import _usage, ledger_budget, output_quality
 from .storage import configured_secrets, redact, snapshot_hash
 
 JsonDict = dict[str, Any]
@@ -295,6 +296,41 @@ def _ledger_budget(
             output_usage_complete=False,
         )
         return budget, "unavailable_missing_call_ledger"
+    if not calls or all(call.get("cost_schema_version") == "experiment-cost/v2" for call in calls):
+        reconstructed = []
+        for call in calls:
+            row = copy.deepcopy(call)
+            estimate = estimate_cost(
+                spec["budget"],
+                _usage(call.get("usage")),
+                provider=call.get("provider", ""),
+                model=call.get("observed_model") or call.get("model", ""),
+                phase=call.get("phase", ""),
+            )
+            row["estimated_cost"] = estimate
+            row["charged_cost"] = next(
+                (
+                    value
+                    for value in (
+                        finite_cost(call.get("actual_cost")),
+                        finite_cost(call.get("reported_cost")),
+                        estimate,
+                        finite_cost(call.get("reserved_cost")),
+                    )
+                    if value is not None
+                ),
+                None,
+            )
+            reconstructed.append(row)
+        budget = ledger_budget(
+            reconstructed,
+            spec["budget"],
+            elapsed_seconds=budget.get("elapsed_seconds", 0),
+            concurrency=spec["max_concurrency"],
+        )
+        return budget, "recomputed_known_fields" if budget[
+            "cost_status"
+        ] == "known" else "partial_unknown_usage_or_prices"
     known_output, charged_output, known_cost, charged_cost = [], [], [], []
     unknown_cost = 0
     output_complete = True
@@ -462,6 +498,41 @@ def _rescore(
                 if status == "completed" and isinstance(output, str)
                 else "unavailable",
             )
+            if status == "completed" and isinstance(output, str) and "@1" in spec["metric"]:
+                row.update(score_details(output, task["expected"], spec["metric"]))
+            if "score_mode" in spec:
+                prediction: JsonDict = next(
+                    (p for p in spec["predictions"][arm] if p["id"] == item), cast(JsonDict, {})
+                )
+                original = prediction.get("source_score", prediction.get("score"))
+                fixed = (
+                    original
+                    if (
+                        isinstance(original, (int, float))
+                        and not isinstance(original, bool)
+                        and 0 <= original <= 1
+                    )
+                    else None
+                )
+                row["source_score"] = fixed
+                row["source_metric"] = copy.deepcopy(
+                    prediction.get("source_metric", spec.get("source_metric"))
+                )
+                row["derived_score"] = (
+                    score_output(output, task["expected"], spec["metric"])
+                    if status in {"completed", "missing_score"} and isinstance(output, str)
+                    else None
+                )
+                row["derived_metric"] = spec["metric"]
+            if spec.get("score_mode") == "preserve":
+                row["score"] = row["source_score"] if status == "completed" else None
+                row.update(
+                    source_score=fixed,
+                    source_metric=copy.deepcopy(spec["source_metric"]),
+                    metric_id=spec["source_metric"]["id"],
+                    metric_version=spec["source_metric"]["version"],
+                    direction=spec["source_metric"]["direction"],
+                )
             differences = compare_values(source.get("score"), row["score"], atol=ATOL, rtol=RTOL)
             score_checks.append(
                 {
@@ -501,16 +572,18 @@ def _rescore(
                     }
                 )
             elif spec["operation"] == "import":
-                prediction = next(
+                imported_prediction: JsonDict | None = next(
                     (value for value in spec["predictions"][arm] if value["id"] == item), None
                 )
                 imported_output = (
-                    prediction.get("output", prediction.get("output_text")) if prediction else None
+                    imported_prediction.get("output", imported_prediction.get("output_text"))
+                    if imported_prediction
+                    else None
                 )
-                imported_status = "completed" if prediction else "missing"
-                if prediction and (
-                    prediction.get("error")
-                    or prediction.get("status")
+                imported_status = "completed" if imported_prediction else "missing"
+                if imported_prediction and (
+                    imported_prediction.get("error")
+                    or imported_prediction.get("status")
                     in {
                         "failed",
                         "error",
@@ -522,10 +595,22 @@ def _rescore(
                     }
                 ):
                     imported_status = (
-                        "missing" if prediction.get("status") == "missing" else "service_error"
+                        "missing"
+                        if imported_prediction.get("status") == "missing"
+                        else "service_error"
                     )
                 if imported_status == "completed" and not isinstance(imported_output, str):
                     imported_status = "missing"
+                if imported_status == "completed" and spec.get("score_mode") == "preserve":
+                    original_score = (imported_prediction or {}).get(
+                        "source_score", (imported_prediction or {}).get("score")
+                    )
+                    if (
+                        isinstance(original_score, bool)
+                        or not isinstance(original_score, (int, float))
+                        or not 0 <= original_score <= 1
+                    ):
+                        imported_status = "missing_score"
                 links.append(
                     {
                         "arm": arm,
@@ -618,10 +703,39 @@ def _write(result: JsonDict, out_dir: Path) -> None:
         )
     stream = io.StringIO(newline="")
     writer = csv.writer(stream)
-    writer.writerow(["arm", "id", "transport_status", "parse_status", "recomputed_score"])
+    writer.writerow(
+        [
+            "arm",
+            "id",
+            "transport_status",
+            "parse_status",
+            "recomputed_score",
+            "source_score",
+            "derived_score",
+            "source_metric",
+            "derived_metric",
+            "score_mode",
+        ]
+    )
     for arm, rows in result["records_recomputed"].items():
         for row in rows:
-            values = [arm, row["id"], row["status"], row["output_status"], row["score"]]
+            values = [
+                arm,
+                row["id"],
+                row["status"],
+                row["output_status"],
+                row["score"],
+                *[
+                    row.get(key)
+                    for key in (
+                        "source_score",
+                        "derived_score",
+                        "source_metric",
+                        "derived_metric",
+                        "score_mode",
+                    )
+                ],
+            ]
             writer.writerow(
                 [
                     "null"
@@ -654,9 +768,9 @@ def _write(result: JsonDict, out_dir: Path) -> None:
         assessment = result["assessment_recomputed"]
         coverage = assessment["coverage"]
         note = (
-            f"已从原始保存输出重新评分，成功配对 {coverage['matched']}/{coverage['total']}。服务错误、超时和缺失保留原状态，不按质量零分计入。解析失败是实际观察到的质量结果。"
+            f"比较遵循保存的评分模式；保留模式使用原评分，重算分另列。成功配对 {coverage['matched']}/{coverage['total']}。服务错误、超时和缺失保留原状态，不按质量零分计入。"
             if zh
-            else f"Scores were recalculated from raw saved outputs; {coverage['matched']}/{coverage['total']} pairs matched. Service errors, timeouts and missing outputs keep their transport status and are excluded from quality scores. Parse failures remain observed quality outcomes."
+            else f"Comparison follows the saved score mode: preserve uses source scores; derived scores are separate. {coverage['matched']}/{coverage['total']} pairs matched. Service errors, timeouts and missing outputs remain excluded from quality scores."
         )
         boundary = (
             "哈希仅核对包内一致性，不能认证来源或冻结日期。未提供的记录仍标记为不可用。复算没有模型调用、网络请求、命令执行或 pickle 加载。"
@@ -678,6 +792,9 @@ def _write(result: JsonDict, out_dir: Path) -> None:
                     row["status"],
                     row["output_status"],
                     "null" if row["score"] is None else row["score"],
+                    row.get("source_score"),
+                    row.get("derived_score"),
+                    row.get("score_mode", "recompute"),
                 ]
             )
             + "</tr>"
@@ -685,9 +802,18 @@ def _write(result: JsonDict, out_dir: Path) -> None:
             for row in rows
         )
         headers = (
-            ["组别", "样本", "传输状态", "解析状态", "复算分数"]
+            ["组别", "样本", "传输状态", "解析状态", "比较分数", "原评分", "重算分", "评分模式"]
             if zh
-            else ["Arm", "Item", "Transport status", "Parse status", "Recomputed score"]
+            else [
+                "Arm",
+                "Item",
+                "Transport status",
+                "Parse status",
+                "Comparison score",
+                "Source score",
+                "Derived score",
+                "Score mode",
+            ]
         )
         details = html.escape(
             json.dumps(result, ensure_ascii=False, sort_keys=True, indent=2, allow_nan=False)

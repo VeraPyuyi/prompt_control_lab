@@ -1,0 +1,18 @@
+{
+  "protocol_version": "1",
+  "benchmark_name": "Offline synthetic exact-answer fixture",
+  "provider": "imported",
+  "model": "synthetic-fixture",
+  "prompt_version": "synthetic-import-v1",
+  "dataset_version": "synthetic-sums-v1",
+  "metric_id": "exact_match",
+  "metric_version": "1",
+  "score_mode": "recompute",
+  "negative_results_allowed": true,
+  "replay_entry": "experiment.zip",
+  "limitations": [
+    "Synthetic predetermined outputs; no live provider calls or competitor comparison.",
+    "Four evaluation items; no untouched generalization or production performance claim.",
+    "Local hashes verify internal consistency, not source authenticity or collection dates."
+  ]
+}

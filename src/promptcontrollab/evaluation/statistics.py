@@ -69,6 +69,39 @@ def compare_prediction_files(
     return payload
 
 
+def cluster_paired_compare(
+    baseline: dict[str, float],
+    candidate: dict[str, float],
+    groups: dict[str, str],
+    *,
+    seed: int,
+    bootstrap_samples: int,
+    permutation_samples: int,
+) -> ComparisonResult:
+    """Compare paired task effects by resampling independent groups."""
+    grouped: dict[str, list[str]] = {}
+    for item_id in sorted(set(baseline) & set(candidate)):
+        grouped.setdefault(groups[item_id], []).append(item_id)
+    if len(grouped) < 2:
+        raise ValueError("At least two independent groups are required")
+    group_deltas = []
+    for ids in grouped.values():
+        group_deltas.append(mean([candidate[item] - baseline[item] for item in ids]))
+    return ComparisonResult(
+        n=len(grouped),
+        baseline_mean=mean([mean([baseline[item] for item in ids]) for ids in grouped.values()]),
+        candidate_mean=mean([mean([candidate[item] for item in ids]) for ids in grouped.values()]),
+        mean_delta=mean(group_deltas),
+        bootstrap_ci=bootstrap_ci(group_deltas, seed=seed, samples=bootstrap_samples),
+        permutation_p_value=paired_permutation_p_value(
+            group_deltas, seed=seed, samples=permutation_samples
+        ),
+        holm_adjusted_p_value=holm_adjust(
+            [paired_permutation_p_value(group_deltas, seed=seed, samples=permutation_samples)]
+        )[0],
+    )
+
+
 def paired_compare(
     baseline: dict[str, float],
     candidate: dict[str, float],
@@ -167,4 +200,3 @@ def interpret_delta(delta: float, ci: tuple[float, float], adjusted_p_value: flo
     if delta < 0:
         return "candidate_lower_but_uncertain"
     return "no_observed_delta"
-

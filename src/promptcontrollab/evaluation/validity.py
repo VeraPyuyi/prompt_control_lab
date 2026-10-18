@@ -366,8 +366,7 @@ def _plain_summary(validity: str, prompt_only: bool | str) -> str:
     if validity == "invalid":
         return "The comparison is confounded by blocking provenance or protocol issues."
     return (
-        "The comparison needs review before treating it as prompt-only evidence "
-        f"({prompt_only})."
+        f"The comparison needs review before treating it as prompt-only evidence ({prompt_only})."
     )
 
 

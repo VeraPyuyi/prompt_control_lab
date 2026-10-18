@@ -14,9 +14,10 @@ from pathlib import Path
 from typing import Any, cast
 
 from promptcontrollab.core.files import stable_digest
-from promptcontrollab.evaluation.metrics import _first_number, score_output
+from promptcontrollab.evaluation.metrics import _first_number, score_details, score_output
 from promptcontrollab.integrations.providers import call_provider
 
+from .pricing import cost_summary, estimate_cost, finite_cost, reserve_cost, resolve_price_snapshot
 from .storage import JobLock, configured_secrets, event, read_json, redact, write_json
 
 
@@ -89,7 +90,12 @@ def validate_completed_record(
         or not isinstance(score, (int, float))
         or not 0 <= score <= 1
         or not math.isfinite(score)
-        or score != score_output(record["output"], task["expected"], metric)
+        or score
+        != (
+            record.get("source_score")
+            if imported and record.get("score_mode") == "preserve"
+            else score_output(record["output"], task["expected"], metric)
+        )
     ):
         raise ValueError("Persisted completion does not match its immutable task or score")
     if imported:
@@ -127,11 +133,8 @@ def ledger_budget(
         "output_usage_complete": all(
             row.get("usage", {}).get("output_tokens") is not None for row in records
         ),
-        "known_cost": sum(row.get("actual_cost") or 0 for row in records),
-        "unknown_cost_calls": sum(row.get("actual_cost") is None for row in records),
-        "reserved_cost": sum(
-            row.get("charged_cost", row.get("reserved_cost")) or 0 for row in records
-        ),
+        **cost_summary(records),
+        "unknown_cost_calls": cost_summary(records)["cost_unknown_count"],
         "elapsed_seconds": round(elapsed_seconds, 6),
         "limits": budget,
         "concurrency_limit": concurrency,
@@ -271,29 +274,34 @@ class ExperimentRuntime:
                 > budget["max_output_tokens"]
             ):
                 raise ExperimentStopped("output_token_budget")
-            rates_known = all(
-                budget.get(key) is not None
-                for key in ("input_cost_per_million", "output_cost_per_million")
-            )
             # Byte-bound input reservation plus protocol overhead. Any provider
             # usage exceeding this bound is recorded and stops further calls.
             input_bound = len(prompt.encode("utf-8")) + 4096
-            reserved_cost = (
-                (
-                    input_bound * budget["input_cost_per_million"]
-                    + tokens * budget["output_cost_per_million"]
-                )
-                / 1_000_000
-                if rates_known
-                else None
+            reserved_cost = reserve_cost(
+                budget,
+                provider=config["provider"],
+                model=config["model"],
+                phase=phase,
+                input_tokens=input_bound,
+                output_tokens=tokens,
             )
+            snapshot = resolve_price_snapshot(
+                budget,
+                provider=config["provider"],
+                model=config["model"],
+                phase=phase,
+            )
+            currency = snapshot["currency"] if snapshot else None
             if budget.get("max_cost") is not None:
-                if reserved_cost is None:
-                    raise ExperimentStopped("cost_unknown")
                 if (
-                    usage["reserved_cost"] + reserved_cost + self._headroom_cost
-                    > budget["max_cost"]
+                    reserved_cost is None
+                    or (usage["calls"] and usage["cost_currency"] != currency)
+                    or (budget.get("currency") and budget["currency"] != currency)
                 ):
+                    raise ExperimentStopped("cost_unknown")
+                if (usage["charged_cost"] or 0) + reserved_cost + self._headroom_cost > budget[
+                    "max_cost"
+                ]:
                     raise ExperimentStopped("cost_budget")
             record = {
                 "call_id": path.stem,
@@ -310,7 +318,19 @@ class ExperimentRuntime:
                 "reserved_output_tokens": tokens,
                 "input_token_reservation": input_bound,
                 "reserved_cost": reserved_cost,
+                "charged_cost": reserved_cost,
+                "cost_currency": currency,
+                "reserved_cost_currency": currency,
+                "charged_cost_currency": currency,
+                "price_snapshot": copy.deepcopy(snapshot),
+                "reserved_price_snapshot": copy.deepcopy(snapshot),
+                "price_source": snapshot.get("source", "configured_price_snapshot")
+                if snapshot
+                else None,
+                "cost_schema_version": "experiment-cost/v2",
                 "usage": {"input_tokens": None, "output_tokens": None},
+                "estimated_cost": None,
+                "reported_cost": None,
                 "actual_cost": None,
                 "output": None,
             }
@@ -438,15 +458,47 @@ class ExperimentRuntime:
                 output_count if output_count is not None else record["reserved_output_tokens"]
             )
             budget = self.spec["budget"]
-            if all(usage[key] is not None for key in ("input_tokens", "output_tokens")) and all(
-                budget.get(key) is not None
-                for key in ("input_cost_per_million", "output_cost_per_million")
-            ):
-                cost = (
-                    usage["input_tokens"] * budget["input_cost_per_million"]
-                    + usage["output_tokens"] * budget["output_cost_per_million"]
-                ) / 1_000_000
-                record.update(actual_cost=cost, charged_cost=cost)
+            cost = estimate_cost(
+                budget,
+                usage,
+                provider=config["provider"],
+                model=record.get("observed_model", config["model"]),
+                phase=phase,
+            )
+            snapshot = resolve_price_snapshot(
+                budget,
+                provider=config["provider"],
+                model=record.get("observed_model", config["model"]),
+                phase=phase,
+            )
+            record.update(
+                estimated_cost=cost,
+                price_snapshot=copy.deepcopy(snapshot),
+                price_source=snapshot.get("source", "configured_price_snapshot")
+                if snapshot
+                else None,
+            )
+            if cost is not None and snapshot is not None:
+                record.update(
+                    charged_cost=cost,
+                    cost_currency=snapshot["currency"],
+                    estimated_cost_currency=snapshot["currency"],
+                    charged_cost_currency=snapshot["currency"],
+                )
+            actual = finite_cost(response.get("actual_cost"))
+            reported = finite_cost(response.get("reported_cost", actual))
+            if actual is not None or reported is not None:
+                reported_currency = response.get("cost_currency", response.get("currency"))
+                record.update(
+                    actual_cost=actual,
+                    reported_cost=reported,
+                    reported_cost_currency=reported_currency or "unknown",
+                    actual_cost_currency=reported_currency or "unknown",
+                    cost_source="provider_response",
+                    cost_currency=reported_currency,
+                    charged_cost_currency=reported_currency or "unknown",
+                )
+                record["charged_cost"] = actual if actual is not None else reported
             if (output_count is not None and output_count > record["reserved_output_tokens"]) or (
                 usage["input_tokens"] is not None
                 and usage["input_tokens"] > record["input_token_reservation"]
@@ -588,10 +640,32 @@ class ExperimentRuntime:
                 "usage": call["usage"],
                 "latency_ms": call.get("latency_ms"),
                 "observed_model": call.get("observed_model"),
-                "actual_cost": call.get("actual_cost"),
+                **{
+                    key: call.get(key)
+                    for key in (
+                        "actual_cost",
+                        "reported_cost",
+                        "estimated_cost",
+                        "reserved_cost",
+                        "charged_cost",
+                        "cost_currency",
+                        "price_snapshot",
+                        "reserved_price_snapshot",
+                        "price_source",
+                        "cost_source",
+                        "cost_schema_version",
+                        "reported_cost_currency",
+                        "actual_cost_currency",
+                        "estimated_cost_currency",
+                        "reserved_cost_currency",
+                        "charged_cost_currency",
+                    )
+                },
                 "retry_safe": call.get("retry_safe", False),
                 "execution_attempt": call.get("execution_attempt", 1),
             }
+            if call["status"] == "completed" and "@1" in self.spec["metric"]:
+                result.update(score_details(call["output"], task["expected"], self.spec["metric"]))
             write_json(target, result)
             self.event(
                 "record_completed", id=task["id"], name=name, phase=phase, status=result["status"]

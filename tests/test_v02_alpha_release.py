@@ -88,8 +88,8 @@ def test_pypi_readme_uses_resolvable_absolute_links() -> None:
 def test_release_guides_cover_both_distributions_and_flagship_template() -> None:
     for relative_path in ("docs/release_install.en.md", "docs/release_install.zh.md"):
         guide = (ROOT / relative_path).read_text(encoding="utf-8")
-        assert "promptcontrollab-0.2.0a1-py3-none-any.whl" in guide
-        assert "promptcontrollab-0.2.0a1.tar.gz" in guide
+        assert "promptcontrollab-0.3.0a2-py3-none-any.whl" in guide
+        assert "promptcontrollab-0.3.0a2.tar.gz" in guide
         assert "pcl install-plugin deepseek-harness" in guide
         assert "node_modules" in guide
 

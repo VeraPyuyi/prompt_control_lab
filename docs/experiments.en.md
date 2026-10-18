@@ -24,6 +24,10 @@ Deterministic scorers support exact answers, containment, classification, numeri
 
 Native PCL JSON/CSV and existing Promptfoo, DeepEval, Langfuse, LangSmith and prompt-optimizer importers are supported. Select the relevant prompt/arm when an export contains several versions. Prompt assets load into the editor for evaluation. Explicit `aggregate_metrics` objects remain descriptive; they do not acquire paired statistics. CSV is spreadsheet-safe; `records.json` preserves exact text for lossless reuse.
 
+Grouping identities are exact: nonblank string labels keep their case, Unicode form and whitespace, and integer labels remain distinct from strings. Empty or whitespace-only labels declare no group. To combine different task IDs intentionally, give them the same explicit `meta.group_id`; recognized task/document field aliases and explicitly supplied bridge rows also retain their declared connections. No alias values are guessed from text similarity.
+
+Assessment uses only explicit identity connections to count and weight groups. `effect.grouping` reports matched row IDs separately under `explicit_group_duplicates` and `normalized_input_duplicates`. Input recurrence detection still uses NFKC, case folding and whitespace normalization; it conservatively disables inference without reducing the group count or changing its weights. One or two groups have no confidence interval or p-value. Optimization split components also keep repeated inputs together to prevent leakage; a split component is separate from an assessment group.
+
 ## Bounded GEPA search
 
 Install `gepa==0.1.4` through the `optimize` extra. The default is at most five rounds, one proposal per round, with two validation rounds without improvement stopping the search. The reflection model uses the selected evaluation model unless explicitly changed. The UI gives reflection 512 output tokens per call.

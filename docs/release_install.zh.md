@@ -27,8 +27,8 @@ python -m build
 预期结果：`dist/` 中出现类似下面的 wheel：
 
 ```text
-promptcontrollab-0.2.0a1-py3-none-any.whl
-promptcontrollab-0.2.0a1.tar.gz
+promptcontrollab-0.3.0a2-py3-none-any.whl
+promptcontrollab-0.3.0a2.tar.gz
 ```
 
 除非正式 release 流程明确要求，不要把 `dist/` 产物提交进仓库。
@@ -52,7 +52,7 @@ Demo MP4。只在最后一次构建完成后生成发布包校验值。
 可以创建临时环境，或用 `pipx`：
 
 ```bash
-pipx install dist/promptcontrollab-0.2.0a1-py3-none-any.whl
+pipx install dist/promptcontrollab-0.3.0a2-py3-none-any.whl
 pcl --help
 pcl doctor
 pcl install-plugin all --target ./tmp-pcl-templates --dry-run
@@ -71,7 +71,7 @@ Claude Code hook 模板、Cursor rule 和 demo report，而不是因为缺少 `e
 如果当前环境已经安装了 `research` extra，也要用构建出的 wheel 验证高级诊断流程：
 
 ```bash
-python -m pip install --force-reinstall --no-deps dist/promptcontrollab-0.2.0a1-py3-none-any.whl
+python -m pip install --force-reinstall --no-deps dist/promptcontrollab-0.3.0a2-py3-none-any.whl
 pcl research-quickstart --out ./tmp-pcl-research-demo --language zh --open-report
 ```
 
@@ -111,3 +111,5 @@ pcl install-plugin deepseek-harness --target ./tmp-pcl-deepseek-harness
 如果本地没有配置 PyPI token，就停在本地构建和 wheel 冒烟测试。文档中只能写
 “PyPI-ready”，不要写成“已经发布”。在包真正以 `promptcontrollab` 名称可安装前，
 不要声称用户可以直接从 PyPI 安装。
+
+发布状态: [单一事实来源](releases/publication-status.md)。
