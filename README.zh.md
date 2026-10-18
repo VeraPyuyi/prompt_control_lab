@@ -68,3 +68,5 @@ PEOC 提供控制论框架和若干诊断方法；产品层将其推广到 Promp
 欢迎参与贡献：[中文贡献指南](CONTRIBUTING.zh.md)、[安全策略](SECURITY.md)和 [v0.2.0-alpha.1 发布检查表](docs/release_checklist_v0.2.0-alpha.1.md)。
 
 Apache-2.0。见 [LICENSE](LICENSE)。
+
+Publication status / ????: [local preview and external pending items](docs/releases/publication-status.md).

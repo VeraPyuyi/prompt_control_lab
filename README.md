@@ -68,3 +68,5 @@ One mathematical foundation for the terminal-objective sensitivity, long-horizon
 Contributions are welcome: [contributing guide](https://github.com/VeraPyuyi/prompt_control_lab/blob/main/CONTRIBUTING.md), [security policy](https://github.com/VeraPyuyi/prompt_control_lab/blob/main/SECURITY.md), and [v0.2.0-alpha.1 release checklist](https://github.com/VeraPyuyi/prompt_control_lab/blob/main/docs/release_checklist_v0.2.0-alpha.1.md).
 
 Apache-2.0. See [LICENSE](https://github.com/VeraPyuyi/prompt_control_lab/blob/main/LICENSE).
+
+Publication status / ????: [local preview and external pending items](docs/releases/publication-status.md).
