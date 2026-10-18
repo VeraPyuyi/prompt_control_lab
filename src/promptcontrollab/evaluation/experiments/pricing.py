@@ -106,9 +106,9 @@ def cost_summary(rows: list[dict[str, Any]]) -> dict[str, Any]:
         if not isinstance(currency, str) or not currency.strip():
             currency = "unknown"
         for field, value in values.items():
-            unit = row.get(f"{field}_currency") or currency
-            section = currencies.setdefault(unit, {key: [] for key in (*fields, "known_cost")})
             if value is not None:
+                unit = row.get(f"{field}_currency") or currency
+                section = currencies.setdefault(unit, {key: [] for key in (*fields, "known_cost")})
                 section[field].append(value)
         effective_field = next(
             (

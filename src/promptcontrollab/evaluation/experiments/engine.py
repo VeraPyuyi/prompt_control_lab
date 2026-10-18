@@ -483,8 +483,13 @@ def _import_records(directory: Path, spec: dict[str, Any], arm: str) -> list[dic
             )
             if not row["cost_currency"] and row["reported_cost"] is None:
                 row["cost_currency"] = snapshot["currency"]
-        if row["reported_cost"] is not None and not row["cost_currency"]:
-            row["reported_cost_currency"] = row["actual_cost_currency"] = "unknown"
+        if row["actual_cost"] is not None and not row["actual_cost_currency"]:
+            row["actual_cost_currency"] = row["cost_currency"] or "unknown"
+        if row["reported_cost"] is not None and not row["reported_cost_currency"]:
+            # A reported amount copied from actual cost must carry the same unit.
+            row["reported_cost_currency"] = (
+                row["actual_cost_currency"] if "reported_cost" not in (source or {}) else None
+            ) or row["cost_currency"] or "unknown"
         if status == "completed" and "@1" in spec["metric"]:
             row.update(score_details(output_text, task["expected"], spec["metric"]))
         if "score_mode" in spec:
