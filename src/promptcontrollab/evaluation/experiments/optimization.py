@@ -15,7 +15,7 @@ import importlib.metadata
 import json
 import math
 from collections.abc import Mapping
-from typing import TYPE_CHECKING, Any, NoReturn
+from typing import TYPE_CHECKING, Any, NoReturn, cast
 
 if TYPE_CHECKING:
     from .runtime import ExperimentRuntime
@@ -261,7 +261,7 @@ class _Search:
             return self.entry()
         for row in reversed(self.history):
             if row["prompt"] == prompt:
-                return row
+                return cast(dict[str, Any], row)
         self.stop("invalid_proposal", "failed")
         raise AssertionError("unreachable")
 
