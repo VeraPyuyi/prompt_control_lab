@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { ArrowRight, Download, FlaskConical, Play, Square, WandSparkles } from 'lucide-react';
 import type { Language } from '../types';
 import { experimentRequest, type Json } from '../experimentApi';
+import { PairedRecordsPanel } from '../components/PairedRecordsPanel';
 
 const sampleData = [
   ['A wonderful service.', 'positive'], ['This is a terrible product.', 'negative'],
@@ -149,6 +150,7 @@ export function ExperimentPage({ language, writeEnabled = true, active = true }:
   const practical = assessment?.practical;
   const number = (value: unknown) => typeof value === 'number' && Number.isFinite(value) ? value !== 0 && Math.abs(value) < 0.001 ? value.toExponential(2) : value.toFixed(3) : '—';
   const allRows = records ? [...(records.baseline ?? []).map((row: Json) => ({ ...row, arm: 'baseline' })), ...(records.candidate ?? []).map((row: Json) => ({ ...row, arm: 'candidate' }))] : [];
+  const pairedRecords = records ? { baseline: records.baseline ?? [], candidate: records.candidate ?? [] } : undefined;
   const labels: Record<string, string> = zh ? { comparable: '条件一致', confounded: '多项条件同时变化', declared_only: '来源由导入者声明', improved: '支持提升', regressed: '发现退步', uncertain: '提升尚不明确', no_observed_change: '未观察到变化', insufficient_data: '样本不足', completed: '已完成', completed_with_errors: '完成，部分样本出错', queued: '排队中', running: '运行中', stopped: '已停止', cancelled: '已取消', failed: '运行失败', unknown: '未确定', known: '已记录', complete: '完整', partial: '不完整' } : {};
   Object.assign(labels, zh ? { preparing: '准备中', evaluation: '评估', withheld: '留出比较', search: '搜索', validation: '验证', training: '训练', final: '最终比较', cancelling: '正在取消', import: '导入', imported: '已导入', baseline: '原版本', candidate: '候选版本', parse_error: '解析失败', format_error: '格式错误', empty_output: '空输出', model_error: '模型输出错误', service_error: '服务错误', timeout: '超时', max_rounds: '达到轮数上限', patience: '连续验证无提升', max_calls: '达到调用上限', max_output_tokens: '达到输出预算', max_seconds: '达到时间上限' } : {});
   const label = (value: unknown) => typeof value === 'string' ? labels[value] ?? value.replaceAll('_', ' ') : '—';
@@ -253,7 +255,7 @@ export function ExperimentPage({ language, writeEnabled = true, active = true }:
         {assessment && <p className="experiment-next"><strong>{t('Next step', '下一步')}</strong> · {nextAction}</p>}
         {job.optimization && <details open><summary>{t('Search history and selected candidate', '搜索记录与选中候选')}</summary><p className="field-help">{t('Validation selects the candidate. The effect above is the separate withheld comparison; completion alone does not establish an improvement.', '验证集用于选候选，上方效果来自单独的留出比较；搜索完成本身不代表改进有效。')}</p><table><thead><tr><th>{t('Round', '轮次')}</th><th>{t('Validation score', '验证分数')}</th><th>{t('Selection', '选择')}</th></tr></thead><tbody>{job.optimization.history?.map((entry: Json) => <tr key={entry.id}><td>{entry.round}</td><td>{number(entry.validation_score)}</td><td>{entry.id === job.optimization.best_id ? t('Selected', '已选中') : entry.validation_complete ? t('Compared', '已比较') : t('Incomplete', '未完成')}</td></tr>)}</tbody></table><pre>{job.optimization.candidate?.prompt}</pre><p className="field-help">{t('Stop reason', '停止原因')}: {label(job.optimization.stop_reason)}</p></details>}
         <div className="experiment-downloads">{finalStates.has(job.status) && [['experiment.zip', t('Portable bundle', '完整结果包')], [`report.${language}.html`, t('Readable report', '可读报告')], ['records.csv', 'CSV']].map(([file, title]) => <a key={file} className="button" href={`/api/experiments/${selected}/artifacts/${file}`}><Download size={15} />{title}</a>)}</div>
-        {allRows.length > 0 && <details><summary>{t('Inspect individual outputs', '查看逐条输出')} ({allRows.length})</summary><div className="experiment-table-wrap"><table><thead><tr>{['ID', t('Version', '版本'), t('Status', '状态'), t('Score', '分数'), t('Output', '输出')].map(item => <th key={item}>{item}</th>)}</tr></thead><tbody>{allRows.slice(0,200).map((row: Json) => <tr key={`${row.arm}-${row.id}`}><td>{row.id}</td><td>{row.arm}</td><td>{label(row.status)}</td><td>{row.score ?? '—'}</td><td>{row.output}</td></tr>)}</tbody></table></div></details>}
+        {pairedRecords && <details open><summary>{t('Inspect paired outputs', '查看配对输出')} ({allRows.length})</summary><PairedRecordsPanel records={pairedRecords} language={language} /></details>}
       </>}
     </section>
   </div>;

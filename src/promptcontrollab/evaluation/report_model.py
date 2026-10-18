@@ -274,9 +274,7 @@ def _existing_artifacts(run_dir: Path, diagnostics: dict[str, JsonDict]) -> list
     artifacts = [name for name in names if (run_dir / name).exists()]
     for name in sorted(diagnostics):
         nested = run_dir / "diagnostics" / f"{name}.json"
-        artifacts.append(
-            f"diagnostics/{name}.json" if nested.is_file() else f"{name}.json"
-        )
+        artifacts.append(f"diagnostics/{name}.json" if nested.is_file() else f"{name}.json")
     return artifacts
 
 

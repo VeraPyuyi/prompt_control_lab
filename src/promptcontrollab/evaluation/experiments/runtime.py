@@ -17,6 +17,7 @@ from promptcontrollab.core.files import stable_digest
 from promptcontrollab.evaluation.metrics import _first_number, score_details, score_output
 from promptcontrollab.integrations.providers import call_provider
 
+from .pricing import estimate_cost, reserve_cost
 from .storage import JobLock, configured_secrets, event, read_json, redact, write_json
 
 
@@ -89,7 +90,8 @@ def validate_completed_record(
         or not isinstance(score, (int, float))
         or not 0 <= score <= 1
         or not math.isfinite(score)
-        or score != (
+        or score
+        != (
             record.get("source_score")
             if imported and record.get("score_mode") == "preserve"
             else score_output(record["output"], task["expected"], metric)
@@ -132,6 +134,8 @@ def ledger_budget(
             row.get("usage", {}).get("output_tokens") is not None for row in records
         ),
         "known_cost": sum(row.get("actual_cost") or 0 for row in records),
+        "reported_cost": sum(row.get("actual_cost") or 0 for row in records),
+        "estimated_cost": sum(row.get("estimated_cost") or 0 for row in records),
         "unknown_cost_calls": sum(row.get("actual_cost") is None for row in records),
         "reserved_cost": sum(
             row.get("charged_cost", row.get("reserved_cost")) or 0 for row in records
@@ -275,21 +279,16 @@ class ExperimentRuntime:
                 > budget["max_output_tokens"]
             ):
                 raise ExperimentStopped("output_token_budget")
-            rates_known = all(
-                budget.get(key) is not None
-                for key in ("input_cost_per_million", "output_cost_per_million")
-            )
             # Byte-bound input reservation plus protocol overhead. Any provider
             # usage exceeding this bound is recorded and stops further calls.
             input_bound = len(prompt.encode("utf-8")) + 4096
-            reserved_cost = (
-                (
-                    input_bound * budget["input_cost_per_million"]
-                    + tokens * budget["output_cost_per_million"]
-                )
-                / 1_000_000
-                if rates_known
-                else None
+            reserved_cost = reserve_cost(
+                budget,
+                provider=config["provider"],
+                model=config["model"],
+                phase=phase,
+                input_tokens=input_bound,
+                output_tokens=tokens,
             )
             if budget.get("max_cost") is not None:
                 if reserved_cost is None:
@@ -442,15 +441,15 @@ class ExperimentRuntime:
                 output_count if output_count is not None else record["reserved_output_tokens"]
             )
             budget = self.spec["budget"]
-            if all(usage[key] is not None for key in ("input_tokens", "output_tokens")) and all(
-                budget.get(key) is not None
-                for key in ("input_cost_per_million", "output_cost_per_million")
-            ):
-                cost = (
-                    usage["input_tokens"] * budget["input_cost_per_million"]
-                    + usage["output_tokens"] * budget["output_cost_per_million"]
-                ) / 1_000_000
-                record.update(actual_cost=cost, charged_cost=cost)
+            cost = estimate_cost(
+                budget,
+                usage,
+                provider=config["provider"],
+                model=config.get("observed_model", config["model"]),
+                phase=phase,
+            )
+            if cost is not None:
+                record.update(actual_cost=cost, estimated_cost=cost, charged_cost=cost)
             if (output_count is not None and output_count > record["reserved_output_tokens"]) or (
                 usage["input_tokens"] is not None
                 and usage["input_tokens"] > record["input_token_reservation"]

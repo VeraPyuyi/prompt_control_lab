@@ -7,7 +7,7 @@ import unicodedata
 from collections import Counter
 from typing import Any
 
-from promptcontrollab.evaluation.statistics import paired_compare
+from promptcontrollab.evaluation.statistics import cluster_paired_compare, paired_compare
 
 from .models import ComparisonAssessment
 
@@ -274,13 +274,41 @@ def assess(
 
     left, right = valid(baseline, "baseline"), valid(candidate, "candidate")
     matched = sorted(set(left) & set(right))
-    stats = (
-        paired_compare(
-            left, right, seed=spec["seed"], bootstrap_samples=2000, permutation_samples=2000
-        ).to_json()
-        if matched
-        else None
-    )
+    group_map = {}
+    for task in spec["data"]:
+        meta = task.get("meta", {})
+        for key in ("group_id", "group", "document_id", "document", "task_id", "task"):
+            if isinstance(meta.get(key), str) and meta[key]:
+                group_map[task["id"]] = meta[key]
+                break
+    stats = None
+    if matched:
+        if len(set(group_map.get(item, item) for item in matched)) >= 2 and all(
+            item in group_map for item in matched
+        ):
+            stats = cluster_paired_compare(
+                left,
+                right,
+                group_map,
+                seed=spec["seed"],
+                bootstrap_samples=2000,
+                permutation_samples=2000,
+            ).to_json()
+            stats.update(
+                record_count=len(matched),
+                independent_group_count=len(set(group_map[item] for item in matched)),
+                estimation_target="mean_task_effect",
+                inference_status="cluster_bootstrap",
+            )
+        else:
+            stats = paired_compare(
+                left, right, seed=spec["seed"], bootstrap_samples=2000, permutation_samples=2000
+            ).to_json()
+            stats.update(
+                record_count=len(matched),
+                independent_group_count=len(set(group_map.get(item, item) for item in matched)),
+                estimation_target="mean_record_effect",
+            )
     direction = (
         spec["source_metric"]["direction"]
         if spec.get("score_mode") == "preserve"
@@ -333,7 +361,7 @@ def assess(
     matched_components = [find(index) for index, task in enumerate(tasks) if task["id"] in matched]
     if len(set(matched_components)) != len(matched_components):
         dependence_fields.add("full_snapshot_connected_components")
-    if stats:
+    if stats and stats.get("inference_status") != "cluster_bootstrap":
         stats["inference_status"] = "iid_assumed"
         if dependence_fields:
             # Keep the raw resampling output only as explicitly invalidated

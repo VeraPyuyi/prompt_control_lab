@@ -210,6 +210,9 @@ class ExperimentSpec:
             "max_cost",
             "input_cost_per_million",
             "output_cost_per_million",
+            "currency",
+            "effective_date",
+            "price_snapshots",
         }:
             raise ValueError("Unsupported budget fields")
         defaults = {"max_calls": 100, "max_output_tokens": 25600, "max_seconds": 300}
@@ -217,6 +220,32 @@ class ExperimentSpec:
             budget[key] = (_number if key == "max_seconds" else _integer)(
                 budget.get(key, default), f"budget.{key}", positive=key == "max_seconds"
             )
+        if "price_snapshots" in budget:
+            snapshots = budget["price_snapshots"]
+            if not isinstance(snapshots, list) or not snapshots:
+                raise ValueError("price_snapshots must be a nonempty list")
+            for snapshot in snapshots:
+                if not isinstance(snapshot, dict):
+                    raise ValueError("Each price snapshot must be an object")
+                for key in (
+                    "provider",
+                    "model",
+                    "phase",
+                    "currency",
+                    "effective_date",
+                    "input_cost_per_million",
+                    "output_cost_per_million",
+                ):
+                    if not isinstance(snapshot.get(key), str) and key in {
+                        "provider",
+                        "model",
+                        "phase",
+                        "currency",
+                        "effective_date",
+                    }:
+                        raise ValueError(f"price snapshot {key} must be a string")
+                    if key.endswith("_per_million"):
+                        _number(snapshot[key], f"price snapshot {key}")
         for key in ("max_cost", "input_cost_per_million", "output_cost_per_million"):
             if key in budget and budget[key] is not None:
                 _number(budget[key], f"budget.{key}")

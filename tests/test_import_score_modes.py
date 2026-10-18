@@ -49,6 +49,9 @@ def test_import_report_csv_and_relocated_replay_retain_both_scores(
     assert row["source_score"] == 0.75
     assert row["derived_score"] == 0
     assert row["source_metric"]["reviewer"] == "fixed-judge"
+    html = (report / "report.en.html").read_text(encoding="utf-8")
+    assert 'Source score' in html
+    assert 'Derived score' in html
     with (report / "records.csv").open(encoding="utf-8-sig", newline="") as stream:
         csvrow = next(csv.DictReader(stream))
     assert float(csvrow["source_score"]) == 0.75
@@ -69,6 +72,13 @@ def test_preserve_rejects_mixed_versions_and_uses_external_direction(tmp_path: P
     }
     with pytest.raises(ValueError, match="metric identity"):
         create_experiment(tmp_path, value)
+
+
+def test_report_html_is_standalone_without_network_resources(tmp_path: Path) -> None:
+    job = run_experiment(tmp_path, create_experiment(tmp_path, spec("preserve"))["id"])
+    html = (job_directory(tmp_path, job["id"]) / "report/report.en.html").read_text(encoding="utf-8")
+    assert "<style>" in html and "<script>" not in html
+    assert "http://" not in html and "https://" not in html and "src=\"http" not in html
 
 
 def test_native_multiple_scores_require_explicit_selection(tmp_path: Path) -> None:

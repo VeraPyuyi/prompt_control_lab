@@ -199,7 +199,15 @@ def write_reports(
             "<tr>"
             + "".join(
                 f"<td>{_html_value(record.get(key))}</td>"
-                for key in ("arm", "id", "status", "score", "output")
+                for key in (
+                    "arm",
+                    "id",
+                    "status",
+                    "score",
+                    "source_score",
+                    "derived_score",
+                    "output",
+                )
             )
             + "</tr>"
             for record in records
@@ -226,9 +234,9 @@ def write_reports(
             else ""
         )
         headers = (
-            ("组别", "ID", "状态", "分数", "输出")
+            ("组别", "ID", "状态", "分数", "原评分", "重算分", "输出")
             if chinese
-            else ("Arm", "ID", "Status", "Score", "Output")
+            else ("Arm", "ID", "Status", "Score", "Source score", "Derived score", "Output")
         )
         header_html = "".join(f"<th>{header}</th>" for header in headers)
         practical_html = _practical_html(assessment, language)

@@ -29,8 +29,8 @@ python -m build
 Expected result: `dist/` contains a wheel named like:
 
 ```text
-promptcontrollab-0.2.0a1-py3-none-any.whl
-promptcontrollab-0.2.0a1.tar.gz
+promptcontrollab-0.3.0a2-py3-none-any.whl
+promptcontrollab-0.3.0a2.tar.gz
 ```
 
 Do not commit `dist/` artifacts unless a release process explicitly asks for
@@ -56,7 +56,7 @@ Generate release checksums only after this final build.
 Create a temporary environment or use `pipx`:
 
 ```bash
-pipx install dist/promptcontrollab-0.2.0a1-py3-none-any.whl
+pipx install dist/promptcontrollab-0.3.0a2-py3-none-any.whl
 pcl --help
 pcl doctor
 pcl install-plugin all --target ./tmp-pcl-templates --dry-run
@@ -76,7 +76,7 @@ When the current environment already has the `research` extra installed, also
 verify the advanced diagnostic workflow from the built wheel:
 
 ```bash
-python -m pip install --force-reinstall --no-deps dist/promptcontrollab-0.2.0a1-py3-none-any.whl
+python -m pip install --force-reinstall --no-deps dist/promptcontrollab-0.3.0a2-py3-none-any.whl
 pcl research-quickstart --out ./tmp-pcl-research-demo --open-report
 ```
 
@@ -119,3 +119,5 @@ If no PyPI token is configured, stop after local build and wheel smoke tests.
 Document the package as "PyPI-ready" rather than "published". Do not claim a
 PyPI install path until the package is actually available under
 `promptcontrollab`.
+
+Publication status / ????: [single source of truth](releases/publication-status.md).

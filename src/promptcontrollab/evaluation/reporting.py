@@ -463,12 +463,7 @@ def _html_dashboard(markdown: str) -> str:
 
 
 def _html_dashboard_card(title: str, body: str) -> str:
-    return (
-        "<article class='dashboard-card'>"
-        f"<h2>{html.escape(title)}</h2>"
-        f"<p>{body}</p>"
-        "</article>"
-    )
+    return f"<article class='dashboard-card'><h2>{html.escape(title)}</h2><p>{body}</p></article>"
 
 
 def _prompt_only_validity(markdown: str) -> str:
