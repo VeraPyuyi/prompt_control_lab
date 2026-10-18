@@ -20,7 +20,7 @@ from typing import Any, cast
 
 from promptcontrollab.core.files import stable_digest
 from promptcontrollab.diagnostics.research_tools.replay import compare_values
-from promptcontrollab.evaluation.metrics import score_output
+from promptcontrollab.evaluation.metrics import score_details, score_output
 
 from .assessment import assess
 from .models import ExperimentSpec, model_config
@@ -462,6 +462,8 @@ def _rescore(
                 if status == "completed" and isinstance(output, str)
                 else "unavailable",
             )
+            if status == "completed" and "@1" in spec["metric"]:
+                row.update(score_details(output, task["expected"], spec["metric"]))
             differences = compare_values(source.get("score"), row["score"], atol=ATOL, rtol=RTOL)
             score_checks.append(
                 {

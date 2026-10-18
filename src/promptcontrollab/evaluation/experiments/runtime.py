@@ -14,7 +14,7 @@ from pathlib import Path
 from typing import Any, cast
 
 from promptcontrollab.core.files import stable_digest
-from promptcontrollab.evaluation.metrics import _first_number, score_output
+from promptcontrollab.evaluation.metrics import _first_number, score_details, score_output
 from promptcontrollab.integrations.providers import call_provider
 
 from .storage import JobLock, configured_secrets, event, read_json, redact, write_json
@@ -592,6 +592,8 @@ class ExperimentRuntime:
                 "retry_safe": call.get("retry_safe", False),
                 "execution_attempt": call.get("execution_attempt", 1),
             }
+            if call["status"] == "completed" and "@1" in self.spec["metric"]:
+                result.update(score_details(call["output"], task["expected"], self.spec["metric"]))
             write_json(target, result)
             self.event(
                 "record_completed", id=task["id"], name=name, phase=phase, status=result["status"]

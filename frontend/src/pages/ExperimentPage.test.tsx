@@ -17,6 +17,12 @@ beforeEach(() => {
   });
 });
 describe('experiment workspace', () => {
+  it('names legacy scoring accurately and offers versioned JSON checks', () => {
+    render(<ExperimentPage language="en" />);
+    expect(screen.getByRole('option', { name: 'Empty output check · lower is better' })).toHaveValue('format_error');
+    expect(screen.getByRole('option', { name: 'Valid JSON · v1' })).toHaveValue('json_valid@1');
+    expect(screen.getByRole('option', { name: 'JSON schema · v1' })).toHaveValue('json_schema@1');
+  });
   it('runs the offline example without collecting a key or calling a model', async () => {
     const user = userEvent.setup();
     render(<ExperimentPage language="en" />);

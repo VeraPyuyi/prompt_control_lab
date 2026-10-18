@@ -11,7 +11,7 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import Any, cast
 
-from promptcontrollab.evaluation.metrics import score_output
+from promptcontrollab.evaluation.metrics import score_details, score_output
 
 from .assessment import assess
 from .models import ExperimentSpec, model_config
@@ -442,6 +442,8 @@ def _import_records(directory: Path, spec: dict[str, Any], arm: str) -> list[dic
             "provenance": "imported",
             **_imported_conditions(source or {}),
         }
+        if status == "completed" and "@1" in spec["metric"]:
+            row.update(score_details(output_text, task["expected"], spec["metric"]))
         write_json(
             directory
             / "records"
