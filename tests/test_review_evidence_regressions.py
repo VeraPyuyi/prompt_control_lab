@@ -114,10 +114,17 @@ def test_task_group_boundaries_use_independent_units(groups: int) -> None:
         assert stats["bootstrap_ci"] is None
         assert stats["holm_adjusted_p_value"] is None
         assert stats["inference_status"].startswith("descriptive")
+    elif groups == 2:
+        assert result["effect"]["status"] == "uncertain"
+        assert stats["bootstrap_ci"] is None
+        assert stats["permutation_p_value"] is None
+        assert stats["holm_adjusted_p_value"] is None
+        assert stats["inference_status"] == "descriptive_only_insufficient_groups"
+        assert stats["estimation_target"] == "mean_task_effect"
     else:
         assert stats["inference_status"] == "cluster_bootstrap"
         assert stats["estimation_target"] == "mean_task_effect"
-        assert result["effect"]["status"] == ("uncertain" if groups == 2 else "improved")
+        assert result["effect"]["status"] == "improved"
 
 
 def test_connected_rows_count_one_independent_unit_and_never_resample_rows() -> None:

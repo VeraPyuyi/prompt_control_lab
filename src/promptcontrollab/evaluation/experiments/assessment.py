@@ -13,6 +13,12 @@ from .models import ComparisonAssessment
 from .pricing import cost_summary, estimate_cost, finite_cost, resolve_price_snapshot
 
 
+def _group_label(value: object) -> str | None:
+    if isinstance(value, bool) or not isinstance(value, (str, int)):
+        return None
+    return " ".join(unicodedata.normalize("NFKC", str(value)).casefold().split()) or None
+
+
 def _finite_measurement(value: object, *, tokens: bool = False) -> float | None:
     if isinstance(value, bool) or not isinstance(value, (int, float)):
         return None
@@ -287,13 +293,12 @@ def assess(
 
     left, right = valid(baseline, "baseline"), valid(candidate, "candidate")
     matched = sorted(set(left) & set(right))
-    group_map = {}
-    for task in spec["data"]:
-        meta = task.get("meta", {})
-        for key in ("group_id", "group", "document_id", "document", "task_id", "task"):
-            if isinstance(meta.get(key), (str, int)) and not isinstance(meta[key], bool):
-                group_map[task["id"]] = str(meta[key])
-                break
+    group_fields = ("group_id", "group", "document_id", "document", "task_id", "task")
+    has_declared_groups = any(
+        task["id"] in matched
+        and any(_group_label(task.get("meta", {}).get(key)) is not None for key in group_fields)
+        for task in spec["data"]
+    )
     tasks = spec["data"]
     parents = list(range(len(tasks)))
 
@@ -309,9 +314,9 @@ def assess(
         normalized = " ".join(unicodedata.normalize("NFKC", task["input"]).casefold().split())
         tokens = [("normalized_input", normalized)]
         for key in ("group", "group_id", "sample_id", "source_id", "document_id"):
-            value = task.get("meta", {}).get(key)
+            value = _group_label(task.get("meta", {}).get(key))
             if value is not None:
-                tokens.append(("group" if key in {"group", "group_id"} else key, str(value)))
+                tokens.append(("group" if key in {"group", "group_id"} else key, value))
         for token in tokens:
             if token in seen_groups:
                 parents[find(index)] = find(seen_groups[token])
@@ -321,24 +326,47 @@ def assess(
         dependence_fields.add("full_snapshot_connected_components")
     # Count independent units after joining declared task groups with every existing
     # input/sample connection. A group label cannot split a connected component.
-    seen_labels: dict[str, int] = {}
+    seen_labels: dict[tuple[str, str], int] = {}
     for index, task in enumerate(tasks):
-        label = group_map.get(task["id"])
-        if label is not None:
-            if label in seen_labels:
-                parents[find(index)] = find(seen_labels[label])
-            seen_labels[label] = index
-    independent_count = len(
-        {find(index) for index, task in enumerate(tasks) if task["id"] in matched}
-    )
-    single_group = bool(matched) and independent_count < 2
-    stats = None
+        for key in group_fields:
+            label = _group_label(task.get("meta", {}).get(key))
+            if label is not None:
+                token = (key.removesuffix("_id"), label)
+                if token in seen_labels:
+                    parents[find(index)] = find(seen_labels[token])
+                seen_labels[token] = index
+    group_map = {task["id"]: str(find(index)) for index, task in enumerate(tasks)}
+    grouped: dict[str, list[str]] = {}
+    for item in matched:
+        grouped.setdefault(group_map[item], []).append(item)
+    independent_count = len(grouped)
+    insufficient_groups = bool(matched) and independent_count < 3
+    stats: dict[str, Any] | None = None
     if matched:
-        if (
-            len(set(group_map.get(item, item) for item in matched)) >= 2
-            and all(item in group_map for item in matched)
-            and not dependence_fields
-        ):
+        if insufficient_groups or dependence_fields:
+            # One or two units cannot support inference at the existing two-sided
+            # 0.05 threshold. Retain equal-weight group means, never row resampling.
+            base_mean = sum(
+                sum(left[item] for item in ids) / len(ids) for ids in grouped.values()
+            ) / independent_count
+            cand_mean = sum(
+                sum(right[item] for item in ids) / len(ids) for ids in grouped.values()
+            ) / independent_count
+            stats = {
+                "n": independent_count,
+                "baseline_mean": base_mean,
+                "candidate_mean": cand_mean,
+                "mean_delta": cand_mean - base_mean,
+                "record_count": len(matched),
+                "independent_group_count": independent_count,
+                "estimation_target": "mean_task_effect",
+                "bootstrap_ci": None,
+                "permutation_p_value": None,
+                "holm_adjusted_p_value": None,
+                "inference_status": "descriptive_only_insufficient_groups",
+                "interpretation": "insufficient_independent_groups",
+            }
+        elif has_declared_groups or independent_count < len(matched):
             stats = cluster_paired_compare(
                 left,
                 right,
@@ -349,25 +377,10 @@ def assess(
             ).to_json()
             stats.update(
                 record_count=len(matched),
-                independent_group_count=len(set(group_map[item] for item in matched)),
+                independent_group_count=independent_count,
                 estimation_target="mean_task_effect",
                 inference_status="cluster_bootstrap",
             )
-        elif single_group:
-            stats = {
-                "n": 1,
-                "baseline_mean": sum(left[item] for item in matched) / len(matched),
-                "candidate_mean": sum(right[item] for item in matched) / len(matched),
-                "mean_delta": sum(right[item] - left[item] for item in matched) / len(matched),
-                "record_count": len(matched),
-                "independent_group_count": 1,
-                "estimation_target": "mean_task_effect",
-                "bootstrap_ci": None,
-                "permutation_p_value": None,
-                "holm_adjusted_p_value": None,
-                "inference_status": "descriptive_only_insufficient_groups",
-                "interpretation": "insufficient_independent_groups",
-            }
         else:
             stats = paired_compare(
                 left, right, seed=spec["seed"], bootstrap_samples=2000, permutation_samples=2000
@@ -385,6 +398,8 @@ def assess(
         else "higher_is_better"
     )
     effect_status = "insufficient_data"
+    if stats and independent_count == 2:
+        effect_status = "uncertain" if stats["mean_delta"] else "no_observed_change"
     if stats and stats["bootstrap_ci"] is not None:
         lo, hi = stats["bootstrap_ci"]
         delta = stats["mean_delta"]
@@ -407,8 +422,8 @@ def assess(
     if stats:
         stats["inference_status"] = stats.get("inference_status", "iid_assumed")
         if dependence_fields and stats.get("inference_status") != "cluster_bootstrap":
-            # Keep the raw resampling output only as explicitly invalidated
-            # diagnostics; do not report row-wise intervals as group evidence.
+            # Preserve the diagnostic schema without computing invalid row-wise
+            # intervals for records that share an input or sample/group metadata.
             stats["iid_diagnostics"] = {
                 key: stats[key]
                 for key in ("bootstrap_ci", "permutation_p_value", "holm_adjusted_p_value")
@@ -561,7 +576,7 @@ def assess(
         comparability=comparability["status"],
         coverage=str(coverage["status"]),
         effect=effect_status,
-        dependent=bool(dependence_fields) or single_group,
+        dependent=bool(dependence_fields) or insufficient_groups,
     )
     return ComparisonAssessment(
         {
