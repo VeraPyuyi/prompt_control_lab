@@ -281,6 +281,31 @@ def assess(
             if isinstance(meta.get(key), str) and meta[key]:
                 group_map[task["id"]] = meta[key]
                 break
+    tasks = spec["data"]
+    parents = list(range(len(tasks)))
+
+    def find(index: int) -> int:
+        while index != parents[index]:
+            parents[index] = parents[parents[index]]
+            index = parents[index]
+        return index
+
+    seen_groups: dict[tuple[str, str], int] = {}
+    dependence_fields: set[str] = set()
+    for index, task in enumerate(tasks):
+        normalized = " ".join(unicodedata.normalize("NFKC", task["input"]).casefold().split())
+        tokens = [("normalized_input", normalized)]
+        for key in ("group", "group_id", "sample_id", "source_id", "document_id"):
+            value = task.get("meta", {}).get(key)
+            if value is not None:
+                tokens.append(("group" if key in {"group", "group_id"} else key, str(value)))
+        for token in tokens:
+            if token in seen_groups:
+                parents[find(index)] = find(seen_groups[token])
+            seen_groups[token] = index
+    matched_components = [find(index) for index, task in enumerate(tasks) if task["id"] in matched]
+    if len(set(matched_components)) != len(matched_components):
+        dependence_fields.add("full_snapshot_connected_components")
     stats = None
     if matched:
         if (
@@ -338,31 +363,6 @@ def assess(
             from promptcontrollab.evaluation.statistics import interpret_delta
 
             stats["interpretation"] = interpret_delta(delta, (lo, hi), adjusted)
-    tasks = spec["data"]
-    parents = list(range(len(tasks)))
-
-    def find(index: int) -> int:
-        while index != parents[index]:
-            parents[index] = parents[parents[index]]
-            index = parents[index]
-        return index
-
-    seen_groups: dict[tuple[str, str], int] = {}
-    dependence_fields: set[str] = set()
-    for index, task in enumerate(tasks):
-        normalized = " ".join(unicodedata.normalize("NFKC", task["input"]).casefold().split())
-        tokens = [("normalized_input", normalized)]
-        for key in ("group", "group_id", "sample_id", "source_id", "document_id"):
-            value = task.get("meta", {}).get(key)
-            if value is not None:
-                tokens.append(("group" if key in {"group", "group_id"} else key, str(value)))
-        for token in tokens:
-            if token in seen_groups:
-                parents[find(index)] = find(seen_groups[token])
-            seen_groups[token] = index
-    matched_components = [find(index) for index, task in enumerate(tasks) if task["id"] in matched]
-    if len(set(matched_components)) != len(matched_components):
-        dependence_fields.add("full_snapshot_connected_components")
     if stats:
         stats["inference_status"] = stats.get("inference_status", "iid_assumed")
         if dependence_fields and stats.get("inference_status") != "cluster_bootstrap":
