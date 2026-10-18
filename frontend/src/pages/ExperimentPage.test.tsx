@@ -18,6 +18,16 @@ beforeEach(() => {
   });
 });
 describe('experiment workspace', () => {
+  it('labels estimated and reported costs separately with currency', async () => {
+    const saved = { ...job, budget: { calls: 2, limits: { max_calls: 10 }, estimated_cost: .0046, actual_cost: null, reported_cost: null, reserved_cost: .02, cost_currency: 'USD' } };
+    request.mockImplementation(async (path, payload) => path === '/api/experiments' && !payload ? { experiments: [saved] } : saved);
+    render(<ExperimentPage language="en" />);
+    await screen.findByRole('option', { name: /Synthetic comparison/ });
+    await userEvent.selectOptions(screen.getByLabelText('Select experiment'), job.id);
+    expect(await screen.findByText(/Estimated cost: 0.0046 USD/)).toBeInTheDocument();
+    expect(screen.getByText(/Actual cost: Unknown/)).toBeInTheDocument();
+    expect(screen.getByText(/Reported cost: Unknown/)).toBeInTheDocument();
+  });
   it('names legacy scoring accurately and offers versioned JSON checks', () => {
     render(<ExperimentPage language="en" />);
     expect(screen.getByRole('option', { name: 'Empty output check · lower is better' })).toHaveValue('format_error');

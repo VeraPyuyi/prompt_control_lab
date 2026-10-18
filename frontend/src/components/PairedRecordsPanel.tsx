@@ -9,6 +9,7 @@ export function PairedRecordsPanel({ records, language, review }: { records: Jso
   const t = (en: string, cn: string) => zh ? cn : en;
   const [status, setStatus] = useState('all');
   const [slice, setSlice] = useState('all');
+  const [scoreMax, setScoreMax] = useState('');
   const [page, setPage] = useState(0);
   const pageSize = 50;
   const pairs = useMemo(() => {
@@ -27,6 +28,7 @@ export function PairedRecordsPanel({ records, language, review }: { records: Jso
   const filtered = pairs.filter(pair => {
     const left = pair.baseline;
     const right = pair.candidate;
+    if (scoreMax !== '' && (typeof right?.score !== 'number' || !Number.isFinite(right.score) || right.score > Number(scoreMax))) return false;
     if (slice !== 'all' && (left?.slice ?? right?.slice) !== slice) return false;
     if (status === 'missing_candidate') return !right;
     if (status !== 'all' && left?.status !== status && right?.status !== status) return false;
@@ -45,6 +47,7 @@ export function PairedRecordsPanel({ records, language, review }: { records: Jso
       <label>{t('Slice', '切片')}<select value={slice} onChange={e => { setSlice(e.target.value); setPage(0); }}>
         <option value="all">{t('All', '全部')}</option>{slices.map(value => <option key={value} value={value}>{value}</option>)}
       </select></label>
+      <label>{t('Candidate score at most', '候选分数上限')}<input type="number" min="0" max="1" step="any" value={scoreMax} onChange={e => { setScoreMax(e.target.value); setPage(0); }} /></label>
       <span>{t('Showing', '显示')} {pageRows.length} / {filtered.length} · {t('Total pairs', '总配对')} {pairs.length}</span>
       <button disabled={page === 0} onClick={() => setPage(page - 1)}>{t('Previous', '上一页')}</button>
       <button disabled={(page + 1) * pageSize >= filtered.length} onClick={() => setPage(page + 1)}>{t('Next', '下一页')}</button>

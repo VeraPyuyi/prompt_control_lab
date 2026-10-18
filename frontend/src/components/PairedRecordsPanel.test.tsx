@@ -10,6 +10,26 @@ function records(count: number) {
 }
 
 describe('paired records panel', () => {
+  it('filters by candidate score without treating missing scores as zero', async () => {
+    const user = userEvent.setup();
+    render(<PairedRecordsPanel language="en" records={{
+      baseline: [],
+      candidate: [
+        { id: 'fail', output: 'failed output', score: 0, status: 'completed' },
+        { id: 'partial', output: 'partial output', score: 0.25, status: 'completed' },
+        { id: 'pass', output: 'passed output', score: 1, status: 'completed' },
+        { id: 'unknown', score: null, status: 'missing' },
+      ],
+    }} />);
+    await user.type(screen.getByLabelText('Candidate score at most'), '0.25');
+    expect(screen.getByText('failed output')).toBeInTheDocument();
+    expect(screen.getByText('partial output')).toBeInTheDocument();
+    expect(screen.queryByText('passed output')).not.toBeInTheDocument();
+    expect(screen.queryByText('unknown')).not.toBeInTheDocument();
+    await user.clear(screen.getByLabelText('Candidate score at most'));
+    expect(screen.getByText('passed output')).toBeInTheDocument();
+    expect(screen.getByText('unknown')).toBeInTheDocument();
+  });
   it('keeps paired rows aligned and can reach the last item beyond 200 records', async () => {
     const user = userEvent.setup();
     render(<PairedRecordsPanel language="en" records={records(500)} />);
